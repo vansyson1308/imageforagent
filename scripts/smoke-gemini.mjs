@@ -75,7 +75,7 @@ try {
       "flat 2D cartoon style, bold outlines, warm lighting. No text in image.",
     response_format: {
       type: "image",
-      mime_type: "image/png",
+      mime_type: "image/jpeg", // API chỉ hỗ trợ jpeg ở response_format
       aspect_ratio: "16:9",
       image_size: "1K",
     },

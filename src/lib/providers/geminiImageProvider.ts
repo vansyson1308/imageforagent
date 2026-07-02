@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import sharp from "sharp";
 import type { ImageRequest } from "@/lib/services/promptComposer";
 import type { GeneratedImage, ImageProvider } from "@/lib/providers/types";
 import { AppError } from "@/lib/services/apiError";
@@ -75,7 +76,8 @@ export class GeminiImageProvider implements ImageProvider {
         input,
         response_format: {
           type: "image",
-          mime_type: "image/png",
+          // API chỉ hỗ trợ image/jpeg cho response_format — convert PNG phía dưới
+          mime_type: "image/jpeg",
           aspect_ratio: request.aspectRatio,
           image_size: request.resolution, // "1K" | "2K" — chữ K viết hoa
         },
@@ -92,10 +94,9 @@ export class GeminiImageProvider implements ImageProvider {
         );
       }
 
-      return {
-        data: Buffer.from(image.data, "base64"),
-        mimeType: image.mime_type ?? "image/png",
-      };
+      // Chuẩn hoá về PNG để pipeline (raw/watermark/export) đồng nhất
+      const png = await sharp(Buffer.from(image.data, "base64")).png().toBuffer();
+      return { data: png, mimeType: "image/png" };
     } catch (err: unknown) {
       throw classifyError(err);
     }

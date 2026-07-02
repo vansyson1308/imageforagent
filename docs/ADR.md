@@ -12,6 +12,8 @@ Hệ quả: route handler `params` là Promise (`await ctx.params`); design toke
 Xác minh docs chính thức 07/2026: model hiện hành là `gemini-3.1-flash-image` (Nano Banana 2, mặc định) và `gemini-3-pro-image` (premium). SDK `@google/genai` v2 gọi qua `ai.interactions.create({model, input, response_format})`; ảnh trả về ở `interaction.output_image.data` (base64). `image_size` nhận `"1K"|"2K"` (chữ K hoa), `aspect_ratio` hỗ trợ đủ 4 ratio của blueprint.
 **Seed không được API hỗ trợ** → cột `Frame.seed` giữ nullable, không dùng; tính nhất quán dựa hoàn toàn vào reference images + CHARACTER LOCK prompt.
 
+**Phát hiện khi smoke test thật (02/07/2026):** `response_format.mime_type` chỉ chấp nhận `image/jpeg` (gửi `image/png` → 400). Provider request JPEG rồi convert sang PNG bằng sharp để pipeline raw/watermark/export giữ nguyên PNG.
+
 ## ADR-003: Mở rộng Prisma schema so với blueprint mục 3
 
 - `Project.wmPosition/wmScale/wmOpacity` — T6.3 yêu cầu settings watermark persist nhưng schema gốc không có chỗ chứa.
