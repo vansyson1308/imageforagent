@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Project {
+  id            String   @id @default(cuid())
+  name          String
+  characterDesc String?
+  aspectRatio   String   @default("16:9") // "16:9" | "9:16" | "1:1" | "4:5"
+  resolution    String   @default("1K") // "1K" | "2K"
+  playbackSpeed Float    @default(1.5) // giây/frame cho preview
+  sheetUrl      String?
+  wmPosition    String   @default("bottom-right") // 4 góc + "center"
+  wmScale       Float    @default(12) // % chiều rộng ảnh
+  wmOpacity     Float    @default(0.85)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  frames        Frame[]
+  assets        Asset[]
+}
+
+model Frame {
+  id           String    @id @default(cuid())
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  index        Int // 1-based → hiển thị F01, F02...
+  shotType     String
+  description  String
+  status       String    @default("draft") // draft|pending|generating|watermarking|done|failed
+  imagePath    String? // ảnh đã watermark (hiển thị)
+  rawImagePath String? // ảnh gốc chưa watermark
+  seed         Int? // provider hiện không hỗ trợ seed — giữ cho tương lai
+  errorMsg     String?
+  generatedAt  DateTime?
+
+  @@unique([projectId, index])
+}
+
+model Asset {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  kind      String // "mascot_ref" (≤3) | "style_ref" (≤3) | "watermark" (=1)
+  filePath  String
+  mimeType  String
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model GenerationLog {
+  id        String   @id @default(cuid())
+  projectId String
+  frameId   String
+  provider  String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

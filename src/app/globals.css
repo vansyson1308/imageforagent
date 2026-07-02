@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #0d0d0f;
+  --color-card: #17171c;
+  --color-card-2: #1e1e26;
+  --color-line: #26262e;
+  --color-muted: #8b8b98;
+  --color-ink: #ececf1;
+  --color-accent: #8b5cf6;
+  --color-accent-2: #ec4899;
+  --radius-card: 16px;
+  --font-sans: var(--font-quicksand), ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Gradient accent dùng chung cho nút chính */
+.btn-gradient {
+  background-image: linear-gradient(135deg, var(--color-accent), var(--color-accent-2));
+  transition: opacity 0.15s ease, transform 0.1s ease;
+}
+.btn-gradient:hover:not(:disabled) {
+  opacity: 0.9;
+}
+.btn-gradient:active:not(:disabled) {
+  transform: scale(0.98);
+}
+.btn-gradient:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Scrollbar tối cho bảng phân cảnh */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #33333d transparent;
+}
