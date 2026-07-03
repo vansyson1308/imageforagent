@@ -67,6 +67,20 @@ export function hasRunningJobForProject(projectId: string): boolean {
   return [...jobs.values()].some((j) => j.projectId === projectId && j.running);
 }
 
+/**
+ * Guard cho các route mutation phá cấu trúc frame (xoá/reorder/import/apply-edit):
+ * chặn khi job generate đang chạy để tránh race frame-biến-mất giữa chừng.
+ */
+export function assertNoRunningJob(projectId: string): void {
+  if (hasRunningJobForProject(projectId)) {
+    throw new AppError(
+      "VALIDATION",
+      "Đang có job generate chạy cho project này.",
+      "Bấm Dừng hoặc đợi job xong rồi thao tác lại.",
+    );
+  }
+}
+
 export function cancelJob(jobId: string): boolean {
   const job = jobs.get(jobId);
   if (!job) return false;
@@ -153,7 +167,12 @@ async function runJob(job: GenerationJob, provider: ImageProvider): Promise<void
 
   for (const frameId of job.frameIds) {
     if (job.cancelled) break;
-    await generateFrame(job, frameId, provider);
+    try {
+      await generateFrame(job, frameId, provider);
+    } catch (err: unknown) {
+      // Một frame crash không được phép bỏ rơi các frame còn lại
+      logger.error({ err, frameId, jobId: job.id }, "frame generation crashed — continuing");
+    }
   }
 
   if (job.cancelled) {
@@ -199,18 +218,28 @@ async function generateFrame(
       const rawRelPath = toPosix(`${job.projectId}/frames/${frameId}.raw.png`);
       await saveBuffer(rawRelPath, image.data);
 
+      // Watermark lỗi KHÔNG được phá frame — ảnh đã tạo (đã trả tiền),
+      // fallback về ảnh gốc kèm cảnh báo để user chỉnh settings rồi Áp dụng lại.
       let imageRelPath = rawRelPath;
+      let wmWarning: string | null = null;
       if (watermarkAsset) {
         await prisma.frame.update({
           where: { id: frameId },
           data: { status: "watermarking", rawImagePath: rawRelPath },
         });
-        imageRelPath = toPosix(`${job.projectId}/frames/${frameId}.wm.png`);
-        await applyWatermark(rawRelPath, imageRelPath, watermarkAsset.filePath, {
-          position: project.wmPosition,
-          scalePercent: project.wmScale,
-          opacity: project.wmOpacity,
-        });
+        try {
+          const wmRelPath = toPosix(`${job.projectId}/frames/${frameId}.wm.png`);
+          await applyWatermark(rawRelPath, wmRelPath, watermarkAsset.filePath, {
+            position: project.wmPosition,
+            scalePercent: project.wmScale,
+            opacity: project.wmOpacity,
+          });
+          imageRelPath = wmRelPath;
+        } catch (wmErr: unknown) {
+          logger.warn({ wmErr, frameId }, "watermark failed — falling back to raw image");
+          wmWarning =
+            "Ảnh đã tạo nhưng đóng watermark lỗi — chỉnh settings watermark rồi bấm 'Áp dụng lại toàn bộ'.";
+        }
       }
 
       await prisma.frame.update({
@@ -220,11 +249,20 @@ async function generateFrame(
           rawImagePath: rawRelPath,
           imagePath: imageRelPath,
           generatedAt: new Date(),
-          errorMsg: null,
+          errorMsg: wmWarning,
         },
       });
       return;
     } catch (err: unknown) {
+      // Frame bị xoá giữa chừng (race hiếm) → dừng êm, không retry, không đốt API
+      const stillExists = await prisma.frame
+        .findUnique({ where: { id: frameId }, select: { id: true } })
+        .catch(() => null);
+      if (!stillExists) {
+        logger.warn({ frameId }, "frame disappeared mid-generation — skipping");
+        return;
+      }
+
       const appErr = err instanceof AppError ? err : null;
       const retryable =
         attempt < RETRY_BACKOFF_MS.length &&
@@ -240,15 +278,21 @@ async function generateFrame(
         continue;
       }
 
-      const message = appErr?.message ?? "Lỗi không xác định khi tạo ảnh.";
+      const message =
+        appErr?.message ??
+        (err instanceof Error ? err.message : "Lỗi không xác định khi tạo ảnh.");
       const hint = appErr?.hint;
-      await prisma.frame.update({
-        where: { id: frameId },
-        data: {
-          status: "failed",
-          errorMsg: hint ? `${message} — ${hint}` : message,
-        },
-      });
+      await prisma.frame
+        .update({
+          where: { id: frameId },
+          data: {
+            status: "failed",
+            errorMsg: hint ? `${message} — ${hint}` : message,
+          },
+        })
+        .catch((markErr: unknown) => {
+          logger.error({ markErr, frameId }, "could not mark frame failed");
+        });
       return;
     }
   }

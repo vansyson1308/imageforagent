@@ -66,7 +66,10 @@ export async function POST(): Promise<Response> {
             stack.push(childPath);
           } else {
             const relPath = toPosix(path.relative(root, childPath));
-            if (!referenced.has(relPath)) {
+            // Grace period 10 phút: file vừa ghi có thể chưa kịp commit path
+            // vào DB (job đang chạy) — không được xoá nhầm ảnh vừa trả tiền
+            const isRecent = Date.now() - childStat.mtimeMs < 10 * 60 * 1000;
+            if (!referenced.has(relPath) && !isRecent) {
               await fs.unlink(childPath).catch(() => {});
               removedFiles++;
             }

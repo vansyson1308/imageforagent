@@ -1,5 +1,7 @@
+import fs from "node:fs/promises";
 import { PassThrough, Readable } from "node:stream";
 import { ZipArchive } from "archiver";
+import { logger } from "@/lib/services/logger";
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { handleRoute } from "@/lib/services/routeHelpers";
@@ -50,13 +52,34 @@ export async function GET(req: Request): Promise<Response> {
     }
 
     const archive = new ZipArchive({ zlib: { level: 6 } });
+    archive.on("warning", (warning: unknown) => {
+      logger.warn({ warning }, "zip archive warning");
+    });
+    archive.on("error", (err: unknown) => {
+      logger.error({ err }, "zip archive error");
+    });
     const passthrough = new PassThrough();
     archive.pipe(passthrough);
 
+    // Chỉ đóng gói file thực sự tồn tại — file mất trên disk phải được
+    // phản ánh trong storyboard.json thay vì âm thầm thiếu trong ZIP
+    const includedIndexes = new Set<number>();
     for (const frame of doneFrames) {
-      archive.file(resolveStoragePath(frame.imagePath!), {
-        name: `${formatFrameBadge(frame.index)}.png`,
-      });
+      const absolute = resolveStoragePath(frame.imagePath!);
+      try {
+        await fs.access(absolute);
+        archive.file(absolute, { name: `${formatFrameBadge(frame.index)}.png` });
+        includedIndexes.add(frame.index);
+      } catch {
+        logger.warn({ frameIndex: frame.index }, "zip: frame image missing on disk — skipped");
+      }
+    }
+    if (includedIndexes.size === 0) {
+      throw new AppError(
+        "VALIDATION",
+        "Ảnh của các frame không còn trên disk.",
+        "Generate lại rồi xuất ZIP.",
+      );
     }
 
     const storyboardJson = {
@@ -71,7 +94,7 @@ export async function GET(req: Request): Promise<Response> {
       },
       frames: project.frames.map((f) => ({
         index: f.index,
-        file: f.status === "done" ? `${formatFrameBadge(f.index)}.png` : null,
+        file: includedIndexes.has(f.index) ? `${formatFrameBadge(f.index)}.png` : null,
         shotType: f.shotType,
         description: f.description,
         status: f.status,
@@ -82,9 +105,13 @@ export async function GET(req: Request): Promise<Response> {
       name: "storyboard.json",
     });
 
-    archive.append(buildSrt(doneFrames, project.playbackSpeed), {
-      name: "captions.srt",
-    });
+    archive.append(
+      buildSrt(
+        doneFrames.filter((f) => includedIndexes.has(f.index)),
+        project.playbackSpeed,
+      ),
+      { name: "captions.srt" },
+    );
 
     void archive.finalize();
 

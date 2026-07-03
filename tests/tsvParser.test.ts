@@ -156,4 +156,25 @@ describe("parseTsv", () => {
     if (!result.ok) return;
     expect(result.frames[0].description).toBe('He said "hello" loudly');
   });
+
+  // Case 15 (regression audit): dòng dữ liệu đầu chứa từ khoá header trong văn xuôi
+  // KHÔNG được bị nhầm là header và bị vứt bỏ
+  it("does not misdetect a data row containing header-like words as header", () => {
+    const text = `1${T}Wide shot${T}A frame shows the hero running through the shot location`;
+    const result = parseTsv(text);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.frames).toHaveLength(1);
+    expect(result.frames[0].description).toContain("hero running");
+  });
+
+  // Case 16: header thật vẫn được nhận diện đúng sau khi siết heuristic
+  it("still detects a real header row with exact column names", () => {
+    const text = `Frame${T}Shot${T}Desc\n1${T}Close-up${T}Mascot smiles warmly`;
+    const result = parseTsv(text);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.frames).toHaveLength(1);
+    expect(result.frames[0].description).toBe("Mascot smiles warmly");
+  });
 });

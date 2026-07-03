@@ -60,7 +60,14 @@ export function toErrorBody(err: unknown): { body: ErrorBody; status: number } {
       status: err.status,
     };
   }
-  const message = err instanceof Error ? err.message : "Lỗi không xác định.";
+  // Production: không echo message nội bộ (path tuyệt đối, chi tiết Prisma/sharp)
+  // ra client — chi tiết đã được log server-side ở handleRoute.
+  const message =
+    process.env.NODE_ENV === "production"
+      ? "Lỗi hệ thống — chi tiết đã được ghi log."
+      : err instanceof Error
+        ? err.message
+        : "Lỗi không xác định.";
   return { body: { error: { code: "INTERNAL", message } }, status: 500 };
 }
 

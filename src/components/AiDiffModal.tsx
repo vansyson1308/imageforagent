@@ -78,7 +78,12 @@ export function AiDiffModal({ proposal, onClose }: AiDiffModalProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+      role="dialog"
+      aria-modal="true"
+      onClick={onClose}
+    >
       <div
         className="flex max-h-[85vh] w-full max-w-3xl flex-col rounded-card border border-line bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import sharp from "sharp";
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { handleRoute } from "@/lib/services/routeHelpers";
@@ -64,9 +65,26 @@ export async function POST(req: Request): Promise<Response> {
     const created = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      // Defense-in-depth: file.type là header client tự khai — verify magic
+      // bytes thật qua sharp trước khi ghi disk
+      let format: string | undefined;
+      try {
+        format = (await sharp(buffer).metadata()).format;
+      } catch {
+        format = undefined;
+      }
+      if (!format || !["png", "jpeg", "webp"].includes(format)) {
+        throw new AppError(
+          "ASSET_BAD_TYPE",
+          `File "${file.name}" không phải ảnh PNG/JPEG/WebP hợp lệ.`,
+        );
+      }
+
       const ext = EXT_BY_MIME[file.type] ?? "png";
       const relPath = `${projectId}/assets/${randomUUID()}.${ext}`;
-      await saveBuffer(relPath, Buffer.from(await file.arrayBuffer()));
+      await saveBuffer(relPath, buffer);
       const asset = await prisma.asset.create({
         data: {
           projectId,

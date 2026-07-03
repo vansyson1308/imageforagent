@@ -54,12 +54,19 @@ export async function applyWatermark(
   const imgW = meta.width ?? 1024;
   const imgH = meta.height ?? 576;
 
-  const targetLogoW = Math.max(16, Math.round((imgW * config.scalePercent) / 100));
+  // Clamp logo vào trong ảnh (trừ padding) ở CẢ 2 chiều — logo dọc/cao
+  // không được phép vượt chiều cao ảnh (sharp composite sẽ throw)
+  const maxLogoW = Math.max(16, imgW - PADDING * 2);
+  const maxLogoH = Math.max(16, imgH - PADDING * 2);
+  const targetLogoW = Math.min(
+    maxLogoW,
+    Math.max(16, Math.round((imgW * config.scalePercent) / 100)),
+  );
 
-  // Resize logo + nhân alpha theo opacity (blend dest-in với alpha đồng nhất)
+  // Resize logo (fit inside giữ tỷ lệ) + nhân alpha theo opacity (blend dest-in)
   const resizedLogo = await sharp(logoBuffer)
     .ensureAlpha()
-    .resize({ width: targetLogoW })
+    .resize({ width: targetLogoW, height: maxLogoH, fit: "inside" })
     .png()
     .toBuffer();
 
@@ -77,13 +84,15 @@ export async function applyWatermark(
     .toBuffer();
 
   const logoMeta = await sharp(logoWithOpacity).metadata();
-  const pos = placement(
+  const rawPos = placement(
     imgW,
     imgH,
     logoMeta.width ?? targetLogoW,
     logoMeta.height ?? targetLogoW,
     config.position,
   );
+  // An toàn tuyệt đối: toạ độ không bao giờ âm
+  const pos = { left: Math.max(0, rawPos.left), top: Math.max(0, rawPos.top) };
 
   const output = await base
     .composite([{ input: logoWithOpacity, left: pos.left, top: pos.top }])

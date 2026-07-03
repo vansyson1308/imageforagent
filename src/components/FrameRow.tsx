@@ -34,10 +34,19 @@ export function FrameRow({ frame }: FrameRowProps) {
 
   const descRef = useRef<HTMLTextAreaElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const committingRef = useRef(false);
   const originalRef = useRef<{ description: string; shotType: string }>({
     description: frame.description,
     shotType: frame.shotType,
   });
+
+  // Unmount (xoá frame / đổi project) → huỷ autosave đang chờ,
+  // không được bắn PATCH cho frame đã biến mất
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: frame.id });
@@ -58,6 +67,13 @@ export function FrameRow({ frame }: FrameRowProps) {
   }
 
   function commitDesc() {
+    // Enter gây blur ngay sau đó — guard để không PATCH đúp
+    if (committingRef.current) return;
+    committingRef.current = true;
+    setTimeout(() => {
+      committingRef.current = false;
+    }, 0);
+
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setEditingDesc(false);
     void saveFrame(frame.id, { description: frame.description });

@@ -27,8 +27,17 @@ export function PreviewPlayer() {
   const [loop, setLoop] = useState(true);
   const [speed, setSpeed] = useState(project?.playbackSpeed ?? 1.5);
 
-  const speedRef = useRef(speed);
-  speedRef.current = speed;
+  // Đổi project → đồng bộ lại tốc độ/vị trí từ project mới
+  // (pattern "adjust state during render" — useState initializer chỉ chạy 1 lần)
+  const projectId = project?.id;
+  const [lastProjectId, setLastProjectId] = useState(projectId);
+  if (projectId !== lastProjectId) {
+    setLastProjectId(projectId);
+    setSpeed(project?.playbackSpeed ?? 1.5);
+    setCursor(0);
+    setPlaying(false);
+  }
+
   const speedDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clampedCursor = Math.min(cursor, Math.max(0, playlist.length - 1));
@@ -68,6 +77,9 @@ export function PreviewPlayer() {
     function onKey(e: KeyboardEvent) {
       const target = e.target as HTMLElement;
       if (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      if (target.isContentEditable) return;
+      // Modal đang mở (AI diff...) → phím tắt player không được cướp sự kiện
+      if (document.querySelector('[role="dialog"]')) return;
       if (e.code === "Space") {
         e.preventDefault();
         setPlaying((p) => !p);

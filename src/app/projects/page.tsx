@@ -12,16 +12,17 @@ export default function ProjectsPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  async function load() {
-    try {
-      setProjects(await api.listProjects());
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Không tải được danh sách");
-    }
+  function load(): void {
+    api
+      .listProjects()
+      .then(setProjects)
+      .catch((err: unknown) => {
+        setError(err instanceof Error ? err.message : "Không tải được danh sách");
+      });
   }
 
   useEffect(() => {
-    void load();
+    load();
   }, []);
 
   async function createProject() {

@@ -5,6 +5,7 @@ import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { applyWatermark } from "@/lib/services/watermarker";
 import { toPosix } from "@/lib/services/storage";
+import { logger } from "@/lib/services/logger";
 
 const reapplySchema = z.object({ projectId: z.string().min(10).max(64) });
 
@@ -28,26 +29,41 @@ export async function POST(req: Request): Promise<Response> {
 
     const watermark = project.assets[0];
     let updated = 0;
+    const failed: number[] = [];
 
+    // Một frame lỗi không được chặn các frame còn lại
     for (const frame of project.frames) {
-      const rawRelPath = frame.rawImagePath!;
-      let imageRelPath = rawRelPath;
-      if (watermark) {
-        imageRelPath = toPosix(`${project.id}/frames/${frame.id}.wm.png`);
-        await applyWatermark(rawRelPath, imageRelPath, watermark.filePath, {
-          position: project.wmPosition,
-          scalePercent: project.wmScale,
-          opacity: project.wmOpacity,
+      try {
+        const rawRelPath = frame.rawImagePath!;
+        let imageRelPath = rawRelPath;
+        if (watermark) {
+          imageRelPath = toPosix(`${project.id}/frames/${frame.id}.wm.png`);
+          await applyWatermark(rawRelPath, imageRelPath, watermark.filePath, {
+            position: project.wmPosition,
+            scalePercent: project.wmScale,
+            opacity: project.wmOpacity,
+          });
+        }
+        await prisma.frame.update({
+          where: { id: frame.id },
+          // generatedAt mới để cache-bust ?v= trên imageUrl
+          data: { imagePath: imageRelPath, generatedAt: new Date() },
         });
+        updated++;
+      } catch (err: unknown) {
+        logger.warn({ err, frameId: frame.id }, "reapply watermark failed for frame");
+        failed.push(frame.index);
       }
-      await prisma.frame.update({
-        where: { id: frame.id },
-        // generatedAt mới để cache-bust ?v= trên imageUrl
-        data: { imagePath: imageRelPath, generatedAt: new Date() },
-      });
-      updated++;
     }
 
+    if (failed.length > 0) {
+      return Response.json({
+        ok: false,
+        updated,
+        failed,
+        message: `Watermark lỗi ở frame: ${failed.join(", ")} — kiểm tra file logo/ảnh gốc.`,
+      });
+    }
     return Response.json({ ok: true, updated });
   });
 }

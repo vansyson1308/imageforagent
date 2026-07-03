@@ -65,6 +65,13 @@ function errorMessage(err: unknown): string {
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
+function stopPolling(): void {
+  if (pollTimer) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+  }
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   project: null,
   frames: [],
@@ -77,6 +84,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   setToast: (message) => set({ toast: message }),
 
   bootstrap: async (projectId) => {
+    // Đổi project → job/polling của project cũ không được bám theo
+    stopPolling();
+    set({ job: null });
     let id = projectId;
     if (!id) {
       const projects = await api.listProjects();
@@ -131,16 +141,42 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   saveFrame: async (id, patch) => {
-    const prev = get().frames;
+    const before = get().frames.find((f) => f.id === id);
+    if (!before) return; // frame đã bị xoá trước khi debounce kịp bắn
     set({ saveState: "saving" });
     try {
       const updated = await api.patchFrame(id, patch);
       set({
-        frames: get().frames.map((f) => (f.id === id ? updated : f)),
+        frames: get().frames.map((f) => {
+          if (f.id !== id) return f;
+          // Không cho response cũ đè keystroke mới hơn: chỉ nhận giá trị
+          // server khi local chưa đổi tiếp so với payload đã gửi
+          return {
+            ...updated,
+            description:
+              patch.description !== undefined && f.description !== patch.description
+                ? f.description
+                : updated.description,
+            shotType:
+              patch.shotType !== undefined && f.shotType !== patch.shotType
+                ? f.shotType
+                : updated.shotType,
+          };
+        }),
         saveState: "saved",
       });
     } catch (err) {
-      set({ frames: prev, saveState: "error", toast: errorMessage(err) });
+      if (err instanceof ApiError && err.code === "NOT_FOUND") {
+        // Frame đã bị xoá song song — bỏ qua, tuyệt đối không "hồi sinh"
+        set({ saveState: "idle" });
+        return;
+      }
+      // Rollback CHỈ frame lỗi — không đụng các frame khác
+      set({
+        frames: get().frames.map((f) => (f.id === id ? before : f)),
+        saveState: "error",
+        toast: errorMessage(err),
+      });
     }
   },
 
@@ -234,14 +270,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       const { jobId } = await api.generate(project.id, frameIds);
       set({ job: { id: jobId, running: true } });
 
-      if (pollTimer) clearInterval(pollTimer);
+      stopPolling();
+      let consecutiveErrors = 0;
       pollTimer = setInterval(async () => {
         const current = get().job;
-        if (!current) return;
+        if (!current || current.id !== jobId) {
+          stopPolling();
+          return;
+        }
         try {
           const status = await api.jobStatus(current.id);
+          consecutiveErrors = 0;
           if (status.lost) {
-            if (pollTimer) clearInterval(pollTimer);
+            stopPolling();
             set({ job: null });
             await get().hydrate();
             return;
@@ -262,12 +303,20 @@ export const useAppStore = create<AppState>((set, get) => ({
             }),
           });
           if (status.done) {
-            if (pollTimer) clearInterval(pollTimer);
+            stopPolling();
             set({ job: null });
             await get().refreshMeta();
           }
         } catch {
-          // lỗi mạng tạm thời — tiếp tục poll
+          // Circuit breaker: lỗi mạng kéo dài không được poll vô hạn
+          consecutiveErrors++;
+          if (consecutiveErrors >= 15) {
+            stopPolling();
+            set({
+              job: null,
+              toast: "Mất kết nối theo dõi job — tải lại trang để xem kết quả.",
+            });
+          }
         }
       }, 2000);
     } catch (err) {
@@ -296,9 +345,13 @@ export const useAppStore = create<AppState>((set, get) => ({
     const { project } = get();
     if (!project) return;
     try {
-      await api.reapplyWatermark(project.id);
+      const result = await api.reapplyWatermark(project.id);
       await get().hydrate();
-      set({ toast: "Đã áp dụng lại watermark ✓" });
+      set({
+        toast: result.ok
+          ? `Đã áp dụng lại watermark cho ${result.updated} ảnh ✓`
+          : (result.message ?? "Một số frame watermark lỗi."),
+      });
     } catch (err) {
       set({ toast: errorMessage(err) });
     }

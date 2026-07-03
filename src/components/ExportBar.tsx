@@ -21,16 +21,22 @@ export function ExportBar() {
           captions.srt
         </p>
       </div>
-      <a
-        href={doneCount > 0 ? `/api/export/zip?projectId=${project.id}` : undefined}
-        aria-disabled={doneCount === 0}
-        className={`rounded-xl px-6 py-2.5 text-sm font-bold text-white ${
-          doneCount > 0 ? "btn-gradient" : "cursor-not-allowed bg-line text-muted"
-        }`}
-        download
-      >
-        ⬇ Tải ZIP ({doneCount} ảnh)
-      </a>
+      {doneCount > 0 ? (
+        <a
+          href={`/api/export/zip?projectId=${project.id}`}
+          className="btn-gradient rounded-xl px-6 py-2.5 text-sm font-bold text-white"
+          download
+        >
+          ⬇ Tải ZIP ({doneCount} ảnh)
+        </a>
+      ) : (
+        <button
+          disabled
+          className="cursor-not-allowed rounded-xl bg-line px-6 py-2.5 text-sm font-bold text-muted"
+        >
+          ⬇ Tải ZIP (chưa có ảnh)
+        </button>
+      )}
     </section>
   );
 }

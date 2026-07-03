@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type DragEvent } from "react";
+import { useEffect, useRef, useState, type DragEvent } from "react";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { ASSET_LIMITS, type AssetKind } from "@/lib/config/limits";
 
@@ -142,6 +142,19 @@ export function AssetPanel() {
   const patchProject = useAppStore((s) => s.patchProject);
   const [desc, setDesc] = useState<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, []);
+
+  // Đổi project → bỏ draft đang gõ của project cũ (adjust state during render)
+  const [lastProjectId, setLastProjectId] = useState(project?.id);
+  if (project?.id !== lastProjectId) {
+    setLastProjectId(project?.id);
+    setDesc(null);
+  }
 
   const value = desc ?? project?.characterDesc ?? "";
 

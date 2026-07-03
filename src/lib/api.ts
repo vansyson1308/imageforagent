@@ -100,7 +100,11 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiError(code, message, res.status, hint);
   }
-  return res.json() as Promise<T>;
+  try {
+    return (await res.json()) as T;
+  } catch {
+    throw new ApiError("INTERNAL", "Server trả về dữ liệu không hợp lệ.", res.status);
+  }
 }
 
 function jsonInit(method: string, body: unknown): RequestInit {
@@ -174,7 +178,7 @@ export const api = {
     request<{ ok: boolean }>(`/api/generate/${jobId}/cancel`, { method: "POST" }),
 
   reapplyWatermark: (projectId: string) =>
-    request<{ ok: boolean; updated: number }>(
+    request<{ ok: boolean; updated: number; failed?: number[]; message?: string }>(
       "/api/watermark/reapply",
       jsonInit("POST", { projectId }),
     ),

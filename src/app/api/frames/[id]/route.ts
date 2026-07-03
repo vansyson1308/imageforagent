@@ -7,6 +7,7 @@ import { computeReindexAfterDelete } from "@/lib/services/frameService";
 import { applyIndexUpdates } from "@/lib/services/frameDb";
 import { removeQuiet } from "@/lib/services/storage";
 import { withImageUrl } from "@/lib/services/dto";
+import { assertNoRunningJob } from "@/lib/services/jobRunner";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -30,6 +31,7 @@ export async function DELETE(_req: Request, ctx: RouteContext): Promise<Response
     const { id } = await ctx.params;
     const existing = await prisma.frame.findUnique({ where: { id } });
     if (!existing) throw new AppError("NOT_FOUND", "Không tìm thấy frame.");
+    assertNoRunningJob(existing.projectId);
 
     await prisma.$transaction(async (tx) => {
       await tx.frame.delete({ where: { id } });

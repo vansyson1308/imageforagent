@@ -17,17 +17,29 @@ export type ParseResult =
 
 const DEFAULT_SHOT_TYPE = "Static shot";
 
-const HEADER_KEYWORDS = [
+/**
+ * Header nhận diện theo match CHÍNH XÁC từng ô (không substring) — mô tả cảnh
+ * chứa từ "frame"/"shot" trong văn xuôi không được phép bị nhầm thành header.
+ */
+const HEADER_CELLS = new Set([
   "stt",
   "frame",
-  "shot type",
+  "no",
+  "#",
   "shot",
+  "shot type",
+  "shottype",
   "loại cảnh",
   "loai canh",
+  "loại shot",
+  "loai shot",
   "description",
+  "desc",
   "mô tả",
   "mo ta",
-];
+  "nội dung",
+  "noi dung",
+]);
 
 /**
  * Tách văn bản TSV thành các "record" — hỗ trợ ô trong ngoặc kép chứa
@@ -97,8 +109,11 @@ function tokenizeTsv(
 }
 
 function isHeaderRow(cells: readonly string[]): boolean {
-  const joined = cells.join(" ").toLowerCase();
-  return HEADER_KEYWORDS.some((kw) => joined.includes(kw)) && !/\d{2,}/.test(joined);
+  const normalized = cells.map((c) => c.trim().toLowerCase()).filter((c) => c !== "");
+  if (normalized.length === 0) return false;
+  const matches = normalized.filter((c) => HEADER_CELLS.has(c)).length;
+  // ≥2 ô đúng tên cột chuẩn → header; 1 ô duy nhất và đó là tên cột → header
+  return matches >= 2 || (normalized.length === 1 && matches === 1);
 }
 
 /**
