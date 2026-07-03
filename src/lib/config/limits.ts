@@ -2,6 +2,7 @@ export const ASSET_LIMITS = {
   mascot_ref: 3,
   style_ref: 3,
   watermark: 1,
+  bgm: 1, // nhạc nền — Phase 9
 } as const;
 
 export type AssetKind = keyof typeof ASSET_LIMITS;
@@ -12,7 +13,28 @@ export const ALLOWED_IMAGE_MIME_TYPES: readonly string[] = [
   "image/webp",
 ];
 
-export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8MB/file
+export const ALLOWED_AUDIO_MIME_TYPES: readonly string[] = [
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/wav",
+  "audio/x-wav",
+  "audio/mp4",
+  "audio/x-m4a",
+];
+
+export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8MB/file ảnh
+export const MAX_AUDIO_UPLOAD_BYTES = 20 * 1024 * 1024; // 20MB nhạc nền
+
+/** Kind nào nhận mime nào + trần dung lượng. */
+export function uploadRulesFor(kind: AssetKind): {
+  mimes: readonly string[];
+  maxBytes: number;
+} {
+  if (kind === "bgm") {
+    return { mimes: ALLOWED_AUDIO_MIME_TYPES, maxBytes: MAX_AUDIO_UPLOAD_BYTES };
+  }
+  return { mimes: ALLOWED_IMAGE_MIME_TYPES, maxBytes: MAX_UPLOAD_BYTES };
+}
 export const MAX_FRAMES_PER_PROJECT = 100;
 export const MAX_DESCRIPTION_LENGTH = 2000;
 
@@ -42,27 +64,36 @@ export function validateAssetUpload(
     return { ok: false, code: "ASSET_LIMIT", message: "Không có file nào được gửi lên." };
   }
 
+  const rules = uploadRulesFor(kind);
+  const maxMb = Math.round(rules.maxBytes / 1024 / 1024);
+  const typeLabel = kind === "bgm" ? "MP3/WAV/M4A" : "PNG/JPEG/WebP";
+
   for (const file of files) {
-    if (!ALLOWED_IMAGE_MIME_TYPES.includes(file.mimeType)) {
+    if (!rules.mimes.includes(file.mimeType)) {
       return {
         ok: false,
         code: "ASSET_BAD_TYPE",
-        message: `Chỉ nhận PNG/JPEG/WebP — file ${file.mimeType} bị từ chối.`,
+        message: `Chỉ nhận ${typeLabel} — file ${file.mimeType} bị từ chối.`,
       };
     }
-    if (file.sizeBytes > MAX_UPLOAD_BYTES) {
+    if (file.sizeBytes > rules.maxBytes) {
       return {
         ok: false,
         code: "ASSET_TOO_LARGE",
-        message: `File vượt quá 8MB (${(file.sizeBytes / 1024 / 1024).toFixed(1)}MB).`,
+        message: `File vượt quá ${maxMb}MB (${(file.sizeBytes / 1024 / 1024).toFixed(1)}MB).`,
       };
     }
   }
 
   const limit = ASSET_LIMITS[kind];
-  if (kind === "watermark") {
+  // watermark & bgm: 1 file, upload mới thay thế cũ
+  if (kind === "watermark" || kind === "bgm") {
     if (files.length > 1) {
-      return { ok: false, code: "ASSET_LIMIT", message: "Watermark chỉ nhận đúng 1 file." };
+      return {
+        ok: false,
+        code: "ASSET_LIMIT",
+        message: `${kind === "bgm" ? "Nhạc nền" : "Watermark"} chỉ nhận đúng 1 file.`,
+      };
     }
     return { ok: true };
   }

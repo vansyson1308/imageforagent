@@ -18,10 +18,29 @@ model Project {
   wmPosition    String   @default("bottom-right") // 4 góc + "center"
   wmScale       Float    @default(12) // % chiều rộng ảnh
   wmOpacity     Float    @default(0.85)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  frames        Frame[]
-  assets        Asset[]
+
+  // ---- Phase 9: video settings ----
+  videoTier          String    @default("animatic") // animatic|lite|fast|standard
+  clipDurationSec    Int       @default(8) // 4|6|8 (Veo); animatic tự do
+  videoResolution    String    @default("720p") // 720p|1080p
+  transitionType     String    @default("cut") // cut|crossfade
+  transitionSec      Float     @default(0.4)
+  captionsBurnIn     Boolean   @default(true)
+  colorPolish        Boolean   @default(true)
+  bgmEnabled         Boolean   @default(true)
+  bgmVolumeDb        Float     @default(-6)
+  voiceoverEnabled   Boolean   @default(true)
+  nativeAudioEnabled Boolean   @default(true)
+  finalVideoPath     String?
+  finalVideoStatus   String    @default("none") // none|rendering|done|failed
+  finalVideoError    String?
+  finalRenderedAt    DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  frames    Frame[]
+  assets    Asset[]
+  clips     Clip[]
 }
 
 model Frame {
@@ -38,7 +57,35 @@ model Frame {
   errorMsg     String?
   generatedAt  DateTime?
 
+  // ---- Phase 9: voiceover + motion ----
+  voiceoverText String? // lời thuyết minh (TTS đọc)
+  voPath        String? // file wav TTS đã sinh (cache theo hash text)
+  interpToNext  Boolean @default(false) // clip nội suy frame này → frame kế
+
+  clip Clip?
+
   @@unique([projectId, index])
+}
+
+// Phase 9: 1 clip video / frame
+model Clip {
+  id             String    @id @default(cuid())
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  frameId       String    @unique
+  frame         Frame     @relation(fields: [frameId], references: [id], onDelete: Cascade)
+  tier          String // animatic|lite|fast|standard
+  mode          String    @default("per-frame") // per-frame|interp
+  status        String    @default("pending") // pending|generating|downloading|done|failed
+  clipPath      String?
+  durationSec   Float     @default(8)
+  hasNativeAudio Boolean  @default(false)
+  operationName String? // Veo long-running operation (debug)
+  errorMsg      String?
+  generatedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@unique([projectId, frameId])
 }
 
 model Asset {
@@ -57,6 +104,8 @@ model GenerationLog {
   projectId String
   frameId   String
   provider  String
+  kind      String   @default("image") // image|video|tts
+  seconds   Int      @default(0) // số giây video (0 với image/tts)
   createdAt DateTime @default(now())
 
   @@index([createdAt])

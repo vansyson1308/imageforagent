@@ -33,3 +33,32 @@ export function buildSrt(
 
   return blocks.join("\n\n") + "\n";
 }
+
+export interface SrtTimedFrame {
+  readonly index: number;
+  readonly description: string;
+  readonly durationSec: number;
+}
+
+/**
+ * SRT theo duration THẬT của từng clip (Phase 9) — trừ overlap crossfade:
+ * clip i bắt đầu tại Σ(dur_0..i-1) − i·overlap.
+ */
+export function buildSrtFromDurations(
+  frames: readonly SrtTimedFrame[],
+  overlapSec: number,
+): string {
+  const ordered = frames.slice().sort((a, b) => a.index - b.index);
+  const blocks: string[] = [];
+  let cursorMs = 0;
+
+  ordered.forEach((frame, i) => {
+    const durMs = Math.max(100, frame.durationSec * 1000);
+    const start = formatTimestamp(cursorMs);
+    const end = formatTimestamp(cursorMs + durMs);
+    blocks.push(`${i + 1}\n${start} --> ${end}\n${frame.description}`);
+    cursorMs += durMs - (i < ordered.length - 1 ? overlapSec * 1000 : 0);
+  });
+
+  return blocks.join("\n\n") + "\n";
+}
