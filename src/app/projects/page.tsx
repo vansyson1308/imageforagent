@@ -28,7 +28,7 @@ export default function ProjectsPage() {
   async function createProject() {
     setBusy("create");
     try {
-      const project = await api.createProject("Video mới");
+      const project = await api.createProject("Storyboard mới");
       router.push(`/?p=${project.id}`);
     } finally {
       setBusy(null);

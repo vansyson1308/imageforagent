@@ -91,7 +91,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!id) {
       const projects = await api.listProjects();
       if (projects.length === 0) {
-        const created = await api.createProject("Video mới");
+        const created = await api.createProject("Storyboard mới");
         id = created.id;
       } else {
         id = projects[0].id;
