@@ -3,7 +3,7 @@
 export interface ProjectDto {
   id: string;
   name: string;
-  characterDesc: string | null;
+  artworkDefs: string | null;
   aspectRatio: string;
   resolution: string;
   playbackSpeed: number;
@@ -23,6 +23,7 @@ export interface FrameDto {
   description: string;
   status: string;
   imageUrl: string | null;
+  artworkSvg: string | null;
   errorMsg: string | null;
   generatedAt: string | null;
 }
@@ -39,28 +40,11 @@ export interface AssetDto {
 
 export interface MetaDto {
   serviceAccountEmail: string | null;
-  imageProvider: string;
-  dailyUsed: number;
-  dailyLimit: number;
 }
 
 export interface ProjectListItemDto extends ProjectDto {
   frameCount: number;
   doneCount: number;
-}
-
-export interface JobStatusDto {
-  jobId: string;
-  frames: Array<{
-    id: string;
-    index: number;
-    status: string;
-    imageUrl: string | null;
-    errorMsg: string | null;
-  }>;
-  done: boolean;
-  lost?: boolean;
-  cancelled?: boolean;
 }
 
 export interface AiEditFrameDto {
@@ -150,11 +134,6 @@ export const api = {
       jsonInit("POST", { projectId, frameId, targetIndex }),
     ),
 
-  aiEdit: (projectId: string, instruction: string) =>
-    request<{ frames: AiEditFrameDto[] }>(
-      "/api/storyboard/ai-edit",
-      jsonInit("POST", { projectId, instruction }),
-    ),
   applyEdit: (projectId: string, frames: AiEditFrameDto[]) =>
     request<{ frames: FrameDto[] }>(
       "/api/storyboard/apply-edit",
@@ -171,16 +150,19 @@ export const api = {
   deleteAsset: (id: string) =>
     request<{ ok: boolean }>(`/api/assets/${id}`, { method: "DELETE" }),
 
-  generate: (projectId: string, frameIds?: string[]) =>
-    request<{ jobId: string }>("/api/generate", jsonInit("POST", { projectId, frameIds })),
-  jobStatus: (jobId: string) => request<JobStatusDto>(`/api/generate/${jobId}/status`),
-  cancelJob: (jobId: string) =>
-    request<{ ok: boolean }>(`/api/generate/${jobId}/cancel`, { method: "POST" }),
 
   reapplyWatermark: (projectId: string) =>
     request<{ ok: boolean; updated: number; failed?: number[]; message?: string }>(
       "/api/watermark/reapply",
       jsonInit("POST", { projectId }),
+    ),
+
+  putArtwork: (frameId: string, svg: string) =>
+    request<FrameDto>(`/api/frames/${frameId}/artwork`, jsonInit("PUT", { svg })),
+  renderAll: (projectId: string, frameIds?: string[]) =>
+    request<{ ok: boolean; rendered: number; failed: { frameId: string; index: number; message: string }[] }>(
+      "/api/render",
+      jsonInit("POST", { projectId, frameIds }),
     ),
 
   meta: () => request<MetaDto>("/api/meta"),

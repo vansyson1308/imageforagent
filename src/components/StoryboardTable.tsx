@@ -15,7 +15,6 @@ import {
 import { useAppStore } from "@/lib/store/useAppStore";
 import { FrameRow } from "@/components/FrameRow";
 import { SaveIndicator } from "@/components/SaveIndicator";
-import { AiEditBar } from "@/components/AiEditBar";
 
 export function StoryboardTable() {
   const frames = useAppStore((s) => s.frames);
@@ -73,8 +72,6 @@ export function StoryboardTable() {
           </button>
         </>
       )}
-
-      <AiEditBar />
     </section>
   );
 }

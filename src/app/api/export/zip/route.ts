@@ -86,7 +86,7 @@ export async function GET(req: Request): Promise<Response> {
       project: {
         id: project.id,
         name: project.name,
-        characterDesc: project.characterDesc,
+        artworkDefs: project.artworkDefs,
         aspectRatio: project.aspectRatio,
         resolution: project.resolution,
         playbackSpeed: project.playbackSpeed,
@@ -97,6 +97,7 @@ export async function GET(req: Request): Promise<Response> {
         file: includedIndexes.has(f.index) ? `${formatFrameBadge(f.index)}.png` : null,
         shotType: f.shotType,
         description: f.description,
+        artworkSvg: f.artworkSvg,
         status: f.status,
         generatedAt: f.generatedAt,
       })),

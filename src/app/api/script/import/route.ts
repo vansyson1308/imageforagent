@@ -6,7 +6,6 @@ import { importScriptSchema } from "@/lib/validation/schemas";
 import { parseTsv } from "@/lib/services/tsvParser";
 import { readSheetScript } from "@/lib/services/sheetReader";
 import { withImageUrl } from "@/lib/services/dto";
-import { assertNoRunningJob } from "@/lib/services/jobRunner";
 
 /**
  * Nạp kịch bản từ Google Sheet hoặc TSV — thay TOÀN BỘ frame hiện có
@@ -16,7 +15,6 @@ export async function POST(req: Request): Promise<Response> {
   return handleRoute(async () => {
     enforceRateLimit("script:import", 10);
     const body = await parseBody(req, importScriptSchema);
-    assertNoRunningJob(body.projectId);
 
     const project = await prisma.project.findUnique({
       where: { id: body.projectId },

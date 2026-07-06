@@ -28,7 +28,7 @@ export async function POST(_req: Request, ctx: RouteContext): Promise<Response> 
     const copy = await prisma.project.create({
       data: {
         name: `${source.name} (bản sao)`,
-        characterDesc: source.characterDesc,
+        artworkDefs: source.artworkDefs,
         aspectRatio: source.aspectRatio,
         resolution: source.resolution,
         playbackSpeed: source.playbackSpeed,
@@ -41,6 +41,7 @@ export async function POST(_req: Request, ctx: RouteContext): Promise<Response> 
             index: f.index,
             shotType: f.shotType,
             description: f.description,
+            artworkSvg: f.artworkSvg, // giữ artwork — 1 lần /api/render là dựng lại ảnh
             status: "draft",
           })),
         },

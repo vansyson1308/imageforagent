@@ -19,7 +19,7 @@ export const createProjectSchema = z.object({
 export const patchProjectSchema = z
   .object({
     name: z.string().trim().min(1).max(120).optional(),
-    characterDesc: z.string().max(2000).nullable().optional(),
+    artworkDefs: z.string().max(512_000).nullable().optional(),
     aspectRatio: z.enum(ASPECT_RATIOS).optional(),
     resolution: z.enum(RESOLUTIONS).optional(),
     playbackSpeed: z.number().min(0.5).max(5).optional(),
@@ -64,11 +64,6 @@ export const reorderSchema = z.object({
   targetIndex: z.number().int().min(1),
 });
 
-export const aiEditSchema = z.object({
-  projectId: id,
-  instruction: z.string().trim().min(3, "Yêu cầu quá ngắn").max(500),
-});
-
 export const applyEditSchema = z.object({
   projectId: id,
   frames: z
@@ -83,7 +78,11 @@ export const applyEditSchema = z.object({
     .max(100),
 });
 
-export const generateSchema = z.object({
+export const artworkSchema = z.object({
+  svg: z.string().min(1, "SVG trống").max(512_000),
+});
+
+export const renderSchema = z.object({
   projectId: id,
   frameIds: z.array(id).max(100).optional(),
 });

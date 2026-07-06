@@ -4,7 +4,6 @@ import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { applyEditSchema } from "@/lib/validation/schemas";
 import { withImageUrl } from "@/lib/services/dto";
-import { assertNoRunningJob } from "@/lib/services/jobRunner";
 
 /**
  * Ghi bản kịch bản đã duyệt (từ diff-review AI edit) — thay toàn bộ frame
@@ -15,7 +14,6 @@ export async function POST(req: Request): Promise<Response> {
   return handleRoute(async () => {
     enforceRateLimit("storyboard:apply-edit", 10);
     const body = await parseBody(req, applyEditSchema);
-    assertNoRunningJob(body.projectId);
 
     const project = await prisma.project.findUnique({
       where: { id: body.projectId },

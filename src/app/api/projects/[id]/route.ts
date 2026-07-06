@@ -5,7 +5,6 @@ import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { patchProjectSchema } from "@/lib/validation/schemas";
 import { withAssetUrl, withImageUrl } from "@/lib/services/dto";
 import { removeDirQuiet } from "@/lib/services/storage";
-import { assertNoRunningJob } from "@/lib/services/jobRunner";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -48,7 +47,6 @@ export async function DELETE(_req: Request, ctx: RouteContext): Promise<Response
     const { id } = await ctx.params;
     const existing = await prisma.project.findUnique({ where: { id } });
     if (!existing) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
-    assertNoRunningJob(id);
     await prisma.project.delete({ where: { id } }); // cascade frames + assets
     await removeDirQuiet(id);
     return Response.json({ ok: true });

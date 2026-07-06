@@ -6,13 +6,11 @@ import { reorderSchema } from "@/lib/validation/schemas";
 import { computeReorder } from "@/lib/services/frameService";
 import { applyIndexUpdates } from "@/lib/services/frameDb";
 import { withImageUrl } from "@/lib/services/dto";
-import { assertNoRunningJob } from "@/lib/services/jobRunner";
 
 export async function POST(req: Request): Promise<Response> {
   return handleRoute(async () => {
     enforceRateLimit("frames:reorder");
     const body = await parseBody(req, reorderSchema);
-    assertNoRunningJob(body.projectId);
 
     // Đọc + tính + ghi trong CÙNG transaction — hai reorder liên tiếp
     // không được tính toán trên snapshot cũ của nhau

@@ -4,7 +4,6 @@ import { create } from "zustand";
 import {
   api,
   ApiError,
-  type AiEditFrameDto,
   type AssetDto,
   type FrameDto,
   type MetaDto,
@@ -13,18 +12,12 @@ import {
 
 export type SaveState = "idle" | "saving" | "saved" | "error";
 
-interface JobState {
-  id: string;
-  running: boolean;
-}
-
 interface AppState {
   project: ProjectDto | null;
   frames: FrameDto[];
   assets: AssetDto[];
   meta: MetaDto | null;
   saveState: SaveState;
-  job: JobState | null;
   toast: string | null;
 
   bootstrap: (projectId?: string) => Promise<void>;
@@ -50,9 +43,8 @@ interface AppState {
   uploadAssets: (kind: string, files: File[]) => Promise<void>;
   deleteAsset: (id: string) => Promise<void>;
 
-  startGeneration: (frameIds?: string[]) => Promise<void>;
-  cancelGeneration: () => Promise<void>;
-  applyAiEdit: (frames: AiEditFrameDto[]) => Promise<void>;
+  saveArtwork: (frameId: string, svg: string) => Promise<void>;
+  renderAll: () => Promise<void>;
   reapplyWatermark: () => Promise<void>;
 }
 
@@ -63,30 +55,17 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : "Lỗi không xác định";
 }
 
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-function stopPolling(): void {
-  if (pollTimer) {
-    clearInterval(pollTimer);
-    pollTimer = null;
-  }
-}
-
 export const useAppStore = create<AppState>((set, get) => ({
   project: null,
   frames: [],
   assets: [],
   meta: null,
   saveState: "idle",
-  job: null,
   toast: null,
 
   setToast: (message) => set({ toast: message }),
 
   bootstrap: async (projectId) => {
-    // Đổi project → job/polling của project cũ không được bám theo
-    stopPolling();
-    set({ job: null });
     let id = projectId;
     if (!id) {
       const projects = await api.listProjects();
@@ -263,82 +242,39 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  startGeneration: async (frameIds) => {
+  saveArtwork: async (frameId, svg) => {
     const { project } = get();
     if (!project) return;
+    set({ saveState: "saving" });
     try {
-      const { jobId } = await api.generate(project.id, frameIds);
-      set({ job: { id: jobId, running: true } });
-
-      stopPolling();
-      let consecutiveErrors = 0;
-      pollTimer = setInterval(async () => {
-        const current = get().job;
-        if (!current || current.id !== jobId) {
-          stopPolling();
-          return;
-        }
-        try {
-          const status = await api.jobStatus(current.id);
-          consecutiveErrors = 0;
-          if (status.lost) {
-            stopPolling();
-            set({ job: null });
-            await get().hydrate();
-            return;
-          }
-          // Merge trạng thái frame từ job vào danh sách
-          const byId = new Map(status.frames.map((f) => [f.id, f]));
-          set({
-            frames: get().frames.map((f) => {
-              const update = byId.get(f.id);
-              return update
-                ? {
-                    ...f,
-                    status: update.status,
-                    imageUrl: update.imageUrl,
-                    errorMsg: update.errorMsg,
-                  }
-                : f;
-            }),
-          });
-          if (status.done) {
-            stopPolling();
-            set({ job: null });
-            await get().refreshMeta();
-          }
-        } catch {
-          // Circuit breaker: lỗi mạng kéo dài không được poll vô hạn
-          consecutiveErrors++;
-          if (consecutiveErrors >= 15) {
-            stopPolling();
-            set({
-              job: null,
-              toast: "Mất kết nối theo dõi job — tải lại trang để xem kết quả.",
-            });
-          }
-        }
-      }, 2000);
+      const updated = await api.putArtwork(frameId, svg);
+      set({
+        frames: get().frames.map((f) => (f.id === frameId ? updated : f)),
+        saveState: "saved",
+      });
     } catch (err) {
-      set({ toast: errorMessage(err) });
+      set({ saveState: "error", toast: errorMessage(err) });
+      // Render lỗi vẫn được server lưu artwork + status failed → đồng bộ lại
+      await get().hydrate().catch(() => {});
+      throw err;
     }
   },
 
-  cancelGeneration: async () => {
-    const { job } = get();
-    if (!job) return;
+  renderAll: async () => {
+    const { project } = get();
+    if (!project) return;
     try {
-      await api.cancelJob(job.id);
+      const result = await api.renderAll(project.id);
+      await get().hydrate();
+      set({
+        toast:
+          result.failed.length === 0
+            ? `Đã render ${result.rendered} frame ✓`
+            : `Render ${result.rendered} OK, ${result.failed.length} lỗi — xem chi tiết trên từng frame`,
+      });
     } catch (err) {
       set({ toast: errorMessage(err) });
     }
-  },
-
-  applyAiEdit: async (frames) => {
-    const { project } = get();
-    if (!project) return;
-    const result = await api.applyEdit(project.id, frames);
-    set({ frames: result.frames });
   },
 
   reapplyWatermark: async () => {

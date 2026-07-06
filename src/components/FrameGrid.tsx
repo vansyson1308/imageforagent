@@ -2,7 +2,8 @@
 
 import { useAppStore } from "@/lib/store/useAppStore";
 import { FrameCard } from "@/components/FrameCard";
-import { GenerationSettings } from "@/components/GenerationSettings";
+import { ArtworkPanel } from "@/components/ArtworkPanel";
+import { WatermarkSettings } from "@/components/WatermarkSettings";
 
 export function FrameGrid() {
   const frames = useAppStore((s) => s.frames);
@@ -17,16 +18,17 @@ export function FrameGrid() {
       style={{ animationDelay: "180ms" }}
     >
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-bold">4. Generate ảnh storyboard</h2>
+        <h2 className="text-lg font-bold">4. Artwork & Render</h2>
         {sorted.length > 0 && (
           <span className="text-sm text-muted">
-            {doneCount}/{sorted.length} frame hoàn thành
+            {doneCount}/{sorted.length} frame đã render
           </span>
         )}
       </div>
 
-      <div className="mt-4">
-        <GenerationSettings />
+      <div className="mt-4 flex flex-col gap-4">
+        <ArtworkPanel />
+        <WatermarkSettings />
       </div>
 
       {sorted.length > 0 && project && (

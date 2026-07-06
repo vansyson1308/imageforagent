@@ -1,6 +1,4 @@
 export const ASSET_LIMITS = {
-  mascot_ref: 3,
-  style_ref: 3,
   watermark: 1,
 } as const;
 
@@ -33,12 +31,12 @@ export type UploadValidation =
   | { readonly ok: false; readonly code: "ASSET_LIMIT" | "ASSET_BAD_TYPE" | "ASSET_TOO_LARGE"; readonly message: string };
 
 /**
- * Validate một đợt upload theo kind. Watermark là trường hợp thay thế
- * (existingCount không chặn) nhưng mỗi đợt chỉ được 1 file.
+ * Validate một đợt upload. Watermark là kind duy nhất: thay thế cái cũ
+ * (existingCount không chặn) nhưng mỗi đợt chỉ được đúng 1 file.
  */
 export function validateAssetUpload(
-  kind: AssetKind,
-  existingCount: number,
+  _kind: AssetKind,
+  _existingCount: number,
   files: readonly UploadCandidate[],
 ): UploadValidation {
   if (files.length === 0) {
@@ -62,21 +60,8 @@ export function validateAssetUpload(
     }
   }
 
-  const limit = ASSET_LIMITS[kind];
-  if (kind === "watermark") {
-    if (files.length > 1) {
-      return { ok: false, code: "ASSET_LIMIT", message: "Watermark chỉ nhận đúng 1 file." };
-    }
-    return { ok: true };
-  }
-
-  if (existingCount + files.length > limit) {
-    const remaining = Math.max(0, limit - existingCount);
-    return {
-      ok: false,
-      code: "ASSET_LIMIT",
-      message: `Tối đa ${limit} ảnh cho mục này — còn ${remaining} slot trống.`,
-    };
+  if (files.length > 1) {
+    return { ok: false, code: "ASSET_LIMIT", message: "Watermark chỉ nhận đúng 1 file." };
   }
 
   return { ok: true };

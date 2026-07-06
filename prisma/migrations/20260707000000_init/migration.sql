@@ -2,7 +2,7 @@
 CREATE TABLE "Project" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "name" TEXT NOT NULL,
-    "characterDesc" TEXT,
+    "artworkDefs" TEXT,
     "aspectRatio" TEXT NOT NULL DEFAULT '16:9',
     "resolution" TEXT NOT NULL DEFAULT '1K',
     "playbackSpeed" REAL NOT NULL DEFAULT 1.5,
@@ -21,10 +21,10 @@ CREATE TABLE "Frame" (
     "index" INTEGER NOT NULL,
     "shotType" TEXT NOT NULL,
     "description" TEXT NOT NULL,
+    "artworkSvg" TEXT,
     "status" TEXT NOT NULL DEFAULT 'draft',
     "imagePath" TEXT,
     "rawImagePath" TEXT,
-    "seed" INTEGER,
     "errorMsg" TEXT,
     "generatedAt" DATETIME,
     CONSTRAINT "Frame_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
@@ -42,18 +42,6 @@ CREATE TABLE "Asset" (
     CONSTRAINT "Asset_projectId_fkey" FOREIGN KEY ("projectId") REFERENCES "Project" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
--- CreateTable
-CREATE TABLE "GenerationLog" (
-    "id" TEXT NOT NULL PRIMARY KEY,
-    "projectId" TEXT NOT NULL,
-    "frameId" TEXT NOT NULL,
-    "provider" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
 -- CreateIndex
 CREATE UNIQUE INDEX "Frame_projectId_index_key" ON "Frame"("projectId", "index");
-
--- CreateIndex
-CREATE INDEX "GenerationLog_createdAt_idx" ON "GenerationLog"("createdAt");
 
