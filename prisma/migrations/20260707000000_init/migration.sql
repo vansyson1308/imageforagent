@@ -56,3 +56,4 @@ CREATE UNIQUE INDEX "Frame_projectId_index_key" ON "Frame"("projectId", "index")
 
 -- CreateIndex
 CREATE INDEX "GenerationLog_createdAt_idx" ON "GenerationLog"("createdAt");
+

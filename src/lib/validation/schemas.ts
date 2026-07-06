@@ -1,10 +1,4 @@
 import { z } from "zod";
-import {
-  CLIP_DURATIONS,
-  TRANSITION_TYPES,
-  VIDEO_RESOLUTIONS,
-  VIDEO_TIERS,
-} from "@/lib/config/video";
 
 export const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:5"] as const;
 export const RESOLUTIONS = ["1K", "2K"] as const;
@@ -33,22 +27,6 @@ export const patchProjectSchema = z
     wmPosition: z.enum(WM_POSITIONS).optional(),
     wmScale: z.number().min(2).max(50).optional(),
     wmOpacity: z.number().min(0.05).max(1).optional(),
-    // Phase 9: video settings
-    videoTier: z.enum(VIDEO_TIERS).optional(),
-    clipDurationSec: z
-      .number()
-      .int()
-      .refine((v) => CLIP_DURATIONS.includes(v as 4 | 6 | 8), "Chỉ nhận 4/6/8 giây")
-      .optional(),
-    videoResolution: z.enum(VIDEO_RESOLUTIONS).optional(),
-    transitionType: z.enum(TRANSITION_TYPES).optional(),
-    transitionSec: z.number().min(0.2).max(1).optional(),
-    captionsBurnIn: z.boolean().optional(),
-    colorPolish: z.boolean().optional(),
-    bgmEnabled: z.boolean().optional(),
-    bgmVolumeDb: z.number().min(-30).max(0).optional(),
-    voiceoverEnabled: z.boolean().optional(),
-    nativeAudioEnabled: z.boolean().optional(),
   })
   .strict();
 
@@ -74,18 +52,11 @@ export const patchFrameSchema = z
   .object({
     shotType: z.string().trim().max(120).optional(),
     description: z.string().max(2000).optional(),
-    voiceoverText: z.string().max(1000).nullable().optional(),
-    interpToNext: z.boolean().optional(),
   })
   .strict()
-  .refine(
-    (v) =>
-      v.shotType !== undefined ||
-      v.description !== undefined ||
-      v.voiceoverText !== undefined ||
-      v.interpToNext !== undefined,
-    { message: "Không có trường nào để cập nhật." },
-  );
+  .refine((v) => v.shotType !== undefined || v.description !== undefined, {
+    message: "Không có trường nào để cập nhật.",
+  });
 
 export const reorderSchema = z.object({
   projectId: id,
@@ -115,29 +86,4 @@ export const applyEditSchema = z.object({
 export const generateSchema = z.object({
   projectId: id,
   frameIds: z.array(id).max(100).optional(),
-});
-
-// ---------- Phase 9: video ----------
-
-export const videoClipsSchema = z.object({
-  projectId: id,
-  tier: z.enum(VIDEO_TIERS),
-  /** Rỗng = tất cả frame done. */
-  frameIds: z.array(id).max(100).optional(),
-  /** true → chỉ trả estimate chi phí, không chạy. */
-  dryRun: z.boolean().optional(),
-});
-
-export const assembleSchema = z.object({
-  projectId: id,
-});
-
-export const voiceoverDraftSchema = z.object({
-  projectId: id,
-  /** Gợi ý phong cách lời thuyết minh (tuỳ chọn). */
-  instruction: z.string().trim().max(300).optional(),
-});
-
-export const voiceoverPreviewSchema = z.object({
-  frameId: id,
 });
