@@ -42,7 +42,9 @@ export async function PUT(req: Request, ctx: RouteContext): Promise<Response> {
     try {
       await renderFrameArtwork(project, saved);
     } catch (err: unknown) {
-      // Lưu trạng thái failed để UI/agent thấy — artwork không mất
+      // Lưu trạng thái failed để UI/agent thấy — artwork không mất.
+      // .catch: frame có thể bị xoá song song (P2025) — không được nuốt
+      // mất lỗi gốc bằng một lỗi update phụ.
       const message =
         err instanceof AppError
           ? err.hint
@@ -51,14 +53,17 @@ export async function PUT(req: Request, ctx: RouteContext): Promise<Response> {
           : err instanceof Error
             ? err.message
             : "Render lỗi.";
-      await prisma.frame.update({
-        where: { id },
-        data: { status: "failed", errorMsg: message },
-      });
+      await prisma.frame
+        .update({
+          where: { id },
+          data: { status: "failed", errorMsg: message },
+        })
+        .catch(() => {});
       throw err;
     }
 
     const fresh = await prisma.frame.findUnique({ where: { id } });
-    return Response.json(withImageUrl(fresh!));
+    if (!fresh) throw new AppError("NOT_FOUND", "Frame đã bị xoá trong lúc render.");
+    return Response.json(withImageUrl(fresh));
   });
 }

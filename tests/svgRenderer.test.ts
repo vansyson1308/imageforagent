@@ -92,6 +92,19 @@ describe("sanitizeSvg — reject vectors (bypass tricks)", () => {
     const err = expectReject(big);
     expect(err.message).toContain("KB limit");
   });
+
+  it("cap đo BYTE UTF-8, không phải length UTF-16 (ký tự đa byte không lách được)", () => {
+    // "ề" = 1 UTF-16 code unit nhưng 3 byte UTF-8 → length dưới cap, byte vượt cap
+    const multibyte = "<g>" + "ề".repeat(Math.ceil(MAX_SVG_BYTES / 3) + 10) + "</g>";
+    expect(multibyte.length).toBeLessThan(MAX_SVG_BYTES);
+    const err = expectReject(multibyte);
+    expect(err.message).toContain("KB limit");
+  });
+
+  it("rejects xml:base (defense-in-depth chống đổi origin phân giải URI)", () => {
+    expectReject('<g xml:base="http://evil.com/"><use href="#m"/></g>');
+    expectReject("<g XML:BASE = 'https://evil'><rect/></g>");
+  });
 });
 
 describe("sanitizeSvg — PASS vectors (artwork hợp lệ)", () => {

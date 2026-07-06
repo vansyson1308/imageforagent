@@ -18,7 +18,7 @@ Authoring rules (memorize these — violations return `422 ARTWORK_INVALID` with
 
 - Draw in the **logical canvas**: 16:9→1920×1080, 9:16→1080×1920, 1:1→1080², 4:5→1080×1350 (canvas table in README).
 - Fragments only — never an `<svg>` tag, **not even in comments** (the sanitizer rejects over-broadly by design).
-- Only `href="#id"`, `url(#id)`, and `data:image/png|jpeg|webp` references. No external URLs, no scripts, no DOCTYPE, no event handlers, ≤500KB per fragment.
+- Only `href="#id"`, `url(#id)`, and `data:image/png|jpeg|webp` references. No external URLs, no scripts, no DOCTYPE, no event handlers, no `xml:base`, ≤500KB (UTF-8 bytes) per fragment.
 - Start frames with a full-bleed background rect. Prefer paths/shapes over `<text>` (font metrics vary per OS).
 
 ## Working on the codebase

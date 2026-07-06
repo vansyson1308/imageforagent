@@ -74,7 +74,7 @@ curl -s "$BASE/api/export/zip?projectId=$PID" -o storyboard.zip
   | 4:5 | 1080×1350 | 819×1024 | 1638×2048 |
 
 - Submit **SVG fragments** — the engine owns the `<svg>` wrapper. `artworkDefs` is the inner content of `<defs>`; frame SVG is the scene body.
-- Allowed references: `href="#id"`, `fill="url(#id)"`, `data:image/png|jpeg|webp` data-URIs. Everything external (http, file, relative paths) is rejected with `422 ARTWORK_INVALID` + a hint. Also rejected: DOCTYPE/entities, `<script>`, `<foreignObject>`, event handlers, `@import`, processing instructions, nested `<svg>` roots (even inside comments — the sanitizer rejects over-broadly by design), fragments over 500KB.
+- Allowed references: `href="#id"`, `fill="url(#id)"`, `data:image/png|jpeg|webp` data-URIs. Everything external (http, file, relative paths) is rejected with `422 ARTWORK_INVALID` + a hint. Also rejected: DOCTYPE/entities, `<script>`, `<foreignObject>`, event handlers, `@import`, `xml:base`, processing instructions, nested `<svg>` roots (even inside comments — the sanitizer rejects over-broadly by design), fragments over 500KB (UTF-8 bytes).
 - **Prefer paths/shapes over `<text>`** — text renders but font metrics differ across operating systems; paths are pixel-identical everywhere.
 - A failed render still saves your SVG (`status: "failed"` + `errorMsg`) — agent work is never lost.
 

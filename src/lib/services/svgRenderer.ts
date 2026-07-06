@@ -104,6 +104,13 @@ const COMMON_RULES: readonly RejectRule[] = [
     hint: "Inline all styles — external stylesheets are not supported.",
   },
   {
+    // Defense-in-depth: xml:base có thể đổi origin phân giải cho URI tương
+    // đối của các thuộc tính tương lai chưa nằm trong reject-list
+    pattern: /\bxml:base\s*=/i,
+    reason: "xml:base is not allowed",
+    hint: "Remove xml:base — all references must be local #ids or raster data: URIs.",
+  },
+  {
     pattern: /<\?/,
     reason: "XML processing instructions are not allowed",
     hint: "Remove <?xml …?> / <?xml-stylesheet …?> — submit a bare SVG fragment; the engine owns the document wrapper.",
@@ -123,10 +130,13 @@ const FRAGMENT_RULES: readonly RejectRule[] = [
  * Throws AppError("ARTWORK_INVALID") on the first violated rule.
  */
 export function sanitizeSvg(fragment: string, kind: SvgKind): void {
-  if (fragment.length > MAX_SVG_BYTES) {
+  // Đo BYTE thật (UTF-8) — .length là UTF-16 code units, ký tự đa byte
+  // (tiếng Việt…) sẽ lách được trần nếu đo bằng length
+  const bytes = Buffer.byteLength(fragment, "utf8");
+  if (bytes > MAX_SVG_BYTES) {
     throw new AppError(
       "ARTWORK_INVALID",
-      `SVG ${kind} exceeds the ${Math.round(MAX_SVG_BYTES / 1024)}KB limit (${Math.round(fragment.length / 1024)}KB).`,
+      `SVG ${kind} exceeds the ${Math.round(MAX_SVG_BYTES / 1024)}KB limit (${Math.round(bytes / 1024)}KB).`,
       "Simplify paths or split artwork across frames.",
     );
   }

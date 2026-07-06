@@ -16,6 +16,16 @@ export function FrameArtworkEditor({ frame }: FrameArtworkEditorProps) {
   const [rendering, setRendering] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Resync khi artwork đổi từ ngoài (hydrate sau renderAll, tab khác…) —
+  // pattern "adjust state during render", chỉ khi user không đang gõ dở
+  const [lastServerSvg, setLastServerSvg] = useState(frame.artworkSvg);
+  if (frame.artworkSvg !== lastServerSvg) {
+    setLastServerSvg(frame.artworkSvg);
+    if (svg === (lastServerSvg ?? "")) {
+      setSvg(frame.artworkSvg ?? "");
+    }
+  }
+
   async function render() {
     if (!svg.trim()) return;
     setRendering(true);

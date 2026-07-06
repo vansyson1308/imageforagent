@@ -39,4 +39,4 @@ curl -s -X POST $BASE/api/render -H "Content-Type: application/json" -d "{\"proj
 - Start each frame with a full-bleed background rect; unpainted areas become transparent.
 - Allowed references: `href="#id"`, `fill="url(#id)"`, `data:image/png|jpeg|webp` URIs. Everything external is rejected.
 - **Prefer paths/shapes over `<text>`** — text renders, but font metrics vary between operating systems; paths are pixel-identical everywhere.
-- Forbidden (422 `ARTWORK_INVALID` with a hint): DOCTYPE, entities, script, foreignObject, event handlers, external href/src/url(), `@import`, processing instructions, nested svg roots, fragments > 500KB.
+- Forbidden (422 `ARTWORK_INVALID` with a hint): DOCTYPE, entities, script, foreignObject, event handlers, external href/src/url(), `@import`, `xml:base`, processing instructions, nested svg roots, fragments > 500KB (UTF-8 bytes).
