@@ -1,17 +1,25 @@
 # AGENTS.md
 
-Guidance for AI agents. Two audiences: agents **working on this codebase**, and agents **using the running app** to produce storyboards.
+Guidance for AI agents. Two audiences: agents **using the running app** to produce storyboards, and agents **working on this codebase**.
 
 ## Using the app (as a client)
 
-The entire product is driven over REST — see the **Agent workflow (API recipes)** and **Full API reference** sections in [README.md](README.md). Key facts:
+This engine is built FOR you — no API keys needed. You write the artwork as SVG; the engine renders it. Full workflow + API reference in [README.md](README.md); working sample in [examples/](examples/).
 
-- Base URL: `http://localhost:3000` (start with `npm run dev`).
-- All errors: `{"error":{"code","message","hint?"}}` — `hint` usually tells you the fix.
-- Generation is an async job: `POST /api/generate` → poll `GET /api/generate/:jobId/status` every ~2s until `done`.
-- Regenerate a single frame by passing `frameIds` — it never touches other frames.
-- `GET /api/export/zip?projectId=` gives you `FNN.png` + `storyboard.json` + `captions.srt`; build the final video yourself (e.g. with Remotion) using `playbackSpeed` for timing and `shotType` per frame for camera motion.
-- Without `GEMINI_API_KEY`, images come from a free mock provider — use it to validate your pipeline before spending credits. Check `GET /api/meta` for the active provider and today's usage against `DAILY_GEN_LIMIT`.
+The essentials:
+
+1. `POST /api/projects` → `POST /api/script/import` (TSV: `STT | Shot Type | Description`).
+2. Design the character/props ONCE: `PATCH /api/projects/:id` with `{artworkDefs}` — inner `<defs>` content: `<symbol id="…">`, gradients. This is your consistency mechanism: every frame that `<use href="#id">`s a symbol renders it pixel-identically.
+3. Per frame: `PUT /api/frames/:id/artwork` with `{svg}` — the scene body (no `<svg>` root). Renders synchronously; response carries `imageUrl`. A render failure still saves your SVG (`status:"failed"` + `errorMsg` hint) — fix and re-PUT.
+4. Changed the defs or canvas settings? `POST /api/render` re-renders everything.
+5. `GET /api/export/zip?projectId=` → `FNN.png` + `storyboard.json` (includes all SVG sources) + `captions.srt`. Build the video yourself (e.g. Remotion): `playbackSpeed` = seconds/frame, `shotType` = camera motion per frame.
+
+Authoring rules (memorize these — violations return `422 ARTWORK_INVALID` with a hint):
+
+- Draw in the **logical canvas**: 16:9→1920×1080, 9:16→1080×1920, 1:1→1080², 4:5→1080×1350 (canvas table in README).
+- Fragments only — never an `<svg>` tag, **not even in comments** (the sanitizer rejects over-broadly by design).
+- Only `href="#id"`, `url(#id)`, and `data:image/png|jpeg|webp` references. No external URLs, no scripts, no DOCTYPE, no event handlers, ≤500KB per fragment.
+- Start frames with a full-bleed background rect. Prefer paths/shapes over `<text>` (font metrics vary per OS).
 
 ## Working on the codebase
 
@@ -21,31 +29,29 @@ The entire product is driven over REST — see the **Agent workflow (API recipes
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
-Notably: route-handler `params` is a **Promise** (`const { id } = await ctx.params`), and design tokens live in `globals.css` `@theme` (Tailwind v4), not `tailwind.config`.
+Notably: route-handler `params` is a **Promise** (`const { id } = await ctx.params`); design tokens live in `globals.css` `@theme` (Tailwind v4).
 
 ### Commands
 
 ```bash
 npm run dev      # dev server (Turbopack), http://localhost:3000
-npm test         # vitest — MUST stay green; tests never call paid APIs
+npm test         # vitest — MUST stay green (includes the sanitizer bypass-vector suite)
 npm run build    # production build — must be clean
 npm run lint     # eslint (includes React Compiler rules)
 npx tsc --noEmit # strict typecheck
 npx prisma migrate deploy && npx prisma generate   # DB setup after clone
-node scripts/smoke-gemini.mjs [--image]            # manual real-API smoke test (costs money with --image)
 ```
 
 ### Conventions
 
-- **Never call paid APIs in automated tests.** Real-API verification lives in `scripts/smoke-*.mjs`, run manually.
-- **Pure core, thin edges**: `promptComposer`, `tsvParser`, `frameService`, `srtBuilder` are pure functions with unit tests (promptComposer is snapshot-tested — prompt changes must update snapshots deliberately). Route handlers stay thin: `handleRoute` + Zod `parseBody` + `enforceRateLimit` + service calls.
-- **Adapter pattern for AI**: model calls only go through `ImageProvider`/`TextProvider` (`src/lib/providers/`). New model = new adapter + factory entry; don't call SDKs from routes or UI.
-- **Storage paths** are relative POSIX (`projectId/frames/x.png`) joined against `STORAGE_ROOT` at read time via `resolveStoragePath` (traversal-guarded). Never store absolute or `\`-separated paths.
-- **Prisma 7** with the Rust-free client: generated into `src/generated/prisma` (gitignored), SQLite via `@prisma/adapter-better-sqlite3`, config in `prisma.config.ts` (CLI reads `.env` only).
-- **Job engine**: `jobRunner.ts` is a `globalThis` singleton (survives HMR); every status transition is persisted; frames stuck mid-flight are swept to `failed` on boot. Mutation routes must call `assertNoRunningJob(projectId)` before structural frame changes.
-- Errors use `AppError(code, message, hint?)` — codes enumerated in `src/lib/services/apiError.ts`. UI strings are Vietnamese; prompts sent to image models are English.
-- Commit style: conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`).
+- **`src/lib/services/svgRenderer.ts` is security-critical.** Its sanitizer is a reject-not-strip pattern list whose soundness rests on banning `<!DOCTYPE` (closes XML's only markup-construction channel). Any change there requires new bypass-vector tests in `tests/svgRenderer.test.ts`. Beware regex backtracking: allowed-forms belong INSIDE lookaheads, never consumed before them (see the href rule).
+- **Pure core, thin edges**: `svgRenderer`, `tsvParser`, `frameService`, `srtBuilder` are pure, unit-tested functions. Routes stay thin: `handleRoute` + Zod `parseBody` + `enforceRateLimit` + service calls.
+- Rendering is **synchronous** (sharp, ~20–50ms/frame) — there are deliberately no job queues/polling. Don't reintroduce them.
+- **Storage paths** are relative POSIX (`projectId/frames/x.png`) resolved via `resolveStoragePath` (traversal-guarded). Never store absolute or `\`-separated paths.
+- **Prisma 7**, Rust-free client generated into `src/generated/prisma` (gitignored), SQLite via `@prisma/adapter-better-sqlite3`, config in `prisma.config.ts` (CLI reads `.env` only).
+- Errors: `AppError(code, message, hint?)` — codes in `src/lib/services/apiError.ts`. UI strings Vietnamese; agent-facing artwork errors English.
+- Commits: conventional (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`).
 
-### Architecture decisions
+### History & decisions
 
-See [docs/ADR.md](docs/ADR.md) — including why the image-to-video phase was removed (ADR-009) and hard-won API findings (Gemini `response_format` only accepts `image/jpeg`; Veo `referenceImages` is incompatible with image-to-video) in case anyone revisits video generation.
+[docs/ADR.md](docs/ADR.md) — including ADR-010 (why zero-key SVG replaced AI image generation, librsvg capability findings, sanitizer soundness argument) and preserved findings from the removed Gemini/Veo phases in case anyone revisits AI generation.

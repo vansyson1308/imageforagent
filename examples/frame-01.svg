@@ -1,0 +1,19 @@
+<!-- Frame 1 — "Pip waves hello" (wide shot, 16:9 logical canvas 1920×1080).
+     This is the FRAME BODY only: no root element — the engine wraps it.
+     Note: the sanitizer is reject-over-broad by design, so even comments
+     must not contain forbidden patterns (script tags, svg root tags, …). -->
+<rect width="1920" height="1080" fill="url(#bg-day)"/>
+<!-- sun glow -->
+<circle cx="1560" cy="220" r="260" fill="url(#glow)"/>
+<circle cx="1560" cy="220" r="90" fill="#ffd23f"/>
+<!-- ground -->
+<path d="M0 860 Q 480 800 960 860 T 1920 860 L 1920 1080 L 0 1080 Z" fill="#7ccf7c"/>
+<path d="M0 900 Q 600 850 1200 905 T 1920 900 L 1920 1080 L 0 1080 Z" fill="#5cb85c"/>
+<!-- clouds (simple ellipses) -->
+<g fill="#ffffff" opacity="0.9">
+  <ellipse cx="420" cy="220" rx="130" ry="46"/>
+  <ellipse cx="520" cy="200" rx="90" ry="38"/>
+  <ellipse cx="1180" cy="150" rx="110" ry="40"/>
+</g>
+<!-- Pip enters, waving — anchored feet on ground line -->
+<use href="#pip-wave" x="780" y="380" width="440" height="480"/>

@@ -1,0 +1,17 @@
+<!-- Frame 3 — "Night: Pip plants the flag" (same location at night = swap the
+     background gradient, keep composition — continuity by construction). -->
+<rect width="1920" height="1080" fill="url(#bg-night)"/>
+<!-- moon + stars -->
+<circle cx="1520" cy="200" r="70" fill="#f4f1de"/>
+<g fill="#f4f1de">
+  <circle cx="300" cy="160" r="4"/><circle cx="520" cy="90" r="3"/>
+  <circle cx="820" cy="200" r="3"/><circle cx="1150" cy="120" r="4"/>
+  <circle cx="1750" cy="420" r="3"/><circle cx="240" cy="420" r="3"/>
+</g>
+<!-- ground (darker at night) -->
+<path d="M0 860 Q 480 800 960 860 T 1920 860 L 1920 1080 L 0 1080 Z" fill="#2f5d3a"/>
+<path d="M0 900 Q 600 850 1200 905 T 1920 900 L 1920 1080 L 0 1080 Z" fill="#234a2d"/>
+<!-- flag planted on the hill -->
+<use href="#prop-flag" x="1150" y="620" width="180" height="270"/>
+<!-- Pip beside it, proud -->
+<use href="#pip" x="700" y="440" width="380" height="420"/>

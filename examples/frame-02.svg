@@ -1,0 +1,9 @@
+<!-- Frame 2 — "Close-up: Pip smiles" (tight framing = draw the SAME symbol larger).
+     Character stays pixel-identical because it's the same <symbol>. -->
+<rect width="1920" height="1080" fill="url(#bg-day)"/>
+<circle cx="300" cy="900" r="420" fill="#7ccf7c" opacity="0.6"/>
+<circle cx="1700" cy="180" r="300" fill="url(#glow)"/>
+<!-- big Pip, slightly rotated for life -->
+<g transform="rotate(-4 960 540)">
+  <use href="#pip" x="560" y="-40" width="820" height="1160"/>
+</g>

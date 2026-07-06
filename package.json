@@ -16,7 +16,6 @@
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
-    "@google/genai": "^2.10.0",
     "@prisma/adapter-better-sqlite3": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "archiver": "^8.0.0",
@@ -43,7 +42,7 @@
     "typescript": "^5",
     "vitest": "^4.1.9"
   },
-  "description": "Agent-first storyboard image engine — generate consistent-character storyboard frames via Gemini (Nano Banana) through a REST API designed for AI coding agents.",
+  "description": "Zero-API-key storyboard engine for AI agents — your agent writes each frame as SVG code; the engine renders, watermarks, and packages it for video assembly (Remotion-style).",
   "license": "MIT",
   "repository": {
     "type": "git",

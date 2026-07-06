@@ -59,3 +59,15 @@ Contract mục 4 cho phép "Poll 2s hoặc SSE". Chọn polling: sống sót qua
 - TTS hoạt động: model `gemini-3.1-flash-tts-preview` qua Interactions API (`speech_config:[{voice:"Kore"}]` + `response_format:{type:"audio"}`), trả PCM s16le 24kHz mono → tự bọc WAV.
 - ffmpeg loudnorm trên audio im lặng tuyệt đối (anullsrc) sinh NaN làm aac encoder chết — chỉ loudnorm khi timeline có audio thật.
 - Audio-mix hierarchy đã thiết kế và test được: VO 0dB > native −13dB (khi có VO) > BGM −6dB + sidechaincompress duck theo bus thoại → loudnorm I=-16:TP=-1.5.
+
+## ADR-010: Zero-key pivot — artwork là SVG code do agent viết, render bằng sharp (07/07/2026)
+
+**Quyết định:** gỡ hẳn Gemini (cả image generation lẫn text/AI-edit). Artwork từng frame do AI agent VIẾT dưới dạng SVG fragment; project có `artworkDefs` (thư viện `<defs>`: mascot `<symbol>`, gradient, props) — engine wrap + render deterministic bằng sharp/librsvg (dependency có sẵn). Mô hình Remotion: agent viết code, máy render, không key, không credit.
+
+**Lý do:** (1) người dùng đích là agent — agent viết SVG giỏi và miễn phí, trong khi API ảnh tốn credit theo iteration; (2) nhất quán nhân vật trở thành thuộc tính kiến trúc (`<use href="#symbol">` → pixel-identical) thay vì xác suất prompt-engineering; (3) deterministic + round-trip được (storyboard.json chứa cả source SVG).
+
+**Findings librsvg (verify thực nghiệm trên sharp 0.35.3/librsvg 2.62.3):** `<use>`+`<symbol>`+gradient/filter/clipPath/mask hoạt động pixel-perfect; width/height trên root cho đúng kích thước pixel (không cần density); input Buffer → external href (http/file/relative) bị lờ hoàn toàn, KHÔNG có network/file I/O; không có JS engine; XXE bị refuse, billion-laughs bị libxml2 chặn amplification; text render được nhưng font metrics lệch theo OS (docs khuyên dùng path); tốc độ 17–37ms/frame @1080p+ (cold start ~1–2s/process) → render sync, không cần job engine.
+
+**Sanitizer (svgRenderer.ts) — luận cứ soundness:** reject-not-strip qua pattern list. Trong XML, kênh DUY NHẤT có thể tái cấu trúc markup từ text đã escape là internal DTD entity → **cấm `<!DOCTYPE` đóng toàn bộ lớp bypass "giấu tag qua mặt regex"**; match thừa (pattern trong comment/CDATA) chỉ gây từ chối oan — chấp nhận được với gate reject-only. Phòng thủ 3 lớp: sanitizer + librsvg không JS/không I/O + chỉ PNG được serve ra browser (SVG thô không bao giờ được serve). Bài học lúc implement: **allowed-forms phải nằm TRONG lookahead, không được consume trước lookahead** — `["']?` đứng ngoài bị regex backtracking lách qua (đã có regression test).
+
+**Kênh phân phối lỗi cho agent:** render fail vẫn lưu `artworkSvg` + `status failed` + `errorMsg` (không mất WIP); mọi lỗi 422 `ARTWORK_INVALID` kèm hint sửa cụ thể.
