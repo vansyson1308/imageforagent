@@ -13,6 +13,9 @@ export const ALLOWED_IMAGE_MIME_TYPES: readonly string[] = [
 ];
 
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8MB/file
+
+/** Trần kích thước mỗi phần SVG (defs của project / artwork của frame). */
+export const MAX_SVG_BYTES = 512_000;
 export const MAX_FRAMES_PER_PROJECT = 100;
 export const MAX_DESCRIPTION_LENGTH = 2000;
 

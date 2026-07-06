@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`composeSvgDocument > snapshot (hợp đồng wrapper đóng băng) 1`] = `
+"<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1920 1080" width="1024" height="576">
+<defs><symbol id="m"/></defs>
+<use href="#m"/>
+</svg>"
+`;
