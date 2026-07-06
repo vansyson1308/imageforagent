@@ -42,5 +42,11 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.9"
+  },
+  "description": "Agent-first storyboard image engine — generate consistent-character storyboard frames via Gemini (Nano Banana) through a REST API designed for AI coding agents.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vansyson1308/storyboard-studio"
   }
 }

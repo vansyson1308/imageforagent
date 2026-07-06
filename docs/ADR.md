@@ -45,3 +45,17 @@ Contract mục 4 cho phép "Poll 2s hoặc SSE". Chọn polling: sống sót qua
 ## ADR-008: AI edit giữ ảnh frame không đổi
 
 `apply-edit` so sánh shotType+description theo index: frame giữ nguyên nội dung giữ nguyên ảnh đã generate; frame đổi nội dung reset về `draft`. Tránh mất công generate lại toàn bộ sau một lệnh AI chỉ sửa vài frame.
+
+## ADR-009: Pivot agent-first — gỡ toàn bộ phase image-to-video (07/07/2026)
+
+**Quyết định:** loại bỏ hoàn toàn Phase 9 (Veo clips + TTS voiceover + ffmpeg assembly) đã build và verify một phần. Sản phẩm định vị lại là **storyboard image engine cho AI agent** dùng qua REST API; phần video do agent tự dựng bằng Remotion từ gói export (ảnh + storyboard.json + captions.srt).
+
+**Lý do:** chi phí video AI quá cao cho iteration (~$6–22/video 5–7 clip tuỳ tier), trong khi agent + Remotion dựng video từ ảnh tĩnh miễn phí và kiểm soát được 100%. Schema/migrations đã squash về 1 init sạch.
+
+**Finding kỹ thuật đáng giữ (đã verify thực nghiệm, phòng khi build lại video):**
+- Veo 3.1 qua Gemini API: `ai.models.generateVideos` + poll `operations.getVideosOperation` (10s), video chỉ lưu server 2 ngày → phải download ngay trong provider.
+- **`referenceImages` KHÔNG kết hợp được với `image` (image-to-video) → 400 Unsupported** — refs chỉ cho text-to-video. Nhất quán nhân vật dựa vào first-frame image là đủ (đã verify on-model với Lite 4s).
+- Veo Lite (`veo-3.1-lite-generate-preview`) câm hoàn toàn; 1080p bắt buộc durationSeconds=8.
+- TTS hoạt động: model `gemini-3.1-flash-tts-preview` qua Interactions API (`speech_config:[{voice:"Kore"}]` + `response_format:{type:"audio"}`), trả PCM s16le 24kHz mono → tự bọc WAV.
+- ffmpeg loudnorm trên audio im lặng tuyệt đối (anullsrc) sinh NaN làm aac encoder chết — chỉ loudnorm khi timeline có audio thật.
+- Audio-mix hierarchy đã thiết kế và test được: VO 0dB > native −13dB (khi có VO) > BGM −6dB + sidechaincompress duck theo bus thoại → loudnorm I=-16:TP=-1.5.

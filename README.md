@@ -1,98 +1,183 @@
 # Storyboard Studio
 
-Hệ thống tạo chuỗi ảnh storyboard với **mascot nhất quán 100%** cho video animation.
+**An agent-first storyboard image engine.** Generate sequences of storyboard frames with a **100%-consistent mascot/character** using Google Gemini image models (Nano Banana), through a REST API designed to be driven by AI coding agents (Claude Code, Codex, …) — with a full web UI included for humans.
 
-Flow: nhập kịch bản (Google Sheet / dán TSV) → bảng phân cảnh chỉnh sửa được → AI sửa kịch bản hàng loạt → upload ảnh reference (mascot / style / watermark) → generate ảnh bằng Gemini (Nano Banana) → đóng watermark tự động → preview slideshow → xuất ZIP (ảnh + storyboard.json + captions.srt).
+The intended pipeline: **an agent generates the storyboard frames here, then builds the final video itself with [Remotion](https://www.remotion.dev/)** (or any editor) from the exported images + machine-readable metadata. No expensive video-generation credits needed.
 
-> Blueprint gốc: [blueprint-storyboard-generator.md](blueprint-storyboard-generator.md) · Quyết định kiến trúc: [docs/ADR.md](docs/ADR.md)
+> 🇻🇳 Có phần **Tóm tắt tiếng Việt** ở cuối file.
 
-## Chạy dự án
+---
+
+## What it does
+
+- **Script ingestion** — paste TSV (or read a Google Sheet) with `STT | Shot Type | Description` rows → editable storyboard table.
+- **Character-locked image generation** — every frame is generated with a composed prompt (CHARACTER LOCK block + reference images + shot-type camera mapping + negative prompt) so the mascot stays on-model across all frames. Verified: same character across full batches with reference images *or* a text `characterDesc` alone.
+- **AI bulk script editing** — one instruction rewrites the whole script (returns a reviewable diff, never overwrites silently).
+- **Automatic watermarking** — your logo composited onto every output (position/scale/opacity configurable, re-apply without re-generating).
+- **Slideshow preview** and **ZIP export**: `F01.png…FNN.png` + `storyboard.json` + `captions.srt` — everything an agent needs to assemble a video.
+- **Cost guard** — daily generation limit, mock provider for free development.
+
+## Quickstart
+
+Requirements: Node.js 20+.
 
 ```bash
-npm install            # tự chạy prisma generate (postinstall)
-npx prisma migrate dev # tạo DB SQLite lần đầu
-npm run dev            # http://localhost:3000
+npm install                # runs prisma generate via postinstall
+cp .env.example .env       # then put your GEMINI_API_KEY in .env
+npx prisma migrate deploy  # create the SQLite database
+npm run dev                # http://localhost:3000
 ```
 
-Yêu cầu: Node.js 20+. Kiểm tra nhanh: `npm run build && npm test`.
+No `GEMINI_API_KEY`? The app runs with a **mock image provider** (placeholder frames) — the entire workflow is testable for free.
 
-## Biến môi trường (.env)
+Checks: `npm test` (unit tests, never call paid APIs) · `npm run build` · `npm run lint`.
 
-Copy `.env.example` → `.env` rồi điền:
+## Environment variables (`.env`)
 
-| Biến | Bắt buộc | Mô tả |
+| Variable | Required | Description |
 |---|---|---|
-| `DATABASE_URL` | ✅ | Mặc định `file:./prisma/dev.db`. Nếu thư mục Documents bị OneDrive sync gây lỗi `SQLITE_BUSY`, chuyển sang đường dẫn ngoài Documents, VD `file:C:/data/storyboard.db` |
-| `GEMINI_API_KEY` | Cho ảnh thật | Lấy tại [aistudio.google.com/apikey](https://aistudio.google.com/apikey). Bỏ trống → app chạy MockImageProvider (ảnh placeholder, không tốn tiền) |
-| `GEMINI_IMAGE_MODEL` | — | Mặc định `gemini-3.1-flash-image` (Nano Banana 2). Đổi sang `gemini-3-pro-image` nếu cần chất lượng cao nhất (~$0.134/ảnh) |
-| `GEMINI_TEXT_MODEL` | — | Mặc định `gemini-flash-latest` — dùng cho AI sửa kịch bản |
-| `IMAGE_PROVIDER` | — | Ép `mock` hoặc `gemini`. Bỏ trống = tự chọn theo key |
-| `GOOGLE_SERVICE_ACCOUNT_JSON` | Cho Google Sheet | JSON credentials một dòng — xem mục Google Sheets |
-| `DAILY_GEN_LIMIT` | — | Cost guard: số ảnh thật tối đa/ngày (mặc định 40). Mock không tính |
-| `STORAGE_ROOT` | — | Thư mục lưu ảnh (mặc định `./storage`) |
+| `DATABASE_URL` | ✅ | Default `file:./prisma/dev.db` (SQLite) |
+| `GEMINI_API_KEY` | for real generation | Get one at [aistudio.google.com/apikey](https://aistudio.google.com/apikey). Empty → mock provider |
+| `GEMINI_IMAGE_MODEL` | — | Default `gemini-3.1-flash-image` (Nano Banana 2) |
+| `GEMINI_TEXT_MODEL` | — | Default `gemini-flash-latest` — used by AI script editing |
+| `IMAGE_PROVIDER` | — | Force `mock` or `gemini`; empty = auto by key presence |
+| `GOOGLE_SERVICE_ACCOUNT_JSON` | for Sheets | One-line service-account JSON; see [Google Sheets](#google-sheets-optional) |
+| `DAILY_GEN_LIMIT` | — | Cost guard: max real images/day (default 40) |
+| `STORAGE_ROOT` | — | Image storage directory (default `./storage`) |
 
-## Google Sheets (tùy chọn)
+## Agent workflow (API recipes)
 
-Đường dán TSV hoạt động không cần cấu hình gì. Để đọc trực tiếp từ link Google Sheet:
+Everything the UI does is plain REST with a consistent error envelope `{"error":{"code","message","hint?"}}`. A complete agent run:
 
-1. Vào [Google Cloud Console](https://console.cloud.google.com) → tạo project → bật **Google Sheets API**.
-2. IAM & Admin → Service Accounts → **Create Service Account** (không cần role gì).
-3. Tab Keys → Add Key → **JSON** → tải file về.
-4. Nén JSON thành 1 dòng, dán vào `GOOGLE_SERVICE_ACCOUNT_JSON` trong `.env`.
-5. Mở Google Sheet → **Share** → thêm email service account (dạng `xxx@yyy.iam.gserviceaccount.com`) quyền **Viewer**. Email này hiển thị sẵn trong UI tab "Link Google Sheet" kèm nút copy.
+```bash
+BASE=http://localhost:3000
 
-**Định dạng sheet chuẩn** (3 cột, dòng 1 header): `STT | Shot Type | Description`. Chấp nhận header tiếng Việt (`STT/Frame`, `Loại cảnh`, `Mô tả`); cột STT có thể bỏ trống — hệ thống tự đánh số.
+# 1. Create a project
+PID=$(curl -s -X POST $BASE/api/projects -H "Content-Type: application/json" \
+  -d '{"name":"My spot"}' | jq -r .id)
 
-## Đổi ImageProvider (thêm model ảnh khác)
+# 2. Import the script (TSV, tab-separated; header row optional)
+curl -s -X POST $BASE/api/script/import -H "Content-Type: application/json" -d @- <<EOF
+{"projectId":"$PID","source":"tsv","tsvText":"STT\tShot Type\tDescription\n1\tStatic shot\tThe mascot waves hello\n2\tClose-up\tThe mascot winks"}
+EOF
 
-Mọi call model ảnh đi qua interface `ImageProvider` ([src/lib/providers/types.ts](src/lib/providers/types.ts)):
+# 3. Describe the character (drives the CHARACTER LOCK prompt block)
+curl -s -X PATCH $BASE/api/projects/$PID -H "Content-Type: application/json" \
+  -d '{"characterDesc":"A cheerful orange fox mascot with a red neckerchief","aspectRatio":"16:9","resolution":"1K"}'
 
-```ts
-interface ImageProvider {
-  readonly name: string;
-  generate(request: ImageRequest): Promise<GeneratedImage>;
+# 4. (Optional but recommended) upload reference images / watermark logo
+curl -s -X POST $BASE/api/assets/upload -F "projectId=$PID" \
+  -F "kind=mascot_ref" -F "files=@mascot.png"          # kinds: mascot_ref (≤3), style_ref (≤3), watermark (1)
+
+# 5. Generate all frames (async job) and poll
+JOB=$(curl -s -X POST $BASE/api/generate -H "Content-Type: application/json" \
+  -d "{\"projectId\":\"$PID\"}" | jq -r .jobId)
+curl -s $BASE/api/generate/$JOB/status        # poll every 2s until .done == true
+# Regenerate selectively: pass {"frameIds":["..."]} to /api/generate
+
+# 6. Export everything
+curl -s "$BASE/api/export/zip?projectId=$PID" -o storyboard.zip
+```
+
+<details>
+<summary><b>Full API reference</b></summary>
+
+| Method | Endpoint | Body / Query | Purpose |
+|---|---|---|---|
+| POST | `/api/projects` | `{name}` | Create project |
+| GET | `/api/projects` | — | List projects (+frame counts) |
+| GET | `/api/projects/:id` | — | Hydrate project + frames + assets |
+| PATCH | `/api/projects/:id` | partial project | Update name/ratio/resolution/characterDesc/watermark settings/playbackSpeed |
+| DELETE | `/api/projects/:id` | — | Delete project + files |
+| POST | `/api/projects/:id/duplicate` | — | Clone script + assets (for series) |
+| POST | `/api/script/import` | `{projectId, source:"tsv"\|"sheet", tsvText?, sheetUrl?, confirmOverwrite?}` | Replace all frames; returns `409 CONFIRM_REQUIRED` if frames exist and no confirm flag |
+| POST | `/api/frames` | `{projectId, afterIndex?}` | Insert a frame |
+| PATCH | `/api/frames/:id` | `{shotType?, description?}` | Edit a frame |
+| DELETE | `/api/frames/:id` | — | Delete + reindex |
+| POST | `/api/frames/reorder` | `{projectId, frameId, targetIndex}` | Move a frame (server reindexes 1..N) |
+| POST | `/api/storyboard/ai-edit` | `{projectId, instruction}` | AI rewrite → returns a **proposal** (not saved) |
+| POST | `/api/storyboard/apply-edit` | `{projectId, frames:[{index,shotType,description}]}` | Persist an accepted proposal |
+| POST | `/api/assets/upload` | multipart `projectId, kind, files[]` | Upload refs/watermark (PNG/JPEG/WebP ≤8MB, magic-byte verified) |
+| DELETE | `/api/assets/:id` | — | Remove an asset |
+| POST | `/api/generate` | `{projectId, frameIds?}` | Start generation job (`202 {jobId}`) |
+| GET | `/api/generate/:jobId/status` | — | `{frames:[{id,index,status,imageUrl,errorMsg}], done}` |
+| POST | `/api/generate/:jobId/cancel` | — | Stop job (pending frames → draft) |
+| POST | `/api/watermark/reapply` | `{projectId}` | Re-composite watermark from raw images (no API cost) |
+| GET | `/api/export/zip?projectId=` | — | ZIP: `FNN.png` + `storyboard.json` + `captions.srt` |
+| GET | `/api/files/{path}` | — | Serve stored images (HTTP Range supported) |
+| GET | `/api/meta` | — | `{serviceAccountEmail, imageProvider, dailyUsed, dailyLimit}` |
+| POST | `/api/maintenance/cleanup` | — | Remove orphaned files from storage |
+
+Frame `status` machine: `draft → pending → generating → watermarking → done | failed`.
+Error codes: `SHEET_NOT_SHARED, SHEET_NOT_FOUND, SHEET_BAD_FORMAT, ASSET_LIMIT, ASSET_BAD_TYPE, ASSET_TOO_LARGE, PROVIDER_RATE_LIMIT, PROVIDER_SAFETY_BLOCK, DAILY_LIMIT, CONFIRM_REQUIRED, VALIDATION, NOT_FOUND, RATE_LIMITED, INTERNAL`.
+
+</details>
+
+## Video assembly hand-off (Remotion)
+
+This engine deliberately stops at images — video generation APIs are expensive, and an agent with [Remotion](https://www.remotion.dev/) does the job for free. The ZIP export is designed as Remotion input:
+
+```jsonc
+// storyboard.json
+{
+  "project": { "name", "characterDesc", "aspectRatio", "resolution", "playbackSpeed" },
+  "frames": [
+    { "index": 1, "file": "F01.png", "shotType": "Static shot",
+      "description": "The mascot waves hello", "status": "done", "generatedAt": "…" }
+  ]
 }
 ```
 
-Để thêm OpenAI gpt-image / Flux / Midjourney: tạo class mới implement interface này (tham khảo [geminiImageProvider.ts](src/lib/providers/geminiImageProvider.ts)), đăng ký trong factory [src/lib/providers/index.ts](src/lib/providers/index.ts). Không cần đụng UI hay JobRunner.
+- `playbackSpeed` (seconds per frame) + `captions.srt` give you the intended timing.
+- `shotType` tells the agent which camera move to fake per frame (Ken Burns zoom-in for `Slow zoom-in`, static hold for `Static shot`, horizontal pan for `Pan`, …).
+- Images are already watermarked; raw un-watermarked versions stay on the server if you need them (`rawImagePath`).
 
-## Kiến trúc & thư mục
+## Google Sheets (optional)
+
+The TSV paste path needs zero setup. To read scripts directly from a Google Sheet:
+
+1. [Google Cloud Console](https://console.cloud.google.com) → create a project → enable **Google Sheets API**.
+2. IAM & Admin → Service Accounts → Create (no roles needed) → Keys → Add key → JSON.
+3. Flatten the JSON to one line into `GOOGLE_SERVICE_ACCOUNT_JSON` in `.env`.
+4. Share your sheet (Viewer) with the service-account email — the UI shows it with a copy button.
+
+## Architecture
 
 ```
-src/app/api/          Route handlers (REST, error envelope {error:{code,message,hint}})
-src/components/       UI components (1 file/1 component)
-src/lib/providers/    ImageProvider/TextProvider adapters (mock + gemini)
-src/lib/services/     tsvParser, promptComposer (pure), jobRunner, watermarker, sheetReader…
-src/lib/config/       shot-types.ts (map shot → camera instruction), limits.ts
-prisma/               schema.prisma — nguồn chân lý data model
-storage/              Ảnh gốc + output (gitignore)
-tests/                Vitest unit tests (KHÔNG bao giờ gọi API ảnh thật)
-scripts/              smoke-gemini.mjs — test API thật thủ công
+src/app/api/          REST route handlers (Zod-validated, rate-limited, error envelope)
+src/components/       Web UI (Next.js App Router + Zustand)
+src/lib/providers/    ImageProvider / TextProvider adapters (mock + Gemini) — swap models here
+src/lib/services/     promptComposer (pure, snapshot-tested), jobRunner (in-process queue),
+                      watermarker (sharp), tsvParser, sheetReader, costGuard, storage…
+prisma/               Schema: Project / Frame / Asset / GenerationLog (SQLite)
+storage/              Generated images (gitignored)
+tests/                Vitest — pure units; NEVER calls paid APIs
 ```
 
-Điểm thiết kế chính:
+Key design points:
 
-- **PromptComposer** ([promptComposer.ts](src/lib/services/promptComposer.ts)) là pure function quyết định tính nhất quán nhân vật: CHARACTER LOCK + reference images (mascot trước, style sau) + shot-type mapping + NEGATIVE block. Có snapshot test — sửa prompt phải cập nhật snapshot có chủ đích.
-- **JobRunner** chạy in-process tuần tự, retry 2 lần (backoff 2s/8s), lỗi safety **không** retry. Server restart giữa chừng → frame kẹt được đánh dấu `failed` để regenerate chọn lọc.
-- **Watermark** đóng sau khi generate; ảnh gốc (`*.raw.png`) luôn được giữ — đổi vị trí/scale/opacity rồi "Áp dụng lại" không tốn API.
-- **Cost guard**: đếm mọi call provider thật trong ngày (bảng `GenerationLog`), chặn khi vượt `DAILY_GEN_LIMIT`.
+- **`promptComposer` is a pure function** and the heart of character consistency: CHARACTER LOCK + ordered reference images (mascot before style) + shot-type camera mapping + NEGATIVE block. Snapshot-tested — prompt changes are deliberate.
+- **Adapter pattern**: to add OpenAI gpt-image / Flux / anything, implement `ImageProvider` (`src/lib/providers/types.ts`) and register it in the factory. Nothing else changes.
+- **Jobs are async & restart-safe**: in-process sequential queue, status persisted per transition, orphaned frames swept to `failed` on boot, per-frame retry with backoff (safety blocks never retried).
+- **Raw images are never overwritten** — watermark settings can be re-applied at any time for free.
 
-## Smoke test Gemini thật
+## Security notes
 
-```bash
-node scripts/smoke-gemini.mjs          # chỉ test text structured output (rẻ)
-node scripts/smoke-gemini.mjs --image  # thêm test tạo 1 ảnh 16:9 1K
-```
+- No authentication — this is a **local / internal tool by design**. Do not deploy it to a public URL as-is: anyone could trigger paid generations or delete projects. Put it behind auth/a private network first.
+- Uploads are magic-byte verified, renamed to UUIDs, and size/type limited. File serving is traversal-guarded. All inputs Zod-validated, mutating routes rate-limited. Production error responses don't leak internals.
 
-## Deploy
+## License
 
-App là 1 Next.js instance duy nhất (single-user/nội bộ, chưa có auth):
+[MIT](LICENSE)
 
-- **VPS/máy nội bộ**: `npm run build && npm start`. Cần disk ghi được cho `storage/` + file SQLite.
-- **Vercel**: không khuyến nghị ở MVP — SQLite + filesystem storage cần disk bền vững. Nếu muốn deploy serverless, đổi sang Postgres (sửa `datasource` trong schema.prisma) và S3/GCS cho storage trước.
+---
 
-## Vận hành
+## 🇻🇳 Tóm tắt tiếng Việt
 
-- **Dọn file mồ côi**: `curl -X POST http://localhost:3000/api/maintenance/cleanup`
-- **Xem DB**: `npm run db:studio`
-- **Log**: pino JSON ra stdout — set `LOG_LEVEL=debug` khi cần chi tiết.
+**Storyboard Studio** là công cụ tạo chuỗi ảnh storyboard với **nhân vật/mascot đồng nhất 100%** bằng Gemini (Nano Banana), thiết kế **cho AI agent dùng qua REST API** (Claude Code, Codex…) — kèm web UI đầy đủ cho người dùng.
+
+**Quy trình:** dán kịch bản TSV (hoặc đọc Google Sheet) → bảng phân cảnh chỉnh sửa được → AI sửa kịch bản hàng loạt (có diff review) → upload ảnh mascot/style/logo → generate ảnh (job async, retry, cost guard) → watermark tự động → preview slideshow → **export ZIP** (ảnh + `storyboard.json` + `captions.srt`).
+
+**Phần video:** engine này chủ đích dừng ở ảnh. Agent tự dựng video bằng **Remotion** từ gói export — `playbackSpeed` + SRT cho timing, `shotType` cho chuyển động camera từng cảnh (zoom/pan/tĩnh). Không tốn credit video AI.
+
+**Chạy nhanh:** `npm install` → copy `.env.example` thành `.env` + điền `GEMINI_API_KEY` → `npx prisma migrate deploy` → `npm run dev`. Không có key vẫn chạy được với mock provider (miễn phí). Lưu ý: app không có đăng nhập — chỉ chạy local/nội bộ, không deploy công khai khi chưa thêm auth.
