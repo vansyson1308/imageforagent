@@ -86,3 +86,7 @@ export const renderSchema = z.object({
   projectId: id,
   frameIds: z.array(id).max(100).optional(),
 });
+
+// Construct engine (POST /api/construct): schema ở constructSchema.ts —
+// import TRỰC TIẾP từ đó, KHÔNG re-export tại đây (re-export tạo vòng
+// import schemas ↔ constructSchema → TDZ crash dưới Turbopack).

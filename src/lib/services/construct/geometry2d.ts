@@ -292,6 +292,32 @@ export function flattenToContours(
   return contours;
 }
 
+/** Convex hull 2D (Andrew monotone chain) — silhouette cho solid smooth. */
+export function convexHull2D(points: readonly Vec2[]): Vec2[] {
+  if (points.length < 3) return [...points];
+  const sorted = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: Vec2, a: Vec2, b: Vec2) =>
+    (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower: Vec2[] = [];
+  for (const p of sorted) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) {
+      lower.pop();
+    }
+    lower.push(p);
+  }
+  const upper: Vec2[] = [];
+  for (let i = sorted.length - 1; i >= 0; i--) {
+    const p = sorted[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) {
+      upper.pop();
+    }
+    upper.push(p);
+  }
+  lower.pop();
+  upper.pop();
+  return [...lower, ...upper];
+}
+
 /** Diện tích có dấu (shoelace) — dương nếu CCW trong hệ y-down là CW thị giác. */
 export function signedArea(contour: readonly Vec2[]): number {
   let area = 0;
