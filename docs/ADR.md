@@ -71,3 +71,22 @@ Contract mục 4 cho phép "Poll 2s hoặc SSE". Chọn polling: sống sót qua
 **Sanitizer (svgRenderer.ts) — luận cứ soundness:** reject-not-strip qua pattern list. Trong XML, kênh DUY NHẤT có thể tái cấu trúc markup từ text đã escape là internal DTD entity → **cấm `<!DOCTYPE` đóng toàn bộ lớp bypass "giấu tag qua mặt regex"**; match thừa (pattern trong comment/CDATA) chỉ gây từ chối oan — chấp nhận được với gate reject-only. Phòng thủ 3 lớp: sanitizer + librsvg không JS/không I/O + chỉ PNG được serve ra browser (SVG thô không bao giờ được serve). Bài học lúc implement: **allowed-forms phải nằm TRONG lookahead, không được consume trước lookahead** — `["']?` đứng ngoài bị regex backtracking lách qua (đã có regression test).
 
 **Kênh phân phối lỗi cho agent:** render fail vẫn lưu `artworkSvg` + `status failed` + `errorMsg` (không mất WIP); mọi lỗi 422 `ARTWORK_INVALID` kèm hint sửa cụ thể.
+
+## ADR-011: Construct engine — compiler dựng hình kỷ hà cho agent (11/07/2026)
+
+**Quyết định:** thêm `POST /api/construct` — compiler STATELESS biến spec JSON (primitives 2D/3D + boolean + transform + camera + light) thành SVG fragment, theo đúng phương pháp dựng hình kỷ hà của hoạ sĩ vector: phân rã thành hình cơ bản → kết hợp (boolean) → biến đổi (affine/chiếu 3D/extrude) → đổ bóng. Fragment compile ra chảy qua pipeline sanitize→compose→render HIỆN CÓ, không đụng `svgRenderer.ts`; không lưu DB — SVG agent dán vào defs/frame vẫn là nguồn chân lý duy nhất (schema Prisma không đổi, storyboard.json round-trip không đổi).
+
+**Kiến trúc:** module thuần `src/lib/services/construct/` (geometry2d · pathBoolean · pathParse · math3d · camera · geometry3d · painterSort · shading · svgEmitter · compile). Response kèm `stats` (faces/bytes/compileMs) + `warnings` + optional `previewPng` (data URI, render qua `renderArtwork` sẵn có ~30ms) — vòng lặp agent khép kín trong 1 round-trip, không cần đụng project/frame khi thử nghiệm.
+
+**Dependency:** `path-bool@1.0.0` (pure ESM, MIT, dep duy nhất gl-matrix) — boolean TRỰC TIẾP trên bezier, không nắn polygon; thuật toán được Graphite editor port sang Rust dùng production. Đã loại: PathKit-WASM (đóng băng 2022 + Turbopack bundle .wasm trầy trật), paper.js (kéo jsdom, dormant), polygon-clipping/clipper2 (mất độ cong). **Toàn bộ toán 3D tự viết** (`math3d.ts` KHÔNG import gl-matrix): ma trận chiếu isometric chuẩn 35.264° + orbit tự do + perspective, extrude đa contour (phân loại outer/hole bằng containment parity, cap có lỗ = subpath evenodd — lỗ sắc nét vector), painter's sort centroid + tie-break deterministic, lambert lượng tử N tông (default direction [-0.3,-1.7,-1] tinh chỉnh cho cube iso ra đúng 3 tông tách bạch), solid smooth = silhouette convex-hull + gradient (trick zdog).
+
+**Determinism là hợp đồng:** một `fmt()` formatter duy nhất, sort tie-break cố định, id gradient `cg-<solidId>` (prefix reserved, schema chặn agent dùng); test double-compile byte-identical + snapshot 3 spec mẫu; `compile.ts` chạy `sanitizeSvg` trên chính output như runtime assert — sanitizer drift tương lai fail CI thay vì fail agent.
+
+**DoS bounds (compile sync trên event loop):** CONSTRUCT_LIMITS — 256 nodes, depth 16, 32 operand/phép, 64 segments/primitive, 5.000 faces, 2.500 segment input/boolean, output 400KB + 20K lệnh path, |coord|≤1e5, wall-clock guard 2s giữa các stage; rate limit `construct:compile` 20. Mọi lỗi 422 `CONSTRUCTION_INVALID` (mã riêng — phân biệt "spec sai" với "SVG unsafe") + hint nêu đúng knob (`Reduce "segments"…`, `Did you mean "hole"?` qua Levenshtein).
+
+**Giới hạn trung thực (chấp nhận có chủ đích):**
+- **KHÔNG có CSG 3D thể tích** (không trừ sphere khỏi box). Hai kênh boolean thực dụng thay thế: (a) boolean 2D trên profile TRƯỚC extrude → đục lỗ xuyên khối; (b) `cutouts` SAU chiếu → khoét mặt phẳng (subtract) hoặc dán decal clip theo mặt (overlay). Overlay lên solid smooth map vào silhouette; subtract lên smooth bị từ chối kèm hint.
+- **Painter's algorithm** sort theo centroid — solid xuyên nhau/áp sát mặt ngang có thể sai thứ tự vùng giao (warning AABB-overlap trong response; không BSP v1). Bài học từ example house: mặt ngang kẹp giữa 2 mặt nghiêng là pattern dễ lỗi nhất — thiết kế bằng khối lồi tách rời (thân ngũ giác + 2 tấm mái box nghiêng) thay vì hộp + mái ôm.
+- Sphere perspective = xấp xỉ circle theo scale tâm; smooth quantized banding trên mặt cong faceted là cố ý (dùng `shading:"smooth"` cho mượt).
+
+**Examples test-enforced:** `examples/construct-{gear,house,rocket}.{json,svg}` sinh từ fixtures test (`REGEN_EXAMPLES=1`) — docs không bao giờ lệch code.

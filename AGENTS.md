@@ -10,9 +10,10 @@ The essentials:
 
 1. `POST /api/projects` → `POST /api/script/import` (TSV: `STT | Shot Type | Description`).
 2. Design the character/props ONCE: `PATCH /api/projects/:id` with `{artworkDefs}` — inner `<defs>` content: `<symbol id="…">`, gradients. This is your consistency mechanism: every frame that `<use href="#id">`s a symbol renders it pixel-identically.
-3. Per frame: `PUT /api/frames/:id/artwork` with `{svg}` — the scene body (no `<svg>` root). Renders synchronously; response carries `imageUrl`. A render failure still saves your SVG (`status:"failed"` + `errorMsg` hint) — fix and re-PUT.
-4. Changed the defs or canvas settings? `POST /api/render` re-renders everything.
-5. `GET /api/export/zip?projectId=` → `FNN.png` + `storyboard.json` (includes all SVG sources) + `captions.srt`. Build the video yourself (e.g. Remotion): `playbackSpeed` = seconds/frame, `shotType` = camera motion per frame.
+3. For complex or 3D-looking artwork, don't hand-write paths — `POST /api/construct` with a geometric-construction spec (primitives + booleans + 3D solids + camera + light; full vocabulary in README). Stateless: response carries the compiled `svg` fragment, `stats`, `warnings`, and (if you send `preview`) a `previewPng` data URI — look at it, tune the spec, re-POST (~20ms), then paste `svg` into defs or a frame. Spec errors are `422 CONSTRUCTION_INVALID` with a hint. No volumetric CSG: drill holes with profile booleans before `extrude`, or `cutouts` after projection. Gradient ids `cg-*` are reserved.
+4. Per frame: `PUT /api/frames/:id/artwork` with `{svg}` — the scene body (no `<svg>` root). Renders synchronously; response carries `imageUrl`. A render failure still saves your SVG (`status:"failed"` + `errorMsg` hint) — fix and re-PUT.
+5. Changed the defs or canvas settings? `POST /api/render` re-renders everything.
+6. `GET /api/export/zip?projectId=` → `FNN.png` + `storyboard.json` (includes all SVG sources) + `captions.srt`. Build the video yourself (e.g. Remotion): `playbackSpeed` = seconds/frame, `shotType` = camera motion per frame.
 
 Authoring rules (memorize these — violations return `422 ARTWORK_INVALID` with a hint):
 
@@ -46,6 +47,7 @@ npx prisma migrate deploy && npx prisma generate   # DB setup after clone
 
 - **`src/lib/services/svgRenderer.ts` is security-critical.** Its sanitizer is a reject-not-strip pattern list whose soundness rests on banning `<!DOCTYPE` (closes XML's only markup-construction channel). Any change there requires new bypass-vector tests in `tests/svgRenderer.test.ts`. Beware regex backtracking: allowed-forms belong INSIDE lookaheads, never consumed before them (see the href rule).
 - **Pure core, thin edges**: `svgRenderer`, `tsvParser`, `frameService`, `srtBuilder` are pure, unit-tested functions. Routes stay thin: `handleRoute` + Zod `parseBody` + `enforceRateLimit` + service calls.
+- **`src/lib/services/construct/` is pure and deterministic** — no I/O, no randomness, one `fmt()` number formatter, stable sort tie-breaks; output is snapshot-tested and double-compile must be byte-identical. Its output MUST pass `sanitizeSvg` (runtime assert in `compile.ts` + emitter allowlist test). Dependency policy: `path-bool` is the only geometry dep — 3D math stays hand-written (`math3d.ts` must not import gl-matrix). Examples in `examples/construct-*.{json,svg}` are test-enforced (`REGEN_EXAMPLES=1 npx vitest run tests/construct/examples.test.ts` to regenerate). No volumetric CSG / no BSP by design (ADR-011).
 - Rendering is **synchronous** (sharp, ~20–50ms/frame) — there are deliberately no job queues/polling. Don't reintroduce them.
 - **Storage paths** are relative POSIX (`projectId/frames/x.png`) resolved via `resolveStoragePath` (traversal-guarded). Never store absolute or `\`-separated paths.
 - **Prisma 7**, Rust-free client generated into `src/generated/prisma` (gitignored), SQLite via `@prisma/adapter-better-sqlite3`, config in `prisma.config.ts` (CLI reads `.env` only).
@@ -54,4 +56,4 @@ npx prisma migrate deploy && npx prisma generate   # DB setup after clone
 
 ### History & decisions
 
-[docs/ADR.md](docs/ADR.md) — including ADR-010 (why zero-key SVG replaced AI image generation, librsvg capability findings, sanitizer soundness argument) and preserved findings from the removed Gemini/Veo phases in case anyone revisits AI generation.
+[docs/ADR.md](docs/ADR.md) — including ADR-010 (why zero-key SVG replaced AI image generation, librsvg capability findings, sanitizer soundness argument), ADR-011 (the construct engine: stateless compiler design, why path-bool + hand-written 3D math, honest limitations), and preserved findings from the removed Gemini/Veo phases in case anyone revisits AI generation.

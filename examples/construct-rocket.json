@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "shapes": [
+    {
+      "id": "finProfile",
+      "type": "polygon",
+      "points": [
+        [
+          0,
+          0
+        ],
+        [
+          95,
+          55
+        ],
+        [
+          95,
+          130
+        ],
+        [
+          0,
+          95
+        ]
+      ]
+    },
+    {
+      "id": "porthole",
+      "type": "circle",
+      "r": 34
+    }
+  ],
+  "solids": [
+    {
+      "id": "body",
+      "type": "cylinder",
+      "r": 70,
+      "h": 300,
+      "segments": 32,
+      "shading": "smooth",
+      "fill": "#E8E4DC"
+    },
+    {
+      "id": "nose",
+      "type": "cone",
+      "r": 70,
+      "h": 120,
+      "at": [
+        0,
+        210,
+        0
+      ],
+      "shading": "smooth",
+      "fill": "#D9482B"
+    },
+    {
+      "id": "finR",
+      "type": "extrude",
+      "profile": "finProfile",
+      "depth": 14,
+      "at": [
+        66,
+        -215,
+        0
+      ],
+      "rotate": [
+        0,
+        90,
+        0
+      ],
+      "fill": "#D9482B"
+    },
+    {
+      "id": "finL",
+      "type": "extrude",
+      "profile": "finProfile",
+      "depth": 14,
+      "at": [
+        -66,
+        -215,
+        0
+      ],
+      "rotate": [
+        0,
+        -90,
+        0
+      ],
+      "fill": "#D9482B"
+    },
+    {
+      "id": "nozzle",
+      "type": "cone",
+      "r": 46,
+      "rTop": 30,
+      "h": 44,
+      "at": [
+        0,
+        -172,
+        0
+      ],
+      "shading": "smooth",
+      "fill": "#6B6B75"
+    }
+  ],
+  "cutouts": [
+    {
+      "solid": "body",
+      "face": "front",
+      "shape": "porthole",
+      "at": [
+        0,
+        -60
+      ],
+      "mode": "overlay",
+      "fill": "#7FB4D9"
+    }
+  ],
+  "camera": {
+    "orbit": {
+      "azimuth": 30,
+      "elevation": 15
+    },
+    "zoom": 1.2
+  },
+  "light": {
+    "direction": [
+      -0.6,
+      -1,
+      -0.3
+    ],
+    "tones": 3,
+    "ambient": 0.35
+  },
+  "place": {
+    "at": [
+      960,
+      560
+    ],
+    "scale": 1.1
+  }
+}

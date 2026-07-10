@@ -39,7 +39,7 @@ describe("compile — 3 example specs chính thức", () => {
     const result = compile(HOUSE_SPEC);
     expect(result.svg).toContain('fill="#5B3A24"'); // decal cửa
     expect(result.svg).toContain('fill="#7FB4D9"'); // decal cửa sổ
-    expect(result.stats.solids).toBe(4);
+    expect(result.stats.solids).toBe(5);
     expect(result.stats.facesEmitted).toBeGreaterThan(4);
     // chimney cắm xuyên roof → có overlap warning
     expect(result.warnings.some((w) => w.includes("overlap"))).toBe(true);

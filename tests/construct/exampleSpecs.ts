@@ -31,33 +31,32 @@ export const HOUSE_SPEC = {
   version: 1,
   shapes: [
     {
-      id: "gable",
+      // Thân nhà = MỘT ngũ giác lồi (tường + đầu hồi) — khối lồi thì
+      // painter's sort không bao giờ sai nội bộ
+      id: "bodyProfile",
       type: "polygon",
       points: [
-        [-160, 0],
-        [160, 0],
-        [0, -95],
+        [-140, 84],
+        [140, 84],
+        [140, -84],
+        [0, -179],
+        [-140, -84],
       ],
     },
     { id: "door", type: "rect", w: 56, h: 92, rx: 4 },
-    { id: "window", type: "circle", r: 26 },
+    { id: "window", type: "circle", r: 24 },
   ],
   solids: [
     { id: "ground", type: "box", size: [620, 24, 620], at: [0, -12, 0], fill: "#8FBF6A" },
-    { id: "walls", type: "box", size: [280, 170, 210], at: [0, 85, 0], fill: "#F2E3C6" },
-    {
-      id: "roof",
-      type: "extrude",
-      profile: "gable",
-      depth: 250,
-      at: [0, 170, 0],
-      fill: "#C24D3A",
-    },
-    { id: "chimney", type: "box", size: [40, 90, 40], at: [80, 255, 40], fill: "#8A8A94" },
+    { id: "body", type: "extrude", profile: "bodyProfile", depth: 210, at: [0, 84, 0], fill: "#F2E3C6" },
+    // Mái = 2 tấm box nghiêng đúng góc dốc atan(95/140) ≈ 34.16°
+    { id: "roofR", type: "box", size: [190, 12, 250], rotate: [0, 0, -34.16], at: [73.9, 221.3, 0], fill: "#C24D3A" },
+    { id: "roofL", type: "box", size: [190, 12, 250], rotate: [0, 0, 34.16], at: [-73.9, 221.3, 0], fill: "#C24D3A" },
+    { id: "chimney", type: "box", size: [40, 90, 40], at: [80, 250, 40], fill: "#8A8A94" },
   ],
   cutouts: [
-    { solid: "walls", face: "front", shape: "door", at: [-60, 30], mode: "overlay", fill: "#5B3A24" },
-    { solid: "walls", face: "right", shape: "window", at: [0, -20], mode: "overlay", fill: "#7FB4D9" },
+    { solid: "body", face: "front", shape: "door", at: [-60, 72], mode: "overlay", fill: "#5B3A24" },
+    { solid: "body", face: "front", shape: "window", at: [0, -55], mode: "overlay", fill: "#7FB4D9" },
   ],
   camera: { preset: "isometric" },
   light: { tones: 3 },

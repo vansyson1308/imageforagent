@@ -1,0 +1,164 @@
+{
+  "version": 1,
+  "shapes": [
+    {
+      "id": "bodyProfile",
+      "type": "polygon",
+      "points": [
+        [
+          -140,
+          84
+        ],
+        [
+          140,
+          84
+        ],
+        [
+          140,
+          -84
+        ],
+        [
+          0,
+          -179
+        ],
+        [
+          -140,
+          -84
+        ]
+      ]
+    },
+    {
+      "id": "door",
+      "type": "rect",
+      "w": 56,
+      "h": 92,
+      "rx": 4
+    },
+    {
+      "id": "window",
+      "type": "circle",
+      "r": 24
+    }
+  ],
+  "solids": [
+    {
+      "id": "ground",
+      "type": "box",
+      "size": [
+        620,
+        24,
+        620
+      ],
+      "at": [
+        0,
+        -12,
+        0
+      ],
+      "fill": "#8FBF6A"
+    },
+    {
+      "id": "body",
+      "type": "extrude",
+      "profile": "bodyProfile",
+      "depth": 210,
+      "at": [
+        0,
+        84,
+        0
+      ],
+      "fill": "#F2E3C6"
+    },
+    {
+      "id": "roofR",
+      "type": "box",
+      "size": [
+        190,
+        12,
+        250
+      ],
+      "rotate": [
+        0,
+        0,
+        -34.16
+      ],
+      "at": [
+        73.9,
+        221.3,
+        0
+      ],
+      "fill": "#C24D3A"
+    },
+    {
+      "id": "roofL",
+      "type": "box",
+      "size": [
+        190,
+        12,
+        250
+      ],
+      "rotate": [
+        0,
+        0,
+        34.16
+      ],
+      "at": [
+        -73.9,
+        221.3,
+        0
+      ],
+      "fill": "#C24D3A"
+    },
+    {
+      "id": "chimney",
+      "type": "box",
+      "size": [
+        40,
+        90,
+        40
+      ],
+      "at": [
+        80,
+        250,
+        40
+      ],
+      "fill": "#8A8A94"
+    }
+  ],
+  "cutouts": [
+    {
+      "solid": "body",
+      "face": "front",
+      "shape": "door",
+      "at": [
+        -60,
+        72
+      ],
+      "mode": "overlay",
+      "fill": "#5B3A24"
+    },
+    {
+      "solid": "body",
+      "face": "front",
+      "shape": "window",
+      "at": [
+        0,
+        -55
+      ],
+      "mode": "overlay",
+      "fill": "#7FB4D9"
+    }
+  ],
+  "camera": {
+    "preset": "isometric"
+  },
+  "light": {
+    "tones": 3
+  },
+  "place": {
+    "at": [
+      960,
+      640
+    ],
+    "scale": 1.05
+  }
+}

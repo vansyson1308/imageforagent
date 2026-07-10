@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "shapes": [
+    {
+      "id": "disc",
+      "type": "circle",
+      "r": 220
+    },
+    {
+      "id": "teeth",
+      "type": "star",
+      "points": 12,
+      "rOuter": 262,
+      "rInner": 214
+    },
+    {
+      "id": "gearBody",
+      "type": "boolean",
+      "op": "union",
+      "of": [
+        "disc",
+        "teeth"
+      ]
+    },
+    {
+      "id": "hub",
+      "type": "circle",
+      "r": 80
+    },
+    {
+      "id": "gear",
+      "type": "boolean",
+      "op": "difference",
+      "of": [
+        "gearBody",
+        "hub"
+      ],
+      "fill": "#F4B23C",
+      "stroke": "#2B2B33",
+      "strokeWidth": 6
+    }
+  ],
+  "place": {
+    "at": [
+      960,
+      540
+    ]
+  }
+}

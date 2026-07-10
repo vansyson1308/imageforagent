@@ -78,6 +78,46 @@ curl -s "$BASE/api/export/zip?projectId=$PID" -o storyboard.zip
 - **Prefer paths/shapes over `<text>`** — text renders but font metrics differ across operating systems; paths are pixel-identical everywhere.
 - A failed render still saves your SVG (`status: "failed"` + `errorMsg`) — agent work is never lost.
 
+## Geometric construction API (3D & complex vector art)
+
+Hand-writing every `<path>` is the hard way. `POST /api/construct` gives you the **geometric construction method** human vector artists use: decompose into primitive shapes, **combine** (boolean union/difference/intersection/exclusion), **transform** (affine, 3D rotation, extrusion), then shade — compiled deterministically to SVG paths.
+
+```bash
+curl -s -X POST $BASE/api/construct -H "Content-Type: application/json" -d '{
+  "spec": {
+    "version": 1,
+    "shapes": [
+      {"id": "disc",  "type": "circle", "r": 220},
+      {"id": "teeth", "type": "star", "points": 12, "rOuter": 262, "rInner": 214},
+      {"id": "body",  "type": "boolean", "op": "union", "of": ["disc", "teeth"]},
+      {"id": "hub",   "type": "circle", "r": 80},
+      {"id": "gear",  "type": "boolean", "op": "difference", "of": ["body", "hub"], "fill": "#F4B23C"}
+    ]
+  },
+  "preview": {"background": "#1a1a2e"}
+}'
+# → { "svg": "<g …>", "stats": {…}, "warnings": [], "previewPng": "data:image/png;base64,…" }
+```
+
+**Stateless by design**: nothing is stored — look at `previewPng`, iterate on the spec (~20ms/compile), then paste `svg` into `artworkDefs` (as part of a `<symbol>`) or a frame body. The SVG you save stays the single source of truth.
+
+The spec vocabulary:
+
+| Field | What you get |
+|---|---|
+| `shapes[]` | 2D: `rect(w,h,rx)` · `circle` · `ellipse` · `polygon` · `regularPolygon` · `star` · `line` · raw `path` · `boolean{op, of:[ids]}` — every shape takes `at/rotate/scale/skew/mirror/fill/stroke`. Booleans run on real bezier curves (via [path-bool](https://github.com/r-flash/PathBool.js)), and nest freely. |
+| `solids[]` | 3D: `box` · `cylinder` · `cone(rTop)` · `sphere` · `prism` · `pyramid` · `extrude{profile: 2D-shape-id, depth}` — profile booleans carry through (drill holes by subtracting before extruding). `shading`: `auto` (smooth for curved solids) · `faceted` · `smooth` (silhouette + gradient, the classic vector look) · `none`. |
+| `camera` | Presets `isometric` (true 35.264°) · `isometric-2:1` · `dimetric` · `top/front/side`, or **free orbit** `{azimuth, elevation, roll}`; `orthographic` or `perspective` (auto-fit distance); `zoom`. |
+| `light` | One directional light; `tones: 2-8` quantized lambert (default 3 — the classic top-light/left-mid/right-dark isometric look) + `ambient`. |
+| `cutouts[]` | Post-projection booleans on a face: `subtract` (punch a hole through a flat face) or `overlay` (decal clipped to the face — doors, windows, labels). |
+| `place` | Position/scale/rotate the result on the logical canvas (default center 16:9). |
+
+Coordinates: 2D is y-down (SVG convention); the 3D world is y-up right-handed, heights along y. Face labels for cutouts: `top/bottom/front(+z)/back/left/right(+x)` on box/extrude.
+
+Working examples with their exact compiled output: [examples/construct-gear.json](examples/construct-gear.json) (2D booleans), [construct-house.json](examples/construct-house.json) (isometric + extrude + cutouts), [construct-rocket.json](examples/construct-rocket.json) (free 3D camera + smooth shading).
+
+Every response includes `stats` (`facesGenerated/bytes/compileMs`) so you can tune against the limits (256 nodes, 5,000 faces, 400KB output, 2s compile). Spec errors return `422 CONSTRUCTION_INVALID` with an actionable hint (`Did you mean "hole"?`). Honest limitations (by design, documented in ADR-011): **no volumetric 3D CSG** — you can't subtract a sphere from a box; use profile booleans before extruding or cutouts after projection. Painter's-algorithm depth sorting can mis-order **interpenetrating** solids (you get a warning; offset them). The reserved gradient id prefix is `cg-`.
+
 <details>
 <summary><b>Full API reference</b></summary>
 
@@ -96,16 +136,17 @@ curl -s "$BASE/api/export/zip?projectId=$PID" -o storyboard.zip
 | DELETE | `/api/frames/:id` | — | Delete + reindex |
 | POST | `/api/frames/reorder` | `{projectId, frameId, targetIndex}` | Move a frame |
 | POST | `/api/storyboard/apply-edit` | `{projectId, frames:[{index,shotType,description}]}` | Bulk-replace the whole script (agents editing scripts) |
+| **POST** | **`/api/construct`** | `{spec, preview?}` | **Compile a geometric-construction spec → SVG fragment** (+ optional PNG preview data-URI); stateless |
 | **POST** | **`/api/render`** | `{projectId, frameIds?}` | **Re-render all frames with artwork** (after changing defs/ratio/resolution) |
 | POST | `/api/assets/upload` | multipart `projectId, kind:"watermark", files[]` | Upload watermark logo (PNG/JPEG/WebP ≤8MB, magic-byte verified) |
 | DELETE | `/api/assets/:id` | — | Remove watermark |
 | POST | `/api/watermark/reapply` | `{projectId}` | Re-composite watermark on all rendered frames |
 | GET | `/api/export/zip?projectId=` | — | ZIP: `FNN.png` + `storyboard.json` (incl. all SVG sources) + `captions.srt` |
 | GET | `/api/files/{path}` | — | Serve rendered images (HTTP Range supported) |
-| GET | `/api/meta` | — | `{serviceAccountEmail}` (Google Sheets, optional) |
+| GET | `/api/meta` | — | `{serviceAccountEmail, construct:{version}}` (feature-detect) |
 | POST | `/api/maintenance/cleanup` | — | Remove orphaned files |
 
-Errors: `{"error":{"code","message","hint?"}}`. Codes: `ARTWORK_INVALID, SHEET_NOT_SHARED, SHEET_NOT_FOUND, SHEET_BAD_FORMAT, ASSET_LIMIT, ASSET_BAD_TYPE, ASSET_TOO_LARGE, CONFIRM_REQUIRED, VALIDATION, NOT_FOUND, RATE_LIMITED, INTERNAL`.
+Errors: `{"error":{"code","message","hint?"}}`. Codes: `ARTWORK_INVALID, CONSTRUCTION_INVALID, SHEET_NOT_SHARED, SHEET_NOT_FOUND, SHEET_BAD_FORMAT, ASSET_LIMIT, ASSET_BAD_TYPE, ASSET_TOO_LARGE, CONFIRM_REQUIRED, VALIDATION, NOT_FOUND, RATE_LIMITED, INTERNAL`.
 Frame `status`: `draft → done | failed`.
 
 </details>
@@ -133,11 +174,16 @@ Everything is optional except the database path:
 ```
 src/lib/services/svgRenderer.ts   sanitize (reject-list) + compose + render — the core
 src/lib/services/artworkService.ts render→watermark→persist pipeline per frame
+src/lib/services/construct/       geometric-construction compiler (pure, deterministic):
+                                  geometry2d · pathBoolean (path-bool) · pathParse ·
+                                  math3d · camera · geometry3d · painterSort · shading ·
+                                  svgEmitter · compile (orchestrator)
 src/app/api/                      REST routes (Zod, rate-limited, error envelope)
 src/components/                   Web UI (Next.js App Router + Zustand)
 src/lib/services/                 tsvParser, sheetReader, watermarker (sharp), storage…
 prisma/                           Project / Frame / Asset (SQLite, single migration)
-tests/                            Vitest — includes the sanitizer's bypass-vector suite
+tests/                            Vitest — sanitizer bypass-vector suite + construct
+                                  golden/determinism/pixel-proof suites
 ```
 
 - **Rendering is synchronous and local** (~20–50ms per frame warm; first render per process ~1–2s while libvips initializes) — no job queues, no polling.
@@ -162,5 +208,7 @@ tests/                            Vitest — includes the sanitizer's bypass-vec
 **Nhất quán nhân vật tuyệt đối theo kiến trúc**: mascot định nghĩa MỘT LẦN là `<symbol>` trong thư viện defs của project, mọi frame `<use href="#id">` → giống hệt từng pixel. Đổi thiết kế một chỗ, gọi `POST /api/render` một phát — toàn bộ storyboard cập nhật.
 
 **Quy trình agent:** tạo project → import kịch bản TSV/Google Sheet → `PATCH artworkDefs` (thư viện nhân vật) → `PUT /api/frames/:id/artwork` từng frame (render sync ~50ms) → chỉnh sửa & re-render → export ZIP (ảnh + storyboard.json chứa cả source SVG + captions.srt) → agent tự dựng video bằng **Remotion** với timing từ `playbackSpeed` và chuyển động camera từ `shotType`.
+
+**Dựng hình kỷ hà (`POST /api/construct`):** thay vì viết tay từng path, agent mô tả hình theo đúng phương pháp hoạ sĩ vector — phân rã thành **hình kỷ hà cơ bản** (tròn, chữ nhật, đa giác, khối hộp, trụ, cầu…), rồi **kết hợp** (boolean union/trừ/giao trên đường cong bezier thật) và **biến đổi** (affine, chiếu 3D isometric hoặc camera tự do mọi góc, extrude khối từ silhouette, đổ bóng 3 tông tự động). Engine compile deterministic ra SVG paths + trả kèm ảnh preview ngay trong response — agent nhìn, chỉnh spec, gửi lại (~20ms/lần). Xem 3 mẫu trong [examples/](examples/): bánh răng 2D, nhà isometric, tên lửa 3D.
 
 **Chạy:** `npm install` → `cp .env.example .env` (không cần điền gì) → `npx prisma migrate deploy` → `npm run dev`. Xem [examples/](examples/) — bộ mẫu mascot "Pip" hoàn chỉnh. Lưu ý: app không có đăng nhập — chỉ dùng local/nội bộ.
