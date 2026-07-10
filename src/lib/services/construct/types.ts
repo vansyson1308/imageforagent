@@ -30,6 +30,8 @@ export interface Affine2D {
  */
 export interface MeshFace {
   readonly vertices: readonly number[];
+  /** Ring lỗ (cap của extrude có lỗ) — winding ngược outer, fill evenodd. */
+  readonly holes?: readonly (readonly number[])[];
   /** Nhãn mặt cho cutout: "top"|"bottom"|"front"|"back"|"left"|"right" với box/extrude. */
   readonly label?: string;
 }
@@ -52,6 +54,8 @@ export type SmoothKind = "sphere" | "cylinder" | "cone";
 export interface ProjectedFace {
   /** Đa giác 2D toạ độ màn hình (sau chiếu + flip y). */
   readonly points: readonly Vec2[];
+  /** Ring lỗ đã chiếu (nếu có) — emit subpath, fill evenodd. */
+  readonly holes?: readonly (readonly Vec2[])[];
   /** Độ sâu view-space (centroid z) — sort painter's algorithm. */
   readonly depth: number;
   /** Normal view-space (đã transform) — tính lambert. */
