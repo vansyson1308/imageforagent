@@ -17,6 +17,36 @@ export const MAX_SVG_BYTES = 512_000;
 export const MAX_FRAMES_PER_PROJECT = 100;
 export const MAX_DESCRIPTION_LENGTH = 2000;
 
+/**
+ * Trần cho construct compiler (POST /api/construct) — compile chạy sync
+ * trên event loop nên mọi chiều input/output đều phải chặn cứng.
+ * Vi phạm → CONSTRUCTION_INVALID kèm hint nói rõ knob cần giảm.
+ */
+export const CONSTRUCT_LIMITS = {
+  /** Tổng shapes + solids + cutouts trong một spec. */
+  maxNodes: 256,
+  /** Độ sâu chuỗi ref boolean (boolean của boolean…). */
+  maxOpDepth: 16,
+  /** Số operand mỗi phép boolean. */
+  maxBooleanOperands: 32,
+  /** Số segment tối đa mỗi primitive cong (cylinder/sphere/cone…). */
+  maxSegments: 64,
+  /** Mặc định segment cho primitive cong. */
+  defaultSegments: 24,
+  /** Tổng số mặt sau tessellation toàn scene. */
+  maxTotalFaces: 5_000,
+  /** Tổng segment đầu vào mỗi phép boolean (path-bool worst case). */
+  maxBooleanInputSegments: 2_500,
+  /** Trần byte SVG compile ra — dưới MAX_SVG_BYTES để agent còn ghép thêm. */
+  maxOutputBytes: 400_000,
+  /** Trần số lệnh path trong output. */
+  maxPathCommandsOut: 20_000,
+  /** |toạ độ / kích thước| tối đa. */
+  maxCoord: 100_000,
+  /** Guard wall-clock giữa các stage compile (ms). */
+  maxCompileMs: 2_000,
+} as const;
+
 export function isAssetKind(value: string): value is AssetKind {
   return value in ASSET_LIMITS;
 }
