@@ -40,6 +40,7 @@ export interface AssetDto {
 
 export interface MetaDto {
   serviceAccountEmail: string | null;
+  construct?: { version: number };
 }
 
 export interface ProjectListItemDto extends ProjectDto {
