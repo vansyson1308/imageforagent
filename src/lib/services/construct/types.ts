@@ -34,6 +34,8 @@ export interface MeshFace {
   readonly holes?: readonly (readonly number[])[];
   /** Nhãn mặt cho cutout: "top"|"bottom"|"front"|"back"|"left"|"right" với box/extrude. */
   readonly label?: string;
+  /** Fill kế thừa từ solid nguồn (mặt kết quả CSG đa màu). */
+  readonly fill?: string;
 }
 
 export interface Mesh {
@@ -65,6 +67,8 @@ export interface ProjectedFace {
   readonly solidIndex: number;
   readonly faceIndex: number;
   readonly label?: string;
+  /** Fill kế thừa từ solid nguồn (CSG đa màu) — ưu tiên sau csg.fill. */
+  readonly fill?: string;
 }
 
 // ---------- Kết quả compile ----------

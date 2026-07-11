@@ -45,6 +45,10 @@ export const CONSTRUCT_LIMITS = {
   maxCoord: 100_000,
   /** Guard wall-clock giữa các stage compile (ms). */
   maxCompileMs: 2_000,
+  /** Số node CSG (solid type "csg") mỗi spec. */
+  maxCsgOps: 8,
+  /** Tổng mặt đầu vào mỗi phép CSG (sau tam giác hoá). */
+  maxCsgOperandFaces: 2_000,
 } as const;
 
 export function isAssetKind(value: string): value is AssetKind {

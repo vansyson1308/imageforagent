@@ -86,6 +86,13 @@ export const solidSchema = z.discriminatedUnion("type", [
   z.object({ ...solidBase, type: z.literal("prism"), sides: z.number().int().min(3).max(64), r: pos, h: pos }),
   z.object({ ...solidBase, type: z.literal("pyramid"), sides: z.number().int().min(3).max(64), r: pos, h: pos }),
   z.object({ ...solidBase, type: z.literal("extrude"), profile: constructId, depth: pos }),
+  z.object({
+    ...solidBase,
+    type: z.literal("csg"),
+    op: z.enum(["union", "difference", "intersection"]),
+    /** Operand là SOLID id (kể cả csg khác — lồng được); bị tiêu thụ, không vẽ riêng. */
+    of: z.array(constructId).min(2).max(8),
+  }),
 ]);
 
 export type Solid = z.infer<typeof solidSchema>;

@@ -58,6 +58,7 @@ export function projectAndSort(
         solidIndex: item.solidIndex,
         faceIndex,
         label: face.label,
+        fill: face.fill,
       });
     });
   }
