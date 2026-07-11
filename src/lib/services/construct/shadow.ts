@@ -102,6 +102,17 @@ function solidShadowD(
     return Math.abs(area) / 2;
   };
 
+  // Fast-path khối LỒI: hull toàn bộ điểm bóng = footprint chính xác,
+  // 1 ring, không cần boolean (đa số solid trong scene là primitive lồi)
+  if (item.convex && !sweepScreen) {
+    const hull = convexHull2D(shadowScreen);
+    return hull.length >= 3 ? ringToPathD(hull, precision) : "";
+  }
+  if (item.convex && sweepScreen) {
+    const hull = convexHull2D([...shadowScreen, ...sweepScreen]);
+    return hull.length >= 3 ? ringToPathD(hull, precision) : "";
+  }
+
   const faceDs: string[] = [];
   for (const face of item.mesh.faces) {
     const pts = face.vertices.map((i) => shadowScreen[i]);

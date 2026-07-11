@@ -217,7 +217,8 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     if (isSmooth) {
       smoothInfos.set(solid.id, { solid, solidIndex, kind: smoothKind! });
     }
-    facetedItems.push({ solidId: solid.id, solidIndex, mesh: world });
+    // Extrude có thể lõm/có lỗ — mọi primitive khác lồi
+    facetedItems.push({ solidId: solid.id, solidIndex, mesh: world, convex: solid.type !== "extrude" });
   });
 
   // ---------- Stage CSG (Layer 1): resolve DAG bottom-up ----------

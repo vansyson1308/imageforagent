@@ -15,6 +15,9 @@ export interface SolidSceneItem {
   readonly solidIndex: number;
   /** Mesh ĐÃ transform sang world space. */
   readonly mesh: Mesh;
+  /** Khối LỒI (primitive box/cylinder/cone/sphere/prism/pyramid) — bóng đổ
+   * dùng convex hull thay union per-face (nhanh + vẫn chính xác). */
+  readonly convex?: boolean;
 }
 
 /**

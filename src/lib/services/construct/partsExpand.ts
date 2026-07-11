@@ -10,6 +10,7 @@ import {
   buildWheel,
   type PartBuild,
 } from "@/lib/services/construct/partWheel";
+import { buildFigure } from "@/lib/services/construct/partFigure";
 
 /**
  * partsExpand — Layer 5: spec → spec rewrite TRƯỚC compile.
@@ -81,6 +82,8 @@ function resolveGroupMatrices(groups: readonly Group[]): Map<string, Mat4> {
 
 function buildPart(part: ConstructSpec["parts"][number]): PartBuild {
   switch (part.type) {
+    case "figure":
+      return buildFigure(part);
     case "wheel":
       return buildWheel(part);
     case "tree":

@@ -154,6 +154,24 @@ const partBase3d = {
 export const partSchema = z.discriminatedUnion("type", [
   z.object({
     ...partBase3d,
+    type: z.literal("figure"),
+    /** Chiều cao tổng (đỉnh đầu → đất). */
+    height: pos.default(170),
+    /** Số "đầu" — 8 = tả thực, 3 = chibi (default storyboard-friendly). */
+    headCount: z.number().min(2).max(8).default(3),
+    /**
+     * Pose theo TÊN KHỚP, độ, TƯƠNG ĐỐI so với A-pose: scalar = gập trục z
+     * (profile) hoặc [x,y,z]. Khớp: neck, spine, shoulderL/R, elbowL/R,
+     * wristL/R, hipL/R, kneeL/R, ankleL/R.
+     */
+    pose: z.record(z.string(), z.union([deg, vec3])).default({}),
+    fills: z
+      .object({ skin: fillColor, shirt: fillColor, pants: fillColor, shoes: fillColor })
+      .partial()
+      .optional(),
+  }),
+  z.object({
+    ...partBase3d,
     type: z.literal("wheel"),
     /** Trục bánh dọc z (bánh đứng, lăn theo x). */
     radius: pos,
