@@ -90,3 +90,26 @@ Contract mục 4 cho phép "Poll 2s hoặc SSE". Chọn polling: sống sót qua
 - Sphere perspective = xấp xỉ circle theo scale tâm; smooth quantized banding trên mặt cong faceted là cố ý (dùng `shading:"smooth"` cho mượt).
 
 **Examples test-enforced:** `examples/construct-{gear,house,rocket}.{json,svg}` sinh từ fixtures test (`REGEN_EXAMPLES=1`) — docs không bao giờ lệch code.
+
+## ADR-012: Construct v2 — CSG thể tích, depth sort exact, shading layers, parts FK (12/07/2026)
+
+**Quyết định:** vượt cả 4 giới hạn ADR-011 trong một phase, theo triết lý layer: quay về nguyên lý gốc của engine ("polygon soup 3D → danh sách path 2D tô ĐÚNG THỨ TỰ"), bóc thành các layer đơn tuyến, mỗi layer một module thuần, ghép duy nhất tại orchestrator:
+
+```
+L0 plane3      "cắt 1 đa giác lồi bằng 1 mặt phẳng" — kernel chung
+L1 csg         L0 đệ quy thành BSP (csg.js MIT, viết tay thuần TS)
+L2 depthOrder  L0 áp dụng LAZY khi sort gặp xung đột (Newell–Newell–Sancha)
+L3 meshRepair  nghịch đảo của L0: weld + gộp mặt đồng phẳng
+L4 shadow / faceGradient   mỗi hiệu ứng = hàm thuần "scene → thêm PathItems"
+L5 partsExpand / partFigure / partWheel   spec → spec rewrite TRƯỚC compile
+```
+
+**L1 CSG:** thuật toán csg.js (Node build/invert/clipTo; subtract=~(~A∪B)) trên kernel plane3; eps TƯƠNG ĐỐI 1e-5·sceneRadius (eps tuyệt đối vỡ với toạ độ canvas nghìn đơn vị); weld first-seen + **insertTVertices** vá T-junction (csg.js issue #13 — grid cell phải THÍCH ỨNG kích thước scene, cell theo eps làm cạnh dài quét nghìn cell: 900ms → 17ms); mặt lõm/có lỗ tam giác hoá trước (ear clipping + bridge-cut Eberly — đỉnh bridge trùng toạ độ phải bỏ qua trong ear test kẻo deadlock); **chuỗi op phải compact (repair + re-triangulate) giữa các phép** — phân mảnh tích luỹ qua fold (xúc xắc 6 pip vượt 2000 mặt input nếu không); fill kế thừa per-face qua SharedTag (CSG đa màu), csg.fill override; fast-path AABB rời nhau.
+
+**L2 depth sort exact (DEFAULT):** NNS chứ không phải visibility-BSP đầy đủ — với ≤5k mặt, NNS đơn giản hơn, deterministic không PRNG, và ZERO split khi cảnh sạch. Chốt thiết kế đắt giá: **khoá sort khởi đầu = đúng khoá painter** (depth centroid, solidIndex, faceIndex) → cảnh không xung đột cho output byte-identical painter; exact là strict extension. 5 phép thử leo thang (extent x/y, P-sau-plane-Q, Q-trước-plane-P, chồng lấn màn hình); bài học: **test giao-cắt-cạnh proper thất bại khi mọi giao điểm rơi đúng đầu mút** (2 hình chữ nhật cùng y-extent) → dùng SAT. Swap-once rồi mới cắt; budget maxDepthSplits 2000 → fallback painter + warning. Smooth solid chèn theo depth (xấp xỉ, ghi rõ). Cutout đổi find→filter (mặt có thể thành nhiều fragment cùng label).
+
+**L4 shading layers:** bóng đổ KHÔNG cần ma trận — trượt đỉnh dọc hướng sáng s=(ground−y)/Ly rồi tái dùng chiếu camera + union path-bool; footprint mặt phẳng qua chiếu affine là CHÍNH ring đã map (không hull) → giữ lỗ (vòng đệm đổ bóng vành khuyên); khối LỒI dùng convex hull fast-path (4 figure: 1174→135ms). Bóng vẽ SAU solid "nền" (mesh trọn ≤ mặt phẳng bóng) TRƯỚC phần nổi — không thì mặt sàn đè mất bóng. Blur = feGaussianBlur opt-in (region -25%/150%, sRGB; SVG bytes deterministic, raster có thể lệch giữa VERSION librsvg — caveat). Gradient mặt: linearGradient userSpaceOnUse dọc trục sáng chiếu lên mặt — né hẳn giới hạn affine của gradientTransform; budget maxGradients 128.
+
+**L5 parts:** groups = khung FK cha-con (world = M(parent)·SRT), solid gắn group qua worldMatrixById override — schema solid không đổi. Figure: 14 khớp, pose theo TÊN KHỚP độ (scalar = gập z; format LLM viết đúng nhất — mô hình Spine), A-pose neutral, tỷ lệ head-unit nội suy chibiness c=(8−headCount)/6 với RESCALE thân để tổng đúng height. Id sinh `partId:segment` — user không thể đặt id chứa ':' nên không thể đụng độ; refId cho phép csg/cutout trỏ nội bộ part.
+
+**Giới hạn trung thực còn lại:** CSG là BSP epsilon-based — operand tiếp tuyến/đồng phẳng sát có thể cần nudge (hint nói rõ); exact quá 2000 split rơi về painter; smooth trong exact là xấp xỉ theo depth; long-shadow dùng sweep hull (mất lỗ — stylized); blur raster lệch theo version librsvg. Backward compat: mọi field mới additive; painter mode giữ nguyên semantics v1; exact default đổi thứ tự vẽ nội bộ nên snapshot/examples regen MỘT lần (quyết định user).

@@ -11,6 +11,9 @@ A complete working sample showing how an agent authors storyboard artwork as SVG
 | `construct-gear.json` | **Geometric construction, 2D**: decompose into primitives (disc + star teeth + hub), combine with booleans (`union` then `difference`) — the way human vector artists build complex marks. Each `.json` has a matching `.svg` — the exact fragment `POST /api/construct` compiles it to, for diffing. |
 | `construct-house.json` | **Isometric 3D**: convex-pentagon body extruded from a 2D profile, two tilted-box roof slabs, `overlay` cutouts (door, round window) applied to a projected face, 3-tone auto shading. |
 | `construct-rocket.json` | **Full free 3D**: arbitrary orbit camera (az 30°, el 15°), `smooth`-shaded cylinder/cones (silhouette + gradient), extruded fins rotated in 3D, a porthole decal on a smooth body. |
+| `construct-dice.json` | **Volumetric CSG**: a white die with six spherical pips subtracted from three faces in one nested `csg` chain — cut interiors inherit the cutter's red. |
+| `construct-cart.json` | **The works (hero)**: an articulated `figure` (FK pose by joint names) leaning to push a two-wheeled cart — hollowed body via `csg`, `wheel` parts with spokes and a real bore, a `tree`, exact projected `shadow`s, and `depthSort:"exact"` resolving all the interpenetrations. |
+| `construct-shading.json` | **Light layers**: `light.mode:"gradient"` (per-face smooth ramps) + `shadow.style:"blob"` soft ellipses under a cube/sphere/cone trio. |
 
 ## How to run this example
 
