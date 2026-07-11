@@ -52,7 +52,7 @@ export interface LightParams {
   readonly direction: Vec3;
   readonly tones: number;
   readonly ambient: number;
-  readonly mode: "quantized" | "smooth";
+  readonly mode: "quantized" | "smooth" | "gradient";
 }
 
 /**

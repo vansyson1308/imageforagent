@@ -9,6 +9,7 @@ import { relativeEps, type Polygon3 } from "@/lib/services/construct/plane3";
 import { csgOperation, prepareOperand } from "@/lib/services/construct/csg";
 import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRepair";
 import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
+import { faceGradientFill } from "@/lib/services/construct/faceGradient";
 import {
   applyCutout,
   collectConsumed,
@@ -529,6 +530,8 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   }
 
   // 3D faces theo painter order
+  let gradientSeq = 0;
+  let gradientOverflow = false;
   for (const entry of entries) {
     const solid = solidMap.get(entry.face.solidId)!;
     // face.fill = fill kế thừa từ solid nguồn (CSG đa màu; csg.fill đã
@@ -539,6 +542,23 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       fill = entry.fillOverride;
     } else if (solid.shading === "none") {
       fill = base;
+    } else if (lightParams.mode === "gradient") {
+      const budgetLeft = CONSTRUCT_LIMITS.maxGradients - gradients.length;
+      const result = faceGradientFill(
+        entry.face,
+        base,
+        lightView,
+        light.ambient,
+        gradientSeq,
+        budgetLeft,
+      );
+      if (result.gradient) {
+        gradients.push(result.gradient);
+        gradientSeq++;
+      } else if (budgetLeft <= 0) {
+        gradientOverflow = true;
+      }
+      fill = result.fill;
     } else {
       fill = shadeFaceHex(base, entry.face.normal, lightParams);
     }
@@ -550,6 +570,12 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       strokeWidth: globalStroke?.width,
     });
     paths.push(...entry.decals);
+  }
+
+  if (gradientOverflow) {
+    warnings.push(
+      `Gradient budget (${CONSTRUCT_LIMITS.maxGradients}) exhausted — remaining faces use flat smooth fill. Reduce face count or use light.mode "quantized".`,
+    );
   }
 
   if (paths.length === 0) {

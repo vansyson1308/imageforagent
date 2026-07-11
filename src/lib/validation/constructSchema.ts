@@ -136,7 +136,8 @@ export const lightSchema = z
     direction: vec3.default([-0.3, -1.7, -1]),
     tones: z.number().int().min(2).max(8).default(3),
     ambient: z.number().min(0).max(1).default(0.3),
-    mode: z.enum(["quantized", "smooth"]).default("quantized"),
+    /** gradient = ramp mượt userSpaceOnUse dọc trục sáng trên từng mặt. */
+    mode: z.enum(["quantized", "smooth", "gradient"]).default("quantized"),
   })
   .default({ direction: [-0.3, -1.7, -1], tones: 3, ambient: 0.3, mode: "quantized" });
 

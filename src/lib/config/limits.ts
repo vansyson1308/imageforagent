@@ -51,6 +51,8 @@ export const CONSTRUCT_LIMITS = {
   maxCsgOperandFaces: 2_000,
   /** Budget cắt của depth sort exact — cạn thì rơi về painter + warning. */
   maxDepthSplits: 2_000,
+  /** Tổng gradient mỗi fragment (smooth + shadow + per-face). */
+  maxGradients: 128,
 } as const;
 
 export function isAssetKind(value: string): value is AssetKind {
