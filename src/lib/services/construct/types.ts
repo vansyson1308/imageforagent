@@ -81,6 +81,10 @@ export interface CompileStats {
   readonly pathCommands: number;
   readonly bytes: number;
   readonly compileMs: number;
+  /** Số node CSG đã resolve. */
+  readonly csgOps: number;
+  /** Số lần depth sort exact phải cắt mặt (0 = cảnh sạch). */
+  readonly depthSplits: number;
 }
 
 export interface CompileResult {

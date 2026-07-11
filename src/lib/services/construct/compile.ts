@@ -33,6 +33,7 @@ import {
   type Projection,
 } from "@/lib/services/construct/camera";
 import { overlapWarnings, projectAndSort, type SolidSceneItem } from "@/lib/services/construct/painterSort";
+import { depthOrderNNS } from "@/lib/services/construct/depthOrder";
 import {
   applyLuminance,
   lambertFactor,
@@ -344,7 +345,20 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
 
   // ---------- Chiếu + sort ----------
   const facetedForSort = facetedItems.filter((i) => !smoothInfos.has(i.solidId));
-  const sortedFaces = projectAndSort(facetedForSort, view, projection);
+  let sortedFaces: ProjectedFace[];
+  let depthSplits = 0;
+  if (spec.depthSort === "exact") {
+    const ordered = depthOrderNNS(facetedForSort, view, projection, checkClock);
+    sortedFaces = ordered.faces;
+    depthSplits = ordered.splits;
+    if (ordered.fallback) {
+      warnings.push(
+        `Depth sort split budget (${CONSTRUCT_LIMITS.maxDepthSplits}) exhausted — remaining faces use painter order.`,
+      );
+    }
+  } else {
+    sortedFaces = projectAndSort(facetedForSort, view, projection);
+  }
 
   // Solid smooth → silhouette hull + nắp trên (nếu thấy được)
   interface SmoothItem {
@@ -414,14 +428,35 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   checkClock("projection");
 
   // ---------- Hợp nhất thứ tự vẽ ----------
-  const entries: DrawEntry[] = [
-    ...sortedFaces.map((face): DrawEntry => ({ face, decals: [] })),
-    ...smoothItems.map((s): DrawEntry => ({ face: s.face, fillOverride: s.fill, decals: [] })),
-  ].sort((a, b) => {
-    if (a.face.depth !== b.face.depth) return a.face.depth - b.face.depth;
-    if (a.face.solidIndex !== b.face.solidIndex) return a.face.solidIndex - b.face.solidIndex;
-    return a.face.faceIndex - b.face.faceIndex;
-  });
+  let entries: DrawEntry[];
+  if (spec.depthSort === "exact") {
+    // Giữ NGUYÊN thứ tự NNS; smooth item chèn theo depth (binary insert)
+    entries = sortedFaces.map((face): DrawEntry => ({ face, decals: [] }));
+    const smoothSorted = [...smoothItems].sort((a, b) => {
+      if (a.face.depth !== b.face.depth) return a.face.depth - b.face.depth;
+      if (a.face.solidIndex !== b.face.solidIndex) return a.face.solidIndex - b.face.solidIndex;
+      return a.face.faceIndex - b.face.faceIndex;
+    });
+    for (const s of smoothSorted) {
+      let lo = 0;
+      let hi = entries.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1;
+        if (entries[mid].face.depth <= s.face.depth) lo = mid + 1;
+        else hi = mid;
+      }
+      entries.splice(lo, 0, { face: s.face, fillOverride: s.fill, decals: [] });
+    }
+  } else {
+    entries = [
+      ...sortedFaces.map((face): DrawEntry => ({ face, decals: [] })),
+      ...smoothItems.map((s): DrawEntry => ({ face: s.face, fillOverride: s.fill, decals: [] })),
+    ].sort((a, b) => {
+      if (a.face.depth !== b.face.depth) return a.face.depth - b.face.depth;
+      if (a.face.solidIndex !== b.face.solidIndex) return a.face.solidIndex - b.face.solidIndex;
+      return a.face.faceIndex - b.face.faceIndex;
+    });
+  }
 
   // ---------- Cutouts (resolve2d.ts) ----------
   for (const cutout of spec.cutouts) {
@@ -513,7 +548,10 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   // Bảo đảm runtime: output LUÔN qua được sanitizer của pipeline artwork
   sanitizeSvg(svg, "frame");
 
-  warnings.push(...overlapWarnings(facetedItems));
+  // Exact mode tự giải xuyên khối — warning chỉ còn ý nghĩa với painter
+  if (spec.depthSort === "painter") {
+    warnings.push(...overlapWarnings(facetedItems));
+  }
 
   return {
     svg,
@@ -525,6 +563,8 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       pathCommands,
       bytes,
       compileMs: Math.round((performance.now() - t0) * 10) / 10,
+      csgOps: csgNodes.length,
+      depthSplits,
     },
     warnings,
   };

@@ -154,6 +154,12 @@ export const constructSpecSchema = z
     shapes: z.array(shape2dSchema).max(128).default([]),
     solids: z.array(solidSchema).max(128).default([]),
     cutouts: z.array(cutoutSchema).max(32).default([]),
+    /**
+     * "exact" (default): Newell–Newell–Sancha — đúng cả khi khối xuyên
+     * nhau (cắt lazy khi xung đột). "painter": sort centroid thuần, nhanh
+     * hơn, có thể sai vùng giao.
+     */
+    depthSort: z.enum(["exact", "painter"]).default("exact"),
     camera: cameraSchema,
     light: lightSchema,
     place: placeSchema,

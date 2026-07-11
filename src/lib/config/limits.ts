@@ -49,6 +49,8 @@ export const CONSTRUCT_LIMITS = {
   maxCsgOps: 8,
   /** Tổng mặt đầu vào mỗi phép CSG (sau tam giác hoá). */
   maxCsgOperandFaces: 2_000,
+  /** Budget cắt của depth sort exact — cạn thì rơi về painter + warning. */
+  maxDepthSplits: 2_000,
 } as const;
 
 export function isAssetKind(value: string): value is AssetKind {

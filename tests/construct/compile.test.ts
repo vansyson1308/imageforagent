@@ -35,14 +35,17 @@ describe("compile — 3 example specs chính thức", () => {
     expect(() => sanitizeSvg(result.svg, "frame")).not.toThrow();
   });
 
-  it("HOUSE (iso preset + extrude + cutout): decal cửa + cảnh báo overlap", () => {
+  it("HOUSE (iso preset + extrude + cutout): decal cửa + exact tự giải xuyên khối", () => {
     const result = compile(HOUSE_SPEC);
     expect(result.svg).toContain('fill="#5B3A24"'); // decal cửa
     expect(result.svg).toContain('fill="#7FB4D9"'); // decal cửa sổ
     expect(result.stats.solids).toBe(5);
     expect(result.stats.facesEmitted).toBeGreaterThan(4);
-    // chimney cắm xuyên roof → có overlap warning
-    expect(result.warnings.some((w) => w.includes("overlap"))).toBe(true);
+    // depthSort exact (default): xuyên khối tự giải — KHÔNG còn overlap warning
+    expect(result.warnings.some((w) => w.includes("overlap"))).toBe(false);
+    // painter opt-in vẫn cảnh báo như v1
+    const painter = compile({ ...HOUSE_SPEC, depthSort: "painter" });
+    expect(painter.warnings.some((w) => w.includes("overlap"))).toBe(true);
     expect(result.stats.compileMs).toBeLessThan(200);
   });
 

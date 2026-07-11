@@ -193,7 +193,9 @@ export function applyCutout(cutout: Cutout, list: DrawEntry[], opts: CutoutOptio
   if (!solid) unknownRefError(cutout.solid, "cutouts[].solid", allIds);
   const smoothKind = smoothKindOf(cutout.solid);
 
-  let target: DrawEntry | undefined;
+  // Depth sort exact có thể cắt một mặt thành nhiều fragment cùng
+  // label/faceIndex — cutout áp lên TẤT CẢ fragment khớp
+  let targets: DrawEntry[];
   if (smoothKind !== undefined) {
     if (cutout.mode === "subtract") {
       err(
@@ -201,16 +203,20 @@ export function applyCutout(cutout: Cutout, list: DrawEntry[], opts: CutoutOptio
         'Overlay maps to the silhouette plane; "subtract" requires a flat face (box, prism, extrude) or shading:"faceted".',
       );
     }
-    target = list.find((e) => e.face.solidId === cutout.solid && e.face.label === "silhouette");
+    targets = list.filter((e) => e.face.solidId === cutout.solid && e.face.label === "silhouette");
   } else if (typeof cutout.face === "string") {
-    target = list.find((e) => e.face.solidId === cutout.solid && e.face.label === cutout.face);
+    targets = list.filter((e) => e.face.solidId === cutout.solid && e.face.label === cutout.face);
   } else {
-    target = list.find((e) => e.face.solidId === cutout.solid && e.face.faceIndex === cutout.face);
+    targets = list.filter((e) => e.face.solidId === cutout.solid && e.face.faceIndex === cutout.face);
   }
-  if (!target) {
-    const available = list
-      .filter((e) => e.face.solidId === cutout.solid)
-      .map((e) => e.face.label ?? String(e.face.faceIndex));
+  if (targets.length === 0) {
+    const available = [
+      ...new Set(
+        list
+          .filter((e) => e.face.solidId === cutout.solid)
+          .map((e) => e.face.label ?? String(e.face.faceIndex)),
+      ),
+    ];
     err(
       `Cutout face "${String(cutout.face)}" of "${cutout.solid}" is not visible from this camera.`,
       `Visible faces of "${cutout.solid}": ${available.join(", ") || "(none)"} — change the camera or the face.`,
@@ -221,12 +227,19 @@ export function applyCutout(cutout: Cutout, list: DrawEntry[], opts: CutoutOptio
   if (shapeRes.shape.type === "line") {
     err(`Cutout shape "${cutout.shape}" is an open line.`, "Use a closed shape for cutouts.");
   }
-  // Đặt shape tại tâm mặt đã chiếu + offset at (toạ độ màn hình)
-  const pts = target.face.points;
-  const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
-  const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  // Đặt shape tại tâm CHUNG của mọi fragment (tâm mặt gốc) + offset at
+  let sx = 0;
+  let sy = 0;
+  let count = 0;
+  for (const t of targets) {
+    for (const p of t.face.points) {
+      sx += p[0];
+      sy += p[1];
+      count++;
+    }
+  }
   const affine = placementToAffine({
-    at: [cx + cutout.at[0], cy + cutout.at[1]],
+    at: [sx / count + cutout.at[0], sy / count + cutout.at[1]],
     rotate: cutout.rotate,
     scale: cutout.scale,
   });
@@ -235,19 +248,29 @@ export function applyCutout(cutout: Cutout, list: DrawEntry[], opts: CutoutOptio
     precision,
   );
 
-  const faceD = target.dOverride ?? faceToPathData(target.face, precision);
   if (cutout.mode === "subtract") {
-    const result = runBoolean("difference", [faceD, shapeD], precision, `cutout on "${cutout.solid}"`);
-    if (result.isEmpty) {
+    let removedAll = true;
+    for (const target of targets) {
+      const faceD = target.dOverride ?? faceToPathData(target.face, precision);
+      const result = runBoolean("difference", [faceD, shapeD], precision, `cutout on "${cutout.solid}"`);
+      target.dOverride = result.d;
+      if (!result.isEmpty) removedAll = false;
+    }
+    if (removedAll) {
       warnings.push(`Cutout on "${cutout.solid}" removed the entire face.`);
     }
-    target.dOverride = result.d;
   } else {
-    const clipped = runBoolean("intersection", [shapeD, faceD], precision, `cutout on "${cutout.solid}"`);
+    // Overlay: clip theo UNION các fragment, decal vẽ sau fragment cuối
+    const faceDs = targets.map((t) => t.dOverride ?? faceToPathData(t.face, precision));
+    const union =
+      faceDs.length === 1
+        ? { d: faceDs[0], isEmpty: faceDs[0].length === 0 }
+        : runBoolean("union", faceDs, precision, `cutout on "${cutout.solid}"`);
+    const clipped = runBoolean("intersection", [shapeD, union.d], precision, `cutout on "${cutout.solid}"`);
     if (clipped.isEmpty) {
       warnings.push(`Overlay cutout on "${cutout.solid}" does not intersect the face — skipped.`);
     } else {
-      target.decals.push({
+      targets[targets.length - 1].decals.push({
         d: clipped.d,
         fill: cutout.fill ?? shapeRes.shape.fill ?? "#c0c0c0",
         fillRule: "nonzero",
