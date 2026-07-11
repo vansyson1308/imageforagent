@@ -85,6 +85,8 @@ export interface CompileStats {
   readonly csgOps: number;
   /** Số lần depth sort exact phải cắt mặt (0 = cảnh sạch). */
   readonly depthSplits: number;
+  /** Số part macro đã expand. */
+  readonly partsExpanded: number;
 }
 
 export interface CompileResult {

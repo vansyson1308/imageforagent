@@ -22,6 +22,14 @@ export const constructId = z
   .regex(/^[A-Za-z][\w-]{0,63}$/, "Id must start with a letter (letters, digits, _, - allowed)")
   .refine((s) => !s.startsWith("cg-"), { message: 'The "cg-" prefix is reserved for engine gradients' });
 
+/**
+ * Ref có thể trỏ vào solid SINH TỪ PART: "wheelL:hub". User không thể tự
+ * đặt id chứa ":" (constructId cấm) — namespace không thể đụng độ.
+ */
+export const refId = z
+  .string()
+  .regex(/^[A-Za-z][\w-]{0,63}(:[\w-]{1,64})?$/, 'Ref must be an id, optionally "partId:segment"');
+
 /** Fill an toàn theo sanitizer: hex, url(#id) local, hoặc none. */
 export const fillColor = z
   .string()
@@ -78,6 +86,8 @@ const solidBase = {
   shading: z.enum(["auto", "faceted", "smooth", "none"]).default("auto"),
   /** false = solid này không đổ bóng (khi spec.shadow bật). */
   shadow: z.boolean().default(true),
+  /** Gắn vào group (khung FK) — placement solid tính TRONG hệ của group. */
+  group: constructId.optional(),
 };
 
 export const solidSchema = z.discriminatedUnion("type", [
@@ -92,8 +102,8 @@ export const solidSchema = z.discriminatedUnion("type", [
     ...solidBase,
     type: z.literal("csg"),
     op: z.enum(["union", "difference", "intersection"]),
-    /** Operand là SOLID id (kể cả csg khác — lồng được); bị tiêu thụ, không vẽ riêng. */
-    of: z.array(constructId).min(2).max(8),
+    /** Operand là SOLID id (kể cả csg khác hoặc "partId:segment"); bị tiêu thụ. */
+    of: z.array(refId).min(2).max(8),
   }),
 ]);
 
@@ -102,7 +112,7 @@ export type Solid = z.infer<typeof solidSchema>;
 // ---------- Cutouts ----------
 
 export const cutoutSchema = z.object({
-  solid: constructId,
+  solid: refId,
   /** Nhãn mặt (box/extrude/nắp trụ) hoặc faceIndex số. */
   face: z.union([z.enum(["top", "bottom", "front", "back", "left", "right"]), z.number().int().min(0)]),
   shape: constructId,
@@ -115,6 +125,90 @@ export const cutoutSchema = z.object({
 });
 
 export type Cutout = z.infer<typeof cutoutSchema>;
+
+// ---------- Groups (khung FK cha-con) + Parts (macro tham số hoá) ----------
+
+/** Khung toạ độ cha-con: world = M(parent) · SRT(group). Cha khai TRƯỚC con. */
+export const groupSchema = z.object({
+  id: constructId,
+  parent: constructId.optional(),
+  at: vec3.default([0, 0, 0]),
+  rotate: vec3.default([0, 0, 0]),
+  scale: scale3.default(1),
+});
+
+export type Group = z.infer<typeof groupSchema>;
+
+const partBase3d = {
+  id: constructId,
+  at: vec3.default([0, 0, 0]),
+  rotate: vec3.default([0, 0, 0]),
+  scale: z.number().gt(0).max(1000).default(1),
+  group: constructId.optional(),
+};
+
+/**
+ * Parts — macro expand thành shapes/solids TRƯỚC compile, id sinh dạng
+ * "partId:segment" (user không thể đặt id chứa ':' → không đụng độ).
+ */
+export const partSchema = z.discriminatedUnion("type", [
+  z.object({
+    ...partBase3d,
+    type: z.literal("wheel"),
+    /** Trục bánh dọc z (bánh đứng, lăn theo x). */
+    radius: pos,
+    width: pos,
+    /** Bề dày lốp — default radius·0.18. */
+    tireProfile: pos.optional(),
+    /** Bán kính mâm — default radius·0.28. */
+    hubRadius: pos.optional(),
+    /** Lỗ trục — 0 = đặc. */
+    boreRadius: z.number().min(0).default(0),
+    spokes: z.number().int().min(0).max(12).default(6),
+    spokeStyle: z.enum(["straight", "none"]).default("straight"),
+    spokeWidth: pos.optional(),
+    fills: z
+      .object({ tire: fillColor, hub: fillColor, spokes: fillColor })
+      .partial()
+      .optional(),
+  }),
+  z.object({
+    ...partBase3d,
+    type: z.literal("tree"),
+    trunkH: pos,
+    trunkR: pos,
+    canopyR: pos,
+    style: z.enum(["blob", "cone", "layered"]).default("blob"),
+    fills: z.object({ trunk: fillColor, canopy: fillColor }).partial().optional(),
+  }),
+  z.object({
+    /** Macro 2D: union các thuỳ tròn → 1 shape id = part id. */
+    id: constructId,
+    type: z.literal("cloud"),
+    at: vec2.default([0, 0]),
+    rotate: deg.default(0),
+    scale: z.number().gt(0).max(1000).default(1),
+    width: pos,
+    height: pos,
+    lobes: z.number().int().min(3).max(7).default(4),
+    fill: fillColor.optional(),
+  }),
+  z.object({
+    /** Macro 2D: polygon mũi tên chỉ +x, tâm giữa thân. */
+    id: constructId,
+    type: z.literal("arrow"),
+    at: vec2.default([0, 0]),
+    rotate: deg.default(0),
+    scale: z.number().gt(0).max(1000).default(1),
+    length: pos,
+    shaftWidth: pos,
+    headWidth: pos,
+    headLength: pos,
+    fill: fillColor.optional(),
+  }),
+]);
+
+export type Part = z.infer<typeof partSchema>;
 
 // ---------- Camera / light / place ----------
 
@@ -157,6 +251,8 @@ export const constructSpecSchema = z
     shapes: z.array(shape2dSchema).max(128).default([]),
     solids: z.array(solidSchema).max(128).default([]),
     cutouts: z.array(cutoutSchema).max(32).default([]),
+    groups: z.array(groupSchema).max(CONSTRUCT_LIMITS.maxGroups).default([]),
+    parts: z.array(partSchema).max(CONSTRUCT_LIMITS.maxParts).default([]),
     /**
      * "exact" (default): Newell–Newell–Sancha — đúng cả khi khối xuyên
      * nhau (cắt lazy khi xung đột). "painter": sort centroid thuần, nhanh
@@ -187,8 +283,8 @@ export const constructSpecSchema = z
     precision: z.number().int().min(0).max(4).default(2),
   })
   .strict()
-  .refine((s) => s.shapes.length + s.solids.length > 0, {
-    message: "Spec needs at least one shape or solid",
+  .refine((s) => s.shapes.length + s.solids.length + s.parts.length > 0, {
+    message: "Spec needs at least one shape, solid, or part",
   })
   .refine((s) => s.shapes.length + s.solids.length + s.cutouts.length <= CONSTRUCT_LIMITS.maxNodes, {
     message: `Total shapes + solids + cutouts must be <= ${CONSTRUCT_LIMITS.maxNodes}`,

@@ -53,6 +53,12 @@ export const CONSTRUCT_LIMITS = {
   maxDepthSplits: 2_000,
   /** Tổng gradient mỗi fragment (smooth + shadow + per-face). */
   maxGradients: 128,
+  /** Số group (khung FK) mỗi spec. */
+  maxGroups: 32,
+  /** Độ sâu chuỗi parent group. */
+  maxGroupDepth: 8,
+  /** Số part macro mỗi spec. */
+  maxParts: 16,
 } as const;
 
 export function isAssetKind(value: string): value is AssetKind {

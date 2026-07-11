@@ -10,6 +10,7 @@ import { csgOperation, prepareOperand } from "@/lib/services/construct/csg";
 import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRepair";
 import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
 import { faceGradientFill } from "@/lib/services/construct/faceGradient";
+import { expandParts } from "@/lib/services/construct/partsExpand";
 import {
   applyCutout,
   collectConsumed,
@@ -85,6 +86,13 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     }
   };
   const warnings: string[] = [];
+
+  // ---------- Stage 1: expand parts + groups (Layer 5, TRƯỚC id collect) ----------
+  const expanded = expandParts(spec);
+  warnings.push(...expanded.warnings);
+  spec = { ...spec, shapes: expanded.shapes, solids: expanded.solids };
+  const worldMatrixById = expanded.worldMatrixById;
+  checkClock("expand");
 
   // ---------- Id namespace chung + duplicate ----------
   const allIds: string[] = [];
@@ -198,7 +206,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     }
 
     const world = transformMesh(
-      composePlacement4(solid.at, solid.rotate, solid.scale),
+      worldMatrixById.get(solid.id) ?? composePlacement4(solid.at, solid.rotate, solid.scale),
       mesh,
     );
     worldMeshById.set(solid.id, { mesh: world, solidIndex });
@@ -619,6 +627,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       compileMs: Math.round((performance.now() - t0) * 10) / 10,
       csgOps: csgNodes.length,
       depthSplits,
+      partsExpanded: expanded.partsExpanded,
     },
     warnings,
   };
