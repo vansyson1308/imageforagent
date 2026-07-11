@@ -5,8 +5,8 @@ import { CONSTRUCT_LIMITS } from "@/lib/config/limits";
 import { convexHull2D, flattenToContours } from "@/lib/services/construct/geometry2d";
 import { parsePathData } from "@/lib/services/construct/pathParse";
 import { normalizeSelfUnion } from "@/lib/services/construct/pathBoolean";
-import { relativeEps, type Polygon3 } from "@/lib/services/construct/plane3";
-import { csgOperation, prepareOperand } from "@/lib/services/construct/csg";
+import { relativeEps, weldVertices, type Polygon3 } from "@/lib/services/construct/plane3";
+import { csgOperation, meshToPolygons, prepareOperand } from "@/lib/services/construct/csg";
 import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRepair";
 import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
 import { faceGradientFill } from "@/lib/services/construct/faceGradient";
@@ -263,9 +263,24 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       const operands = solid.of.map((ref) => resolveCsgPolygons(ref, `"${id}".of`, depth + 1));
       csgResolving.delete(id);
 
+      // Compact giữa các phép fold: BSP làm mặt phân mảnh TÍCH LUỸ qua
+      // chuỗi op — gộp đồng phẳng + re-triangulate giữ tăng trưởng bị chặn
+      const compact = (polys: Polygon3[]): Polygon3[] => {
+        const mesh = repairedToMesh(repairPolygons(polys, eps));
+        // meshToPolygons giữ fill/label per-face (face.fill ưu tiên)
+        return meshToPolygons(mesh, {
+          solidId: id,
+          solidIndex: solidIndexById.get(id)!,
+        }).polygons;
+      };
+
       let result = operands[0];
       for (let i = 1; i < operands.length; i++) {
-        const inputFaces = result.length + operands[i].length;
+        let inputFaces = result.length + operands[i].length;
+        if (inputFaces > CONSTRUCT_LIMITS.maxCsgOperandFaces && i > 1) {
+          result = weldVertices(compact(result), eps);
+          inputFaces = result.length + operands[i].length;
+        }
         if (inputFaces > CONSTRUCT_LIMITS.maxCsgOperandFaces) {
           err(
             `CSG "${id}" input has ${inputFaces.toLocaleString("en-US")} faces (max ${CONSTRUCT_LIMITS.maxCsgOperandFaces.toLocaleString("en-US")}).`,
@@ -532,16 +547,26 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     }
   }
 
-  // Shadow layer: sau nền 2D, dưới mọi mặt 3D
-  if (shadowLayer) {
-    gradients.push(...shadowLayer.gradients);
-    paths.push(...shadowLayer.paths);
+  // Shadow layer: vẽ SAU solid "nền" (toàn bộ mesh ≤ mặt phẳng bóng —
+  // vd sàn/đất), TRƯỚC mọi solid nổi phía trên — bóng nằm ĐÈ lên mặt sàn
+  const groundSolidIds = new Set<string>();
+  if (shadowLayer && spec.shadow) {
+    const groundY = spec.shadow.ground + 1e-6;
+    for (const [id, entry] of worldMeshById) {
+      if (entry.mesh.vertices.every((v) => v[1] <= groundY)) groundSolidIds.add(id);
+    }
   }
+  const groundEntries = shadowLayer
+    ? entries.filter((e) => groundSolidIds.has(e.face.solidId))
+    : [];
+  const floatingEntries = shadowLayer
+    ? entries.filter((e) => !groundSolidIds.has(e.face.solidId))
+    : entries;
 
-  // 3D faces theo painter order
+  // 3D faces theo painter order (nền → bóng → phần nổi)
   let gradientSeq = 0;
   let gradientOverflow = false;
-  for (const entry of entries) {
+  const emit3d = (entry: DrawEntry) => {
     const solid = solidMap.get(entry.face.solidId)!;
     // face.fill = fill kế thừa từ solid nguồn (CSG đa màu; csg.fill đã
     // override từ lúc resolve) — solid thường không có face.fill
@@ -579,7 +604,14 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       strokeWidth: globalStroke?.width,
     });
     paths.push(...entry.decals);
+  };
+
+  for (const entry of groundEntries) emit3d(entry);
+  if (shadowLayer) {
+    gradients.push(...shadowLayer.gradients);
+    paths.push(...shadowLayer.paths);
   }
+  for (const entry of floatingEntries) emit3d(entry);
 
   if (gradientOverflow) {
     warnings.push(

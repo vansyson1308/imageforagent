@@ -1,0 +1,70 @@
+{
+  "version": 1,
+  "solids": [
+    {
+      "id": "cube",
+      "type": "box",
+      "size": [
+        180,
+        180,
+        180
+      ],
+      "at": [
+        -260,
+        90,
+        0
+      ],
+      "fill": "#e07b39"
+    },
+    {
+      "id": "ball",
+      "type": "sphere",
+      "r": 100,
+      "segments": 20,
+      "at": [
+        0,
+        100,
+        0
+      ],
+      "fill": "#3a86c8"
+    },
+    {
+      "id": "cone1",
+      "type": "cone",
+      "r": 95,
+      "h": 210,
+      "segments": 20,
+      "at": [
+        250,
+        105,
+        0
+      ],
+      "fill": "#59a14f"
+    }
+  ],
+  "light": {
+    "direction": [
+      0.8,
+      -1.5,
+      0.6
+    ],
+    "mode": "gradient"
+  },
+  "shadow": {
+    "style": "blob",
+    "opacity": 0.3
+  },
+  "camera": {
+    "orbit": {
+      "azimuth": 30,
+      "elevation": 20
+    }
+  },
+  "place": {
+    "at": [
+      960,
+      600
+    ],
+    "scale": 1.1
+  }
+}

@@ -1,0 +1,254 @@
+{
+  "version": 1,
+  "solids": [
+    {
+      "id": "ground",
+      "type": "box",
+      "size": [
+        1300,
+        20,
+        700
+      ],
+      "at": [
+        0,
+        -10,
+        0
+      ],
+      "fill": "#8fbf6a",
+      "shadow": false
+    },
+    {
+      "id": "bodyOuter",
+      "type": "box",
+      "size": [
+        260,
+        110,
+        190
+      ],
+      "fill": "#b07a45"
+    },
+    {
+      "id": "bodyInner",
+      "type": "box",
+      "size": [
+        236,
+        104,
+        166
+      ],
+      "at": [
+        0,
+        20,
+        0
+      ],
+      "fill": "#7a5230"
+    },
+    {
+      "id": "cargo",
+      "type": "csg",
+      "op": "difference",
+      "of": [
+        "bodyOuter",
+        "bodyInner"
+      ],
+      "at": [
+        40,
+        150,
+        0
+      ]
+    },
+    {
+      "id": "axle",
+      "type": "cylinder",
+      "r": 9,
+      "h": 250,
+      "rotate": [
+        90,
+        0,
+        0
+      ],
+      "at": [
+        40,
+        62,
+        0
+      ],
+      "fill": "#5a5a64",
+      "shading": "faceted"
+    },
+    {
+      "id": "handleL",
+      "type": "box",
+      "size": [
+        190,
+        11,
+        13
+      ],
+      "at": [
+        -120,
+        165,
+        62
+      ],
+      "rotate": [
+        0,
+        0,
+        18
+      ],
+      "fill": "#8a6238"
+    },
+    {
+      "id": "handleR",
+      "type": "box",
+      "size": [
+        190,
+        11,
+        13
+      ],
+      "at": [
+        -120,
+        165,
+        -62
+      ],
+      "rotate": [
+        0,
+        0,
+        18
+      ],
+      "fill": "#8a6238"
+    }
+  ],
+  "parts": [
+    {
+      "id": "wl",
+      "type": "wheel",
+      "radius": 62,
+      "width": 22,
+      "boreRadius": 8,
+      "spokes": 6,
+      "at": [
+        40,
+        62,
+        106
+      ],
+      "fills": {
+        "tire": "#3a3a42",
+        "hub": "#c0392b",
+        "spokes": "#d9d9e0"
+      }
+    },
+    {
+      "id": "wr",
+      "type": "wheel",
+      "radius": 62,
+      "width": 22,
+      "boreRadius": 8,
+      "spokes": 6,
+      "at": [
+        40,
+        62,
+        -106
+      ],
+      "fills": {
+        "tire": "#3a3a42",
+        "hub": "#c0392b",
+        "spokes": "#d9d9e0"
+      }
+    },
+    {
+      "id": "hero",
+      "type": "figure",
+      "height": 310,
+      "headCount": 3,
+      "at": [
+        -300,
+        0,
+        0
+      ],
+      "rotate": [
+        0,
+        -90,
+        0
+      ],
+      "pose": {
+        "spine": [
+          22,
+          0,
+          0
+        ],
+        "shoulderL": [
+          -62,
+          0,
+          -18
+        ],
+        "shoulderR": [
+          -62,
+          0,
+          18
+        ],
+        "elbowL": [
+          -12,
+          0,
+          0
+        ],
+        "elbowR": [
+          -12,
+          0,
+          0
+        ],
+        "hipL": [
+          -18,
+          0,
+          0
+        ],
+        "kneeL": [
+          24,
+          0,
+          0
+        ],
+        "hipR": [
+          14,
+          0,
+          0
+        ]
+      },
+      "fills": {
+        "shirt": "#c0392b",
+        "pants": "#2c3e50"
+      }
+    },
+    {
+      "id": "tr",
+      "type": "tree",
+      "trunkH": 110,
+      "trunkR": 13,
+      "canopyR": 62,
+      "style": "blob",
+      "at": [
+        480,
+        0,
+        -180
+      ]
+    }
+  ],
+  "shadow": {
+    "opacity": 0.28
+  },
+  "light": {
+    "direction": [
+      0.5,
+      -1.7,
+      1
+    ]
+  },
+  "camera": {
+    "orbit": {
+      "azimuth": 28,
+      "elevation": 17
+    }
+  },
+  "place": {
+    "at": [
+      960,
+      660
+    ],
+    "scale": 1
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "solids": [
+    {
+      "id": "body",
+      "type": "box",
+      "size": [
+        260,
+        260,
+        260
+      ],
+      "at": [
+        0,
+        130,
+        0
+      ],
+      "fill": "#f5f0e6"
+    },
+    {
+      "id": "p1",
+      "type": "sphere",
+      "r": 34,
+      "segments": 12,
+      "at": [
+        0,
+        262,
+        0
+      ],
+      "fill": "#c0392b",
+      "shading": "faceted"
+    },
+    {
+      "id": "p2a",
+      "type": "sphere",
+      "r": 30,
+      "segments": 12,
+      "at": [
+        -60,
+        190,
+        132
+      ],
+      "fill": "#c0392b",
+      "shading": "faceted"
+    },
+    {
+      "id": "p2b",
+      "type": "sphere",
+      "r": 30,
+      "segments": 12,
+      "at": [
+        60,
+        70,
+        132
+      ],
+      "fill": "#c0392b",
+      "shading": "faceted"
+    },
+    {
+      "id": "p3a",
+      "type": "sphere",
+      "r": 30,
+      "segments": 12,
+      "at": [
+        132,
+        200,
+        -60
+      ],
+      "fill": "#c0392b",
+      "shading": "faceted"
+    },
+    {
+      "id": "p3b",
+      "type": "sphere",
+      "r": 30,
+      "segments": 12,
+      "at": [
+        132,
+        130,
+        0
+      ],
+      "fill": "#c0392b",
+      "shading": "faceted"
+    },
+    {
+      "id": "p3c",
+      "type": "sphere",
+      "r": 30,
+      "segments": 12,
+      "at": [
+        132,
+        60,
+        60
+      ],
+      "fill": "#c0392b",
+      "shading": "faceted"
+    },
+    {
+      "id": "dice",
+      "type": "csg",
+      "op": "difference",
+      "of": [
+        "body",
+        "p1",
+        "p2a",
+        "p2b",
+        "p3a",
+        "p3b",
+        "p3c"
+      ]
+    }
+  ],
+  "shadow": {
+    "opacity": 0.2
+  },
+  "light": {
+    "direction": [
+      0.6,
+      -1.7,
+      0.9
+    ]
+  },
+  "camera": {
+    "orbit": {
+      "azimuth": 32,
+      "elevation": 24
+    }
+  },
+  "place": {
+    "at": [
+      960,
+      600
+    ],
+    "scale": 1.1
+  }
+}

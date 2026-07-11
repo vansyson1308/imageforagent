@@ -38,7 +38,8 @@ export function meshToPolygons(
   let degraded = false;
   mesh.faces.forEach((face, faceIndex) => {
     const outer = face.vertices.map((i) => mesh.vertices[i]);
-    const shared: SharedTag = { ...tag, faceIndex, label: face.label };
+    // face.fill (mesh đã qua CSG/compact) ưu tiên hơn fill toàn khối
+    const shared: SharedTag = { ...tag, fill: face.fill ?? tag.fill, faceIndex, label: face.label };
     const normal = faceNormal(outer);
     if (!face.holes?.length && isConvexFace(outer, normal)) {
       polygons.push({ vertices: outer, shared });
