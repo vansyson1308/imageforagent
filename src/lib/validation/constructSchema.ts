@@ -76,6 +76,8 @@ const solidBase = {
   fill: fillColor.optional(),
   /** auto = smooth cho sphere/cylinder/cone, faceted cho khối phẳng. */
   shading: z.enum(["auto", "faceted", "smooth", "none"]).default("auto"),
+  /** false = solid này không đổ bóng (khi spec.shadow bật). */
+  shadow: z.boolean().default(true),
 };
 
 export const solidSchema = z.discriminatedUnion("type", [
@@ -160,6 +162,20 @@ export const constructSpecSchema = z
      * hơn, có thể sai vùng giao.
      */
     depthSort: z.enum(["exact", "painter"]).default("exact"),
+    /** Bóng đổ xuống mặt đất y=ground — có mặt là bật. */
+    shadow: z
+      .object({
+        style: z.enum(["silhouette", "blob", "long", "none"]).default("silhouette"),
+        color: z.string().regex(/^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/).default("#000000"),
+        opacity: z.number().min(0).max(1).default(0.25),
+        /** 0 = mép sắc thuần vector; >0 = feGaussianBlur stdDeviation. */
+        blur: z.number().min(0).max(50).default(0),
+        /** Cao độ world y của mặt đất. */
+        ground: num.default(0),
+        /** Chiều dài long shadow (style "long") — default 2.5× scene. */
+        longLength: pos.optional(),
+      })
+      .optional(),
     camera: cameraSchema,
     light: lightSchema,
     place: placeSchema,

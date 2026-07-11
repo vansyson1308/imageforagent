@@ -138,12 +138,19 @@ describe("svgEmitter", () => {
     expect(fragment).toContain('transform="translate(960 540) scale(1.5)"');
   });
 
-  it("chỉ emit element trong allowlist g/path/gradient/stop", () => {
-    const fragment = emitFragment([], [{ d: "M 0 0 L 1 1 Z", fill: "#fff" }], { at: [0, 0], scale: 1, rotate: 0 }, 2);
+  it("chỉ emit element trong allowlist g/path/gradient/stop/filter/feGaussianBlur", () => {
+    const fragment = emitFragment(
+      [],
+      [{ d: "M 0 0 L 1 1 Z", fill: "#fff", filter: "url(#cg-blur-shadow)" }],
+      { at: [0, 0], scale: 1, rotate: 0 },
+      2,
+      [{ id: "cg-blur-shadow", stdDeviation: 4 }],
+    );
     const tags = [...fragment.matchAll(/<([a-zA-Z]+)[\s>]/g)].map((m) => m[1]);
     for (const tag of tags) {
-      expect(["g", "path", "linearGradient", "radialGradient", "stop"]).toContain(tag);
+      expect(["g", "path", "linearGradient", "radialGradient", "stop", "filter", "feGaussianBlur"]).toContain(tag);
     }
+    expect(() => sanitizeSvg(fragment, "frame")).not.toThrow();
   });
 
   it("escape attr chống injection qua fill/id", () => {

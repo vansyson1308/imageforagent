@@ -8,6 +8,7 @@ import { normalizeSelfUnion } from "@/lib/services/construct/pathBoolean";
 import { relativeEps, type Polygon3 } from "@/lib/services/construct/plane3";
 import { csgOperation, prepareOperand } from "@/lib/services/construct/csg";
 import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRepair";
+import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
 import {
   applyCutout,
   collectConsumed,
@@ -348,6 +349,22 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   const lightScreenLen = Math.hypot(lightScreenRaw[0], lightScreenRaw[1]) || 1;
   const lightScreen: Vec2 = [lightScreenRaw[0] / lightScreenLen, lightScreenRaw[1] / lightScreenLen];
 
+  // ---------- Shadow layer (Layer 4a) ----------
+  let shadowLayer: ShadowLayer | null = null;
+  if (spec.shadow && spec.shadow.style !== "none") {
+    const casting = facetedItems.filter((i) => solidMap.get(i.solidId)!.shadow !== false);
+    shadowLayer = buildShadowLayer(
+      casting,
+      normalize3(light.direction),
+      view,
+      projection,
+      spec.shadow,
+      spec.precision,
+    );
+    warnings.push(...shadowLayer.warnings);
+    checkClock("shadow");
+  }
+
   // ---------- Chiếu + sort ----------
   const facetedForSort = facetedItems.filter((i) => !smoothInfos.has(i.solidId));
   let sortedFaces: ProjectedFace[];
@@ -505,6 +522,12 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     }
   }
 
+  // Shadow layer: sau nền 2D, dưới mọi mặt 3D
+  if (shadowLayer) {
+    gradients.push(...shadowLayer.gradients);
+    paths.push(...shadowLayer.paths);
+  }
+
   // 3D faces theo painter order
   for (const entry of entries) {
     const solid = solidMap.get(entry.face.solidId)!;
@@ -534,7 +557,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   }
 
   // ---------- Emit + guard cuối ----------
-  const svg = emitFragment(gradients, paths, spec.place, spec.precision);
+  const svg = emitFragment(gradients, paths, spec.place, spec.precision, shadowLayer?.filters ?? []);
 
   const bytes = Buffer.byteLength(svg, "utf8");
   if (bytes > CONSTRUCT_LIMITS.maxOutputBytes) {
