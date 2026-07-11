@@ -175,11 +175,21 @@ export function triangulateFace(
       const b = ring.pts2[iCur];
       const c = ring.pts2[iNext];
       if (cross2(a, b, c) <= 0) continue; // reflex — không phải ear
-      // Không đỉnh nào khác nằm trong tam giác
+      // Không đỉnh nào khác nằm trong tam giác. Đỉnh TRÙNG toạ độ với
+      // a/b/c (bản sao bridge) không tính — nếu không ear kề bridge bị
+      // chặn vĩnh viễn → deadlock → fallback fan sai hình
       let contains = false;
       for (const j of idx) {
         if (j === iPrev || j === iCur || j === iNext) continue;
-        if (pointInTriangle(ring.pts2[j], a, b, c)) {
+        const p = ring.pts2[j];
+        if (
+          (p[0] === a[0] && p[1] === a[1]) ||
+          (p[0] === b[0] && p[1] === b[1]) ||
+          (p[0] === c[0] && p[1] === c[1])
+        ) {
+          continue;
+        }
+        if (pointInTriangle(p, a, b, c)) {
           contains = true;
           break;
         }

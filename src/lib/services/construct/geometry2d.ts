@@ -251,10 +251,20 @@ export function flattenToContours(
     if (!last || last[0] !== p[0] || last[1] !== p[1]) current.push(p);
   };
 
+  // Ring có điểm cuối trùng điểm đầu (path đóng bằng L về start thay vì Z)
+  // phải dedup — điểm trùng làm ear clipping/tessellation kẹt
+  const flush = () => {
+    if (current.length <= 1) return;
+    const first = current[0];
+    const last = current[current.length - 1];
+    if (first[0] === last[0] && first[1] === last[1]) current.pop();
+    if (current.length > 1) contours.push(current);
+  };
+
   for (const seg of segments) {
     switch (seg.kind) {
       case "M":
-        if (current.length > 1) contours.push(current);
+        flush();
         current = [seg.to];
         cursor = seg.to;
         break;
@@ -277,18 +287,12 @@ export function flattenToContours(
         break;
       }
       case "Z":
-        // Contour đóng: bỏ điểm cuối nếu trùng điểm đầu
-        if (current.length > 1) {
-          const first = current[0];
-          const last = current[current.length - 1];
-          if (first[0] === last[0] && first[1] === last[1]) current.pop();
-          contours.push(current);
-          current = [];
-        }
+        flush();
+        current = [];
         break;
     }
   }
-  if (current.length > 1) contours.push(current);
+  flush();
   return contours;
 }
 

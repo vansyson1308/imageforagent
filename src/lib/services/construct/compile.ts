@@ -6,7 +6,8 @@ import { convexHull2D, flattenToContours } from "@/lib/services/construct/geomet
 import { parsePathData } from "@/lib/services/construct/pathParse";
 import { normalizeSelfUnion } from "@/lib/services/construct/pathBoolean";
 import { relativeEps, type Polygon3 } from "@/lib/services/construct/plane3";
-import { csgOperation, polygonsToMesh, prepareOperand } from "@/lib/services/construct/csg";
+import { csgOperation, prepareOperand } from "@/lib/services/construct/csg";
+import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRepair";
 import {
   applyCutout,
   collectConsumed,
@@ -280,7 +281,10 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
         // bắt được cycle thuần (a↔b không có root)
         continue;
       }
-      let polygons = resolveCsgPolygons(node.id, "solids", 0);
+      const polygons = resolveCsgPolygons(node.id, "solids", 0);
+      // Layer 3: gộp mảnh đồng phẳng (TRƯỚC placement — repair cần đỉnh
+      // welded so theo reference)
+      let repaired = repairPolygons(polygons, eps);
       // Placement của csg node áp lên KẾT QUẢ (giống boolean 2D)
       const placement = composePlacement4(node.at, node.rotate, node.scale);
       const isIdentity =
@@ -288,16 +292,17 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
         node.rotate[0] === 0 && node.rotate[1] === 0 && node.rotate[2] === 0 &&
         (typeof node.scale === "number" ? node.scale === 1 : false);
       if (!isIdentity) {
-        polygons = polygons.map((p) => ({
-          ...p,
-          vertices: p.vertices.map((v) => transformPoint(placement, v)),
+        repaired = repaired.map((f) => ({
+          ...f,
+          outer: f.outer.map((v) => transformPoint(placement, v)),
+          holes: f.holes.map((ring) => ring.map((v) => transformPoint(placement, v))),
         }));
       }
       const solidIndex = solidIndexById.get(node.id)!;
       facetedItems.push({
         solidId: node.id,
         solidIndex,
-        mesh: polygonsToMesh(polygons),
+        mesh: repairedToMesh(repaired),
       });
     }
     // Node csg chưa được resolve (toàn bộ bị tiêu thụ lẫn nhau) → ép resolve
