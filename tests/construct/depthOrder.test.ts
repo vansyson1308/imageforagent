@@ -159,3 +159,48 @@ describe("compile với depthSort", () => {
     expect(parseHex("#d64545")!.r).toBeGreaterThan(200);
   });
 });
+
+describe("regression: smooth silhouette thế chỗ mặt CUỐI trong NNS (bug cối xay gió)", () => {
+  it("mặt top tháp bị cắt bởi vật xuyên KHÔNG lòi lên trên cap smooth", () => {
+    // Tái hiện: frustum faceted + cone smooth đội lên + thanh xuyên ngang
+    // ép NNS cắt mặt top tháp thành nhiều mảnh
+    const { svg, stats } = compileConstruction(
+      constructSpecSchema.parse({
+        version: 1,
+        solids: [
+          { id: "tower", type: "cone", r: 150, rTop: 95, h: 380, at: [0, 190, 0], segments: 24, fill: "#efe6d2", shading: "faceted" },
+          { id: "cap", type: "cone", r: 110, rTop: 0, h: 130, at: [0, 445, 0], segments: 20, fill: "#b3552e" },
+          { id: "bar", type: "box", size: [500, 24, 12], at: [0, 430, 140], rotate: [0, 0, 25], fill: "#6b4a2e" },
+        ],
+        light: { direction: [0.6, -1.7, 0.9], ambient: 0.42 },
+        camera: { orbit: { azimuth: -30, elevation: 14 } },
+      }),
+    );
+    expect(stats.depthSplits).toBeGreaterThan(0); // mặt top thật sự bị cắt
+    // KHÔNG path #efe6d2 nguyên độ sáng (mặt top luminance 1) SAU silhouette cap
+    const fills = [...svg.matchAll(/<path [^>]*fill="([^"]+)"/g)].map((m) => m[1]);
+    const capIdx = fills.findIndex((f) => f.includes("cg-cap"));
+    expect(capIdx).toBeGreaterThanOrEqual(0);
+    expect(fills.slice(capIdx + 1).filter((f) => f === "#efe6d2")).toHaveLength(0);
+  });
+
+  it("vật ĐỨNG TRƯỚC smooth solid vẫn vẽ sau silhouette (không bị nuốt)", () => {
+    // Thanh chắn TRƯỚC cầu smooth — silhouette đặt ở mặt cuối không được đè thanh
+    const { svg } = compileConstruction(
+      constructSpecSchema.parse({
+        version: 1,
+        solids: [
+          { id: "ball", type: "sphere", r: 100, segments: 16, fill: "#3a86c8" },
+          { id: "bar", type: "box", size: [300, 30, 20], at: [0, 0, 130], fill: "#d64545" },
+        ],
+        camera: { preset: "front" },
+      }),
+    );
+    const fills = [...svg.matchAll(/<path [^>]*fill="([^"]+)"/g)].map((m) => m[1]);
+    const ballIdx = fills.findIndex((f) => f.includes("cg-ball"));
+    expect(ballIdx).toBeGreaterThanOrEqual(0);
+    // Mặt thanh (fill hex shaded, không phải gradient) phải có và đứng SAU silhouette
+    const barFacesAfter = fills.slice(ballIdx + 1).filter((f) => f.startsWith("#"));
+    expect(barFacesAfter.length).toBeGreaterThan(0);
+  });
+});

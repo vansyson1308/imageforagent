@@ -395,7 +395,11 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   let sortedFaces: ProjectedFace[];
   let depthSplits = 0;
   if (spec.depthSort === "exact") {
-    const ordered = depthOrderNNS(facetedForSort, view, projection, checkClock);
+    // Mesh của smooth solid THAM GIA NNS thật (plane-test + cắt như mọi
+    // mặt) — silhouette sẽ THẾ CHỖ mặt đầu tiên của nó trong thứ tự.
+    // Chèn theo 1 depth centroid là bug: mặt khác bị NNS cắt có thể rơi
+    // 2 mảnh hai bên silhouette → mảnh sáng lòi lên trên (bug cối xay gió).
+    const ordered = depthOrderNNS(facetedItems, view, projection, checkClock);
     sortedFaces = ordered.faces;
     depthSplits = ordered.splits;
     if (ordered.fallback) {
@@ -477,23 +481,34 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   // ---------- Hợp nhất thứ tự vẽ ----------
   let entries: DrawEntry[];
   if (spec.depthSort === "exact") {
-    // Giữ NGUYÊN thứ tự NNS; smooth item chèn theo depth (binary insert)
-    entries = sortedFaces.map((face): DrawEntry => ({ face, decals: [] }));
-    const smoothSorted = [...smoothItems].sort((a, b) => {
-      if (a.face.depth !== b.face.depth) return a.face.depth - b.face.depth;
-      if (a.face.solidIndex !== b.face.solidIndex) return a.face.solidIndex - b.face.solidIndex;
-      return a.face.faceIndex - b.face.faceIndex;
-    });
-    for (const s of smoothSorted) {
-      let lo = 0;
-      let hi = entries.length;
-      while (lo < hi) {
-        const mid = (lo + hi) >> 1;
-        if (entries[mid].face.depth <= s.face.depth) lo = mid + 1;
-        else hi = mid;
-      }
-      entries.splice(lo, 0, { face: s.face, fillOverride: s.fill, decals: [] });
+    // Mesh smooth đã tham gia NNS: silhouette THẾ CHỖ mặt CUỐI CÙNG của
+    // solid đó trong thứ tự. Mặt của smooth có thể XEN KẼ với mảnh cắt của
+    // solid khác (mảnh sau mặt xa, trước mặt gần) — đặt ở mặt cuối bảo đảm
+    // mọi thứ NNS ép đứng trước BẤT KỲ mặt nào cũng đứng trước silhouette;
+    // vật kẹt "giữa hai bề mặt" nằm TRONG khối đặc → bị che là đúng.
+    entries = [];
+    const silhouetteOf = new Map<string, SmoothItem[]>();
+    for (const s of smoothItems) {
+      const list = silhouetteOf.get(s.face.solidId);
+      if (list) list.push(s);
+      else silhouetteOf.set(s.face.solidId, [s]);
     }
+    const lastIndexOf = new Map<string, number>();
+    sortedFaces.forEach((face, i) => {
+      if (silhouetteOf.has(face.solidId)) lastIndexOf.set(face.solidId, i);
+    });
+    sortedFaces.forEach((face, i) => {
+      const smooth = silhouetteOf.get(face.solidId);
+      if (!smooth) {
+        entries.push({ face, decals: [] });
+        return;
+      }
+      if (lastIndexOf.get(face.solidId) !== i) return; // chưa tới mặt cuối — bỏ
+      for (const s of smooth) {
+        entries.push({ face: s.face, fillOverride: s.fill, decals: [] });
+      }
+    });
+    // Smooth solid bị cull toàn bộ mặt (không xuất hiện trong NNS) → bỏ qua
   } else {
     entries = [
       ...sortedFaces.map((face): DrawEntry => ({ face, decals: [] })),
