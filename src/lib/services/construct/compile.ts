@@ -40,6 +40,7 @@ import { overlapWarnings, projectAndSort, type SolidSceneItem } from "@/lib/serv
 import { depthOrderNNS } from "@/lib/services/construct/depthOrder";
 import {
   applyLuminance,
+  authorGradient,
   lambertFactor,
   luminance,
   parseHex,
@@ -104,6 +105,38 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     seen.set(s.id, `solids[${i}]`);
     allIds.push(s.id);
   });
+
+  // ---------- Gradients tác giả (emit ĐẦU TIÊN — reserve budget trước engine) ----------
+  const gradients: GradientDescriptor[] = [];
+  spec.gradients.forEach((g, i) => {
+    if (seen.has(g.id)) err(`Duplicate id "${g.id}" (${seen.get(g.id)} and gradients[${i}]).`, "Ids are global across shapes, solids, and gradients — rename one.");
+    seen.set(g.id, `gradients[${i}]`);
+    gradients.push(authorGradient(g));
+  });
+  {
+    // url(#id) khớp gradients[] → resolve nội bộ; không khớp → warning
+    // (spec cũ dán vào frame có defs ngoài vẫn hợp lệ — không error)
+    const gradientIds = new Set(spec.gradients.map((g) => g.id));
+    const urlRefs = new Set<string>();
+    const collect = (v: string | undefined) => {
+      const m = v?.match(/^url\(#([\w-]+)\)$/);
+      if (m) urlRefs.add(m[1]);
+    };
+    for (const s of spec.shapes) {
+      collect(s.fill);
+      collect(s.stroke);
+    }
+    for (const s of spec.solids) collect(s.fill);
+    for (const c of spec.cutouts) collect(c.fill);
+    collect(spec.stroke?.color);
+    for (const ref of urlRefs) {
+      if (!gradientIds.has(ref)) {
+        warnings.push(
+          `Fill "url(#${ref})" does not match any gradient in "gradients" — the preview renders it as missing. Declare it in "gradients", or make sure #${ref} exists where the fragment is pasted.`,
+        );
+      }
+    }
+  }
 
   const shapeMap = new Map(spec.shapes.map((s) => [s.id, s]));
   const solidMap = new Map(spec.solids.map((s) => [s.id, s]));
@@ -413,7 +446,6 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     readonly face: ProjectedFace;
     readonly fill: string;
   }
-  const gradients: GradientDescriptor[] = [];
   const smoothItems: SmoothItem[] = [];
 
   for (const info of smoothInfos.values()) {

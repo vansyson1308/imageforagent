@@ -1,4 +1,5 @@
 import type { Vec3 } from "@/lib/services/construct/types";
+import type { SpecGradient } from "@/lib/validation/constructSchema";
 import { dot3, normalize3, scale3 } from "@/lib/services/construct/math3d";
 
 /**
@@ -43,6 +44,104 @@ export function applyLuminance(hex: string, lum: number): string {
   const rgb = parseHex(hex);
   if (!rgb) return hex;
   return toHex({ r: rgb.r * lum, g: rgb.g * lum, b: rgb.b * lum });
+}
+
+// ---------- HSL + blend (Softness layer) ----------
+
+export interface Hsl {
+  /** Hue độ [0, 360). */
+  readonly h: number;
+  /** Saturation [0, 1]. */
+  readonly s: number;
+  /** Lightness [0, 1]. */
+  readonly l: number;
+}
+
+export function rgbToHsl({ r, g, b }: Rgb): Hsl {
+  const rn = r / 255;
+  const gn = g / 255;
+  const bn = b / 255;
+  const max = Math.max(rn, gn, bn);
+  const min = Math.min(rn, gn, bn);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return { h: 0, s: 0, l };
+  const s = d / (1 - Math.abs(2 * l - 1));
+  let h: number;
+  if (max === rn) h = ((gn - bn) / d) % 6;
+  else if (max === gn) h = (bn - rn) / d + 2;
+  else h = (rn - gn) / d + 4;
+  h *= 60;
+  if (h < 0) h += 360;
+  return { h, s, l };
+}
+
+export function hslToRgb({ h, s, l }: Hsl): Rgb {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const hp = (((h % 360) + 360) % 360) / 60;
+  const x = c * (1 - Math.abs((hp % 2) - 1));
+  let rgb: [number, number, number];
+  if (hp < 1) rgb = [c, x, 0];
+  else if (hp < 2) rgb = [x, c, 0];
+  else if (hp < 3) rgb = [0, c, x];
+  else if (hp < 4) rgb = [0, x, c];
+  else if (hp < 5) rgb = [x, 0, c];
+  else rgb = [c, 0, x];
+  const m = l - c / 2;
+  return { r: (rgb[0] + m) * 255, g: (rgb[1] + m) * 255, b: (rgb[2] + m) * 255 };
+}
+
+/** Xoay hue VỀ PHÍA target theo cung ngắn nhất, tối đa maxDegrees. */
+export function shiftHueToward(hue: number, target: number, maxDegrees: number): number {
+  let delta = (((target - hue) % 360) + 360) % 360;
+  if (delta > 180) delta -= 360;
+  const step = Math.sign(delta) * Math.min(Math.abs(delta), maxDegrees);
+  return (((hue + step) % 360) + 360) % 360;
+}
+
+/** Lerp tuyến tính hai màu, t ∈ [0,1] (0 = a, 1 = b). */
+export function mixRgb(a: Rgb, b: Rgb, t: number): Rgb {
+  return { r: a.r + (b.r - a.r) * t, g: a.g + (b.g - a.g) * t, b: a.b + (b.b - a.b) * t };
+}
+
+/** Giảm bão hoà: s *= (1 − amount), amount ∈ [0,1]. */
+export function desaturateRgb(rgb: Rgb, amount: number): Rgb {
+  const hsl = rgbToHsl(rgb);
+  return hslToRgb({ ...hsl, s: hsl.s * (1 - Math.max(0, Math.min(1, amount))) });
+}
+
+/** Blend multiply tự tính trong TS (không dựa librsvg): a·b/255. */
+export function multiplyRgb(a: Rgb, b: Rgb): Rgb {
+  return { r: (a.r * b.r) / 255, g: (a.g * b.g) / 255, b: (a.b * b.b) / 255 };
+}
+
+/** Blend screen: 255 − (255−a)(255−b)/255. */
+export function screenRgb(a: Rgb, b: Rgb): Rgb {
+  return {
+    r: 255 - ((255 - a.r) * (255 - b.r)) / 255,
+    g: 255 - ((255 - a.g) * (255 - b.g)) / 255,
+    b: 255 - ((255 - a.b) * (255 - b.b)) / 255,
+  };
+}
+
+/** Hue "lạnh" chuẩn cho bóng (xanh dương đêm) — kỷ luật phong cách. */
+export const COOL_SHADOW_HUE = 230;
+
+/**
+ * Màu bóng mặc định theo kỷ luật phong cách: KHÔNG BAO GIỜ #000 —
+ * lightness −25%, hue xoay 25° về phía lạnh (230°).
+ */
+export function softShadowColor(baseHex: string): string {
+  const rgb = parseHex(baseHex);
+  if (!rgb) return "#31425e";
+  const hsl = rgbToHsl(rgb);
+  return toHex(
+    hslToRgb({
+      h: shiftHueToward(hsl.s < 0.05 ? COOL_SHADOW_HUE : hsl.h, COOL_SHADOW_HUE, 25),
+      s: Math.max(hsl.s, 0.18),
+      l: Math.max(0, hsl.l - 0.25),
+    }),
+  );
 }
 
 // ---------- Lambert + lượng tử ----------
@@ -138,6 +237,39 @@ export function sphereGradient(
       { offset: 0.55, color: baseHex },
       { offset: 1, color: applyLuminance(baseHex, amb) },
     ],
+  };
+}
+
+/**
+ * Gradient TÁC GIẢ (spec.gradients) → descriptor objectBoundingBox.
+ * Linear: angle độ screen-space (0 = sang phải, 90 = xuống dưới) → trục
+ * qua tâm bbox. Radial: focus lệch tâm điểm sáng, radius theo tỉ lệ bbox.
+ * Id giữ NGUYÊN VĂN của tác giả (namespace chung, cg- đã bị schema chặn).
+ */
+export function authorGradient(g: SpecGradient): GradientDescriptor {
+  const f = (v: number) => v.toFixed(3);
+  if (g.kind === "linear") {
+    const a = (g.angle * Math.PI) / 180;
+    const dx = Math.cos(a) / 2;
+    const dy = Math.sin(a) / 2;
+    return {
+      id: g.id,
+      kind: "linearGradient",
+      attrs: { x1: f(0.5 - dx), y1: f(0.5 - dy), x2: f(0.5 + dx), y2: f(0.5 + dy) },
+      stops: g.stops,
+    };
+  }
+  return {
+    id: g.id,
+    kind: "radialGradient",
+    attrs: {
+      cx: "0.5",
+      cy: "0.5",
+      r: f(g.radius),
+      fx: f(0.5 + g.focus[0]),
+      fy: f(0.5 + g.focus[1]),
+    },
+    stops: g.stops,
   };
 }
 

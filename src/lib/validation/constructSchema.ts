@@ -36,7 +36,10 @@ export const fillColor = z
   .regex(
     /^(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|#[0-9a-fA-F]{8}|url\(#[A-Za-z][\w-]{0,63}\)|none)$/,
     'Fill must be #hex, url(#localId), or "none"',
-  );
+  )
+  .refine((s) => !s.startsWith("url(#cg-"), {
+    message: 'Gradient ids with the "cg-" prefix are engine-reserved — declare yours in "gradients" and reference it by your own id',
+  });
 
 const scale2 = z.union([z.number().gt(0).max(1000), z.tuple([z.number().gt(0).max(1000), z.number().gt(0).max(1000)])]);
 const scale3 = z.union([z.number().gt(0).max(1000), z.tuple([z.number().gt(0).max(1000), z.number().gt(0).max(1000), z.number().gt(0).max(1000)])]);
@@ -228,6 +231,50 @@ export const partSchema = z.discriminatedUnion("type", [
 
 export type Part = z.infer<typeof partSchema>;
 
+// ---------- Gradients (tác giả khai, fill tham chiếu url(#id)) ----------
+
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/, "Stop color must be #hex");
+
+const gradientStopSchema = z.object({
+  offset: z.number().min(0).max(1),
+  color: hexColor,
+  opacity: z.number().min(0).max(1).optional(),
+});
+
+const gradientStops = z
+  .array(gradientStopSchema)
+  .min(2)
+  .max(16)
+  .refine((stops) => stops.every((s, i) => i === 0 || s.offset >= stops[i - 1].offset), {
+    message: "Stop offsets must be non-decreasing",
+  });
+
+/**
+ * Gradient tác giả — id vào namespace chung (không được prefix "cg-"),
+ * mọi fill/stroke trong spec tham chiếu bằng url(#id) và resolve NỘI BỘ
+ * (previewPng render đúng, không cần defs ngoài).
+ */
+export const gradientSchema = z.discriminatedUnion("kind", [
+  z.object({
+    id: constructId,
+    kind: z.literal("linear"),
+    /** Hướng chảy của gradient, độ, screen-space: 0 = sang phải, 90 = xuống dưới. */
+    angle: deg.default(90),
+    stops: gradientStops,
+  }),
+  z.object({
+    id: constructId,
+    kind: z.literal("radial"),
+    /** Lệch tâm điểm sáng trong bbox shape: [-0.4..0.4]² (0,0 = giữa). */
+    focus: z.tuple([z.number().min(-0.4).max(0.4), z.number().min(-0.4).max(0.4)]).default([0, 0]),
+    /** Bán kính theo tỉ lệ bbox (0.5 = chạm mép). */
+    radius: z.number().gt(0).max(1).default(0.5),
+    stops: gradientStops,
+  }),
+]);
+
+export type SpecGradient = z.infer<typeof gradientSchema>;
+
 // ---------- Camera / light / place ----------
 
 export const cameraSchema = z
@@ -271,6 +318,8 @@ export const constructSpecSchema = z
     cutouts: z.array(cutoutSchema).max(32).default([]),
     groups: z.array(groupSchema).max(CONSTRUCT_LIMITS.maxGroups).default([]),
     parts: z.array(partSchema).max(CONSTRUCT_LIMITS.maxParts).default([]),
+    /** Gradient tác giả — fill/stroke tham chiếu url(#id), resolve nội bộ. */
+    gradients: z.array(gradientSchema).max(CONSTRUCT_LIMITS.maxUserGradients).default([]),
     /**
      * "exact" (default): Newell–Newell–Sancha — đúng cả khi khối xuyên
      * nhau (cắt lazy khi xung đột). "painter": sort centroid thuần, nhanh

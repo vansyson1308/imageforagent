@@ -59,6 +59,12 @@ export const CONSTRUCT_LIMITS = {
   maxGroupDepth: 8,
   /** Số part macro mỗi spec. */
   maxParts: 16,
+  /** Gradient tác giả khai trong spec.gradients (đếm vào maxGradients). */
+  maxUserGradients: 32,
+  /** Tổng filter blur mỗi fragment (shadow.blur + glow blur) — blur ĐẮT. */
+  maxFilters: 6,
+  /** Tổng PathItem sinh bởi effects layer (crescents/glow/contact). */
+  maxEffectPaths: 96,
 } as const;
 
 export function isAssetKind(value: string): value is AssetKind {
