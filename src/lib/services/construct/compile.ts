@@ -14,6 +14,7 @@ import { buildVignette } from "@/lib/services/construct/atmosphere";
 import { buildSilhouette } from "@/lib/services/construct/silhouette";
 import { buildContactShadow, buildSolidEffects } from "@/lib/services/construct/effects";
 import { expandParts } from "@/lib/services/construct/partsExpand";
+import { applyFinish } from "@/lib/services/construct/finish";
 import {
   applyCutout,
   collectConsumed,
@@ -94,6 +95,8 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   const expanded = expandParts(spec);
   warnings.push(...expanded.warnings);
   spec = { ...spec, shapes: expanded.shapes, solids: expanded.solids };
+  // Finish preset SAU expand — part-solids cũng hưởng; chỉ điền field vắng
+  spec = applyFinish(spec);
   const worldMatrixById = expanded.worldMatrixById;
   checkClock("expand");
 
@@ -570,6 +573,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   // ---------- Effects (Layer 4c — Softness) ----------
   const effectFilters: FilterDescriptor[] = [];
   const contactPaths: PathItem[] = [];
+  let effectPathCount = 0;
   const solidsWithEffects = spec.solids.filter(
     (s) => s.effects && Object.values(s.effects).some((v) => v !== false),
   );
@@ -586,7 +590,6 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       lastIndexOf.set(e.face.solidId, i);
     });
     let effectSeq = 0;
-    let effectPathCount = 0;
     for (const solid of solidsWithEffects) {
       const last = lastIndexOf.get(solid.id);
       const item = facetedItems.find((i) => i.solidId === solid.id);
@@ -595,7 +598,10 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
         continue;
       }
 
+      // Tính TRƯỚC toàn bộ output của solid này, gắn SAU khi qua budget —
+      // solid được áp effect nguyên khối, không nửa vời
       // Contact: chỉ cần mesh + camera (không cần silhouette)
+      let contactBuild: ReturnType<typeof buildContactShadow> | null = null;
       const contact = solid.effects!.contact;
       if (contact !== false && contact !== undefined) {
         const params = contact === true ? { opacity: 0.45, scale: 1 } : contact;
@@ -604,7 +610,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
           ground = Infinity;
           for (const v of item.mesh.vertices) if (v[1] < ground) ground = v[1];
         }
-        const c = buildContactShadow({
+        contactBuild = buildContactShadow({
           solidId: solid.id,
           mesh: item.mesh,
           view,
@@ -614,49 +620,63 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
           precision: spec.precision,
           seq: effectSeq,
         });
-        effectSeq = c.seqEnd;
-        if (c.path && c.gradient) {
-          contactPaths.push(c.path);
-          gradients.push(c.gradient);
-          effectPathCount++;
-        }
+        effectSeq = contactBuild.seqEnd;
       }
 
       const hasSurfaceEffect = Object.entries(solid.effects!).some(
         ([key, v]) => key !== "contact" && v !== false,
       );
-      if (!hasSurfaceEffect) continue;
+      let surface: ReturnType<typeof buildSolidEffects> | null = null;
+      if (hasSurfaceEffect) {
+        const sil = buildSilhouette(item, view, projection, spec.precision);
+        if (!sil) {
+          warnings.push(`Effects on "${solid.id}" skipped — silhouette is degenerate from this camera.`);
+        } else {
+          surface = buildSolidEffects({
+            solidId: solid.id,
+            silhouette: sil,
+            lightScreen,
+            effects: solid.effects!,
+            baseFill: solid.fill ?? "#c0c0c0",
+            precision: spec.precision,
+            seq: effectSeq,
+          });
+          effectSeq = surface.seqEnd;
+        }
+      }
 
-      const sil = buildSilhouette(item, view, projection, spec.precision);
-      if (!sil) {
-        warnings.push(`Effects on "${solid.id}" skipped — silhouette is degenerate from this camera.`);
-        continue;
+      const added =
+        (contactBuild?.path ? 1 : 0) + (surface ? surface.over.length + surface.behind.length : 0);
+      if (effectPathCount + added > CONSTRUCT_LIMITS.maxEffectPaths) {
+        // Preset finish: degrade mềm theo thứ tự khai báo; effects do
+        // author khai tay: error cứng kèm hint
+        if (spec.finish !== "flat") {
+          warnings.push(
+            `Finish "${spec.finish}" hit the effect budget (${CONSTRUCT_LIMITS.maxEffectPaths} paths) — solids from "${solid.id}" onward render without preset effects. Set "effects" explicitly on hero solids instead.`,
+          );
+          break;
+        }
+        err(
+          `Effects generated ${effectPathCount + added} paths (max ${CONSTRUCT_LIMITS.maxEffectPaths}).`,
+          "Disable effects on minor solids — reserve them for hero objects.",
+        );
       }
-      const res = buildSolidEffects({
-        solidId: solid.id,
-        silhouette: sil,
-        lightScreen,
-        effects: solid.effects!,
-        baseFill: solid.fill ?? "#c0c0c0",
-        precision: spec.precision,
-        seq: effectSeq,
-      });
-      effectSeq = res.seqEnd;
-      warnings.push(...res.warnings);
-      gradients.push(...res.gradients);
-      effectFilters.push(...res.filters);
-      entries[last].decals.push(...res.over);
-      if (res.behind.length > 0) {
-        const first = firstIndexOf.get(solid.id)!;
-        entries[first].preItems = [...(entries[first].preItems ?? []), ...res.behind];
+      effectPathCount += added;
+
+      if (contactBuild?.path && contactBuild.gradient) {
+        contactPaths.push(contactBuild.path);
+        gradients.push(contactBuild.gradient);
       }
-      effectPathCount += res.over.length + res.behind.length;
-    }
-    if (effectPathCount > CONSTRUCT_LIMITS.maxEffectPaths) {
-      err(
-        `Effects generated ${effectPathCount} paths (max ${CONSTRUCT_LIMITS.maxEffectPaths}).`,
-        "Disable effects on minor solids — reserve them for hero objects.",
-      );
+      if (surface) {
+        warnings.push(...surface.warnings);
+        gradients.push(...surface.gradients);
+        effectFilters.push(...surface.filters);
+        entries[last].decals.push(...surface.over);
+        if (surface.behind.length > 0) {
+          const first = firstIndexOf.get(solid.id)!;
+          entries[first].preItems = [...(entries[first].preItems ?? []), ...surface.behind];
+        }
+      }
     }
     const totalFilters = (shadowLayer?.filters.length ?? 0) + effectFilters.length;
     if (totalFilters > CONSTRUCT_LIMITS.maxFilters) {
@@ -745,6 +765,8 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       csgOps: csgNodes.length,
       depthSplits,
       partsExpanded: expanded.partsExpanded,
+      effectPaths: effectPathCount,
+      filters: (shadowLayer?.filters.length ?? 0) + effectFilters.length,
     },
     warnings,
   };

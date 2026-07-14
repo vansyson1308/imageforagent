@@ -501,6 +501,13 @@ export const constructSpecSchema = z
     place: placeSchema,
     /** Lớp không khí scene-wide: depth fade + vignette. */
     atmosphere: atmosphereSchema.optional(),
+    /**
+     * Preset làm mềm một-chạm: CHỈ điền effects cho solid CHƯA khai
+     * effects (kể cả part-solids); "effects": {} = opt-out per solid.
+     * flat = tắt; soft = formShadow+highlight+contact; premium = soft +
+     * rim + specular (solid trơn) + vignette nhẹ nếu atmosphere vắng.
+     */
+    finish: z.enum(["flat", "soft", "premium"]).default("flat"),
     /** 2D shape nào được emit (default: shape không bị tiêu thụ bởi boolean/extrude/cutout). */
     emit: z.array(constructId).max(128).optional(),
     /** Viền outline cho mọi path (phong cách comic). */

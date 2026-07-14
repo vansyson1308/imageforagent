@@ -87,6 +87,10 @@ export interface CompileStats {
   readonly depthSplits: number;
   /** Số part macro đã expand. */
   readonly partsExpanded: number;
+  /** Số PathItem sinh bởi effects layer (crescents/glow/contact). */
+  readonly effectPaths: number;
+  /** Tổng filter blur (shadow.blur + glow blur) — trần maxFilters. */
+  readonly filters: number;
 }
 
 export interface CompileResult {
