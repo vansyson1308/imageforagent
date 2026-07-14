@@ -4,7 +4,9 @@ import { CONSTRUCT_LIMITS } from "@/lib/config/limits";
 import type { DrawEntry, ShapeResolver } from "@/lib/services/construct/resolve2d";
 import type { ShadowLayer } from "@/lib/services/construct/shadow";
 import { faceGradientFill } from "@/lib/services/construct/faceGradient";
+import { fadeHex, fadeStops, type DepthFadeParams } from "@/lib/services/construct/atmosphere";
 import {
+  GRADIENT_ID_PREFIX,
   shadeFaceHex,
   type GradientDescriptor,
   type LightParams,
@@ -19,8 +21,10 @@ import { faceToPathData, type PathItem } from "@/lib/services/construct/svgEmitt
  */
 
 export interface SceneEmitInput {
-  /** Id shape 2D được emit, theo thứ tự khai báo. */
-  readonly emittedShapeIds: readonly string[];
+  /** Id shape 2D layer background (vẽ TRƯỚC 3D), theo thứ tự khai báo. */
+  readonly backgroundShapeIds: readonly string[];
+  /** Id shape 2D layer foreground (vẽ SAU 3D, dưới vignette). */
+  readonly foregroundShapeIds: readonly string[];
   readonly resolver: ShapeResolver;
   /** Draw entries 3D đã sort + cutout. */
   readonly entries: readonly DrawEntry[];
@@ -39,12 +43,17 @@ export interface SceneEmitInput {
   readonly stroke: ConstructSpec["stroke"];
   /** Bóng tiếp xúc (AO) — vẽ SAU shadow layer, TRƯỚC solid nổi. */
   readonly contactPaths?: readonly PathItem[];
+  /** Viễn cận không khí — fade fill mặt 3D theo depth chuẩn hoá. */
+  readonly depthFade?: DepthFadeParams;
+  /** Overlay vignette — path CUỐI CÙNG tuyệt đối. */
+  readonly vignettePath?: PathItem;
 }
 
 /** Ghép toàn bộ PathItems của scene (2D nền → ground 3D → bóng → nổi). */
 export function buildScenePaths(input: SceneEmitInput): PathItem[] {
   const {
-    emittedShapeIds,
+    backgroundShapeIds,
+    foregroundShapeIds,
     resolver,
     entries,
     solidMap,
@@ -56,15 +65,15 @@ export function buildScenePaths(input: SceneEmitInput): PathItem[] {
     warnings,
     precision,
     stroke: globalStroke,
+    depthFade,
   } = input;
   const paths: PathItem[] = [];
 
-  // 2D shapes trước (nền phẳng), theo thứ tự khai báo
-  for (const id of emittedShapeIds) {
+  const emit2d = (id: string) => {
     const r = resolver.resolved.get(id)!;
     if (r.isEmpty) {
       warnings.push(`"${id}" (${r.shape.type === "boolean" ? r.shape.op : r.shape.type}) produced an empty path — skipped.`);
-      continue;
+      return;
     }
     if (r.shape.type === "line") {
       paths.push({
@@ -82,6 +91,23 @@ export function buildScenePaths(input: SceneEmitInput): PathItem[] {
         strokeWidth: r.shape.strokeWidth ?? globalStroke?.width,
       });
     }
+  };
+
+  // 2D shapes background trước (nền phẳng), theo thứ tự khai báo
+  for (const id of backgroundShapeIds) emit2d(id);
+
+  // Depth fade: t chuẩn hoá trên MỌI entry 3D (0 = gần nhất, 1 = xa nhất);
+  // cảnh 1 lớp depth (range ~0) → no-op
+  let tOf: (e: DrawEntry) => number = () => 0;
+  if (depthFade && entries.length > 0) {
+    let minD = Infinity;
+    let maxD = -Infinity;
+    for (const e of entries) {
+      if (e.face.depth < minD) minD = e.face.depth;
+      if (e.face.depth > maxD) maxD = e.face.depth;
+    }
+    const range = maxD - minD;
+    if (range > 1e-9) tOf = (e) => (maxD - e.face.depth) / range;
   }
 
   // Shadow layer: vẽ SAU solid "nền" (toàn bộ mesh ≤ mặt phẳng bóng —
@@ -133,6 +159,24 @@ export function buildScenePaths(input: SceneEmitInput): PathItem[] {
     } else {
       fill = shadeFaceHex(base, entry.face.normal, lightParams);
     }
+    // Depth fade: fill hex fade trực tiếp; gradient ENGINE (cg-*) fade
+    // stops tại chỗ — mỗi gradient cg chỉ được đúng 1 entry tham chiếu.
+    // Gradient TÁC GIẢ (id tự đặt, dùng chung) và decals/preItems (lớp
+    // effect tương đối trên nền đã fade) giữ nguyên.
+    if (depthFade) {
+      const t = tOf(entry);
+      if (t > 1e-9) {
+        if (fill.startsWith("#")) {
+          fill = fadeHex(fill, t, depthFade);
+        } else if (fill.startsWith(`url(#${GRADIENT_ID_PREFIX}`)) {
+          const id = fill.slice(5, -1);
+          const gi = gradients.findIndex((g) => g.id === id);
+          if (gi >= 0) {
+            gradients[gi] = { ...gradients[gi], stops: fadeStops(gradients[gi].stops, t, depthFade) };
+          }
+        }
+      }
+    }
     if (entry.preItems) paths.push(...entry.preItems);
     paths.push({
       d: entry.dOverride ?? faceToPathData(entry.face, precision),
@@ -151,6 +195,10 @@ export function buildScenePaths(input: SceneEmitInput): PathItem[] {
   }
   if (input.contactPaths) paths.push(...input.contactPaths);
   for (const entry of floatingEntries) emit3d(entry);
+
+  // 2D foreground TRÊN mọi solid (sương, haze); vignette là path CUỐI
+  for (const id of foregroundShapeIds) emit2d(id);
+  if (input.vignettePath) paths.push(input.vignettePath);
 
   if (gradientOverflow) {
     warnings.push(

@@ -58,6 +58,8 @@ const shapeBase = {
   fill: fillColor.optional(),
   stroke: fillColor.optional(),
   strokeWidth: z.number().gt(0).max(500).optional(),
+  /** "foreground" = vẽ TRÊN mọi solid 3D (sương mù, haze, khung cảnh cận). */
+  layer: z.enum(["background", "foreground"]).default("background"),
 };
 
 export const shape2dSchema = z.discriminatedUnion("type", [
@@ -432,6 +434,36 @@ export const placeSchema = z
   })
   .default({ at: [960, 540], scale: 1, rotate: 0 });
 
+// ---------- Atmosphere (scene-wide softness) ----------
+
+export const atmosphereSchema = z
+  .object({
+    /** Vật càng XA càng ngả về color + bớt bão hoà (aerial perspective). */
+    depthFade: z
+      .object({
+        color: hexColor.default("#9db4cc"),
+        strength: z.number().min(0).max(1).default(0.5),
+        desaturate: z.number().min(0).max(1).default(0.5),
+      })
+      .strict()
+      .optional(),
+    /** Tối 4 góc khung hình — vẽ CUỐI CÙNG, phủ toàn canvas. */
+    vignette: z
+      .object({
+        color: hexColor.default("#101528"),
+        strength: z.number().min(0).max(1).default(0.3),
+        /** Offset gradient bắt đầu tối (0.55 = hơn nửa khung trong suốt). */
+        start: z.number().min(0).max(0.95).default(0.55),
+        /** Kích thước canvas logic — đổi khi vẽ 9:16/1:1/4:5. */
+        size: z.tuple([pos, pos]).default([1920, 1080]),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+export type Atmosphere = z.infer<typeof atmosphereSchema>;
+
 // ---------- Spec + request ----------
 
 export const constructSpecSchema = z
@@ -467,6 +499,8 @@ export const constructSpecSchema = z
     camera: cameraSchema,
     light: lightSchema,
     place: placeSchema,
+    /** Lớp không khí scene-wide: depth fade + vignette. */
+    atmosphere: atmosphereSchema.optional(),
     /** 2D shape nào được emit (default: shape không bị tiêu thụ bởi boolean/extrude/cutout). */
     emit: z.array(constructId).max(128).optional(),
     /** Viền outline cho mọi path (phong cách comic). */

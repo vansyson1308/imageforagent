@@ -33,6 +33,7 @@ const SHAPE_DEFAULTS = {
   rotate: 0,
   scale: 1,
   skew: [0, 0] as [number, number],
+  layer: "background" as const,
 };
 
 type WheelPart = Extract<Part, { type: "wheel" }>;

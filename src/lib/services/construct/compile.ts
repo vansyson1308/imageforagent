@@ -10,6 +10,7 @@ import { csgOperation, meshToPolygons, prepareOperand } from "@/lib/services/con
 import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRepair";
 import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
 import { buildScenePaths } from "@/lib/services/construct/emitScene";
+import { buildVignette } from "@/lib/services/construct/atmosphere";
 import { buildSilhouette } from "@/lib/services/construct/silhouette";
 import { buildContactShadow, buildSolidEffects } from "@/lib/services/construct/effects";
 import { expandParts } from "@/lib/services/construct/partsExpand";
@@ -667,9 +668,22 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     checkClock("effects");
   }
 
+  // ---------- Atmosphere (Layer 6 — vignette dựng trước, path chèn cuối) ----------
+  let vignettePath: PathItem | undefined;
+  if (spec.atmosphere?.vignette) {
+    const v = buildVignette(spec.atmosphere.vignette, spec.place, spec.precision);
+    gradients.push(v.gradient);
+    vignettePath = v.path;
+  }
+
   // ---------- Ghép PathItems (emitScene.ts) ----------
+  // layer !== "foreground" (không phải === "background") — shape sinh từ
+  // part macro không đi qua schema default nên có thể thiếu field layer
+  const backgroundShapeIds = emittedShapeIds.filter((id) => shapeMap.get(id)!.layer !== "foreground");
+  const foregroundShapeIds = emittedShapeIds.filter((id) => shapeMap.get(id)!.layer === "foreground");
   const paths = buildScenePaths({
-    emittedShapeIds,
+    backgroundShapeIds,
+    foregroundShapeIds,
     resolver,
     entries,
     solidMap,
@@ -682,6 +696,8 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     precision: spec.precision,
     stroke: spec.stroke,
     contactPaths,
+    depthFade: spec.atmosphere?.depthFade,
+    vignettePath,
   });
 
   if (paths.length === 0) {

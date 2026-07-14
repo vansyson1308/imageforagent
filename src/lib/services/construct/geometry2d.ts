@@ -38,6 +38,16 @@ export function applyAffine(m: Affine2D, [x, y]: Vec2): Vec2 {
   return [m.a * x + m.c * y + m.e, m.b * x + m.d * y + m.f];
 }
 
+/** Nghịch đảo affine (det ≠ 0 — place của spec luôn khả nghịch vì scale > 0). */
+export function invertAffine(m: Affine2D): Affine2D {
+  const det = m.a * m.d - m.b * m.c;
+  const ia = m.d / det;
+  const ib = -m.b / det;
+  const ic = -m.c / det;
+  const id = m.a / det;
+  return { a: ia, b: ib, c: ic, d: id, e: -(ia * m.e + ic * m.f), f: -(ib * m.e + id * m.f) };
+}
+
 const DEG = Math.PI / 180;
 
 export interface Placement2D {
