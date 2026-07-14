@@ -37,6 +37,8 @@ export interface SceneEmitInput {
   readonly warnings: string[];
   readonly precision: number;
   readonly stroke: ConstructSpec["stroke"];
+  /** Bóng tiếp xúc (AO) — vẽ SAU shadow layer, TRƯỚC solid nổi. */
+  readonly contactPaths?: readonly PathItem[];
 }
 
 /** Ghép toàn bộ PathItems của scene (2D nền → ground 3D → bóng → nổi). */
@@ -147,6 +149,7 @@ export function buildScenePaths(input: SceneEmitInput): PathItem[] {
     gradients.push(...shadowLayer.gradients);
     paths.push(...shadowLayer.paths);
   }
+  if (input.contactPaths) paths.push(...input.contactPaths);
   for (const entry of floatingEntries) emit3d(entry);
 
   if (gradientOverflow) {

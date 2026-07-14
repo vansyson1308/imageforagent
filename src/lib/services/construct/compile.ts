@@ -11,7 +11,7 @@ import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRep
 import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
 import { buildScenePaths } from "@/lib/services/construct/emitScene";
 import { buildSilhouette } from "@/lib/services/construct/silhouette";
-import { buildSolidEffects } from "@/lib/services/construct/effects";
+import { buildContactShadow, buildSolidEffects } from "@/lib/services/construct/effects";
 import { expandParts } from "@/lib/services/construct/partsExpand";
 import {
   applyCutout,
@@ -55,6 +55,7 @@ import {
   countFragmentPathCommands,
   emitFragment,
   type FilterDescriptor,
+  type PathItem,
 } from "@/lib/services/construct/svgEmitter";
 import { sanitizeSvg } from "@/lib/services/svgRenderer";
 
@@ -567,6 +568,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
 
   // ---------- Effects (Layer 4c — Softness) ----------
   const effectFilters: FilterDescriptor[] = [];
+  const contactPaths: PathItem[] = [];
   const solidsWithEffects = spec.solids.filter(
     (s) => s.effects && Object.values(s.effects).some((v) => v !== false),
   );
@@ -591,6 +593,39 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
         warnings.push(`Effects on "${solid.id}" skipped — solid has no visible faces (culled, or consumed as a csg operand).`);
         continue;
       }
+
+      // Contact: chỉ cần mesh + camera (không cần silhouette)
+      const contact = solid.effects!.contact;
+      if (contact !== false && contact !== undefined) {
+        const params = contact === true ? { opacity: 0.45, scale: 1 } : contact;
+        let ground = spec.shadow?.ground;
+        if (ground === undefined) {
+          ground = Infinity;
+          for (const v of item.mesh.vertices) if (v[1] < ground) ground = v[1];
+        }
+        const c = buildContactShadow({
+          solidId: solid.id,
+          mesh: item.mesh,
+          view,
+          projection,
+          ground,
+          params,
+          precision: spec.precision,
+          seq: effectSeq,
+        });
+        effectSeq = c.seqEnd;
+        if (c.path && c.gradient) {
+          contactPaths.push(c.path);
+          gradients.push(c.gradient);
+          effectPathCount++;
+        }
+      }
+
+      const hasSurfaceEffect = Object.entries(solid.effects!).some(
+        ([key, v]) => key !== "contact" && v !== false,
+      );
+      if (!hasSurfaceEffect) continue;
+
       const sil = buildSilhouette(item, view, projection, spec.precision);
       if (!sil) {
         warnings.push(`Effects on "${solid.id}" skipped — silhouette is degenerate from this camera.`);
@@ -622,6 +657,13 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
         "Disable effects on minor solids — reserve them for hero objects.",
       );
     }
+    const totalFilters = (shadowLayer?.filters.length ?? 0) + effectFilters.length;
+    if (totalFilters > CONSTRUCT_LIMITS.maxFilters) {
+      err(
+        `Fragment uses ${totalFilters} blur filters (max ${CONSTRUCT_LIMITS.maxFilters}) — blur is the most expensive softness tool.`,
+        'Use glow mode "halo" (pure gradient, free) on most solids; reserve "blur" for the hero light source.',
+      );
+    }
     checkClock("effects");
   }
 
@@ -639,6 +681,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     warnings,
     precision: spec.precision,
     stroke: spec.stroke,
+    contactPaths,
   });
 
   if (paths.length === 0) {

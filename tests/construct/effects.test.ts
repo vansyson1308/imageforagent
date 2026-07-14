@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 import sharp from "sharp";
 import { buildSilhouette } from "@/lib/services/construct/silhouette";
-import { buildSolidEffects } from "@/lib/services/construct/effects";
+import { buildContactShadow, buildSolidEffects } from "@/lib/services/construct/effects";
 import { boxMesh, extrudeMesh } from "@/lib/services/construct/geometry3d";
 import { flattenToContours } from "@/lib/services/construct/geometry2d";
 import { parsePathData } from "@/lib/services/construct/pathParse";
 import { CAMERA_PRESETS, viewMatrix } from "@/lib/services/construct/camera";
 import { compileConstruction } from "@/lib/services/construct/compile";
-import { constructSpecSchema } from "@/lib/validation/constructSchema";
+import { constructSpecSchema, effectsSchema } from "@/lib/validation/constructSchema";
 import { renderArtwork } from "@/lib/services/svgRenderer";
+
+/** Parse partial effects qua schema — defaults false cho key vắng. */
+const FX = (partial: object) => effectsSchema.parse(partial);
 
 const ISO = viewMatrix(CAMERA_PRESETS.isometric);
 const FRONT = viewMatrix(CAMERA_PRESETS.front);
@@ -62,7 +65,7 @@ describe("effects — One Boolean Rule trên silhouette vuông", () => {
       solidId: "s",
       silhouette: SIL,
       lightScreen: L,
-      effects: { formShadow: true, highlight: false, rim: false },
+      effects: FX({ formShadow: true }),
       baseFill: "#cc8844",
       precision: 2,
       seq: 0,
@@ -87,7 +90,7 @@ describe("effects — One Boolean Rule trên silhouette vuông", () => {
       solidId: "s",
       silhouette: SIL,
       lightScreen: L,
-      effects: { formShadow: false, highlight: true, rim: false },
+      effects: FX({ highlight: true }),
       baseFill: "#cc8844",
       precision: 2,
       seq: 5,
@@ -103,7 +106,7 @@ describe("effects — One Boolean Rule trên silhouette vuông", () => {
       solidId: "s",
       silhouette: SIL,
       lightScreen: L,
-      effects: { formShadow: false, highlight: false, rim: { width: 0.1, opacity: 0.5 } },
+      effects: FX({ rim: { width: 0.1, opacity: 0.5 } }),
       baseFill: "#cc8844",
       precision: 2,
       seq: 0,
@@ -118,7 +121,7 @@ describe("effects — One Boolean Rule trên silhouette vuông", () => {
       solidId: "s",
       silhouette: SIL,
       lightScreen: L,
-      effects: { formShadow: true, highlight: true, rim: true },
+      effects: FX({ formShadow: true, highlight: true, rim: true }),
       baseFill: "#cc8844",
       precision: 2,
       seq: 0,
@@ -133,13 +136,112 @@ describe("effects — One Boolean Rule trên silhouette vuông", () => {
       solidId: "s",
       silhouette: SIL,
       lightScreen: [0, 0],
-      effects: { formShadow: true, highlight: false, rim: false },
+      effects: FX({ formShadow: true }),
       baseFill: "#cc8844",
       precision: 2,
       seq: 0,
     });
     expect(res.over).toHaveLength(0);
     expect(res.warnings.some((w) => w.includes("head-on"))).toBe(true);
+  });
+});
+
+describe("effects S3 — specular / coreAccent / glow / contact", () => {
+  const SIL = {
+    d: "M 0 0 L 100 0 L 100 100 L 0 100 Z",
+    minX: 0,
+    minY: 0,
+    maxX: 100,
+    maxY: 100,
+    r: 50,
+    centroid: [50, 50] as const,
+  };
+  const L: readonly [number, number] = [1, 0];
+  const xCoords = (d: string): number[] =>
+    [...d.matchAll(/[ML] (-?[\d.]+) /g)].map((m) => Number(m[1]));
+  const base = (over: object) => ({
+    solidId: "s",
+    silhouette: SIL,
+    lightScreen: L,
+    baseFill: "#cc8844",
+    precision: 2,
+    seq: 0,
+    effects: {
+      formShadow: false as const,
+      highlight: false as const,
+      rim: false as const,
+      coreAccent: false as const,
+      specular: false as const,
+      glow: false as const,
+      contact: false as const,
+      ...over,
+    },
+  });
+
+  it("specular dịch VỀ nguồn sáng, clip trong S, radial trắng→trong", () => {
+    const res = buildSolidEffects(base({ specular: { size: 0.2, offset: 0.6, opacity: 0.5 } }));
+    expect(res.over).toHaveLength(1);
+    // tâm x = 50 − 0.6·50 = 20, r = 10 → đĩa nằm [10, 30]
+    const xs = xCoords(res.over[0].d);
+    expect(Math.min(...xs)).toBeGreaterThan(9);
+    expect(Math.max(...xs)).toBeLessThan(31);
+    expect(res.gradients[0].kind).toBe("radialGradient");
+    expect(res.gradients[0].stops[0].opacity).toBe(0.5);
+    expect(res.gradients[0].stops[1].opacity).toBe(0);
+  });
+
+  it("coreAccent = dải giữa hai bản shift, fill phẳng có opacity", () => {
+    const res = buildSolidEffects(base({ coreAccent: { from: 0.1, to: 0.45, opacity: 0.2 } }));
+    expect(res.over).toHaveLength(1);
+    // band = [100−22.5, 100−5] = [77.5, 95]
+    const xs = xCoords(res.over[0].d);
+    expect(Math.min(...xs)).toBeGreaterThan(76.5);
+    expect(Math.max(...xs)).toBeLessThan(95.5);
+    expect(res.gradients).toHaveLength(0); // flat — không tốn gradient
+    expect(res.over[0].opacity).toBe(0.2);
+    expect(res.over[0].fill).not.toBe("#000000");
+  });
+
+  it("glow halo: đĩa 1.6R SAU LƯNG (behind), 3 stop, không filter", () => {
+    const res = buildSolidEffects(base({ glow: true }));
+    expect(res.behind).toHaveLength(1);
+    expect(res.over).toHaveLength(0);
+    expect(res.filters).toHaveLength(0);
+    const xs = xCoords(res.behind[0].d);
+    expect(Math.min(...xs)).toBeLessThan(-25); // 50 − 80
+    expect(res.gradients[0].stops).toHaveLength(3);
+    // Default color = chính fill (vật tự phát sáng)
+    expect(res.gradients[0].stops[0].color).toBe("#cc8844");
+  });
+
+  it("glow blur: bản sao S + feGaussianBlur, tính vào filters", () => {
+    const res = buildSolidEffects(base({ glow: { mode: "blur", size: 1.6, opacity: 0.7 } }));
+    expect(res.filters).toHaveLength(1);
+    expect(res.filters[0].stdDeviation).toBeCloseTo(0.08 * 1.6 * 50);
+    expect(res.behind[0].filter).toBe(`url(#${res.filters[0].id})`);
+    expect(res.behind[0].d).toBe(SIL.d);
+    expect(res.behind[0].opacity).toBe(0.7);
+  });
+
+  it("contact: ellipse trên ground dưới AABB, radial 3 stop, không filter", () => {
+    const item = { solidId: "b", solidIndex: 0, mesh: boxMesh([100, 100, 100]), convex: true };
+    const c = buildContactShadow({
+      solidId: "b",
+      mesh: item.mesh,
+      view: ISO,
+      projection: ORTHO,
+      ground: -50,
+      params: { opacity: 0.45, scale: 1 },
+      precision: 2,
+      seq: 3,
+    });
+    expect(c.path).not.toBeNull();
+    expect(c.gradient!.id).toBe("cg-e3");
+    expect(c.gradient!.stops[0].opacity).toBe(0.45);
+    expect(c.gradient!.stops[2].opacity).toBe(0);
+    expect(c.path!.d.match(/[ML] /g)!.length).toBe(24);
+    expect(c.path!.filter).toBeUndefined();
+    expect(c.seqEnd).toBe(4);
   });
 });
 
@@ -247,6 +349,98 @@ describe("effects — compile integration", () => {
       solids: [{ ...BOX_SPEC.solids[0], effects: undefined }],
     });
     expect(Math.abs(off.left - off.right)).toBeLessThan(3);
+  });
+
+  it("vượt maxFilters (blur đắt) → CONSTRUCTION_INVALID hint dùng halo", () => {
+    const solids = Array.from({ length: 7 }, (_, i) => ({
+      id: `g${i}`,
+      type: "sphere" as const,
+      r: 40,
+      segments: 8,
+      at: [i * 100 - 300, 0, 0] as const,
+      fill: "#ffcc66",
+      effects: { glow: { mode: "blur" as const } },
+    }));
+    expect(() =>
+      compileConstruction(constructSpecSchema.parse({ version: 1, solids })),
+    ).toThrowError(/max 6/);
+  });
+
+  it("PIXEL PROOF 3: glow halo SAU LƯNG — sáng quanh vật, bị vật gần hơn CHE", async () => {
+    const { svg } = compileConstruction(
+      constructSpecSchema.parse({
+        version: 1,
+        solids: [
+          {
+            id: "lamp",
+            type: "sphere",
+            r: 80,
+            segments: 16,
+            at: [0, 0, -200],
+            fill: "#ffcc66",
+            effects: { glow: { size: 2.5, opacity: 1 } },
+          },
+          {
+            id: "wall",
+            type: "box",
+            size: [200, 400, 20],
+            at: [150, 0, 150],
+            fill: "#446688",
+            shading: "none",
+          },
+        ],
+        camera: { preset: "front" },
+      }),
+    );
+    const png = await renderArtwork(null, `<rect width="1920" height="1080" fill="#101018"/>${svg}`, "16:9", "1K");
+    const raw = await sharp(png).raw().toBuffer({ resolveWithObject: true });
+    const px = (lx: number, ly: number) => {
+      const x = Math.round((lx * 1024) / 1920);
+      const y = Math.round((ly * 576) / 1080);
+      const i = (y * raw.info.width + x) * raw.info.channels;
+      return [raw.data[i], raw.data[i + 1], raw.data[i + 2]] as const;
+    };
+    // Ngoài silhouette (r=80) nhưng trong quầng (200): khác nền = có glow
+    const halo = px(960 - 150, 540);
+    expect(halo[0]).toBeGreaterThan(16 + 15); // nền R=16, quầng ấm cộng vào
+    // Trên tường (gần camera hơn): đúng màu tường — glow nằm SAU
+    const wall = px(960 + 150, 540);
+    expect(Math.abs(wall[0] - 68)).toBeLessThanOrEqual(2);
+    expect(Math.abs(wall[1] - 102)).toBeLessThanOrEqual(2);
+    expect(Math.abs(wall[2] - 136)).toBeLessThanOrEqual(2);
+  });
+
+  it("PIXEL PROOF 4: contact làm TỐI nền ngay dưới vật (diff on/off)", async () => {
+    const render = async (contact: boolean) => {
+      const { svg } = compileConstruction(
+        constructSpecSchema.parse({
+          version: 1,
+          solids: [
+            {
+              id: "crate",
+              type: "box",
+              size: [200, 200, 200],
+              at: [0, 100, 0],
+              fill: "#cc8844",
+              effects: contact ? { contact: { opacity: 0.8 } } : undefined,
+            },
+          ],
+        }),
+      );
+      const png = await renderArtwork(null, `<rect width="1920" height="1080" fill="#e8ecf2"/>${svg}`, "16:9", "1K");
+      return sharp(png).raw().toBuffer({ resolveWithObject: true });
+    };
+    const on = await render(true);
+    const off = await render(false);
+    let darker = 0;
+    let brighter = 0;
+    for (let i = 0; i < on.data.length; i += on.info.channels) {
+      if (on.data[i] < off.data[i] - 8) darker++;
+      if (on.data[i] > off.data[i] + 8) brighter++;
+    }
+    // Contact chỉ LÀM TỐI (vẽ dưới vật, trên nền) — không làm sáng đâu cả
+    expect(darker).toBeGreaterThan(200);
+    expect(brighter).toBe(0);
   });
 
   it("PIXEL PROOF 2: rim — MÉP khuất sáng hơn GIỮA vùng khuất", async () => {

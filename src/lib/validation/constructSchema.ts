@@ -132,6 +132,70 @@ export const effectsSchema = z
           .strict(),
       ])
       .default(false),
+    /** Dải TỐI NHẤT sát mép khuất (core shadow): (S − shift(to·R)) ∩ shift(from·R). */
+    coreAccent: z
+      .union([
+        z.boolean(),
+        z
+          .object({
+            from: z.number().min(0).max(0.95).default(0.1),
+            to: z.number().min(0.05).max(1).default(0.45),
+            opacity: effectOpacity.default(0.2),
+            /** Default: màu bóng đậm hơn suy từ fill. */
+            color: hexColor.optional(),
+          })
+          .strict()
+          .refine((v) => v.from < v.to, { message: 'coreAccent needs "from" < "to"' }),
+      ])
+      .default(false),
+    /** Đốm bóng gương: đĩa size·R tại tâm dịch offset·R VỀ nguồn, ∩ S. */
+    specular: z
+      .union([
+        z.boolean(),
+        z
+          .object({
+            size: z.number().min(0.02).max(0.5).default(0.12),
+            offset: z.number().min(0).max(1).default(0.6),
+            opacity: effectOpacity.default(0.5),
+            /** Default: trắng #ffffff. */
+            color: hexColor.optional(),
+          })
+          .strict(),
+      ])
+      .default(false),
+    /**
+     * Quầng sáng SAU LƯNG solid. "halo" = radial gradient (RẺ — default);
+     * "blur" = bản sao silhouette + feGaussianBlur (ĐẮT, tính vào maxFilters).
+     */
+    glow: z
+      .union([
+        z.boolean(),
+        z
+          .object({
+            mode: z.enum(["halo", "blur"]).default("halo"),
+            size: z.number().min(1.05).max(4).default(1.6),
+            opacity: effectOpacity.default(0.5),
+            /** Default: chính fill của solid (vật tự phát sáng). */
+            color: hexColor.optional(),
+          })
+          .strict(),
+      ])
+      .default(false),
+    /** Bóng tiếp xúc (AO) — ellipse gradient trên ground, KHÔNG filter. */
+    contact: z
+      .union([
+        z.boolean(),
+        z
+          .object({
+            opacity: effectOpacity.default(0.45),
+            /** Hệ số nở footprint (1 = ôm sát AABB). */
+            scale: z.number().min(0.3).max(2).default(1),
+            /** Default: tối lạnh #2c3548. */
+            color: hexColor.optional(),
+          })
+          .strict(),
+      ])
+      .default(false),
   })
   .strict();
 
