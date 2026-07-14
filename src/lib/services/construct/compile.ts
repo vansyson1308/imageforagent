@@ -10,6 +10,8 @@ import { csgOperation, meshToPolygons, prepareOperand } from "@/lib/services/con
 import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRepair";
 import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
 import { buildScenePaths } from "@/lib/services/construct/emitScene";
+import { buildSilhouette } from "@/lib/services/construct/silhouette";
+import { buildSolidEffects } from "@/lib/services/construct/effects";
 import { expandParts } from "@/lib/services/construct/partsExpand";
 import {
   applyCutout,
@@ -52,6 +54,7 @@ import {
 import {
   countFragmentPathCommands,
   emitFragment,
+  type FilterDescriptor,
 } from "@/lib/services/construct/svgEmitter";
 import { sanitizeSvg } from "@/lib/services/svgRenderer";
 
@@ -562,6 +565,66 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     });
   }
 
+  // ---------- Effects (Layer 4c — Softness) ----------
+  const effectFilters: FilterDescriptor[] = [];
+  const solidsWithEffects = spec.solids.filter(
+    (s) => s.effects && Object.values(s.effects).some((v) => v !== false),
+  );
+  if (solidsWithEffects.length > 0) {
+    if (depthSplits > 0) {
+      warnings.push(
+        "Effects are per-solid overlays: solids that interpenetrate (depth splits occurred) may show effect layers over the crossing object.",
+      );
+    }
+    const firstIndexOf = new Map<string, number>();
+    const lastIndexOf = new Map<string, number>();
+    entries.forEach((e, i) => {
+      if (!firstIndexOf.has(e.face.solidId)) firstIndexOf.set(e.face.solidId, i);
+      lastIndexOf.set(e.face.solidId, i);
+    });
+    let effectSeq = 0;
+    let effectPathCount = 0;
+    for (const solid of solidsWithEffects) {
+      const last = lastIndexOf.get(solid.id);
+      const item = facetedItems.find((i) => i.solidId === solid.id);
+      if (last === undefined || !item) {
+        warnings.push(`Effects on "${solid.id}" skipped — solid has no visible faces (culled, or consumed as a csg operand).`);
+        continue;
+      }
+      const sil = buildSilhouette(item, view, projection, spec.precision);
+      if (!sil) {
+        warnings.push(`Effects on "${solid.id}" skipped — silhouette is degenerate from this camera.`);
+        continue;
+      }
+      const res = buildSolidEffects({
+        solidId: solid.id,
+        silhouette: sil,
+        lightScreen,
+        effects: solid.effects!,
+        baseFill: solid.fill ?? "#c0c0c0",
+        precision: spec.precision,
+        seq: effectSeq,
+      });
+      effectSeq = res.seqEnd;
+      warnings.push(...res.warnings);
+      gradients.push(...res.gradients);
+      effectFilters.push(...res.filters);
+      entries[last].decals.push(...res.over);
+      if (res.behind.length > 0) {
+        const first = firstIndexOf.get(solid.id)!;
+        entries[first].preItems = [...(entries[first].preItems ?? []), ...res.behind];
+      }
+      effectPathCount += res.over.length + res.behind.length;
+    }
+    if (effectPathCount > CONSTRUCT_LIMITS.maxEffectPaths) {
+      err(
+        `Effects generated ${effectPathCount} paths (max ${CONSTRUCT_LIMITS.maxEffectPaths}).`,
+        "Disable effects on minor solids — reserve them for hero objects.",
+      );
+    }
+    checkClock("effects");
+  }
+
   // ---------- Ghép PathItems (emitScene.ts) ----------
   const paths = buildScenePaths({
     emittedShapeIds,
@@ -583,7 +646,10 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   }
 
   // ---------- Emit + guard cuối ----------
-  const svg = emitFragment(gradients, paths, spec.place, spec.precision, shadowLayer?.filters ?? []);
+  const svg = emitFragment(gradients, paths, spec.place, spec.precision, [
+    ...(shadowLayer?.filters ?? []),
+    ...effectFilters,
+  ]);
 
   const bytes = Buffer.byteLength(svg, "utf8");
   if (bytes > CONSTRUCT_LIMITS.maxOutputBytes) {

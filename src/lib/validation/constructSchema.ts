@@ -44,6 +44,8 @@ export const fillColor = z
 const scale2 = z.union([z.number().gt(0).max(1000), z.tuple([z.number().gt(0).max(1000), z.number().gt(0).max(1000)])]);
 const scale3 = z.union([z.number().gt(0).max(1000), z.tuple([z.number().gt(0).max(1000), z.number().gt(0).max(1000), z.number().gt(0).max(1000)])]);
 
+const hexColor = z.string().regex(/^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/, "Color must be #hex");
+
 // ---------- 2D shapes ----------
 
 const shapeBase = {
@@ -77,6 +79,64 @@ export const shape2dSchema = z.discriminatedUnion("type", [
 
 export type Shape2D = z.infer<typeof shape2dSchema>;
 
+// ---------- Effects (Softness layer — lưỡi liềm overlay per-solid) ----------
+
+const effectOpacity = z.number().min(0).max(1);
+
+/**
+ * One Boolean Rule: silhouette S + hướng sáng màn hình L + R = ½ cạnh
+ * ngắn bbox — mọi lớp đều là S kết hợp bản shift của chính nó. true =
+ * default; object = tinh chỉnh; thiếu field trong object → default field.
+ */
+export const effectsSchema = z
+  .object({
+    /** Lưỡi liềm TỐI phía khuất: S − shift(S, shift·R về phía sáng). */
+    formShadow: z
+      .union([
+        z.boolean(),
+        z
+          .object({
+            shift: z.number().min(0.05).max(1).default(0.45),
+            opacity: effectOpacity.default(0.15),
+            /** Default: softShadowColor(fill) — không bao giờ #000. */
+            color: hexColor.optional(),
+          })
+          .strict(),
+      ])
+      .default(false),
+    /** Nửa SÁNG phía nguồn: S ∩ shift(S, shift·R). */
+    highlight: z
+      .union([
+        z.boolean(),
+        z
+          .object({
+            shift: z.number().min(0.05).max(1).default(0.5),
+            opacity: effectOpacity.default(0.12),
+            /** Default: trắng ấm #fff1dd. */
+            color: hexColor.optional(),
+          })
+          .strict(),
+      ])
+      .default(false),
+    /** Viền sáng mỏng mép khuất (backlight): S − shift(S, width·R). */
+    rim: z
+      .union([
+        z.boolean(),
+        z
+          .object({
+            width: z.number().min(0.005).max(0.2).default(0.03),
+            opacity: effectOpacity.default(0.6),
+            /** Default: lạnh sáng #dcecff. */
+            color: hexColor.optional(),
+          })
+          .strict(),
+      ])
+      .default(false),
+  })
+  .strict();
+
+export type SolidEffects = z.infer<typeof effectsSchema>;
+
 // ---------- 3D solids ----------
 
 const solidBase = {
@@ -91,6 +151,8 @@ const solidBase = {
   shadow: z.boolean().default(true),
   /** Gắn vào group (khung FK) — placement solid tính TRONG hệ của group. */
   group: constructId.optional(),
+  /** Lớp làm mềm per-solid (Softness) — vắng = không effect; {} = opt-out preset. */
+  effects: effectsSchema.optional(),
 };
 
 export const solidSchema = z.discriminatedUnion("type", [
@@ -232,8 +294,6 @@ export const partSchema = z.discriminatedUnion("type", [
 export type Part = z.infer<typeof partSchema>;
 
 // ---------- Gradients (tác giả khai, fill tham chiếu url(#id)) ----------
-
-const hexColor = z.string().regex(/^#[0-9a-fA-F]{3}$|^#[0-9a-fA-F]{6}$/, "Stop color must be #hex");
 
 const gradientStopSchema = z.object({
   offset: z.number().min(0).max(1),
