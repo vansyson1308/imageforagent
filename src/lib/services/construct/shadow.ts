@@ -57,6 +57,7 @@ function solidShadowD(
   projection: Projection,
   precision: number,
   sweep: Vec3 | null,
+  warnings: string[],
 ): string {
   // Đỉnh world → điểm bóng ground → screen (memo theo index)
   const shadowScreen = item.mesh.vertices.map((v) => {
@@ -119,7 +120,19 @@ function solidShadowD(
     }
     faceDs.push(d);
   }
-  return unionPaths(faceDs, precision, `shadow of "${item.solidId}"`);
+  try {
+    return unionPaths(faceDs, precision, `shadow of "${item.solidId}"`);
+  } catch {
+    // path-bool có thể chết trên footprint suy biến (mặt mảnh của mesh CSG
+    // sau HAI phép chiếu — trượt theo sáng rồi camera). Bóng là lớp trang
+    // trí: degrade về convex hull (mất lỗ, hơi phình) + warning — KHÔNG
+    // được giết cả compile.
+    warnings.push(
+      `Shadow of "${item.solidId}" degraded to its convex hull — per-face footprint was degenerate from this camera/light.`,
+    );
+    const hull = convexHull2D(sweepScreen ? [...shadowScreen, ...sweepScreen] : shadowScreen);
+    return hull.length >= 3 ? ringToPathD(hull, precision) : "";
+  }
 }
 
 /**
@@ -213,9 +226,17 @@ export function buildShadowLayer(
   }
 
   const solidDs = items
-    .map((item) => solidShadowD(item, lightWorld, shadow.ground, view, projection, precision, sweep))
+    .map((item) => solidShadowD(item, lightWorld, shadow.ground, view, projection, precision, sweep, warnings))
     .filter((d) => d.length > 0);
-  const merged = unionPaths(solidDs, precision, "shadow");
+  let merged: string;
+  try {
+    merged = unionPaths(solidDs, precision, "shadow");
+  } catch {
+    // Union tổng chết → ghép multi-subpath một path nonzero: vùng giao
+    // không bị tô đậm đôi, bóng vẫn liền — degrade có báo.
+    warnings.push("Shadow layer union degraded — footprints drawn as one multi-subpath fill.");
+    merged = solidDs.join(" ");
+  }
   if (merged.length === 0) return { ...EMPTY, warnings };
 
   let filterRef: string | undefined;
