@@ -276,6 +276,8 @@ const partBase3d = {
   rotate: vec3.default([0, 0, 0]),
   scale: z.number().gt(0).max(1000).default(1),
   group: constructId.optional(),
+  /** Passthrough: áp cho MỌI solid sinh từ part (vd rim cho cả figure). */
+  effects: effectsSchema.optional(),
 };
 
 /**

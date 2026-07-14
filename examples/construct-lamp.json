@@ -1,0 +1,333 @@
+{
+  "version": 1,
+  "gradients": [
+    {
+      "id": "nightSky",
+      "kind": "linear",
+      "angle": 90,
+      "stops": [
+        {
+          "offset": 0,
+          "color": "#0a0e22"
+        },
+        {
+          "offset": 0.62,
+          "color": "#1b2445"
+        },
+        {
+          "offset": 1,
+          "color": "#324066"
+        }
+      ]
+    },
+    {
+      "id": "mist",
+      "kind": "linear",
+      "angle": 90,
+      "stops": [
+        {
+          "offset": 0,
+          "color": "#4a5a80",
+          "opacity": 0
+        },
+        {
+          "offset": 0.5,
+          "color": "#4a5a80",
+          "opacity": 0.28
+        },
+        {
+          "offset": 1,
+          "color": "#4a5a80",
+          "opacity": 0
+        }
+      ]
+    },
+    {
+      "id": "lampHalo",
+      "kind": "radial",
+      "stops": [
+        {
+          "offset": 0,
+          "color": "#ffc861",
+          "opacity": 0.55
+        },
+        {
+          "offset": 0.45,
+          "color": "#f2a94e",
+          "opacity": 0.22
+        },
+        {
+          "offset": 1,
+          "color": "#f2a94e",
+          "opacity": 0
+        }
+      ]
+    },
+    {
+      "id": "moonHalo",
+      "kind": "radial",
+      "stops": [
+        {
+          "offset": 0,
+          "color": "#dfe6f5",
+          "opacity": 0.28
+        },
+        {
+          "offset": 1,
+          "color": "#dfe6f5",
+          "opacity": 0
+        }
+      ]
+    }
+  ],
+  "shapes": [
+    {
+      "id": "sky",
+      "type": "rect",
+      "w": 1940,
+      "h": 1120,
+      "at": [
+        0,
+        -170
+      ],
+      "fill": "url(#nightSky)"
+    },
+    {
+      "id": "moon",
+      "type": "circle",
+      "r": 46,
+      "at": [
+        -620,
+        -430
+      ],
+      "fill": "#dfe6f5"
+    },
+    {
+      "id": "moonGlow",
+      "type": "circle",
+      "r": 110,
+      "at": [
+        -620,
+        -430
+      ],
+      "fill": "url(#moonHalo)"
+    },
+    {
+      "id": "lampGlow",
+      "type": "circle",
+      "r": 185,
+      "at": [
+        230,
+        -443
+      ],
+      "fill": "url(#lampHalo)"
+    },
+    {
+      "id": "mistBand",
+      "type": "rect",
+      "w": 1940,
+      "h": 260,
+      "at": [
+        0,
+        60
+      ],
+      "fill": "url(#mist)",
+      "layer": "foreground"
+    }
+  ],
+  "solids": [
+    {
+      "id": "ground",
+      "type": "box",
+      "size": [
+        3200,
+        24,
+        1700
+      ],
+      "at": [
+        0,
+        -12,
+        0
+      ],
+      "fill": "#222a44",
+      "shadow": false,
+      "effects": {}
+    },
+    {
+      "id": "post",
+      "type": "cylinder",
+      "r": 11,
+      "h": 410,
+      "at": [
+        240,
+        205,
+        0
+      ],
+      "segments": 20,
+      "fill": "#2b3040"
+    },
+    {
+      "id": "bulb",
+      "type": "sphere",
+      "r": 24,
+      "at": [
+        240,
+        434,
+        0
+      ],
+      "segments": 16,
+      "fill": "#ffdf9e",
+      "shading": "none",
+      "shadow": false,
+      "effects": {
+        "glow": {
+          "mode": "blur",
+          "size": 2.6,
+          "opacity": 0.9,
+          "color": "#ffc861"
+        }
+      }
+    },
+    {
+      "id": "hood",
+      "type": "cone",
+      "r": 44,
+      "rTop": 12,
+      "h": 38,
+      "at": [
+        240,
+        477,
+        0
+      ],
+      "segments": 20,
+      "fill": "#333a4e"
+    }
+  ],
+  "parts": [
+    {
+      "id": "walker",
+      "type": "figure",
+      "height": 300,
+      "headCount": 3,
+      "at": [
+        30,
+        0,
+        30
+      ],
+      "rotate": [
+        0,
+        25,
+        0
+      ],
+      "pose": {
+        "neck": [
+          -16,
+          0,
+          6
+        ],
+        "shoulderL": [
+          0,
+          0,
+          -8
+        ],
+        "shoulderR": [
+          0,
+          0,
+          8
+        ]
+      },
+      "fills": {
+        "skin": "#e6b58f",
+        "shirt": "#46536f",
+        "pants": "#2b3247",
+        "shoes": "#1d222f"
+      },
+      "effects": {
+        "formShadow": {
+          "opacity": 0.22
+        },
+        "rim": {
+          "color": "#bcd2ff",
+          "width": 0.05,
+          "opacity": 0.7
+        }
+      }
+    },
+    {
+      "id": "tree1",
+      "type": "tree",
+      "trunkH": 130,
+      "trunkR": 15,
+      "canopyR": 85,
+      "style": "blob",
+      "at": [
+        -520,
+        0,
+        -300
+      ],
+      "fills": {
+        "trunk": "#303649",
+        "canopy": "#3a4a68"
+      }
+    },
+    {
+      "id": "tree2",
+      "type": "tree",
+      "trunkH": 110,
+      "trunkR": 12,
+      "canopyR": 70,
+      "style": "blob",
+      "at": [
+        -780,
+        0,
+        -520
+      ],
+      "fills": {
+        "trunk": "#2b3143",
+        "canopy": "#33425e"
+      }
+    }
+  ],
+  "shadow": {
+    "style": "silhouette",
+    "color": "#0a0f1f",
+    "opacity": 0.42,
+    "blur": 7,
+    "ground": 0
+  },
+  "light": {
+    "direction": [
+      -0.5,
+      -1.5,
+      -0.35
+    ],
+    "ambient": 0.34,
+    "mode": "gradient"
+  },
+  "atmosphere": {
+    "depthFade": {
+      "color": "#2c3a5e",
+      "strength": 0.5,
+      "desaturate": 0.45
+    },
+    "vignette": {
+      "color": "#070b16",
+      "strength": 0.42,
+      "start": 0.5
+    }
+  },
+  "camera": {
+    "orbit": {
+      "azimuth": -16,
+      "elevation": 11
+    }
+  },
+  "place": {
+    "at": [
+      960,
+      700
+    ],
+    "scale": 1
+  },
+  "finish": "soft"
+}

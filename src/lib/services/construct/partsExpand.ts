@@ -156,8 +156,11 @@ export function expandParts(spec: ConstructSpec): ExpandedSpec {
       const p3 = part as Extract<typeof part, { rotate: readonly [number, number, number] }>;
       partM = mul4(partM, composePlacement4(p3.at, p3.rotate, p3.scale));
     }
+    const partEffects = "effects" in part ? part.effects : undefined;
     for (const gen of build.solids) {
-      solids.push(gen.solid);
+      // Passthrough effects của part xuống mọi solid sinh ra (trước finish
+      // preset — part đã khai effects thì preset không đụng nữa)
+      solids.push(partEffects !== undefined ? { ...gen.solid, effects: partEffects } : gen.solid);
       worldMatrixById.set(gen.solid.id, mul4(partM, gen.localM));
     }
   }

@@ -14,6 +14,7 @@ A complete working sample showing how an agent authors storyboard artwork as SVG
 | `construct-dice.json` | **Volumetric CSG**: a white die with six spherical pips subtracted from three faces in one nested `csg` chain — cut interiors inherit the cutter's red. |
 | `construct-cart.json` | **The works (hero)**: an articulated `figure` (FK pose by joint names) leaning to push a two-wheeled cart — hollowed body via `csg`, `wheel` parts with spokes and a real bore, a `tree`, exact projected `shadow`s, and `depthSort:"exact"` resolving all the interpenetrations. |
 | `construct-shading.json` | **Light layers**: `light.mode:"gradient"` (per-face smooth ramps) + `shadow.style:"blob"` soft ellipses under a cube/sphere/cone trio. |
+| `construct-lamp.json` | **The Softness Principle (hero)**: a night street-lamp scene — author `gradients[]` (sky ramp + two *free* radial halos + a foreground mist band on `layer:"foreground"`), the one blur filter spent on the bulb's `glow`, a figure rim-lit in moonlight cool with soft `formShadow`, trees receding via `atmosphere.depthFade`, and a `vignette` closing the frame. `finish:"soft"` fills every solid that didn't declare its own effects. |
 
 ## How to run this example
 

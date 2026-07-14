@@ -114,13 +114,49 @@ The spec vocabulary:
 | `shadow` | Ground-shadow layer: `style: silhouette` (exact projected outline — a washer casts a ring) · `blob` (soft radial ellipse) · `long` (stylized 45° sweep); `opacity`, `ground` plane height, optional `blur` (feGaussianBlur). Draws over floor solids, under everything above. |
 | `depthSort` | **`exact`** (default): Newell–Newell–Sancha ordering — **interpenetrating solids render correctly** (faces split lazily only at true conflicts; clean scenes are byte-identical to painter). `painter`: legacy centroid sort, faster, may mis-order intersections. |
 | `cutouts[]` | Post-projection booleans on a face: `subtract` (punch through a flat face) or `overlay` (decal clipped to the face — doors, windows, labels). |
-| `place` | Position/scale/rotate the result on the logical canvas (default center 16:9). |
+| `gradients[]` | **Author gradients**: `linear{angle°}` / `radial{focus, radius}`, 2-16 stops with per-stop `opacity` — reference anywhere via `fill:"url(#id)"`, resolved inside the fragment (previews render them). |
+| solid `effects` | **Softness layers per solid** (see The Softness Principle below): `formShadow` · `highlight` · `rim` · `coreAccent` · `specular` · `glow{halo\|blur}` · `contact` — each `true` for defaults or an object to tune. Parts accept the same `effects` as a passthrough. |
+| `atmosphere` | Scene-wide softness: `depthFade{color,strength,desaturate}` (aerial perspective) + `vignette{color,strength,start,size}` (drawn last, canvas-exact under any `place`). |
+| `finish` | One-touch preset: `flat` (default) · `soft` (formShadow+highlight+contact everywhere) · `premium` (+rim, +specular on smooth solids, +light vignette). Only fills solids without their own `effects`; `"effects": {}` opts out. |
+| `place` | Position/scale/rotate the result on the logical canvas (default center 16:9). 2D shapes take `layer:"foreground"` to draw over the 3D scene. |
 
 Coordinates: 2D is y-down (SVG convention); the 3D world is y-up right-handed, heights along y. Face labels for cutouts: `top/bottom/front(+z)/back/left/right(+x)` on box/extrude. Figure joints: `spine, neck, shoulderL/R, elbowL/R, wristL/R, hipL/R, kneeL/R, ankleL/R` (scalar pose value = z-axis bend; limbs hang along −y, so e.g. `elbowL: [-90,0,0]` points the forearm forward).
 
-Working examples with their exact compiled output: [construct-gear.json](examples/construct-gear.json) (2D booleans) · [construct-house.json](examples/construct-house.json) (isometric + extrude + cutouts) · [construct-rocket.json](examples/construct-rocket.json) (free camera + smooth shading) · [construct-dice.json](examples/construct-dice.json) (volumetric CSG pips) · [construct-cart.json](examples/construct-cart.json) (**the works**: posed figure pushing a hollowed cart on wheel parts, with shadows) · [construct-shading.json](examples/construct-shading.json) (gradient mode + blob shadows).
+Working examples with their exact compiled output: [construct-gear.json](examples/construct-gear.json) (2D booleans) · [construct-house.json](examples/construct-house.json) (isometric + extrude + cutouts) · [construct-rocket.json](examples/construct-rocket.json) (free camera + smooth shading) · [construct-dice.json](examples/construct-dice.json) (volumetric CSG pips) · [construct-cart.json](examples/construct-cart.json) (**the works**: posed figure pushing a hollowed cart on wheel parts, with shadows) · [construct-shading.json](examples/construct-shading.json) (gradient mode + blob shadows) · [construct-lamp.json](examples/construct-lamp.json) (**softness hero**: night street lamp — glow, halos, rim light, depth fade, mist, vignette).
 
-Every response includes `stats` (`facesGenerated/bytes/compileMs/csgOps/depthSplits/partsExpanded`) so you can tune against the limits (256 nodes post-expansion, 5,000 faces, 8 csg ops × 2,000 input faces, 400KB output, 2s compile). Spec errors return `422 CONSTRUCTION_INVALID` with an actionable hint (`Did you mean "hole"?`). Honest limitations (ADR-011/012): CSG is epsilon-based BSP (near-tangent/coplanar operands may need a small nudge — the hint tells you); `exact` depth-sort falls back to painter order past 2,000 splits (warned); smooth solids in `exact` mode insert by depth (approximation). The reserved gradient id prefix is `cg-`.
+Every response includes `stats` (`facesGenerated/bytes/compileMs/csgOps/depthSplits/partsExpanded/effectPaths/filters`) so you can tune against the limits (256 nodes post-expansion, 5,000 faces, 8 csg ops × 2,000 input faces, 96 effect paths, 6 blur filters, 400KB output, 2s compile). Spec errors return `422 CONSTRUCTION_INVALID` with an actionable hint (`Did you mean "hole"?`). Honest limitations (ADR-011/012/013): CSG is epsilon-based BSP (near-tangent/coplanar operands may need a small nudge — the hint tells you); `exact` depth-sort falls back to painter order past 2,000 splits (warned); smooth solids in `exact` mode insert by depth (approximation); effects are per-solid screen overlays (interpenetrating solids get a warning). The reserved gradient id prefix is `cg-`.
+
+### The Softness Principle (making vector art feel soft)
+
+Vector art is **hard-edged by nature** — a vector shadow is just another shape with a crisp boundary, while real 3D shading falls off smoothly from light to dark. Every "soft" vector illustration you've admired fakes that softness the same way: **stack hard shapes, feather their edges with gradients (cheap) or blur (expensive), and let color do the heavy lifting**. This engine compiles the whole principle for you — and it's worth understanding, because composing the layers well is what turns primitive blocks into finished artwork.
+
+**One boolean rule generates the core light layers.** Take a solid's screen silhouette `S`, the light's screen direction `L`, and `R` = half the short side of `S`'s bounding box. Shift a copy of `S` toward the light and combine:
+
+| `effects.…` | Geometry | Reads as |
+|---|---|---|
+| `formShadow` | `S − shift(S, 0.45R)` | soft dark crescent on the side away from the light |
+| `highlight` | `S ∩ shift(S, 0.5R)` | gentle bright wash on the lit side |
+| `coreAccent` | `(S − shift(to·R)) ∩ shift(from·R)` | darkest band just inside the shadow edge |
+| `specular` | disc at centroid − `L`·0.6R, ∩ `S` | glossy hot-spot (spheres, metal, glass) |
+| `rim` | `S − shift(S, width·R)` | thin bright back-edge (backlight/moonlight) |
+| `glow` | halo disc **behind** the solid, or blurred copy of `S` | the object emits light |
+| `contact` | gradient ellipse on the ground under the solid | grounding/ambient occlusion — no filter |
+
+The soft edge needs **no filter at all**: each crescent is filled with a `userSpaceOnUse` linear gradient running along `L` whose stop-opacity fades to 0 at the terminator. That's the whole trick.
+
+**Color discipline is baked into the defaults.** Shadows are never `#000` — the default shadow tint is the base color with lightness −25% and hue rotated ~25° toward cool (230°, night blue). Highlights are warm (`#fff1dd`), rims cool (`#dcecff`), and every parameter (`color/opacity/shift/width`) is overridable per effect. Keep one shadow hue per scene; typical opacities: formShadow 10–20%, highlight 8–15%, contact ~45%.
+
+**Respect the filter budget.** Blur is the *only* expensive tool — max **6 filters per fragment** (`shadow.blur` + `glow.mode:"blur"`). Everything else is gradients, which cost nothing: use `glow.mode:"halo"` for most glows, `contact` instead of blurred drop-shadows, and plain 2D circles filled with your own `gradients[]` for big ambient halos (see how the lamp example fakes its street-light pool of light).
+
+**Declare your own gradients** in `gradients[]` and reference them anywhere with `fill:"url(#id)"` — `linear{angle}` (degrees: 0 = →, 90 = ↓) or `radial{focus, radius}`, 2–16 stops with per-stop opacity. They resolve inside the fragment, so `previewPng` shows them correctly.
+
+**Scene-level softness** lives in `atmosphere`: `depthFade` pushes far solids toward a sky color (+desaturation) for aerial perspective; `vignette` darkens the frame corners (drawn last, always covering the canvas even under `place` rotation). Set `layer:"foreground"` on any 2D shape to draw it **over** the 3D scene (mist bands, haze) — foreground sits above solids, below the vignette.
+
+**One-touch presets**: `finish:"soft"` gives every solid `formShadow + highlight + contact`; `finish:"premium"` adds `rim`, `specular` on smooth solids, and a light vignette. Presets only fill solids that don't declare `effects` themselves — set `"effects": {}` to opt a solid out, or declare your own to take control. Parts (`figure`/`wheel`/`tree`) accept an `effects` passthrough applied to every solid they generate.
+
+Layer order per scene (what the engine draws, back to front): background 2D → ground solids → projected shadows → contact shadows → solids far-to-near (each: glow behind → faces → crescents on top) → foreground 2D → vignette.
+
+The full showcase is [construct-lamp.json](examples/construct-lamp.json) — a night street-lamp scene: author gradients for the sky and two *free* halos, one blur spent on the bulb, a figure rim-lit in moonlight cool, trees receding through `depthFade`, a foreground mist band, and a vignette.
 
 <details>
 <summary><b>Full API reference</b></summary>
@@ -181,6 +217,9 @@ src/lib/services/artworkService.ts render→watermark→persist pipeline per fra
 src/lib/services/construct/       geometric-construction compiler (pure, deterministic):
                                   geometry2d · pathBoolean (path-bool) · pathParse ·
                                   math3d · camera · geometry3d · painterSort · shading ·
+                                  plane3 · csg · depthOrder · meshRepair · shadow ·
+                                  faceGradient · silhouette · effects · atmosphere ·
+                                  finish · partsExpand/Figure/Wheel · emitScene ·
                                   svgEmitter · compile (orchestrator)
 src/app/api/                      REST routes (Zod, rate-limited, error envelope)
 src/components/                   Web UI (Next.js App Router + Zustand)
@@ -213,6 +252,8 @@ tests/                            Vitest — sanitizer bypass-vector suite + con
 
 **Quy trình agent:** tạo project → import kịch bản TSV/Google Sheet → `PATCH artworkDefs` (thư viện nhân vật) → `PUT /api/frames/:id/artwork` từng frame (render sync ~50ms) → chỉnh sửa & re-render → export ZIP (ảnh + storyboard.json chứa cả source SVG + captions.srt) → agent tự dựng video bằng **Remotion** với timing từ `playbackSpeed` và chuyển động camera từ `shotType`.
 
-**Dựng hình kỷ hà (`POST /api/construct`):** thay vì viết tay từng path, agent mô tả hình theo đúng phương pháp hoạ sĩ vector — phân rã thành **hình kỷ hà cơ bản** (tròn, chữ nhật, đa giác, khối hộp, trụ, cầu…), rồi **kết hợp** (boolean 2D trên bezier thật + **CSG thể tích 3D** — trừ cầu khỏi hộp, khoan trụ xuyên khối, lòng khoét lộ màu dao cắt) và **biến đổi** (affine, chiếu isometric hoặc camera tự do, extrude, **khung xương FK cha-con**). Ánh sáng nhiều tầng: 3 tông lượng tử / gradient mượt theo mặt / **bóng đổ xuống đất** (silhouette chính xác — vòng đệm đổ bóng có lỗ). **Depth sort exact mặc định** — khối xuyên nhau vẫn vẽ đúng. Có sẵn **part tham số hoá**: nhân vật khớp nối (pose theo tên khớp, tỷ lệ 2-8 đầu), bánh xe, cây, mây, mũi tên. Engine compile deterministic + trả preview ngay trong response (~20-400ms/lần). Xem 6 mẫu trong [examples/](examples/) — hero là **người đẩy xe hàng** dùng đủ cả bốn nâng cấp.
+**Dựng hình kỷ hà (`POST /api/construct`):** thay vì viết tay từng path, agent mô tả hình theo đúng phương pháp hoạ sĩ vector — phân rã thành **hình kỷ hà cơ bản** (tròn, chữ nhật, đa giác, khối hộp, trụ, cầu…), rồi **kết hợp** (boolean 2D trên bezier thật + **CSG thể tích 3D** — trừ cầu khỏi hộp, khoan trụ xuyên khối, lòng khoét lộ màu dao cắt) và **biến đổi** (affine, chiếu isometric hoặc camera tự do, extrude, **khung xương FK cha-con**). Ánh sáng nhiều tầng: 3 tông lượng tử / gradient mượt theo mặt / **bóng đổ xuống đất** (silhouette chính xác — vòng đệm đổ bóng có lỗ). **Depth sort exact mặc định** — khối xuyên nhau vẫn vẽ đúng. Có sẵn **part tham số hoá**: nhân vật khớp nối (pose theo tên khớp, tỷ lệ 2-8 đầu), bánh xe, cây, mây, mũi tên. Engine compile deterministic + trả preview ngay trong response (~20-400ms/lần). Xem 7 mẫu trong [examples/](examples/) — hero kỷ hà là **người đẩy xe hàng**, hero làm mềm là **đèn đường đêm**.
+
+**Nguyên lý làm mềm (The Softness Principle):** vector bản chất là mảng cứng — bóng của vector chỉ là một shape sắc cạnh, trong khi 3D thật chuyển êm từ sáng sang tối. Muốn vector "mềm" thì phải GIẢ LẬP: **xếp chồng nhiều lớp shape cứng, phủi mép bằng gradient (rẻ) hoặc blur (đắt), và để màu sắc gánh phần nặng**. Engine compile sẵn nguyên lý này: một quy tắc boolean duy nhất trên silhouette sinh ra mọi lớp sáng-tối (`formShadow` lưỡi liềm tối phía khuất · `highlight` nửa sáng phía nguồn · `rim` viền ngược mỏng · `coreAccent` dải tối nhất · `specular` đốm gương · `glow` quầng phát sáng · `contact` bóng tiếp xúc) — mép mềm KHÔNG cần filter, chỉ là gradient tắt dần theo trục sáng. Kỷ luật màu nướng sẵn vào default: **bóng không bao giờ #000** (giảm sáng 25% + xoay hue 25° về lạnh), highlight ấm/bóng lạnh. Ngân sách blur 6 filter/fragment — dành cho nguồn sáng hero, còn lại dùng gradient. Kèm `gradients[]` tác giả tự khai, `atmosphere` (depth fade viễn cận + vignette), kênh 2D `layer:"foreground"` (sương/haze phủ trên khối 3D), và preset một chạm `finish: soft/premium`. Xem hero [construct-lamp.json](examples/construct-lamp.json).
 
 **Chạy:** `npm install` → `cp .env.example .env` (không cần điền gì) → `npx prisma migrate deploy` → `npm run dev`. Xem [examples/](examples/) — bộ mẫu mascot "Pip" hoàn chỉnh. Lưu ý: app không có đăng nhập — chỉ dùng local/nội bộ.

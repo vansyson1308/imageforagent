@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { compileConstruction } from "@/lib/services/construct/compile";
 import { constructSpecSchema } from "@/lib/validation/constructSchema";
-import { CART_SPEC, DICE_SPEC, GEAR_SPEC, HOUSE_SPEC, ROCKET_SPEC, SHADING_SPEC } from "./exampleSpecs";
+import { CART_SPEC, DICE_SPEC, GEAR_SPEC, HOUSE_SPEC, LAMP_SPEC, ROCKET_SPEC, SHADING_SPEC } from "./exampleSpecs";
 
 /**
  * Giữ examples/construct-*.{json,svg} ĐỒNG BỘ với fixtures + compiler.
@@ -20,6 +20,7 @@ const CASES = [
   ["dice", DICE_SPEC],
   ["cart", CART_SPEC],
   ["shading", SHADING_SPEC],
+  ["lamp", LAMP_SPEC],
 ] as const;
 
 describe("examples/construct-* đồng bộ với fixtures + compiler", () => {
