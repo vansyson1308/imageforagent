@@ -2,8 +2,7 @@ import type { Mat4, Vec2, Vec3 } from "@/lib/services/construct/types";
 import { transformPoint } from "@/lib/services/construct/math3d";
 import { projectViewPoint, type Projection } from "@/lib/services/construct/camera";
 import { convexHull2D, fmt } from "@/lib/services/construct/geometry2d";
-import { runBoolean } from "@/lib/services/construct/pathBoolean";
-import { CONSTRUCT_LIMITS } from "@/lib/config/limits";
+import { unionPaths } from "@/lib/services/construct/pathBoolean";
 import type { SolidSceneItem } from "@/lib/services/construct/painterSort";
 import { GRADIENT_ID_PREFIX, type GradientDescriptor } from "@/lib/services/construct/shading";
 import type { FilterDescriptor, PathItem } from "@/lib/services/construct/svgEmitter";
@@ -47,25 +46,6 @@ function ringToPathD(ring: readonly Vec2[], precision: number): string {
       .map(([x, y], i) => `${i === 0 ? "M" : "L"} ${fmt(x, precision)} ${fmt(y, precision)}`)
       .join(" ") + " Z"
   );
-}
-
-/** Union path 2D theo lô ≤ maxBooleanOperands. */
-function unionPaths(ds: string[], precision: number, context: string): string {
-  let batch: string[] = [];
-  let acc: string | null = null;
-  const flush = () => {
-    if (batch.length === 0) return;
-    const operands = acc !== null ? [acc, ...batch] : batch;
-    acc = operands.length === 1 ? operands[0] : runBoolean("union", operands, precision, context).d;
-    batch = [];
-  };
-  for (const d of ds) {
-    if (d.length === 0) continue;
-    batch.push(d);
-    if (batch.length >= CONSTRUCT_LIMITS.maxBooleanOperands - 1) flush();
-  }
-  flush();
-  return acc ?? "";
 }
 
 /** Footprint bóng một solid trên MÀN HÌNH (union per-face, giữ lỗ). */

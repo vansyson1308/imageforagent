@@ -174,6 +174,8 @@ export interface DrawEntry {
   fillOverride?: string;
   dOverride?: string;
   decals: PathItem[];
+  /** PathItems vẽ TRƯỚC mặt này (vd glow halo sau lưng solid). */
+  preItems?: PathItem[];
 }
 
 export interface CutoutOptions {

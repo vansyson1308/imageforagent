@@ -122,6 +122,25 @@ export function runBoolean(
   }
 }
 
+/** Union path 2D theo lô ≤ maxBooleanOperands — dùng chung shadow + silhouette. */
+export function unionPaths(ds: string[], precision: number, context: string): string {
+  let batch: string[] = [];
+  let acc: string | null = null;
+  const flush = () => {
+    if (batch.length === 0) return;
+    const operands = acc !== null ? [acc, ...batch] : batch;
+    acc = operands.length === 1 ? operands[0] : runBoolean("union", operands, precision, context).d;
+    batch = [];
+  };
+  for (const d of ds) {
+    if (d.length === 0) continue;
+    batch.push(d);
+    if (batch.length >= CONSTRUCT_LIMITS.maxBooleanOperands - 1) flush();
+  }
+  flush();
+  return acc ?? "";
+}
+
 /**
  * Union một path với chính nó — chuẩn hoá path tự cắt (self-intersecting)
  * thành outline sạch theo nonzero fill. Dùng trước extrude.

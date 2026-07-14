@@ -9,7 +9,7 @@ import { relativeEps, weldVertices, type Polygon3 } from "@/lib/services/constru
 import { csgOperation, meshToPolygons, prepareOperand } from "@/lib/services/construct/csg";
 import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRepair";
 import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
-import { faceGradientFill } from "@/lib/services/construct/faceGradient";
+import { buildScenePaths } from "@/lib/services/construct/emitScene";
 import { expandParts } from "@/lib/services/construct/partsExpand";
 import {
   applyCutout,
@@ -43,7 +43,6 @@ import {
   lambertFactor,
   luminance,
   parseHex,
-  shadeFaceHex,
   sideGradient,
   sphereGradient,
   type GradientDescriptor,
@@ -52,8 +51,6 @@ import {
 import {
   countFragmentPathCommands,
   emitFragment,
-  faceToPathData,
-  type PathItem,
 } from "@/lib/services/construct/svgEmitter";
 import { sanitizeSvg } from "@/lib/services/svgRenderer";
 
@@ -533,106 +530,21 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     });
   }
 
-  // ---------- Ghép PathItems ----------
-  const paths: PathItem[] = [];
-  const globalStroke = spec.stroke;
-
-  // 2D shapes trước (nền phẳng), theo thứ tự khai báo
-  for (const id of emittedShapeIds) {
-    const r = resolver.resolved.get(id)!;
-    if (r.isEmpty) {
-      warnings.push(`"${id}" (${r.shape.type === "boolean" ? r.shape.op : r.shape.type}) produced an empty path — skipped.`);
-      continue;
-    }
-    if (r.shape.type === "line") {
-      paths.push({
-        d: r.d,
-        fill: "none",
-        stroke: r.shape.stroke ?? "#333333",
-        strokeWidth: r.shape.strokeWidth,
-      });
-    } else {
-      paths.push({
-        d: r.d,
-        fill: r.shape.fill ?? "#c0c0c0",
-        fillRule: "nonzero",
-        stroke: r.shape.stroke ?? globalStroke?.color,
-        strokeWidth: r.shape.strokeWidth ?? globalStroke?.width,
-      });
-    }
-  }
-
-  // Shadow layer: vẽ SAU solid "nền" (toàn bộ mesh ≤ mặt phẳng bóng —
-  // vd sàn/đất), TRƯỚC mọi solid nổi phía trên — bóng nằm ĐÈ lên mặt sàn
-  const groundSolidIds = new Set<string>();
-  if (shadowLayer && spec.shadow) {
-    const groundY = spec.shadow.ground + 1e-6;
-    for (const [id, entry] of worldMeshById) {
-      if (entry.mesh.vertices.every((v) => v[1] <= groundY)) groundSolidIds.add(id);
-    }
-  }
-  const groundEntries = shadowLayer
-    ? entries.filter((e) => groundSolidIds.has(e.face.solidId))
-    : [];
-  const floatingEntries = shadowLayer
-    ? entries.filter((e) => !groundSolidIds.has(e.face.solidId))
-    : entries;
-
-  // 3D faces theo painter order (nền → bóng → phần nổi)
-  let gradientSeq = 0;
-  let gradientOverflow = false;
-  const emit3d = (entry: DrawEntry) => {
-    const solid = solidMap.get(entry.face.solidId)!;
-    // face.fill = fill kế thừa từ solid nguồn (CSG đa màu; csg.fill đã
-    // override từ lúc resolve) — solid thường không có face.fill
-    const base = entry.face.fill ?? solid.fill ?? "#c0c0c0";
-    let fill: string;
-    if (entry.fillOverride) {
-      fill = entry.fillOverride;
-    } else if (solid.shading === "none") {
-      fill = base;
-    } else if (lightParams.mode === "gradient") {
-      const budgetLeft = CONSTRUCT_LIMITS.maxGradients - gradients.length;
-      const result = faceGradientFill(
-        entry.face,
-        base,
-        lightView,
-        light.ambient,
-        gradientSeq,
-        budgetLeft,
-      );
-      if (result.gradient) {
-        gradients.push(result.gradient);
-        gradientSeq++;
-      } else if (budgetLeft <= 0) {
-        gradientOverflow = true;
-      }
-      fill = result.fill;
-    } else {
-      fill = shadeFaceHex(base, entry.face.normal, lightParams);
-    }
-    paths.push({
-      d: entry.dOverride ?? faceToPathData(entry.face, spec.precision),
-      fill,
-      fillRule: entry.face.holes ? "evenodd" : undefined,
-      stroke: globalStroke?.color,
-      strokeWidth: globalStroke?.width,
-    });
-    paths.push(...entry.decals);
-  };
-
-  for (const entry of groundEntries) emit3d(entry);
-  if (shadowLayer) {
-    gradients.push(...shadowLayer.gradients);
-    paths.push(...shadowLayer.paths);
-  }
-  for (const entry of floatingEntries) emit3d(entry);
-
-  if (gradientOverflow) {
-    warnings.push(
-      `Gradient budget (${CONSTRUCT_LIMITS.maxGradients}) exhausted — remaining faces use flat smooth fill. Reduce face count or use light.mode "quantized".`,
-    );
-  }
+  // ---------- Ghép PathItems (emitScene.ts) ----------
+  const paths = buildScenePaths({
+    emittedShapeIds,
+    resolver,
+    entries,
+    solidMap,
+    shadowLayer,
+    shadowGround: spec.shadow?.ground,
+    worldMeshById,
+    lightParams,
+    gradients,
+    warnings,
+    precision: spec.precision,
+    stroke: spec.stroke,
+  });
 
   if (paths.length === 0) {
     err("Nothing to emit — all shapes were consumed or empty.", 'Add shapes/solids, or list ids in "emit" to force-output consumed shapes.');
