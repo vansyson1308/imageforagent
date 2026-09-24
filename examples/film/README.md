@@ -2,7 +2,7 @@
 
 *A 20-minute 3D animated short made entirely with this engine — written, staged,
 animated, voiced, scored, edited and mastered through the app's own API. No
-hand-drawn frames, no API keys, byte-for-byte reproducible.*
+hand-drawn frames, no API keys; the screenplay → spec step is deterministic.*
 
 > Ngày xửa ngày xưa, ở một ngôi làng nhỏ bên dòng sông, mỗi mùa trăng rằm
 > tháng Tám, trẻ con lại rước đèn…
@@ -27,7 +27,7 @@ from the hilltop he watches the whole village light up for the festival.
 
 ## Production record (this run)
 
-- 105 `PUT /api/frames/:id/motion` calls rendered 14,712 unique 2K frames in **58 min** on 4 CPU cores (~190 ms/frame, synchronous API, one shot at a time); 3.4 GB of PNG clips.
+- 105 `PUT /api/frames/:id/motion` calls rendered **15,108 frames at 2K in 69.5 min** on 4 CPU cores (~276 ms/frame including TTS and writes; synchronous API, one shot at a time); 4.5 GB of PNG clips.
 - `GET /api/projects/:id/lint`: **0 errors**, 1 warning (a 180°-line cross in the festival).
 - Export ZIP 4.8 GB → `assemble.sh` → `film.mp4` (H.264 1998×1080 + AAC 48 kHz, 125 MB) in 19 min.
 - Two real bugs surfaced by making a feature-length film, both fixed with regression tests: a dissolve after a hard cut broke the ffmpeg graph (concat/xfade timebase), and the export silently skipped the mix for films over 15 minutes.
