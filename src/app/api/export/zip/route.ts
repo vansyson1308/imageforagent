@@ -9,6 +9,9 @@ import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { resolveStoragePath } from "@/lib/services/storage";
 import { buildTimedSrt } from "@/lib/services/srtBuilder";
 import { buildAssembleScript, buildTimeline, timelineDuration } from "@/lib/services/timeline";
+import { parseStoredMotion } from "@/lib/services/clipService";
+import { exportMotionGltf } from "@/lib/services/motion/gltfMotion";
+import { LOGICAL_CANVAS } from "@/lib/services/svgRenderer";
 import { formatFrameBadge } from "@/lib/services/frameService";
 
 function slugify(name: string): string {
@@ -27,7 +30,8 @@ function slugify(name: string): string {
  * Export ZIP: F01.png…FNN.png (ảnh final có watermark) + clips/FNN/0001.png…
  * (chuỗi frame của shot motion) + clips/FNN.webp + storyboard.json
  * (metadata + timeline + source SVG/motion) + captions.srt (timing theo
- * timeline thật) + assemble.sh (ffmpeg → film.mp4). Stream bằng archiver.
+ * timeline thật) + assemble.sh (ffmpeg → film.mp4) + gltf/FNN.gltf (shot
+ * motion dạng 3D có animation cho Blender/Unreal). Stream bằng archiver.
  */
 export async function GET(req: Request): Promise<Response> {
   return handleRoute(async () => {
@@ -106,6 +110,24 @@ export async function GET(req: Request): Promise<Response> {
       }
     }
 
+    // Shot motion → glTF có animation (cầu nối Blender/Unreal) — lỗi chỉ bỏ file này
+    const gltfIndexes = new Set<number>();
+    for (const frame of doneFrames) {
+      if (!clipIndexes.has(frame.index) || !frame.motionSpec) continue;
+      try {
+        const motion = parseStoredMotion(frame.motionSpec);
+        const { gltf } = exportMotionGltf(
+          motion,
+          { shotType: frame.shotType },
+          { canvas: LOGICAL_CANVAS[project.aspectRatio] ?? LOGICAL_CANVAS["16:9"] },
+        );
+        archive.append(JSON.stringify(gltf), { name: `gltf/${formatFrameBadge(frame.index)}.gltf` });
+        gltfIndexes.add(frame.index);
+      } catch (err: unknown) {
+        logger.warn({ frameIndex: frame.index, err }, "zip: glTF export skipped");
+      }
+    }
+
     const exported = doneFrames.filter((f) => includedIndexes.has(f.index));
     const timeline = buildTimeline(
       exported.map((f) => ({
@@ -150,6 +172,7 @@ export async function GET(req: Request): Promise<Response> {
                 frameCount: f.clipFrameCount,
                 frames: `clips/${badge}/%04d.png`,
                 webp: f.clipPath ? `clips/${badge}.webp` : null,
+                gltf: gltfIndexes.has(f.index) ? `gltf/${badge}.gltf` : null,
                 spec: f.motionSpec ? (JSON.parse(f.motionSpec) as unknown) : null,
               }
             : null,
