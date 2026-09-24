@@ -4,6 +4,8 @@
 
 **Character consistency is guaranteed by construction**: the agent defines the mascot ONCE as an SVG `<symbol>` in the project's artwork library — every frame reuses it with `<use href="#id">`, so the character is pixel-identical across the entire storyboard.
 
+**Now with a time dimension**: any frame can be an animated shot (keyframe tracks + procedural rigs such as a no-slip walk cycle and storyboard camera moves). The export builds `film.mp4` with one command and ships every shot as **glTF 2.0** for path-traced rendering in Blender: script → storyboard → animatic → 3D film pipeline, still with zero API keys.
+
 > 🇻🇳 Có phần **Tóm tắt tiếng Việt** ở cuối file.
 
 ## How it works
@@ -158,6 +160,59 @@ Layer order per scene (what the engine draws, back to front): background 2D → 
 
 The full showcase is [construct-lamp.json](examples/construct-lamp.json) — a night street-lamp scene: author gradients for the sky and two *free* halos, one blur spent on the bulb, a figure rim-lit in moonlight cool, trees receding through `depthFade`, a foreground mist band, and a vignette.
 
+## Motion — the time dimension (construct v4)
+
+A storyboard frame can now be **a shot that moves**. A motion spec is one shot: a base construct scene + keyframe **tracks** + procedural **rigs**, sampled at `fps`; every frame is a full, deterministic construct compile (so everything above — CSG, FK figures, softness — animates for free).
+
+```bash
+curl -s -X POST $BASE/api/motion -H "Content-Type: application/json" -d '{
+  "motion": {
+    "version": 1, "fps": 12, "duration": 3,
+    "scene": { "version": 1,
+      "solids": [{"id": "ball", "type": "sphere", "r": 34, "at": [360, 34, 140], "fill": "#e74c3c"}],
+      "parts":  [{"id": "pip", "type": "figure", "height": 300, "headCount": 3}],
+      "camera": {"orbit": {"azimuth": 12, "elevation": 12}} },
+    "rigs":   [{"type": "walk", "part": "pip", "path": [[-520, 60], [180, 60]]},
+               {"type": "shot", "move": "dollyIn", "amount": 0.25}],
+    "tracks": [{"target": "solids.ball.at.1", "keys": [{"t": 0, "v": 260}, {"t": 1.2, "v": 34, "ease": "outBounce"}]}]
+  },
+  "preview": {"sheetFrames": 12, "webp": true}
+}'
+# → { stats, warnings, posterPng, contactSheetPng, clipWebp }
+```
+
+**Look at `contactSheetPng`** — a grid of evenly sampled frames with a time bar under each tile: that is how an agent *sees* motion in one image. Then `PUT /api/frames/:id/motion {motion}` makes that storyboard frame an animated shot (full-res PNG sequence + animated WebP; the `poster` frame becomes the frame's still, so watermark/grid/export keep working).
+
+| Field | What you get |
+|---|---|
+| `fps` · `duration` · `holdFrames` | 12 fps = the animation standard; `holdFrames: 2` = **animate on twos** (each pose held 2 frames; camera/place stay on ones so pans don't judder). ≤ 240 frames per shot. |
+| `tracks[]` | `{target, keys:[{t, v, ease}], blend}` — `target` is a dotted path by id: `camera.orbit.azimuth` · `camera.zoom` · `place.at.0` · `light.direction` · `solids.ball.at.1` · `solids.ball.fill` · `parts.pip.pose.kneeL` · `groups.arm.rotate.2` · `gradients.sky.stops.0.color` · `atmosphere.vignette.strength`. Values are numbers, vectors (index a component with `.0/.1/.2`) or `#hex` colors (mixed in linear light). `blend: "add"` layers on top of the base value. |
+| `ease` | Applies to the segment **arriving** at the key. `inOut` (default — slow-in/slow-out) · `linear` · `step` (hold) · `in` · `out` · `inBack`/`outBack` (anticipation/overshoot) · `outElastic` · `outBounce` · `smooth` (Catmull-Rom through multi-key paths, no stops) · CSS `[x1,y1,x2,y2]`. |
+| rig `walk` | `{part, path:[[x,z]…], start?, end?, swing?, armSwing, bounce, lean, cadence}` — a figure walks a ground polyline. Stance is 60 % of the cycle and the hip angle is **solved** so the ankle retreats exactly at body speed: **the planted foot does not slide** (test-enforced < 3 %). Hip height is exact (lowest foot touches the ground); arms counter-swing; stride auto-derives from speed at ~2 steps/s. |
+| rig `shot` | Camera language: `dollyIn` · `dollyOut` · `orbit` · `crane` · `pan` · `tilt` · `shake` · `static` · **`auto`** (inferred from the storyboard Shot Type, EN + VI: "Slow zoom-in" → dollyIn, "Lia máy" → pan…). |
+| rig `roll` | Rolling without slipping: rotation = distance / radius, from the target's (or `follow`'s) motion. |
+| rig `follow` | Follow-through / overlap: target repeats a source's motion `lag` seconds late × `gain` (head lags the body, tails, antennas, a camera that trails the hero). |
+| rig `wiggle` | Seeded smooth noise (fBm) added to any value — handheld camera, breathing, idle sway. Deterministic: same seed, same frames. |
+| `backdrop` · `overlay` · `background` · `poster` | Static SVG under/over the scene each frame (may `<use href="#…">` the project library), full-bleed color, and the storyboard still's time. |
+
+Evaluation order is fixed: generators (`walk`, `shot`) → `tracks` → dependents (`roll`, `follow`) → `wiggle`; the scene is re-validated every frame, so a track that drives a radius negative fails with the exact time (`At t=0.5s … solids.0.r`). Identical frames (holds, static shots) compile once. Examples: [motion-stroll.json](examples/motion-stroll.json) (walk + camera follow + bounce) · [motion-bounce.json](examples/motion-bounce.json) (squash & stretch on twos).
+
+<p align="center"><img src="docs/media/stroll-contact-sheet.jpg" width="720" alt="Contact sheet of the stroll shot"></p>
+
+## 3D export — glTF 2.0 (the bridge to real renderers)
+
+`POST /api/export/gltf` with `{spec}` (a static scene) or `{motion}` (a shot) returns **glTF 2.0** (JSON + embedded buffer): one node per solid — including every figure segment (`pip:shinL`) — with the **same meshes the SVG renderer draws**, materials from your fills (or `unlit`), a camera framed exactly like the SVG frame (test-enforced: a world point lands on the same canvas pixel), a sun light, and the shot's animation as TRS samplers (`STEP` when on twos). Validated by the Khronos glTF-Validator in CI (0 errors). The export ZIP includes `gltf/FNN.gltf` for every motion shot.
+
+```bash
+jq '{motion: ., download: true}' examples/motion-stroll.json | \
+  curl -s -X POST $BASE/api/export/gltf -H "Content-Type: application/json" -d @- -o stroll.gltf
+blender -b -P scripts/blender_render.py -- stroll.gltf out/stroll_ --engine CYCLES --samples 32   # path-traced frames
+```
+
+<p align="center"><img src="docs/media/vector-frame.jpg" width="420" alt="Vector render"> <img src="docs/media/blender-cycles.jpg" width="420" alt="Same scene path-traced in Blender Cycles"><br><sub>The same agent-authored scene: vector render (left) and Blender Cycles via the glTF export (right).</sub></p>
+
+Honest limits: glTF core cannot animate lens parameters (zoom/fov animation is exported at its t=0 value, warned); animated *geometry* (e.g. a radius track) is baked at t=0 (transforms animate, meshes don't); 2D shapes and softness overlays are SVG-only. The long-range plan to feature-quality output is in [docs/FILM-ROADMAP.md](docs/FILM-ROADMAP.md).
+
 <details>
 <summary><b>Full API reference</b></summary>
 
@@ -172,18 +227,22 @@ The full showcase is [construct-lamp.json](examples/construct-lamp.json) — a n
 | POST | `/api/script/import` | `{projectId, source:"tsv"\|"sheet", tsvText?, sheetUrl?, confirmOverwrite?}` | Replace all frames; `409 CONFIRM_REQUIRED` if frames exist |
 | POST | `/api/frames` | `{projectId, afterIndex?}` | Insert a frame |
 | PATCH | `/api/frames/:id` | `{shotType?, description?}` | Edit script fields |
-| **PUT** | **`/api/frames/:id/artwork`** | `{svg}` | **Set artwork + render synchronously** → returns frame with `imageUrl` |
+| **PUT** | **`/api/frames/:id/artwork`** | `{svg}` | **Set artwork + render synchronously** → returns frame with `imageUrl` (a motion frame reverts to a still) |
+| **PUT** | **`/api/frames/:id/motion`** | `{motion}` | **Make the frame an animated shot** — renders PNG sequence + WebP + poster still synchronously → frame with `clipUrl`, `stats`, `warnings` |
+| DELETE | `/api/frames/:id/motion` | — | Revert to a still (keeps the poster) |
 | DELETE | `/api/frames/:id` | — | Delete + reindex |
 | POST | `/api/frames/reorder` | `{projectId, frameId, targetIndex}` | Move a frame |
 | POST | `/api/storyboard/apply-edit` | `{projectId, frames:[{index,shotType,description}]}` | Bulk-replace the whole script (agents editing scripts) |
 | **POST** | **`/api/construct`** | `{spec, preview?}` | **Compile a geometric-construction spec → SVG fragment** (+ optional PNG preview data-URI); stateless |
-| **POST** | **`/api/render`** | `{projectId, frameIds?}` | **Re-render all frames with artwork** (after changing defs/ratio/resolution) |
+| **POST** | **`/api/motion`** | `{motion, shotType?, preview?}` | **Compile + render a shot** → `contactSheetPng`, `posterPng`, optional `clipWebp` / per-frame `frames[].svg`; stateless |
+| **POST** | **`/api/export/gltf`** | `{spec}\|{motion}, options?, download?` | **glTF 2.0** scene (animated for a motion) for Blender/three.js/Unreal |
+| **POST** | **`/api/render`** | `{projectId, frameIds?}` | **Re-render all frames with artwork** (after changing defs/ratio/resolution) — motion frames re-render their clips |
 | POST | `/api/assets/upload` | multipart `projectId, kind:"watermark", files[]` | Upload watermark logo (PNG/JPEG/WebP ≤8MB, magic-byte verified) |
 | DELETE | `/api/assets/:id` | — | Remove watermark |
 | POST | `/api/watermark/reapply` | `{projectId}` | Re-composite watermark on all rendered frames |
-| GET | `/api/export/zip?projectId=` | — | ZIP: `FNN.png` + `storyboard.json` (incl. all SVG sources) + `captions.srt` |
+| GET | `/api/export/zip?projectId=` | — | ZIP: `FNN.png` + `clips/FNN/%04d.png` + `clips/FNN.webp` + `gltf/FNN.gltf` + `storyboard.json` (timeline + all SVG/motion sources) + `captions.srt` + `assemble.sh` |
 | GET | `/api/files/{path}` | — | Serve rendered images (HTTP Range supported) |
-| GET | `/api/meta` | — | `{serviceAccountEmail, construct:{version}}` (feature-detect) |
+| GET | `/api/meta` | — | `{serviceAccountEmail, construct:{version}, motion:{version, limits}}` (feature-detect) |
 | POST | `/api/maintenance/cleanup` | — | Remove orphaned files |
 
 Errors: `{"error":{"code","message","hint?"}}`. Codes: `ARTWORK_INVALID, CONSTRUCTION_INVALID, SHEET_NOT_SHARED, SHEET_NOT_FOUND, SHEET_BAD_FORMAT, ASSET_LIMIT, ASSET_BAD_TYPE, ASSET_TOO_LARGE, CONFIRM_REQUIRED, VALIDATION, NOT_FOUND, RATE_LIMITED, INTERNAL`.
@@ -191,13 +250,18 @@ Frame `status`: `draft → done | failed`.
 
 </details>
 
-## Video assembly hand-off (Remotion)
+## From storyboard to film
 
-The engine deliberately stops at images. The ZIP export is designed as Remotion input:
+The ZIP export is a complete, self-describing film package:
 
-- `storyboard.json` — project settings, `playbackSpeed` (seconds/frame), per-frame `shotType` + `description` + **full SVG sources** (`artworkDefs` + `artworkSvg`, so artwork is versionable and re-renderable anywhere).
-- `captions.srt` — subtitle timing derived from `playbackSpeed`.
-- `shotType` tells the agent which camera move to synthesize per frame (Ken Burns zoom for `Slow zoom-in`, pan for `Pan`, static hold for `Static shot`, …).
+- `F01.png…` — the storyboard stills (motion shots contribute their poster frame).
+- `clips/FNN/0001.png…` + `clips/FNN.webp` — every animated shot as a full-res PNG sequence + a quick-look WebP.
+- `storyboard.json` — settings, the **timeline** (`startSec`/`durationSec` per frame: stills hold `playbackSpeed`, shots last their clip length), full SVG sources and motion specs (re-renderable anywhere).
+- `captions.srt` — timed to the same timeline (subtitles never drift from picture).
+- `assemble.sh` — `sh assemble.sh` builds **`film.mp4`** with ffmpeg (one normalized segment per shot → concat; `FPS=25 sh assemble.sh` to change the film rate). Verified end-to-end: a 3-frame project → 6.000 s, 144 frames @ 24 fps.
+- `gltf/FNN.gltf` — each shot in 3D for Blender/Unreal (see above).
+
+Prefer Remotion? Use `storyboard.json` directly: `durationSec` per frame, `motion.frames` for the sequences, `shotType` for camera moves on stills. For theatrical delivery (DCP), see [docs/FILM-ROADMAP.md](docs/FILM-ROADMAP.md).
 
 ## Environment (`.env`)
 
@@ -217,10 +281,15 @@ src/lib/services/artworkService.ts render→watermark→persist pipeline per fra
 src/lib/services/construct/       geometric-construction compiler (pure, deterministic):
                                   geometry2d · pathBoolean (path-bool) · pathParse ·
                                   math3d · camera · geometry3d · painterSort · shading ·
-                                  plane3 · csg · depthOrder · meshRepair · shadow ·
-                                  faceGradient · silhouette · effects · atmosphere ·
-                                  finish · partsExpand/Figure/Wheel · emitScene ·
-                                  svgEmitter · compile (orchestrator)
+                                  plane3 · csg · sceneMeshes · depthOrder · meshRepair ·
+                                  shadow · faceGradient · silhouette · effects ·
+                                  atmosphere · finish · partsExpand/Figure/Wheel ·
+                                  emitScene · svgEmitter · gltf · compile (orchestrator)
+src/lib/services/motion/          time dimension (pure): easing · interpolate ·
+                                  targetPath · noise · rigs · evaluate · compileMotion ·
+                                  gltfMotion
+src/lib/services/motionRenderer.ts clip rasterizing, animated WebP, contact sheet
+src/lib/services/timeline.ts      one timing source for storyboard.json/SRT/assemble.sh
 src/app/api/                      REST routes (Zod, rate-limited, error envelope)
 src/components/                   Web UI (Next.js App Router + Zustand)
 src/lib/services/                 tsvParser, sheetReader, watermarker (sharp), storage…
@@ -255,5 +324,9 @@ tests/                            Vitest — sanitizer bypass-vector suite + con
 **Dựng hình kỷ hà (`POST /api/construct`):** thay vì viết tay từng path, agent mô tả hình theo đúng phương pháp hoạ sĩ vector — phân rã thành **hình kỷ hà cơ bản** (tròn, chữ nhật, đa giác, khối hộp, trụ, cầu…), rồi **kết hợp** (boolean 2D trên bezier thật + **CSG thể tích 3D** — trừ cầu khỏi hộp, khoan trụ xuyên khối, lòng khoét lộ màu dao cắt) và **biến đổi** (affine, chiếu isometric hoặc camera tự do, extrude, **khung xương FK cha-con**). Ánh sáng nhiều tầng: 3 tông lượng tử / gradient mượt theo mặt / **bóng đổ xuống đất** (silhouette chính xác — vòng đệm đổ bóng có lỗ). **Depth sort exact mặc định** — khối xuyên nhau vẫn vẽ đúng. Có sẵn **part tham số hoá**: nhân vật khớp nối (pose theo tên khớp, tỷ lệ 2-8 đầu), bánh xe, cây, mây, mũi tên. Engine compile deterministic + trả preview ngay trong response (~20-400ms/lần). Xem 7 mẫu trong [examples/](examples/) — hero kỷ hà là **người đẩy xe hàng**, hero làm mềm là **đèn đường đêm**.
 
 **Nguyên lý làm mềm (The Softness Principle):** vector bản chất là mảng cứng — bóng của vector chỉ là một shape sắc cạnh, trong khi 3D thật chuyển êm từ sáng sang tối. Muốn vector "mềm" thì phải GIẢ LẬP: **xếp chồng nhiều lớp shape cứng, phủi mép bằng gradient (rẻ) hoặc blur (đắt), và để màu sắc gánh phần nặng**. Engine compile sẵn nguyên lý này: một quy tắc boolean duy nhất trên silhouette sinh ra mọi lớp sáng-tối (`formShadow` lưỡi liềm tối phía khuất · `highlight` nửa sáng phía nguồn · `rim` viền ngược mỏng · `coreAccent` dải tối nhất · `specular` đốm gương · `glow` quầng phát sáng · `contact` bóng tiếp xúc) — mép mềm KHÔNG cần filter, chỉ là gradient tắt dần theo trục sáng. Kỷ luật màu nướng sẵn vào default: **bóng không bao giờ #000** (giảm sáng 25% + xoay hue 25° về lạnh), highlight ấm/bóng lạnh. Ngân sách blur 6 filter/fragment — dành cho nguồn sáng hero, còn lại dùng gradient. Kèm `gradients[]` tác giả tự khai, `atmosphere` (depth fade viễn cận + vignette), kênh 2D `layer:"foreground"` (sương/haze phủ trên khối 3D), và preset một chạm `finish: soft/premium`. Xem hero [construct-lamp.json](examples/construct-lamp.json).
+
+**Motion, trục thời gian (construct v4):** mỗi frame storyboard có thể là **một shot chuyển động**. Motion spec = scene construct gốc + **tracks** keyframe (target là đường dẫn theo id: `parts.pip.pose.kneeL`, `camera.orbit.azimuth`, `solids.ball.at.1`, màu `#hex` pha trong không gian tuyến tính; easing `inOut` mặc định theo nguyên lý slow-in/slow-out, có `outBack`/`outBounce`/`smooth` Catmull-Rom/cubic-bezier) + **rig thủ tục**: `walk` (đi bộ theo đường, **bàn chân trụ không trượt**: góc hông được *giải* để mắt cá lùi đúng tốc độ thân; test chặn < 3%), `shot` (dolly/orbit/crane/pan/tilt/shake, hoặc `auto` suy từ cột Shot Type tiếng Anh/Việt), `roll` (lăn không trượt), `follow` (follow-through trễ nhịp), `wiggle` (nhiễu mượt tất định theo seed). `holdFrames: 2` = animate on twos. `POST /api/motion` trả **contact sheet**, tức lưới frame kèm thanh thời gian, để agent *nhìn* chuyển động trong một ảnh. `PUT /api/frames/:id/motion` biến frame thành shot (chuỗi PNG + WebP + poster làm ảnh tĩnh).
+
+**Từ storyboard tới phim:** export ZIP có chuỗi PNG từng shot, `storyboard.json` kèm timeline, `captions.srt` khớp timeline, và **`assemble.sh`**: chạy `sh assemble.sh` là ra **`film.mp4`** (đã kiểm chứng end-to-end). **glTF 2.0** (`POST /api/export/gltf`, và `gltf/FNN.gltf` trong ZIP) là cầu nối sang Blender/Unreal: đúng mesh engine vẽ, camera khớp từng pixel với khung SVG, animation TRS; đã qua Khronos validator (0 lỗi) và render path-traced thật bằng Blender Cycles (`scripts/blender_render.py`). Lộ trình trung thực tới phim chiếu rạp nằm ở [docs/FILM-ROADMAP.md](docs/FILM-ROADMAP.md).
 
 **Chạy:** `npm install` → `cp .env.example .env` (không cần điền gì) → `npx prisma migrate deploy` → `npm run dev`. Xem [examples/](examples/) — bộ mẫu mascot "Pip" hoàn chỉnh. Lưu ý: app không có đăng nhập — chỉ dùng local/nội bộ.

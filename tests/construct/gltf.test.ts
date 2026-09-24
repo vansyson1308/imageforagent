@@ -129,6 +129,14 @@ describe("glTF exporter", () => {
     }
   });
 
+  it("trần mặt giống compile SVG (chặn DoS qua exporter)", () => {
+    const spec = constructSpecSchema.parse({
+      version: 1,
+      solids: Array.from({ length: 12 }, (_, i) => ({ id: `s${i}`, type: "sphere", r: 10, segments: 64, at: [i * 30, 0, 0] })),
+    });
+    expect(() => exportGltf(spec)).toThrow(/faces \(max/);
+  });
+
   it("vật liệu: sRGB → linear, unlit tuỳ chọn", () => {
     const spec = constructSpecSchema.parse({ version: 1, solids: [{ id: "b", type: "box", size: [10, 10, 10], fill: "#808080" }] });
     const { gltf } = exportGltf(spec, { unlit: true });

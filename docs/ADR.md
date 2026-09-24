@@ -131,3 +131,80 @@ L5 partsExpand / partFigure / partWheel   spec → spec rewrite TRƯỚC compile
 **Atmosphere:** depthFade = mix fill về màu trời + desaturate theo depth chuẩn hoá trên entries (t=0 gần nhất giữ nguyên màu; 1 lớp depth = no-op); gradient ENGINE (cg-*) fade stops tại chỗ — mỗi gradient cg đúng 1 entry tham chiếu; gradient TÁC GIẢ (dùng chung) + decals effect (overlay tương đối trên nền đã fade) giữ nguyên. Vignette phủ ĐÚNG canvas dưới mọi place nhờ invertAffine (place = translate·rotate·scale đều → luôn khả nghịch), radial userSpaceOnUse tâm canvas, path CUỐI CÙNG tuyệt đối. Kênh 2D `layer:"foreground"` vẽ TRÊN solid DƯỚI vignette (sương/haze).
 
 **Giới hạn trung thực:** effect là overlay 2D per-solid — không occlusion nội bộ giữa crescents và vật xuyên khối; contact chỉ xuống ground phẳng; depth fade không áp cho decals (kể cả cutout decal trên mặt xa); blur raster có thể lệch giữa version librsvg (bytes SVG mới là hợp đồng determinism); hình quá dẹt theo trục sáng có thể cho crescent rỗng → skip + warning. Hero example: `construct-lamp` (đèn đường đêm) — quầng sáng LỚN cố tình làm bằng circle 2D + gradient tác giả (miễn phí) thay vì blur, blur duy nhất dành cho bóng đèn; bài học đắt nhất khi dựng: pose figure tối giản thắng pose phức tạp (tay chĩa về camera bị foreshortening xấu), và "sương thấy được trên nền tối phải SÁNG hơn nền".
+
+## ADR-014: Construct v4, Motion (trục thời gian) (24/09/2026)
+
+**Bối cảnh & quyết định:** engine dừng ở ảnh tĩnh, nên muốn tiến tới *phim* thì thiếu nguyên một chiều: thời gian. v4 thêm **motion spec = một shot**, gồm scene construct gốc + tracks keyframe + rig thủ tục, được lấy mẫu ở `fps`. **Mỗi frame là một lần compile construct đầy đủ**, nên mọi đảm bảo cũ (deterministic, qua sanitizer, CSG/FK/softness) tự động áp dụng cho chuyển động. Thời gian là **hàm thuần** `evaluate(spec, t) → ConstructSpec`, không có state giữa các frame: frame i luôn render lại giống hệt, và render song song hay giữa chừng đều đúng.
+
+**Thiết kế LLM-ergonomic:**
+- Target là **đường dẫn chấm theo id** (`parts.hero.pose.kneeL`, `solids.ball.at.1`), không phải chỉ số mảng. Agent viết đúng ngay lần đầu, lỗi có gợi ý "Did you mean" (Levenshtein).
+- Thời gian tính bằng giây, góc tính bằng độ.
+- `ease` thuộc về đoạn **đi tới** key (quy ước "incoming" của AE). Default `inOut` = nguyên lý slow-in/slow-out.
+- `smooth` là Hermite với tiếp tuyến Catmull-Rom, nên camera đi qua nhiều key mà không khựng.
+- Màu nội suy trong linear-light nên pha trộn không bị bẩn.
+- Các chỗ được phép broadcast: scale số → vec3; pose scalar → `[0,0,z]`; pose joint vắng = 0; `camera.orbit.*` trên scene dùng preset thì tự hiện thực hoá orbit từ preset.
+- Bảo mật: chỉ đi qua own-property, cấm `__proto__/constructor/prototype`, và scene được re-validate bằng `constructSpecSchema` mỗi frame. Track làm bán kính âm sẽ báo lỗi kèm thời điểm (`At t=0.5s …`).
+
+**Thứ tự đánh giá cố định:** generators (`walk`, `shot`) → tracks (`set`/`add`) → dependents (`roll`, `follow`) → noise (`wiggle`). Nhờ vậy key tay của agent luôn thắng hoặc cộng lên chuyển động nền, và dependents đọc trạng thái *sau* tracks (bánh xe lăn theo quãng đường thật của xe).
+
+**Walk không trượt chân (chốt đắt giá nhất):**
+- Bản đầu vung hông hình sin, test đo được chân trụ trượt **49%** tốc độ thân. Nguyên nhân: foot offset `∝ sin` nên vận tốc biến thiên, đỉnh gấp π/2 lần tốc độ thân.
+- Sửa theo đúng cách animator làm. Pha trụ chiếm 60% chu kỳ (duty 0.6, có pha hai chân cùng trụ). Trong pha trụ, **góc hông được giải bằng bisection** để mắt cá lùi *tuyến tính* từ +X về −X, đúng bằng quãng thân tiến. Gối trụ giữ cố định để tuyến tính chính xác.
+- Pha lăng dùng cosine, gối gập cực đại lúc passing. Cổ chân bù để tổng góc chuỗi bằng 0, nên bàn chân phẳng.
+- Độ cao hông tính **chính xác** = max tầm với của hai chân, nên chân thấp nhất vừa chạm đất (contact thấp, passing cao).
+- Sải chân tự suy từ tốc độ ở nhịp ~2 bước/giây: `X = v·duty/cadence`.
+- Kết quả: trượt < 3% (test chặn), đế chân trụ luôn ở y≈0.
+
+**Chi phí & hợp đồng sync:**
+- Memo theo nội dung scene (JSON): frame giống hệt (hold, "on twos", shot tĩnh) chỉ compile một lần; WebP gộp frame liên tiếp giống hệt thành một page với delay cộng dồn.
+- Trần 240 frame/shot, 30s compile tổng. Renderer nhường event loop giữa các frame, nên vẫn không có job queue (đúng ADR-010).
+- Shot 36 frame mất ~3s end-to-end.
+- `holdFrames` quantize thời gian cho vật thể/nhân vật, nhưng camera/place vẫn "on ones", nên pan không bị giật (quy ước hoạt hình 2D).
+
+**Agent "nhìn" chuyển động:** animated WebP thì agent không xem được, nên response mặc định trả **contact sheet PNG**: lưới N frame lấy mẫu đều, mỗi ô có thanh tiến độ thời gian (không dùng text, vì font lệch theo OS).
+
+**Tích hợp storyboard:**
+- Frame có `motionSpec` (JSON thô agent gửi, round-trip nguyên vẹn) + `clipDir/clipPath/clipFps/clipFrameCount/clipDuration` (migration additive).
+- **Poster frame trở thành `artworkSvg`** của frame, nên watermark, grid, F01.png, duplicate, apply-edit đều chạy qua pipeline ảnh tĩnh cũ mà không cần nhánh riêng.
+- PUT artwork tĩnh lên frame motion sẽ gỡ motion.
+- `timeline.ts` là *một* nguồn timing cho storyboard.json, captions.srt và assemble.sh, nên phụ đề không bao giờ lệch hình.
+- Đã kiểm chứng end-to-end bằng ffmpeg thật: 3 frame (still 1.5s + shot 3s + still 1.5s) ra film.mp4 dài 6.000s, 144 frame @24fps.
+
+**Giới hạn trung thực:**
+- Chưa có IK (bàn chân được *khớp tốc độ* chứ không *khoá* world-space). Rẽ góc polyline đổi hướng tức thời. Pose trung tính ngoài cửa sổ walk có ramp 0.35s nên hai đầu hơi trượt.
+- Chưa có squash-stretch tự động (làm bằng track scale, xem motion-bounce).
+- Chưa có audio/lip-sync.
+- Effects vẫn là overlay per-solid, nên solid xuyên nhau trong lúc chuyển động có thể cho viền sai trong vài frame (warning).
+
+**Bug phụ đã sửa:** `apply-edit` tạo lại frame không đổi nội dung mà không copy `artworkSvg` (tàn dư thời Gemini), khiến `/api/render` bỏ sót frame. Giờ nó giữ artwork và motion.
+
+## ADR-015: glTF 2.0, cầu nối sang renderer 3D thật + lộ trình phim trung thực (24/09/2026)
+
+**Quyết định:**
+- Export construct scene/shot ra **glTF 2.0** (JSON + buffer nhúng base64) qua `POST /api/export/gltf` và `gltf/FNN.gltf` trong ZIP.
+- Refactor: tách dựng mesh (primitive + CSG DAG) từ `compile.ts` sang `sceneMeshes.ts` để **một nguồn mesh** phục vụ cả SVG lẫn 3D. Mọi snapshot vẫn byte-identical.
+- Mỗi solid (kể cả segment của part, như `pip:shinL`) là một node, với mesh **local** + TRS tách từ ma trận world. Animation vì thế chỉ là sampler TRS (không bake đỉnh), và FK/walk/tracks xuất trọn.
+- CSG = mesh kết quả + placement của node csg. Operand chuyển động thì bake ở t=0 kèm warning.
+
+**Chuẩn & kiểm chứng:**
+- Y-up right-handed trùng với glTF, nên không cần đổi trục. `unitScale` mặc định 0.01 (figure 170 ≈ người 1.7 m).
+- Vật liệu: baseColor sRGB→linear, hoặc `KHR_materials_unlit` cho look phẳng. Đèn là `KHR_lights_punctual` directional theo `spec.light`.
+- Camera dựng từ nghịch đảo view `Rz·Rx·Ry(−az)` + offset `place.at`. Test chiếu điểm world bằng camera glTF ra **đúng pixel canvas** của renderer SVG (ortho chính xác; perspective ≤0.1px khi place ở tâm; lens-shift khi lệch tâm là xấp xỉ).
+- Test chạy **Khronos glTF-Validator** (devDependency duy nhất thêm vào, chỉ dùng trong test) trên mọi example và shot walk: 0 error.
+- Đã render thật bằng **Blender 4.0 Cycles headless** qua `scripts/blender_render.py`: 4s/frame ở 960×540 CPU.
+- Bài học khi import vào Blender:
+  - Importer chia intensity lux cho 683, nên sun quá tối. Script đặt thẳng năng lượng theo W/m².
+  - Bản Ubuntu thiếu OpenImageDenoise, nên script tự tắt denoise.
+  - Importer cần numpy.
+
+**Giới hạn trung thực của glTF core:**
+- Không animate được thông số lens (zoom/fov): xuất ở giá trị t=0, kèm warning gợi ý dolly camera trong tool 3D. `KHR_animation_pointer` là hướng đi sau.
+- Geometry animate (track bán kính) bị bake ở t=0.
+- Shape 2D và overlay softness chỉ có ở SVG.
+- Chưa có skin/joint hierarchy: figure là các node rời mang TRS world. Muốn chỉnh rig trong Blender thì cần xuất `skins` (bước sau).
+
+**Lộ trình phim (vì sao glTF là bước đúng):**
+- Vector engine render ~30ms/frame, nên 90 phút × 24fps = 129.600 frame ≈ 1–2 giờ CPU. **Điểm nghẽn là nội dung và tay nghề, không phải compute.**
+- Con đường khả thi tới chất lượng chiếu rạp là 3D stylized render bằng Blender. *Flow* (Oscar Phim hoạt hình 2025) làm bằng Blender EEVEE, 0.5–10s/frame 4K trên một máy.
+- Engine giữ vai trò **layout/previs/animation tất định do agent viết**, còn glTF chuyển sang lighting/render thật.
+- Chi tiết, nguồn và các mốc tiếp theo nằm ở [FILM-ROADMAP.md](FILM-ROADMAP.md).

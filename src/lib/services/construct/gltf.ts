@@ -100,6 +100,14 @@ function prepareScene(spec: ConstructSpec): PreparedScene {
     },
     true,
   );
+  // Cùng trần mặt với compile SVG — chặn DoS qua exporter (sync trên event loop)
+  const faces = meshes.facetedItems.reduce((n, i) => n + i.mesh.faces.length, 0);
+  if (faces > CONSTRUCT_LIMITS.maxTotalFaces) {
+    err(
+      `Scene tessellates to ${faces.toLocaleString("en-US")} faces (max ${CONSTRUCT_LIMITS.maxTotalFaces.toLocaleString("en-US")}).`,
+      'Reduce segments (cylinder/sphere "segments") or split into multiple constructions.',
+    );
+  }
   if (meshes.exportMeshes!.length === 0) {
     err("Nothing to export — the scene has no 3D solids.", "glTF exports solids/parts; 2D shapes are SVG-only.");
   }

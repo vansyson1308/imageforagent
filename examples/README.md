@@ -15,6 +15,8 @@ A complete working sample showing how an agent authors storyboard artwork as SVG
 | `construct-cart.json` | **The works (hero)**: an articulated `figure` (FK pose by joint names) leaning to push a two-wheeled cart — hollowed body via `csg`, `wheel` parts with spokes and a real bore, a `tree`, exact projected `shadow`s, and `depthSort:"exact"` resolving all the interpenetrations. |
 | `construct-shading.json` | **Light layers**: `light.mode:"gradient"` (per-face smooth ramps) + `shadow.style:"blob"` soft ellipses under a cube/sphere/cone trio. |
 | `construct-lamp.json` | **The Softness Principle (hero)**: a night street-lamp scene — author `gradients[]` (sky ramp + two *free* radial halos + a foreground mist band on `layer:"foreground"`), the one blur filter spent on the bulb's `glow`, a figure rim-lit in moonlight cool with soft `formShadow`, trees receding via `atmosphere.depthFade`, and a `vignette` closing the frame. `finish:"soft"` fills every solid that didn't declare its own effects. |
+| `motion-stroll.json` | **Motion (construct v4) hero**: one shot, 3 s @ 12 fps — a `walk` rig drives the figure along a path (stride derived from leg length → the planted foot does not slide), a `shot` dolly-in, the camera `follow`s the walker with a 0.4 s lag (follow-through), a seeded `wiggle` gives a subtle handheld drift, and keyframe `tracks` bounce the ball (`outBounce`) and fade its color. `poster: 1.5` picks the storyboard still. |
+| `motion-bounce.json` | **Animation principles**: squash & stretch through `scale` tracks (stretch before contact, squash on it, `outBack` recovery), slow-in/slow-out arcs (`in` falling, `out` rising), `holdFrames: 2` (animated on twos at 24 fps), and a `pan` shot. |
 
 ## How to run this example
 
@@ -68,3 +70,25 @@ The construct endpoint is **stateless** — nothing is stored; the SVG you paste
 - Allowed references: `href="#id"`, `fill="url(#id)"`, `data:image/png|jpeg|webp` URIs. Everything external is rejected.
 - **Prefer paths/shapes over `<text>`** — text renders, but font metrics vary between operating systems; paths are pixel-identical everywhere.
 - Forbidden (422 `ARTWORK_INVALID` with a hint): DOCTYPE, entities, script, foreignObject, event handlers, external href/src/url(), `@import`, `xml:base`, processing instructions, nested svg roots, fragments > 500KB (UTF-8 bytes).
+
+## Motion (a shot that moves)
+
+```bash
+# preview a shot: contact sheet PNG (LOOK at it) + animated WebP
+jq '{motion: ., preview: {sheetFrames: 12, webp: true}}' examples/motion-stroll.json | \
+  curl -s -X POST $BASE/api/motion -H "Content-Type: application/json" -d @- > shot.json
+jq .stats shot.json
+jq -r .contactSheetPng shot.json | sed 's/^data:image\/png;base64,//' | base64 -d > sheet.png
+
+# make frame 2 of the storyboard an animated shot (PNG sequence + WebP + poster still)
+jq '{motion: .}' examples/motion-stroll.json | \
+  curl -s -X PUT $BASE/api/frames/<frameId>/motion -H "Content-Type: application/json" -d @-
+
+# export → build the film
+curl -s "$BASE/api/export/zip?projectId=$PID" -o film.zip && unzip film.zip -d film && cd film && sh assemble.sh
+
+# the same shot as 3D (glTF with animation) → render path-traced in Blender
+jq '{motion: ., download: true}' ../examples/motion-stroll.json | \
+  curl -s -X POST $BASE/api/export/gltf -H "Content-Type: application/json" -d @- -o stroll.gltf
+blender -b -P ../scripts/blender_render.py -- stroll.gltf out/stroll_ --engine CYCLES --samples 32
+```
