@@ -28,12 +28,27 @@ export const LOGICAL_CANVAS: Record<string, CanvasSize> = {
   "9:16": { w: 1080, h: 1920 },
   "1:1": { w: 1080, h: 1080 },
   "4:5": { w: 1080, h: 1350 },
+  // DCI cinema containers (SMPTE 428-1): logical canvas = the 2K container.
+  "1.85:1": { w: 1998, h: 1080 },
+  "2.39:1": { w: 2048, h: 858 },
 };
 
-/** Render size: long edge = 1024 (1K) / 2048 (2K), short edge rounded. */
+/** Aspect ratios whose logical canvas IS a DCI container (Flat / Scope). */
+export const DCI_ASPECTS: ReadonlySet<string> = new Set(["1.85:1", "2.39:1"]);
+
+/**
+ * Render size. Web aspects: long edge = 1024 (1K) / 2048 (2K) / 4096 (4K),
+ * short edge rounded. DCI aspects render the exact container — 2K = 1998×1080
+ * / 2048×858, 4K = 3996×2160 / 4096×1716, 1K = half 2K (preview) — so a DCP
+ * master needs no rescale.
+ */
 export function renderTarget(aspectRatio: string, resolution: string): CanvasSize {
   const logical = LOGICAL_CANVAS[aspectRatio] ?? LOGICAL_CANVAS["16:9"];
-  const longEdge = resolution === "2K" ? 2048 : 1024;
+  if (DCI_ASPECTS.has(aspectRatio)) {
+    const k = resolution === "4K" ? 2 : resolution === "2K" ? 1 : 0.5;
+    return { w: Math.round(logical.w * k), h: Math.round(logical.h * k) };
+  }
+  const longEdge = resolution === "4K" ? 4096 : resolution === "2K" ? 2048 : 1024;
   if (logical.w >= logical.h) {
     return { w: longEdge, h: Math.round((longEdge * logical.h) / logical.w) };
   }

@@ -59,7 +59,7 @@ export async function renderMotionClip(opts: ClipRenderOptions): Promise<ClipRen
   if (opts.motion.backdrop) sanitizeSvg(opts.motion.backdrop, "frame");
   if (opts.motion.overlay) sanitizeSvg(opts.motion.overlay, "frame");
 
-  const compiler = createMotionCompiler(opts.motion, opts.ctx);
+  const compiler = createMotionCompiler(opts.motion, opts.ctx, { canvas });
   const { posterIndex } = compiler.summary().stats;
   const frames: RenderedFrame[] = [];
   let posterBody = "";
@@ -132,7 +132,7 @@ export async function renderPassClip(opts: {
   const compiler = createMotionCompiler(
     opts.motion,
     opts.ctx,
-    opts.pass === "pose" ? {} : { pass: opts.pass as RenderPass },
+    opts.pass === "pose" ? { canvas } : { pass: opts.pass as RenderPass, canvas },
   );
   const pngs: Buffer[] = [];
   const times: number[] = [];

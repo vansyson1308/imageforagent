@@ -50,7 +50,6 @@ export function applyFinish(spec: ConstructSpec): ConstructSpec {
             color: "#101528",
             strength: 0.25,
             start: 0.55,
-            size: [1920, 1080] as [number, number],
           },
         }
       : spec.atmosphere;

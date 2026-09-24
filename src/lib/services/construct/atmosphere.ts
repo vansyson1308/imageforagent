@@ -32,7 +32,7 @@ export interface VignetteParams {
   readonly color: string;
   readonly strength: number;
   readonly start: number;
-  readonly size: readonly [number, number];
+  readonly size?: readonly [number, number];
 }
 
 export interface PlaceParams {
@@ -74,11 +74,16 @@ export interface VignetteBuild {
  * không gian vẽ (place = translate·rotate·scale đều → luôn khả nghịch).
  * Radial gradient userSpaceOnUse tâm canvas, r = ½ đường chéo / scale.
  */
-export function buildVignette(v: VignetteParams, place: PlaceParams, precision: number): VignetteBuild {
+export function buildVignette(
+  v: VignetteParams,
+  place: PlaceParams,
+  precision: number,
+  canvas: { readonly w: number; readonly h: number } = { w: 1920, h: 1080 },
+): VignetteBuild {
   const inv = invertAffine(
     placementToAffine({ at: place.at, rotate: place.rotate, scale: place.scale }),
   );
-  const [w, h] = v.size;
+  const [w, h] = v.size ?? [canvas.w, canvas.h];
   const corners: Vec2[] = [
     applyAffine(inv, [0, 0]),
     applyAffine(inv, [w, 0]),

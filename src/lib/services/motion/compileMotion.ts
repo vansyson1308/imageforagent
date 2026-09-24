@@ -66,6 +66,8 @@ export function posterIndexOf(motion: MotionSpec, frameCount: number): number {
 export interface MotionCompileOptions {
   /** Control pass (depth/segmentation/normal) thay cho render thường. */
   readonly pass?: RenderPass;
+  /** Canvas logic của shot (vignette phủ đúng khung, vd DCI 1998×1080). */
+  readonly canvas?: { readonly w: number; readonly h: number };
 }
 
 export function createMotionCompiler(
@@ -107,7 +109,7 @@ export function createMotionCompiler(
           );
         }
         try {
-          result = compileConstruction(scene, { pass: options.pass });
+          result = compileConstruction(scene, { pass: options.pass, canvas: options.canvas });
         } catch (e) {
           if (e instanceof AppError) {
             throw new AppError(e.code, `Frame ${i} (t=${Math.round(t * 1000) / 1000}s): ${e.message}`, e.hint);

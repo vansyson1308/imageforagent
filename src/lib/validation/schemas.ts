@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:5"] as const;
-export const RESOLUTIONS = ["1K", "2K"] as const;
+export const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:5", "1.85:1", "2.39:1"] as const;
+export const RESOLUTIONS = ["1K", "2K", "4K"] as const;
 export const WM_POSITIONS = [
   "top-left",
   "top-right",

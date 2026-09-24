@@ -70,6 +70,12 @@ export interface CompileOptions {
    * Tắt bóng, effects, 2D shapes, atmosphere.
    */
   readonly pass?: RenderPass;
+  /**
+   * Canvas logic đích (khung mà fragment sẽ được vẽ vào) — overlay phủ toàn
+   * khung (vignette) lấy kích thước này khi spec không khai `size`.
+   * Mặc định 1920×1080.
+   */
+  readonly canvas?: { readonly w: number; readonly h: number };
 }
 
 export function compileConstruction(spec: ConstructSpec, options: CompileOptions = {}): CompileResult {
@@ -498,7 +504,7 @@ export function compileConstruction(spec: ConstructSpec, options: CompileOptions
   // ---------- Atmosphere (Layer 6 — vignette dựng trước, path chèn cuối) ----------
   let vignettePath: PathItem | undefined;
   if (spec.atmosphere?.vignette && !options.pass) {
-    const v = buildVignette(spec.atmosphere.vignette, spec.place, spec.precision);
+    const v = buildVignette(spec.atmosphere.vignette, spec.place, spec.precision, options.canvas);
     gradients.push(v.gradient);
     vignettePath = v.path;
   }

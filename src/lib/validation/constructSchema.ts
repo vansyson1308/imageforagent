@@ -479,8 +479,12 @@ export const atmosphereSchema = z
         strength: z.number().min(0).max(1).default(0.3),
         /** Offset gradient bắt đầu tối (0.55 = hơn nửa khung trong suốt). */
         start: z.number().min(0).max(0.95).default(0.55),
-        /** Kích thước canvas logic — đổi khi vẽ 9:16/1:1/4:5. */
-        size: z.tuple([pos, pos]).default([1920, 1080]),
+        /**
+         * Kích thước canvas logic. Bỏ trống = canvas thật của nơi render
+         * (project/preview/motion — vd 1998×1080 cho DCI Flat); mặc định
+         * 1920×1080 khi compile không kèm canvas.
+         */
+        size: z.tuple([pos, pos]).optional(),
       })
       .strict()
       .optional(),

@@ -156,7 +156,7 @@ describe("sanitizeSvg — PASS vectors (artwork hợp lệ)", () => {
   });
 });
 
-describe("renderTarget — bảng 8 combo", () => {
+describe("renderTarget — bảng combo", () => {
   it.each([
     ["16:9", "1K", 1024, 576],
     ["16:9", "2K", 2048, 1152],
@@ -166,6 +166,14 @@ describe("renderTarget — bảng 8 combo", () => {
     ["1:1", "2K", 2048, 2048],
     ["4:5", "1K", 819, 1024],
     ["4:5", "2K", 1638, 2048],
+    ["16:9", "4K", 4096, 2304],
+    // DCI containers — exact, no rounding drift (DCP needs no rescale)
+    ["1.85:1", "1K", 999, 540],
+    ["1.85:1", "2K", 1998, 1080],
+    ["1.85:1", "4K", 3996, 2160],
+    ["2.39:1", "1K", 1024, 429],
+    ["2.39:1", "2K", 2048, 858],
+    ["2.39:1", "4K", 4096, 1716],
   ])("%s %s → %i×%i", (ratio, res, w, h) => {
     expect(renderTarget(ratio, res)).toEqual({ w, h });
   });
@@ -173,6 +181,8 @@ describe("renderTarget — bảng 8 combo", () => {
   it("logical canvas đúng hợp đồng", () => {
     expect(LOGICAL_CANVAS["16:9"]).toEqual({ w: 1920, h: 1080 });
     expect(LOGICAL_CANVAS["4:5"]).toEqual({ w: 1080, h: 1350 });
+    expect(LOGICAL_CANVAS["1.85:1"]).toEqual({ w: 1998, h: 1080 });
+    expect(LOGICAL_CANVAS["2.39:1"]).toEqual({ w: 2048, h: 858 });
   });
 });
 
