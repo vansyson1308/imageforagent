@@ -7,7 +7,8 @@ import { AppError } from "@/lib/services/apiError";
 import { handleRoute } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { resolveStoragePath } from "@/lib/services/storage";
-import { buildSrt } from "@/lib/services/srtBuilder";
+import { buildTimedSrt } from "@/lib/services/srtBuilder";
+import { buildAssembleScript, buildTimeline, timelineDuration } from "@/lib/services/timeline";
 import { formatFrameBadge } from "@/lib/services/frameService";
 
 function slugify(name: string): string {
@@ -23,9 +24,10 @@ function slugify(name: string): string {
 }
 
 /**
- * Export ZIP: F01.png…FNN.png (ảnh final có watermark) + storyboard.json
- * (metadata đầy đủ cho khâu dựng video / image-to-video) + captions.srt
- * (timing theo playbackSpeed). Stream bằng archiver — không dồn RAM.
+ * Export ZIP: F01.png…FNN.png (ảnh final có watermark) + clips/FNN/0001.png…
+ * (chuỗi frame của shot motion) + clips/FNN.webp + storyboard.json
+ * (metadata + timeline + source SVG/motion) + captions.srt (timing theo
+ * timeline thật) + assemble.sh (ffmpeg → film.mp4). Stream bằng archiver.
  */
 export async function GET(req: Request): Promise<Response> {
   return handleRoute(async () => {
@@ -82,6 +84,42 @@ export async function GET(req: Request): Promise<Response> {
       );
     }
 
+    // Shot motion: chuỗi PNG + WebP (chỉ khi còn trên disk — thiếu thì
+    // frame rơi về ảnh tĩnh poster trên timeline, không vỡ export)
+    const clipIndexes = new Set<number>();
+    for (const frame of doneFrames) {
+      if (!includedIndexes.has(frame.index) || !frame.clipDir || !frame.clipFrameCount) continue;
+      const badge = formatFrameBadge(frame.index);
+      const dirAbs = resolveStoragePath(frame.clipDir);
+      try {
+        const files = (await fs.readdir(dirAbs)).filter((f) => f.endsWith(".png"));
+        if (files.length !== frame.clipFrameCount) throw new Error("clip incomplete");
+        archive.directory(dirAbs, `clips/${badge}`);
+        if (frame.clipPath) {
+          const webpAbs = resolveStoragePath(frame.clipPath);
+          await fs.access(webpAbs);
+          archive.file(webpAbs, { name: `clips/${badge}.webp` });
+        }
+        clipIndexes.add(frame.index);
+      } catch {
+        logger.warn({ frameIndex: frame.index }, "zip: clip frames missing on disk — exporting poster still");
+      }
+    }
+
+    const exported = doneFrames.filter((f) => includedIndexes.has(f.index));
+    const timeline = buildTimeline(
+      exported.map((f) => ({
+        index: f.index,
+        description: f.description,
+        clip:
+          clipIndexes.has(f.index) && f.clipFps && f.clipFrameCount
+            ? { fps: f.clipFps, frameCount: f.clipFrameCount, duration: f.clipDuration ?? f.clipFrameCount / f.clipFps }
+            : null,
+      })),
+      project.playbackSpeed,
+    );
+    const timelineByIndex = new Map(timeline.map((e) => [e.index, e]));
+
     const storyboardJson = {
       project: {
         id: project.id,
@@ -90,28 +128,48 @@ export async function GET(req: Request): Promise<Response> {
         aspectRatio: project.aspectRatio,
         resolution: project.resolution,
         playbackSpeed: project.playbackSpeed,
+        durationSec: timelineDuration(timeline),
         exportedAt: new Date().toISOString(),
       },
-      frames: project.frames.map((f) => ({
-        index: f.index,
-        file: includedIndexes.has(f.index) ? `${formatFrameBadge(f.index)}.png` : null,
-        shotType: f.shotType,
-        description: f.description,
-        artworkSvg: f.artworkSvg,
-        status: f.status,
-        generatedAt: f.generatedAt,
-      })),
+      frames: project.frames.map((f) => {
+        const t = timelineByIndex.get(f.index);
+        const badge = formatFrameBadge(f.index);
+        return {
+          index: f.index,
+          file: includedIndexes.has(f.index) ? `${badge}.png` : null,
+          shotType: f.shotType,
+          description: f.description,
+          artworkSvg: f.artworkSvg,
+          status: f.status,
+          generatedAt: f.generatedAt,
+          startSec: t?.startSec ?? null,
+          durationSec: t?.durationSec ?? null,
+          motion: clipIndexes.has(f.index)
+            ? {
+                fps: f.clipFps,
+                frameCount: f.clipFrameCount,
+                frames: `clips/${badge}/%04d.png`,
+                webp: f.clipPath ? `clips/${badge}.webp` : null,
+                spec: f.motionSpec ? (JSON.parse(f.motionSpec) as unknown) : null,
+              }
+            : null,
+        };
+      }),
     };
     archive.append(JSON.stringify(storyboardJson, null, 2), {
       name: "storyboard.json",
     });
 
+    const descriptionOf = new Map(exported.map((f) => [f.index, f.description]));
     archive.append(
-      buildSrt(
-        doneFrames.filter((f) => includedIndexes.has(f.index)),
-        project.playbackSpeed,
+      buildTimedSrt(
+        timeline.map((e) => ({ description: descriptionOf.get(e.index)!, startSec: e.startSec, durationSec: e.durationSec })),
       ),
       { name: "captions.srt" },
+    );
+    archive.append(
+      buildAssembleScript(timeline.map((entry) => ({ badge: formatFrameBadge(entry.index), entry }))),
+      { name: "assemble.sh" },
     );
 
     void archive.finalize();

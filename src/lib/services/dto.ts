@@ -4,6 +4,7 @@ interface FrameLike {
   readonly id: string;
   readonly imagePath: string | null;
   readonly generatedAt: Date | null;
+  readonly clipPath?: string | null;
 }
 
 export function frameImageUrl(frame: FrameLike): string | null {
@@ -12,8 +13,17 @@ export function frameImageUrl(frame: FrameLike): string | null {
   return `/api/files/${frame.imagePath}?v=${version}`;
 }
 
-export function withImageUrl<T extends FrameLike>(frame: T): T & { imageUrl: string | null } {
-  return { ...frame, imageUrl: frameImageUrl(frame) };
+/** Animated WebP của shot motion (null với frame tĩnh). */
+export function frameClipUrl(frame: FrameLike): string | null {
+  if (!frame.clipPath) return null;
+  const version = frame.generatedAt ? frame.generatedAt.getTime() : 0;
+  return `/api/files/${frame.clipPath}?v=${version}`;
+}
+
+export function withImageUrl<T extends FrameLike>(
+  frame: T,
+): T & { imageUrl: string | null; clipUrl: string | null } {
+  return { ...frame, imageUrl: frameImageUrl(frame), clipUrl: frameClipUrl(frame) };
 }
 
 interface AssetLike {

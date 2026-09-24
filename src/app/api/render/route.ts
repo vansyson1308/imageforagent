@@ -5,10 +5,12 @@ import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { renderSchema } from "@/lib/validation/schemas";
 import { renderFrameArtwork } from "@/lib/services/artworkService";
 import { logger } from "@/lib/services/logger";
+import { renderFrameMotion } from "@/lib/services/clipService";
 
 /**
  * Re-render sync toàn bộ frame có artwork (dùng sau khi đổi artworkDefs
- * hoặc ratio/resolution). ~20–50ms/frame, trần 100 frame/project → ≤15s.
+ * hoặc ratio/resolution). ~20–50ms/frame, trần 100 frame/project → ≤15s;
+ * frame motion render lại cả clip (~30ms × số pose khác nhau).
  * Lỗi per-frame không chặn các frame còn lại.
  */
 export async function POST(req: Request): Promise<Response> {
@@ -24,7 +26,7 @@ export async function POST(req: Request): Promise<Response> {
 
     const targets = project.frames.filter(
       (f) =>
-        f.artworkSvg !== null &&
+        (f.artworkSvg !== null || f.motionSpec !== null) &&
         (!body.frameIds || body.frameIds.length === 0 || body.frameIds.includes(f.id)),
     );
     if (targets.length === 0) {
@@ -40,7 +42,9 @@ export async function POST(req: Request): Promise<Response> {
 
     for (const frame of targets) {
       try {
-        await renderFrameArtwork(project, frame);
+        // Shot motion: render lại cả clip (poster → ảnh tĩnh đi kèm)
+        if (frame.motionSpec) await renderFrameMotion(project, frame);
+        else await renderFrameArtwork(project, frame);
         rendered++;
       } catch (err: unknown) {
         const message =

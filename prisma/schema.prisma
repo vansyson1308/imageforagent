@@ -37,6 +37,13 @@ model Frame {
   rawImagePath String? // ảnh render gốc chưa watermark
   errorMsg     String?
   generatedAt  DateTime?
+  // Motion (construct v4): frame là MỘT shot hoạt hình — poster frame là ảnh tĩnh ở trên
+  motionSpec     String? // JSON motion spec agent gửi (nguồn chân lý của clip)
+  clipDir        String? // thư mục chuỗi PNG: {projectId}/clips/{frameId}/0001.png…
+  clipPath       String? // animated WebP xem nhanh
+  clipFps        Int?
+  clipFrameCount Int?
+  clipDuration   Float? // giây — thời lượng shot trên timeline
 
   @@unique([projectId, index])
 }

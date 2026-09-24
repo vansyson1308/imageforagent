@@ -17,16 +17,20 @@ export async function POST(): Promise<Response> {
     const [assets, frames, projects] = await Promise.all([
       prisma.asset.findMany({ select: { filePath: true } }),
       prisma.frame.findMany({
-        select: { imagePath: true, rawImagePath: true },
+        select: { imagePath: true, rawImagePath: true, clipDir: true, clipPath: true },
       }),
       prisma.project.findMany({ select: { id: true } }),
     ]);
 
     const referenced = new Set<string>();
+    /** Thư mục chuỗi PNG của shot motion — mọi file bên trong đều được tham chiếu. */
+    const referencedDirs: string[] = [];
     for (const a of assets) referenced.add(a.filePath);
     for (const f of frames) {
       if (f.imagePath) referenced.add(f.imagePath);
       if (f.rawImagePath) referenced.add(f.rawImagePath);
+      if (f.clipPath) referenced.add(f.clipPath);
+      if (f.clipDir) referencedDirs.push(`${f.clipDir}/`);
     }
     const projectIds = new Set(projects.map((p) => p.id));
 
@@ -69,7 +73,8 @@ export async function POST(): Promise<Response> {
             // Grace period 10 phút: file vừa ghi có thể chưa kịp commit path
             // vào DB (job đang chạy) — không được xoá nhầm ảnh vừa trả tiền
             const isRecent = Date.now() - childStat.mtimeMs < 10 * 60 * 1000;
-            if (!referenced.has(relPath) && !isRecent) {
+            const inClipDir = referencedDirs.some((d) => relPath.startsWith(d));
+            if (!referenced.has(relPath) && !inClipDir && !isRecent) {
               await fs.unlink(childPath).catch(() => {});
               removedFiles++;
             }
