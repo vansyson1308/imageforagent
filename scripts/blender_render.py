@@ -31,7 +31,8 @@ def parse_args():
     p.add_argument("--res", default="1920x1080")
     p.add_argument("--fps", type=int, default=12, help="frame rate of the shot (motion spec fps)")
     p.add_argument("--frames", default="", help="range like 1-12 (default: whole animation)")
-    p.add_argument("--sky", default="0.05,0.06,0.10", help="world background RGB (linear)")
+    p.add_argument("--sky", default="0.30,0.34,0.42", help="world background/ambient RGB (linear)")
+    p.add_argument("--sun", type=float, default=4.0, help="sun strength in W/m^2 (Blender units)")
     p.add_argument("--still", action="store_true", help="render only the first frame")
     return p.parse_args(argv)
 
@@ -44,6 +45,12 @@ def main():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
     bpy.ops.import_scene.gltf(filepath=args.gltf)
+
+    # glTF lux → Blender W/m² (importer chia 683) quá tối — đặt thẳng năng lượng
+    for obj in scene.objects:
+        if obj.type == "LIGHT" and obj.data.type == "SUN":
+            obj.data.energy = args.sun
+            obj.data.angle = 0.1  # bóng mềm nhẹ
 
     cams = [o for o in scene.objects if o.type == "CAMERA"]
     if not cams:
@@ -66,9 +73,10 @@ def main():
     if scene.render.engine == "CYCLES":
         scene.cycles.samples = args.samples
         scene.cycles.device = "CPU"
-        scene.cycles.use_denoising = True
+        # Một số bản build (vd Ubuntu apt) thiếu OpenImageDenoise → tắt denoise
+        scene.cycles.use_denoising = bool(getattr(bpy.app.build_options, "openimagedenoise", False))
 
-    # World: flat ambient so shadows are never pitch black (engine's rule too)
+    # World: ambient phẳng để bóng không bao giờ đen kịt (đúng luật màu của engine)
     world = bpy.data.worlds.new("sky")
     world.use_nodes = True
     bg = world.node_tree.nodes.get("Background")
