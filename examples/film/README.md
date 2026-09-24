@@ -14,9 +14,9 @@ forest, over a monkey bridge, past a sleeping buffalo — to the lotus pond wher
 the lantern lies torn on a rock. The fireflies gather and light it for him, and
 from the hilltop he watches the whole village light up for the festival.
 
-<p align="center"><img src="../../docs/media/den-ong-sao-poster.jpg" width="640" alt="Poster"></p>
+<p align="center"><a href="../../docs/media/den-ong-sao-720p.mp4"><img src="../../docs/media/den-ong-sao-highlights.gif" width="640" alt="Highlights"></a></p>
 
-[▶ trailer](../../docs/media/den-ong-sao-trailer.mp4) · [contact sheet — one frame every 40 s](../../docs/media/den-ong-sao-contact-sheet.jpg)
+[▶ full film, 720p](../../docs/media/den-ong-sao-720p.mp4) · [trailer](../../docs/media/den-ong-sao-trailer.mp4) · [contact sheet — one frame every 40 s](../../docs/media/den-ong-sao-contact-sheet.jpg)
 
 | | |
 |---|---|

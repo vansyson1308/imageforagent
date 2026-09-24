@@ -1,5 +1,14 @@
 # Storyboard Studio
 
+<p align="center">
+  <a href="docs/media/den-ong-sao-720p.mp4"><img src="docs/media/den-ong-sao-highlights.gif" width="720" alt="Highlights from Đèn Ông Sao, a 20-minute 3D animated film made with this engine"></a><br>
+  <b>This is a real 20-minute 3D animated film, made entirely by an agent with this repo.</b><br>
+  <b>Đây là một bộ phim hoạt hình 3D dài 20 phút, do agent làm hoàn toàn bằng repo này.</b><br>
+  <a href="docs/media/den-ong-sao-720p.mp4">▶ Watch the full film · Xem phim đầy đủ (20:14, 720p, 40 MB)</a> ·
+  <a href="docs/media/den-ong-sao-trailer.mp4">1-minute trailer</a> ·
+  <a href="examples/film/">how it was made</a>
+</p>
+
 **A zero-API-key storyboard engine for AI agents** — the [Remotion](https://www.remotion.dev/) model applied to storyboard images. Your coding agent (Claude Code, Codex, …) **writes each frame's artwork as SVG code**; this engine sanitizes, renders (via [sharp](https://sharp.pixelplumbing.com/)/librsvg), watermarks, previews, and packages everything for video assembly. No image-generation API. No keys. No credits. Deterministic output.
 
 **Character consistency is guaranteed by construction**: the agent defines the mascot ONCE as an SVG `<symbol>` in the project's artwork library — every frame reuses it with `<use href="#id">`, so the character is pixel-identical across the entire storyboard.
@@ -14,7 +23,7 @@
 
 **[Đèn Ông Sao · The Star Lantern](examples/film/)** — 20:14, 105 shots, 7 chapters, DCI Flat 1998×1080 at 24 fps, narration + dialogue with lip-sync, an original score, mastered as a theatrical SMPTE DCP (13.2 GB, ClairMeta: 78 checks passed; asdcplib + SMPTE XSDs verified). Written, staged, animated, voiced, scored and edited by an agent **through this app's own API** (`examples/film/produce.ts` only calls public endpoints), with no hand-drawn frame and no API key. The screenplay → motion specs step is deterministic and test-enforced (`tests/film.test.ts`).
 
-[▶ 1-minute trailer](docs/media/den-ong-sao-trailer.mp4) · [one frame every 40 s](docs/media/den-ong-sao-contact-sheet.jpg) · [source + how to reproduce](examples/film/README.md)
+[▶ full film (20:14, 720p)](docs/media/den-ong-sao-720p.mp4) · [1-minute trailer](docs/media/den-ong-sao-trailer.mp4) · [one frame every 40 s](docs/media/den-ong-sao-contact-sheet.jpg) · [source + how to reproduce](examples/film/README.md)
 
 ## How it works
 
@@ -401,7 +410,7 @@ tests/                            Vitest — sanitizer bypass-vector suite + con
 
 **Motion, trục thời gian (construct v4):** mỗi frame storyboard có thể là **một shot chuyển động**. Motion spec = scene construct gốc + **tracks** keyframe (target là đường dẫn theo id: `parts.pip.pose.kneeL`, `camera.orbit.azimuth`, `solids.ball.at.1`, màu `#hex` pha trong không gian tuyến tính; easing `inOut` mặc định theo nguyên lý slow-in/slow-out, có `outBack`/`outBounce`/`smooth` Catmull-Rom/cubic-bezier) + **rig thủ tục**: `walk` (đi bộ theo đường, **bàn chân trụ không trượt**: góc hông được *giải* để mắt cá lùi đúng tốc độ thân; test chặn < 3%), `shot` (dolly/orbit/crane/pan/tilt/shake, hoặc `auto` suy từ cột Shot Type tiếng Anh/Việt), `roll` (lăn không trượt), `follow` (follow-through trễ nhịp), `wiggle` (nhiễu mượt tất định theo seed). `holdFrames: 2` = animate on twos. `POST /api/motion` trả **contact sheet**, tức lưới frame kèm thanh thời gian, để agent *nhìn* chuyển động trong một ảnh. `PUT /api/frames/:id/motion` biến frame thành shot (chuỗi PNG + WebP + poster làm ảnh tĩnh).
 
-**Bằng chứng: phim hoạt hình 20 phút [Đèn Ông Sao](examples/film/)** — 105 shot, 7 chương, 1998×1080 DCI Flat 24 fps, lời kể + thoại có khẩu hình, nhạc gốc, đóng gói DCP SMPTE chiếu rạp (13,2 GB, ClairMeta 78/78 đạt). Toàn bộ do agent viết, dựng cảnh, diễn hoạt, lồng tiếng, phối nhạc và dựng phim **qua chính API của app** (`examples/film/produce.ts` chỉ gọi endpoint công khai) — không vẽ tay khung nào, không API key; bước kịch bản → motion spec tất định, có test chặn (`tests/film.test.ts`). Xem [trailer 1 phút](docs/media/den-ong-sao-trailer.mp4).
+**Bằng chứng: phim hoạt hình 20 phút [Đèn Ông Sao](examples/film/)** — 105 shot, 7 chương, 1998×1080 DCI Flat 24 fps, lời kể + thoại có khẩu hình, nhạc gốc, đóng gói DCP SMPTE chiếu rạp (13,2 GB, ClairMeta 78/78 đạt). Toàn bộ do agent viết, dựng cảnh, diễn hoạt, lồng tiếng, phối nhạc và dựng phim **qua chính API của app** (`examples/film/produce.ts` chỉ gọi endpoint công khai) — không vẽ tay khung nào, không API key; bước kịch bản → motion spec tất định, có test chặn (`tests/film.test.ts`). Xem [phim đầy đủ 20 phút](docs/media/den-ong-sao-720p.mp4) hoặc [trailer 1 phút](docs/media/den-ong-sao-trailer.mp4).
 
 **Từ storyboard tới phim:** export ZIP có chuỗi PNG từng shot, `storyboard.json` kèm timeline, `captions.srt` khớp timeline, và **`assemble.sh`**: chạy `sh assemble.sh` là ra **`film.mp4`** (đã kiểm chứng end-to-end). **glTF 2.0** (`POST /api/export/gltf`, và `gltf/FNN.gltf` trong ZIP) là cầu nối sang Blender/Unreal: đúng mesh engine vẽ, camera khớp từng pixel với khung SVG, animation TRS; đã qua Khronos validator (0 lỗi) và render path-traced thật bằng Blender Cycles (`scripts/blender_render.py`). Lộ trình trung thực tới phim chiếu rạp nằm ở [docs/FILM-ROADMAP.md](docs/FILM-ROADMAP.md).
 
