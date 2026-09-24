@@ -30,6 +30,8 @@ export interface PartBuild {
   readonly solids: GeneratedSolid[];
   /** Figure: cây khớp (cha trước con), local = translation(pivot) · rotation(pose). */
   readonly joints?: readonly FigureJoint[];
+  /** Figure: điểm neo cho solid `attach` (mọi khớp + "hips" + "head"), hệ part. */
+  readonly anchors?: ReadonlyMap<string, Mat4>;
 }
 
 /** Solid với mọi field default đã điền (expansion chạy SAU zod parse). */

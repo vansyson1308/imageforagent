@@ -4,6 +4,7 @@ import { compileConstruction } from "@/lib/services/construct/compile";
 import { constructSpecSchema, type Part } from "@/lib/validation/constructSchema";
 import { transformPoint } from "@/lib/services/construct/math3d";
 import { AppError } from "@/lib/services/apiError";
+import { expandParts } from "@/lib/services/construct/partsExpand";
 import type { Vec3 } from "@/lib/services/construct/types";
 
 type FigurePart = Extract<Part, { type: "figure" }>;
@@ -118,5 +119,62 @@ describe("compile với figure", () => {
       parts: [{ id: "f", type: "figure", pose: { spine: [15, 0, 0] } }],
     });
     expect(compileConstruction(spec).svg).toBe(compileConstruction(spec).svg);
+  });
+});
+
+describe("solid attach — đạo cụ / tóc / nón bám khớp figure", () => {
+  const specWith = (pose: Record<string, number | [number, number, number]>, solids: unknown[]) =>
+    constructSpecSchema.parse({
+      version: 1,
+      parts: [{ id: "kid", type: "figure", height: 180, headCount: 3, pose, at: [100, 0, -40], rotate: [0, 30, 0] }],
+      solids,
+    });
+  const lantern = { id: "lantern", type: "sphere", r: 12, at: [0, -20, 0], attach: { part: "kid", joint: "wristR" } };
+  const worldOf = (spec: ReturnType<typeof specWith>, id: string) =>
+    transformPoint(expandParts(spec).worldMatrixById.get(id)!, [0, 0, 0]);
+  const handOf = (spec: ReturnType<typeof specWith>) => worldOf(spec, "kid:handR");
+
+  it("đi theo bàn tay khi gập khuỷu (khoảng cách tay↔đạo cụ bất biến)", () => {
+    const rest = specWith({}, [lantern]);
+    const bent = specWith({ elbowR: [-90, 0, 0], shoulderR: [0, 0, 40] }, [lantern]);
+    const d = (s: ReturnType<typeof specWith>) => {
+      const [a, b] = [handOf(s), worldOf(s, "lantern")];
+      return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+    };
+    expect(d(bent)).toBeCloseTo(d(rest), 6);
+    expect(d(rest)).toBeCloseTo(20, 6);
+    // và thật sự đã di chuyển cùng tay
+    const moved = worldOf(bent, "lantern")[1] - worldOf(rest, "lantern")[1];
+    expect(Math.abs(moved)).toBeGreaterThan(10);
+  });
+
+  it('neo "head" = tâm đầu (nón/tóc), tôn trọng at/rotate của part', () => {
+    const spec = specWith({}, [{ id: "hat", type: "cone", r: 40, h: 30, attach: { part: "kid", joint: "head" } }]);
+    const hat = worldOf(spec, "hat");
+    const head = worldOf(spec, "kid:head");
+    expect(hat[0]).toBeCloseTo(head[0], 6);
+    expect(hat[1]).toBeCloseTo(head[1], 6);
+    expect(hat[2]).toBeCloseTo(head[2], 6);
+  });
+
+  it("compile sạch; không đổi output khi không dùng attach (figure không thêm khớp)", () => {
+    const spec = specWith({}, [lantern]);
+    expect(() => compileConstruction(spec)).not.toThrow();
+    expect(buildFigure(figure()).joints!.map((j) => j.name)).not.toContain("head");
+  });
+
+  it("lỗi rõ ràng: sai khớp, part không phải figure, attach + group", () => {
+    const bad = (solids: unknown[], extra: Record<string, unknown> = {}) => () =>
+      expandParts(
+        constructSpecSchema.parse({
+          version: 1,
+          parts: [{ id: "kid", type: "figure" }, { id: "oak", type: "tree", trunkH: 50, trunkR: 5, canopyR: 20 }],
+          solids,
+          ...extra,
+        }),
+      );
+    expect(bad([{ ...lantern, attach: { part: "kid", joint: "tail" } }])).toThrow(/no joint "tail"/);
+    expect(bad([{ ...lantern, attach: { part: "oak", joint: "head" } }])).toThrow(/not a figure/);
+    expect(bad([{ ...lantern, group: "g" }], { groups: [{ id: "g" }] })).toThrow(/both "group" and "attach"/);
   });
 });
