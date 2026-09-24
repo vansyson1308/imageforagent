@@ -9,7 +9,7 @@ import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { resolveStoragePath } from "@/lib/services/storage";
 import { buildTimedSrt } from "@/lib/services/srtBuilder";
 import { buildAssembleScript, buildTimeline, timelineDuration } from "@/lib/services/timeline";
-import { parseStoredMotion } from "@/lib/services/clipService";
+import { parseStoredMotion, passesDirOf } from "@/lib/services/clipService";
 import { exportMotionGltf } from "@/lib/services/motion/gltfMotion";
 import { LOGICAL_CANVAS } from "@/lib/services/svgRenderer";
 import { formatFrameBadge } from "@/lib/services/frameService";
@@ -110,6 +110,17 @@ export async function GET(req: Request): Promise<Response> {
       }
     }
 
+    // Control passes đã render (POST /api/frames/:id/passes) → passes/FNN/
+    const passesOf = new Map<number, string[]>();
+    for (const frame of doneFrames) {
+      if (!clipIndexes.has(frame.index)) continue;
+      const dirAbs = resolveStoragePath(passesDirOf(project.id, frame.id));
+      const entries = await fs.readdir(dirAbs).catch(() => [] as string[]);
+      if (entries.length === 0) continue;
+      archive.directory(dirAbs, `passes/${formatFrameBadge(frame.index)}`);
+      passesOf.set(frame.index, entries.filter((e) => !e.endsWith(".json")).sort());
+    }
+
     // Shot motion → glTF có animation (cầu nối Blender/Unreal) — lỗi chỉ bỏ file này
     const gltfIndexes = new Set<number>();
     for (const frame of doneFrames) {
@@ -173,6 +184,9 @@ export async function GET(req: Request): Promise<Response> {
                 frames: `clips/${badge}/%04d.png`,
                 webp: f.clipPath ? `clips/${badge}.webp` : null,
                 gltf: gltfIndexes.has(f.index) ? `gltf/${badge}.gltf` : null,
+                passes: passesOf.has(f.index)
+                  ? Object.fromEntries(passesOf.get(f.index)!.map((p) => [p, `passes/${badge}/${p}/%04d.png`]))
+                  : null,
                 spec: f.motionSpec ? (JSON.parse(f.motionSpec) as unknown) : null,
               }
             : null,

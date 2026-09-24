@@ -8,6 +8,8 @@ import {
 } from "@/lib/services/motion/compileMotion";
 import type { MotionContext } from "@/lib/services/motion/evaluate";
 import type { MotionSpec } from "@/lib/validation/motionSchema";
+import type { RenderPass } from "@/lib/services/construct/compile";
+import { poseSkeletonSvg, toOpenPoseJson } from "@/lib/services/construct/pose2d";
 
 /**
  * motionRenderer — rìa I/O-free (chỉ sharp) của motion engine: compile từng
@@ -97,6 +99,70 @@ export async function renderMotionClip(opts: ClipRenderOptions): Promise<ClipRen
     posterBody,
     posterPng: posterPng!,
   };
+}
+
+// ---------- Control passes ----------
+
+export const CONTROL_PASSES = ["depth", "segmentation", "normal", "pose"] as const;
+export type ControlPass = (typeof CONTROL_PASSES)[number];
+
+export interface PassRenderResult {
+  readonly pass: ControlPass;
+  readonly pngs: Buffer[];
+  readonly times: number[];
+  /** Chỉ pose: JSON OpenPose từng frame. */
+  readonly openpose?: Record<string, unknown>[];
+}
+
+/**
+ * Render MỘT control pass cho cả clip: nền đen, không backdrop/overlay
+ * (pass đo hình khối 3D). depth/segmentation/normal = compile với
+ * options.pass; pose = skeleton OpenPose vẽ từ khớp FK.
+ */
+export async function renderPassClip(opts: {
+  readonly motion: MotionSpec;
+  readonly ctx?: MotionContext;
+  readonly pass: ControlPass;
+  readonly aspectRatio: string;
+  readonly resolution: string;
+  readonly onFrame?: (index: number, png: Buffer) => Promise<void> | void;
+  readonly keepFrames?: boolean;
+}): Promise<PassRenderResult> {
+  const canvas = LOGICAL_CANVAS[opts.aspectRatio] ?? LOGICAL_CANVAS["16:9"];
+  const compiler = createMotionCompiler(
+    opts.motion,
+    opts.ctx,
+    opts.pass === "pose" ? {} : { pass: opts.pass as RenderPass },
+  );
+  const pngs: Buffer[] = [];
+  const times: number[] = [];
+  const openpose: Record<string, unknown>[] = [];
+  let prevBody: string | null = null;
+  let prevPng: Buffer | null = null;
+  for (let i = 0; i < compiler.frameCount; i++) {
+    let body: string;
+    if (opts.pass === "pose") {
+      const pf = compiler.poseFrame(i, canvas);
+      openpose.push(toOpenPoseJson(pf));
+      body = poseSkeletonSvg(pf);
+    } else {
+      const f = compiler.compileFrame(i);
+      body = `<rect width="${canvas.w}" height="${canvas.h}" fill="#000000"/>\n${f.svg}`;
+    }
+    let png: Buffer;
+    if (body === prevBody && prevPng) png = prevPng;
+    else {
+      sanitizeSvg(body, "frame");
+      png = await renderArtwork(null, body, opts.aspectRatio, opts.resolution);
+    }
+    prevBody = body;
+    prevPng = png;
+    if (opts.onFrame) await opts.onFrame(i, png);
+    if (opts.keepFrames !== false) pngs.push(png);
+    times.push(i / opts.motion.fps);
+    await yieldLoop();
+  }
+  return { pass: opts.pass, pngs, times, ...(opts.pass === "pose" && { openpose }) };
 }
 
 // ---------- Encoders ----------

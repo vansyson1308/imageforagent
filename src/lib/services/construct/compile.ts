@@ -48,6 +48,7 @@ import {
   type PathItem,
 } from "@/lib/services/construct/svgEmitter";
 import { sanitizeSvg } from "@/lib/services/svgRenderer";
+import { makePassFill } from "@/lib/services/construct/passes";
 
 /**
  * compile — orchestrator của construct engine: spec kỷ hà → SVG fragment.
@@ -60,7 +61,18 @@ function err(message: string, hint: string): never {
 }
 
 
-export function compileConstruction(spec: ConstructSpec): CompileResult {
+export type RenderPass = "depth" | "segmentation" | "normal";
+
+export interface CompileOptions {
+  /**
+   * Control pass cho AI video (ControlNet/VACE): cùng hình học + thứ tự
+   * vẽ, fill mã hoá depth (gần = sáng) / id đối tượng / normal view-space.
+   * Tắt bóng, effects, 2D shapes, atmosphere.
+   */
+  readonly pass?: RenderPass;
+}
+
+export function compileConstruction(spec: ConstructSpec, options: CompileOptions = {}): CompileResult {
   const t0 = performance.now();
   const checkClock = (stage: string) => {
     if (performance.now() - t0 > CONSTRUCT_LIMITS.maxCompileMs) {
@@ -203,7 +215,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
 
   // ---------- Shadow layer (Layer 4a) ----------
   let shadowLayer: ShadowLayer | null = null;
-  if (spec.shadow && spec.shadow.style !== "none") {
+  if (spec.shadow && spec.shadow.style !== "none" && !options.pass) {
     const casting = facetedItems.filter((i) => solidMap.get(i.solidId)!.shadow !== false);
     shadowLayer = buildShadowLayer(
       casting,
@@ -369,9 +381,9 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   const effectFilters: FilterDescriptor[] = [];
   const contactPaths: PathItem[] = [];
   let effectPathCount = 0;
-  const solidsWithEffects = spec.solids.filter(
-    (s) => s.effects && Object.values(s.effects).some((v) => v !== false),
-  );
+  const solidsWithEffects = options.pass
+    ? []
+    : spec.solids.filter((s) => s.effects && Object.values(s.effects).some((v) => v !== false));
   if (solidsWithEffects.length > 0) {
     if (depthSplits > 0) {
       warnings.push(
@@ -485,7 +497,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
 
   // ---------- Atmosphere (Layer 6 — vignette dựng trước, path chèn cuối) ----------
   let vignettePath: PathItem | undefined;
-  if (spec.atmosphere?.vignette) {
+  if (spec.atmosphere?.vignette && !options.pass) {
     const v = buildVignette(spec.atmosphere.vignette, spec.place, spec.precision);
     gradients.push(v.gradient);
     vignettePath = v.path;
@@ -496,9 +508,18 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   // part macro không đi qua schema default nên có thể thiếu field layer
   const backgroundShapeIds = emittedShapeIds.filter((id) => shapeMap.get(id)!.layer !== "foreground");
   const foregroundShapeIds = emittedShapeIds.filter((id) => shapeMap.get(id)!.layer === "foreground");
+  // Pass: gradient engine của shading (smooth/cutout) không dùng — chỉ
+  // giữ gradient TÁC GIẢ trong budget, phần còn lại cho depth ramps
+  if (options.pass) gradients.splice(spec.gradients.length);
+  const passFill = options.pass
+    ? makePassFill(options.pass, entries, {
+        zoom: spec.camera.zoom,
+        gradientBudget: CONSTRUCT_LIMITS.maxGradients - gradients.length,
+      })
+    : undefined;
   const paths = buildScenePaths({
-    backgroundShapeIds,
-    foregroundShapeIds,
+    backgroundShapeIds: passFill ? [] : backgroundShapeIds,
+    foregroundShapeIds: passFill ? [] : foregroundShapeIds,
     resolver,
     entries,
     solidMap,
@@ -511,8 +532,9 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     precision: spec.precision,
     stroke: spec.stroke,
     contactPaths,
-    depthFade: spec.atmosphere?.depthFade,
+    depthFade: passFill ? undefined : spec.atmosphere?.depthFade,
     vignettePath,
+    passFill,
   });
 
   if (paths.length === 0) {
@@ -520,7 +542,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   }
 
   // ---------- Emit + guard cuối ----------
-  const svg = emitFragment(gradients, paths, spec.place, spec.precision, [
+  const svg = emitFragment(passFill ? gradients.slice(spec.gradients.length) : gradients, paths, spec.place, spec.precision, passFill ? [] : [
     ...(shadowLayer?.filters ?? []),
     ...effectFilters,
   ]);

@@ -17,7 +17,7 @@ export async function POST(): Promise<Response> {
     const [assets, frames, projects] = await Promise.all([
       prisma.asset.findMany({ select: { filePath: true } }),
       prisma.frame.findMany({
-        select: { imagePath: true, rawImagePath: true, clipDir: true, clipPath: true },
+        select: { id: true, projectId: true, imagePath: true, rawImagePath: true, clipDir: true, clipPath: true },
       }),
       prisma.project.findMany({ select: { id: true } }),
     ]);
@@ -31,6 +31,8 @@ export async function POST(): Promise<Response> {
       if (f.rawImagePath) referenced.add(f.rawImagePath);
       if (f.clipPath) referenced.add(f.clipPath);
       if (f.clipDir) referencedDirs.push(`${f.clipDir}/`);
+      // Control passes của frame còn tồn tại
+      referencedDirs.push(`${f.projectId}/passes/${f.id}/`);
     }
     const projectIds = new Set(projects.map((p) => p.id));
 

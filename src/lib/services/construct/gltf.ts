@@ -1,16 +1,12 @@
 import type { Mat4, Mesh, Vec3 } from "@/lib/services/construct/types";
 import type { ConstructSpec } from "@/lib/validation/constructSchema";
-import { AppError } from "@/lib/services/apiError";
 import { expandParts } from "@/lib/services/construct/partsExpand";
-import { createShapeResolver } from "@/lib/services/construct/resolve2d";
-import { buildSolidMeshes, type ExportMesh } from "@/lib/services/construct/sceneMeshes";
+import { prepareExportScene, type ExportMesh } from "@/lib/services/construct/sceneMeshes";
 import { triangulateFace } from "@/lib/services/construct/triangulate";
 import { composePlacement4, cross3, faceNormal, invertAffine4, mul4, normalize3, transformPoint } from "@/lib/services/construct/math3d";
 import { buildFigure } from "@/lib/services/construct/partFigure";
 import { groupMatricesOf, partPlacementMatrix } from "@/lib/services/construct/partsExpand";
 import { CAMERA_PRESETS, autoDistance } from "@/lib/services/construct/camera";
-import { meshRadius } from "@/lib/services/construct/geometry3d";
-import { CONSTRUCT_LIMITS } from "@/lib/config/limits";
 
 /**
  * gltf — exporter glTF 2.0 (JSON + buffer nhúng base64) cho construct scene:
@@ -27,10 +23,6 @@ import { CONSTRUCT_LIMITS } from "@/lib/config/limits";
  * - Hệ trục: engine y-up right-handed = glTF; unitScale mặc định 0.01
  *   (figure 170 đơn vị ≈ người 1.7 m).
  */
-
-function err(message: string, hint: string): never {
-  throw new AppError("CONSTRUCTION_INVALID", message, hint);
-}
 
 export interface GltfOptions {
   /** Đơn vị engine → mét. */
@@ -59,68 +51,7 @@ export interface GltfResult {
   readonly warnings: string[];
 }
 
-// ---------- Scene → mesh + ma trận ----------
-
-interface PreparedScene {
-  readonly exportMeshes: ExportMesh[];
-  readonly spec: ConstructSpec;
-  readonly radius: number;
-  readonly warnings: string[];
-}
-
-function prepareScene(spec: ConstructSpec): PreparedScene {
-  const warnings: string[] = [];
-  const expanded = expandParts(spec);
-  warnings.push(...expanded.warnings);
-  const full: ConstructSpec = { ...spec, shapes: expanded.shapes, solids: expanded.solids };
-  const allIds = [...full.shapes.map((s) => s.id), ...full.solids.map((s) => s.id)];
-  const seen = new Set<string>();
-  for (const id of allIds) {
-    if (seen.has(id)) err(`Duplicate id "${id}".`, "Ids are global across shapes and solids — rename one.");
-    seen.add(id);
-  }
-  const t0 = performance.now();
-  const checkClock = (stage: string) => {
-    if (performance.now() - t0 > CONSTRUCT_LIMITS.maxCompileMs) {
-      err(`glTF export exceeded ${CONSTRUCT_LIMITS.maxCompileMs}ms at "${stage}".`, 'Reduce "segments" or scene size.');
-    }
-  };
-  const resolver = createShapeResolver({
-    shapeMap: new Map(full.shapes.map((s) => [s.id, s])),
-    allIds,
-    precision: full.precision,
-    warnings,
-    checkClock,
-  });
-  const meshes = buildSolidMeshes(
-    {
-      spec: full,
-      resolver,
-      solidMap: new Map(full.solids.map((s) => [s.id, s])),
-      allIds,
-      worldMatrixById: expanded.worldMatrixById,
-      warnings,
-      checkClock,
-    },
-    true,
-  );
-  // Cùng trần mặt với compile SVG — chặn DoS qua exporter (sync trên event loop)
-  const faces = meshes.facetedItems.reduce((n, i) => n + i.mesh.faces.length, 0);
-  if (faces > CONSTRUCT_LIMITS.maxTotalFaces) {
-    err(
-      `Scene tessellates to ${faces.toLocaleString("en-US")} faces (max ${CONSTRUCT_LIMITS.maxTotalFaces.toLocaleString("en-US")}).`,
-      'Reduce segments (cylinder/sphere "segments") or split into multiple constructions.',
-    );
-  }
-  if (meshes.exportMeshes!.length === 0) {
-    err("Nothing to export — the scene has no 3D solids.", "glTF exports solids/parts; 2D shapes are SVG-only.");
-  }
-  if (full.shapes.length > 0) {
-    warnings.push("2D shapes (backgrounds, clouds, foreground mist) are SVG-only and are not exported to glTF.");
-  }
-  const radius = meshRadius([...meshes.worldMeshById.values()].map((e) => e.mesh));
-  return { exportMeshes: meshes.exportMeshes!, spec: full, radius, warnings };
-}
+// ---------- Scene → mesh + ma trận (sceneMeshes.prepareExportScene) ----------
 
 /** Ma trận world của mọi solid được export tại một scene (per frame). */
 function matricesOf(spec: ConstructSpec, ids: readonly string[]): Map<string, Mat4> {
@@ -458,7 +389,7 @@ export function exportGltf(spec: ConstructSpec, opts: GltfOptions = {}, anim?: G
   const unit = opts.unitScale ?? 0.01;
   const canvas = opts.canvas ?? { w: 1920, h: 1080 };
   const scene0 = anim?.scenes[0] ?? spec;
-  const prep = prepareScene(scene0);
+  const prep = prepareExportScene(scene0);
   const warnings = [...prep.warnings];
   const bin = new BinBuilder();
 

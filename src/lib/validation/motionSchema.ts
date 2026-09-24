@@ -280,6 +280,8 @@ export const motionPreviewSchema = z
     webp: z.boolean().default(false),
     /** Trả SVG từng frame (nặng — chỉ khi cần tự lắp ráp). */
     includeSvg: z.boolean().default(false),
+    /** Control pass cho AI video — mỗi pass trả một contact sheet (+ keypoints với pose). */
+    passes: z.array(z.enum(["depth", "segmentation", "normal", "pose"])).max(4).default([]),
   })
   .strict();
 

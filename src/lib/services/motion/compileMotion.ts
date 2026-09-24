@@ -1,6 +1,7 @@
 import { AppError } from "@/lib/services/apiError";
 import { MOTION_LIMITS } from "@/lib/config/limits";
-import { compileConstruction } from "@/lib/services/construct/compile";
+import { compileConstruction, type RenderPass } from "@/lib/services/construct/compile";
+import { extractPoses, type PoseFrame } from "@/lib/services/construct/pose2d";
 import type { CompileResult } from "@/lib/services/construct/types";
 import type { MotionSpec } from "@/lib/validation/motionSchema";
 import {
@@ -52,6 +53,8 @@ export interface MotionCompiler {
   readonly frameCount: number;
   /** Compile frame i (memo). Ném CONSTRUCTION_INVALID kèm thời điểm khi lỗi. */
   compileFrame(i: number): MotionFrame;
+  /** Skeleton OpenPose của frame i (không compile — chỉ evaluate + FK). */
+  poseFrame(i: number, canvas?: { w: number; h: number }): PoseFrame;
   /** Stats + warnings gộp (dedupe, kèm thời điểm xuất hiện đầu). */
   summary(): { stats: MotionStats; warnings: string[] };
 }
@@ -60,7 +63,16 @@ export function posterIndexOf(motion: MotionSpec, frameCount: number): number {
   return Math.min(frameCount - 1, Math.round(motion.poster * motion.fps));
 }
 
-export function createMotionCompiler(motion: MotionSpec, ctx: MotionContext = {}): MotionCompiler {
+export interface MotionCompileOptions {
+  /** Control pass (depth/segmentation/normal) thay cho render thường. */
+  readonly pass?: RenderPass;
+}
+
+export function createMotionCompiler(
+  motion: MotionSpec,
+  ctx: MotionContext = {},
+  options: MotionCompileOptions = {},
+): MotionCompiler {
   const prepared = prepareMotion(motion, ctx);
   const frameCount = prepared.frameCount;
   const memo = new Map<string, CompileResult>();
@@ -95,7 +107,7 @@ export function createMotionCompiler(motion: MotionSpec, ctx: MotionContext = {}
           );
         }
         try {
-          result = compileConstruction(scene);
+          result = compileConstruction(scene, { pass: options.pass });
         } catch (e) {
           if (e instanceof AppError) {
             throw new AppError(e.code, `Frame ${i} (t=${Math.round(t * 1000) / 1000}s): ${e.message}`, e.hint);
@@ -109,6 +121,12 @@ export function createMotionCompiler(motion: MotionSpec, ctx: MotionContext = {}
       }
       totalBytes += result.stats.bytes;
       return { index: i, t, svg: result.svg, reused };
+    },
+    poseFrame(i: number, canvas = { w: 1920, h: 1080 }): PoseFrame {
+      if (!Number.isInteger(i) || i < 0 || i >= frameCount) {
+        throw new RangeError(`frame ${i} out of range [0, ${frameCount})`);
+      }
+      return extractPoses(evaluateMotionAt(prepared, frameTime(motion, i)), canvas);
     },
     summary() {
       const warnings = [

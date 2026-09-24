@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { motionSpecSchema, type MotionSpec } from "@/lib/validation/motionSchema";
-import { encodeAnimatedWebp, renderMotionClip } from "@/lib/services/motionRenderer";
+import { encodeAnimatedWebp, renderMotionClip, renderPassClip, type ControlPass } from "@/lib/services/motionRenderer";
 import { renderFrameArtwork } from "@/lib/services/artworkService";
 import { removeDirQuiet, removeQuiet, saveBuffer, toPosix } from "@/lib/services/storage";
 
@@ -69,8 +69,10 @@ export async function renderFrameMotion(project: ClipProject, frame: ClipFrame):
   }
   const motion = parseStoredMotion(frame.motionSpec);
   const dir = clipDirOf(project.id, frame.id);
-  // Số frame có thể giảm giữa hai lần render — xoá chuỗi cũ trước
+  // Số frame có thể giảm giữa hai lần render — xoá chuỗi cũ trước; pass
+  // cũ không còn khớp shot mới ⇒ xoá luôn (agent render lại khi cần)
   await removeDirQuiet(dir);
+  await removeDirQuiet(passesDirOf(project.id, frame.id));
 
   const result = await renderMotionClip({
     motion,
@@ -112,5 +114,46 @@ export async function clearFrameMotion(projectId: string, frameId: string): Prom
 
 export async function removeClipFiles(projectId: string, frameId: string): Promise<void> {
   await removeDirQuiet(clipDirOf(projectId, frameId));
+  await removeDirQuiet(passesDirOf(projectId, frameId));
   await removeQuiet(clipWebpOf(projectId, frameId));
+}
+
+// ---------- Control passes của frame (điều kiện AI video) ----------
+
+export function passesDirOf(projectId: string, frameId: string): string {
+  return toPosix(`${projectId}/passes/${frameId}`);
+}
+
+/**
+ * Render chuỗi control pass cho shot motion của frame vào storage:
+ * passes/{frameId}/{pass}/0001.png… (+ pose.json cho pose). Export ZIP
+ * gom các thư mục này; render lại motion sẽ xoá pass cũ (hết đồng bộ).
+ */
+export async function renderFramePasses(
+  project: ClipProject,
+  frame: ClipFrame,
+  passes: readonly ControlPass[],
+): Promise<Record<string, number>> {
+  if (!frame.motionSpec) {
+    throw new AppError("VALIDATION", "Frame has no motion spec.", "Control passes are rendered from a motion shot — PUT /api/frames/:id/motion first.");
+  }
+  const motion = parseStoredMotion(frame.motionSpec);
+  const base = passesDirOf(project.id, frame.id);
+  const counts: Record<string, number> = {};
+  for (const pass of new Set(passes)) {
+    const dir = `${base}/${pass}`;
+    await removeDirQuiet(dir);
+    const pr = await renderPassClip({
+      motion,
+      ctx: { shotType: frame.shotType },
+      pass,
+      aspectRatio: project.aspectRatio,
+      resolution: project.resolution,
+      keepFrames: false,
+      onFrame: (i, png) => saveBuffer(`${dir}/${pad4(i + 1)}.png`, png),
+    });
+    if (pr.openpose) await saveBuffer(`${base}/pose.json`, Buffer.from(JSON.stringify({ fps: motion.fps, frames: pr.openpose })));
+    counts[pass] = pr.times.length;
+  }
+  return counts;
 }

@@ -1,7 +1,12 @@
 import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { motionRequestSchema } from "@/lib/validation/motionSchema";
-import { encodeAnimatedWebp, encodeContactSheet, renderMotionClip } from "@/lib/services/motionRenderer";
+import {
+  encodeAnimatedWebp,
+  encodeContactSheet,
+  renderMotionClip,
+  renderPassClip,
+} from "@/lib/services/motionRenderer";
 
 /**
  * POST /api/motion — motion compiler STATELESS: scene construct + tracks +
@@ -23,6 +28,7 @@ export async function POST(req: Request): Promise<Response> {
       sheetFrames: 12,
       webp: false,
       includeSvg: false,
+      passes: [] as ("depth" | "segmentation" | "normal" | "pose")[],
     };
 
     const result = await renderMotionClip({
@@ -41,7 +47,24 @@ export async function POST(req: Request): Promise<Response> {
       preview.webp ? encodeAnimatedWebp(pngs, body.motion.fps) : Promise.resolve(null),
     ]);
 
+    const passes: Record<string, unknown> = {};
+    for (const pass of new Set(preview.passes)) {
+      const pr = await renderPassClip({
+        motion: body.motion,
+        ctx: { shotType: body.shotType },
+        pass,
+        aspectRatio: preview.aspectRatio,
+        resolution: preview.resolution,
+      });
+      const passSheet = await encodeContactSheet(pr.pngs, preview.sheetFrames, pr.times, body.motion.duration);
+      passes[pass] = {
+        contactSheetPng: `data:image/png;base64,${passSheet.toString("base64")}`,
+        ...(pr.openpose && { openpose: pr.openpose }),
+      };
+    }
+
     return Response.json({
+      ...(preview.passes.length > 0 && { passes }),
       stats: result.stats,
       warnings: result.warnings,
       posterPng: `data:image/png;base64,${result.posterPng.toString("base64")}`,
