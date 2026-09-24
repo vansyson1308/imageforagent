@@ -168,7 +168,7 @@ describe("picture — lệnh ffmpeg container DCI", () => {
     const graph = args[args.indexOf("-filter_complex") + 1];
     expect(graph).toContain("force_original_aspect_ratio=decrease");
     expect(graph).toContain("pad=1998:1080:(ow-iw)/2:(oh-ih)/2:color=black");
-    expect(graph).toContain("[v0][v1]concat=n=2:v=1:a=0[x1]");
+    expect(graph).toContain("[v0][v1]concat=n=2:v=1:a=0,settb=1/24[x1]");
     expect(graph).toContain("[x1][v2]xfade=transition=fade:duration=0.5:offset=4.5[x2]");
     expect(args.slice(-4)).toEqual(["rawvideo", "-pix_fmt", "rgb24", "pipe:1"]);
     expect(args).toContain("-framerate");

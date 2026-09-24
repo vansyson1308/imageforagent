@@ -44,7 +44,8 @@ export function buildPictureArgs(shots: readonly DcpShot[], size: { w: number; h
     parts.push(
       t && t.kind in XFADE_NAME
         ? `[${chain}][v${i}]xfade=transition=${XFADE_NAME[t.kind as Exclude<TransitionKind, "cut">]}:duration=${t.duration}:offset=${s.startSec}[x${i}]`
-        : `[${chain}][v${i}]concat=n=2:v=1:a=0[x${i}]`,
+        : // concat outputs AV_TIME_BASE — back to 1/fps so a following xfade matches
+          `[${chain}][v${i}]concat=n=2:v=1:a=0,settb=1/${fps}[x${i}]`,
     );
     chain = `x${i}`;
   });
