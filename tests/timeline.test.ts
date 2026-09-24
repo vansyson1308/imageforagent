@@ -46,7 +46,8 @@ describe("timeline", () => {
       ],
       1.5,
     );
-    expect(t[0].durationSec).toBeCloseTo(0.2 + 2.5 + 0.35, 6);
+    // 0.2 + 2.5 + 0.35 = 3.05 s → ceil lên frame phim: 74/24 = 3.083 s
+    expect(t[0].durationSec).toBeCloseTo(74 / 24, 5);
     expect(t[0].voiceStart).toBeCloseTo(0.2, 6);
     expect(t[1].durationSec).toBe(2);
     expect(t[1].voiceStart).toBeCloseTo(t[1].startSec + 0.5, 6);

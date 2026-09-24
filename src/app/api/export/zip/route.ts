@@ -10,7 +10,8 @@ import { readBuffer, resolveStoragePath } from "@/lib/services/storage";
 import { decodeWav, encodeWav, type AudioBuffer } from "@/lib/services/audio/wav";
 import { mixTimeline, type MixClip } from "@/lib/services/audio/mix";
 import { buildTimedSrt } from "@/lib/services/srtBuilder";
-import { buildAssembleScript, buildTimeline, timelineDuration } from "@/lib/services/timeline";
+import { buildAssembleScript, buildTimeline, timelineDuration, timelineInputOf } from "@/lib/services/timeline";
+import { buildEdl, buildOtio } from "@/lib/services/editorial";
 import { parseStoredMotion, passesDirOf } from "@/lib/services/clipService";
 import { exportMotionGltf } from "@/lib/services/motion/gltfMotion";
 import { LOGICAL_CANVAS } from "@/lib/services/svgRenderer";
@@ -156,15 +157,7 @@ export async function GET(req: Request): Promise<Response> {
       }
     }
     const timeline = buildTimeline(
-      exported.map((f) => ({
-        index: f.index,
-        description: f.description,
-        clip:
-          clipIndexes.has(f.index) && f.clipFps && f.clipFrameCount
-            ? { fps: f.clipFps, frameCount: f.clipFrameCount, duration: f.clipDuration ?? f.clipFrameCount / f.clipFps }
-            : null,
-        voice: voices.has(f.index) ? { offset: f.voiceOffset, duration: f.voiceDuration ?? 0 } : null,
-      })),
+      exported.map((f) => timelineInputOf(f, { clip: clipIndexes.has(f.index), voice: voices.has(f.index) })),
       project.playbackSpeed,
     );
     const timelineByIndex = new Map(timeline.map((e) => [e.index, e]));
@@ -219,6 +212,8 @@ export async function GET(req: Request): Promise<Response> {
           generatedAt: f.generatedAt,
           startSec: t?.startSec ?? null,
           durationSec: t?.durationSec ?? null,
+          scene: f.scene,
+          transitionIn: t?.transitionIn ?? null,
           dialogue: f.dialogue,
           voice: voices.has(f.index) ? { file: `audio/${badge}.wav`, startSec: t?.voiceStart ?? null, durationSec: t?.voiceDuration ?? null } : null,
           motion: clipIndexes.has(f.index)
@@ -263,6 +258,13 @@ export async function GET(req: Request): Promise<Response> {
       ),
       { name: "assemble.sh" },
     );
+    // Giao nhận cho phần mềm dựng: EDL CMX3600 + OpenTimelineIO (media = segment _shots/)
+    const editorialShots = timeline.map((entry) => {
+      const badge = formatFrameBadge(entry.index);
+      return { badge, entry, media: `_shots/${badge}.mp4`, ...(voices.has(entry.index) && { voiceMedia: `audio/${badge}.wav` }) };
+    });
+    archive.append(buildEdl(project.name, editorialShots), { name: "edit/film.edl" });
+    archive.append(JSON.stringify(buildOtio(project.name, editorialShots), null, 2), { name: "edit/film.otio" });
 
     void archive.finalize();
 

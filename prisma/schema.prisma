@@ -50,6 +50,10 @@ model Frame {
   voicePath      String? // {projectId}/audio/{frameId}.wav
   voiceDuration  Float?
   voiceOffset    Float    @default(0) // giây từ đầu shot tới lúc bắt đầu nói
+  // Sequence (dựng phim): cảnh + chuyển cảnh VÀO frame này
+  scene              String? // nhãn cảnh ("SC01 — Buổi sáng") — gom shot, lint liên tục
+  transition         String  @default("cut") // cut|dissolve|fadeBlack|fadeWhite|wipeLeft|wipeRight|slideLeft|slideRight
+  transitionDuration Float   @default(0.5)
 
   @@unique([projectId, index])
 }
