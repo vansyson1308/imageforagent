@@ -30,7 +30,7 @@ function err(message: string, hint: string): never {
 }
 
 /** Levenshtein cho gợi ý "Did you mean". */
-function levenshtein(a: string, b: string): number {
+export function levenshtein(a: string, b: string): number {
   const dp = Array.from({ length: a.length + 1 }, (_, i) => i);
   for (let j = 1; j <= b.length; j++) {
     let prev = dp[0];

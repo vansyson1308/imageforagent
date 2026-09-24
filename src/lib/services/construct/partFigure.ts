@@ -65,6 +65,47 @@ function poseRotation(deg: Vec3): Mat4 {
   return m;
 }
 
+/**
+ * Tỷ lệ head-unit nội suy chibiness c = (8 − headCount)/6, RESCALE thân để
+ * tổng đúng height. Export cho motion rigs (walk cần chiều dài chân để
+ * chu kỳ bước khớp tốc độ — bàn chân không trượt).
+ */
+export function figureProportions(height: number, headCount: number) {
+  const head = height / headCount;
+  const c = Math.min(1, Math.max(0, (8 - headCount) / 6));
+  const neckLen = head * lerp(0.3, 0.08, c);
+  // Thô theo head-unit, rồi RESCALE để tổng đúng height
+  const torsoRaw = head * lerp(2.6, 1.4, c);
+  const thighRaw = head * lerp(2.0, 1.0, c);
+  const shinRaw = head * lerp(1.8, 1.0, c);
+  const footHRaw = head * 0.22;
+  const bodyBudget = height - head - neckLen;
+  const s = bodyBudget / (torsoRaw + thighRaw + shinRaw + footHRaw);
+  const torso = torsoRaw * s;
+  const thigh = thighRaw * s;
+  const shin = shinRaw * s;
+  const footH = footHRaw * s;
+  return {
+    head,
+    neckLen,
+    torso,
+    thigh,
+    shin,
+    footH,
+    /** Chiều cao khớp hông so với đất ở tư thế đứng thẳng. */
+    hipsY: footH + shin + thigh,
+    upperArm: head * lerp(1.5, 0.9, c) * s,
+    forearm: head * lerp(1.5, 0.9, c) * s,
+    shoulderW: head * lerp(2.0, 1.3, c),
+    hipW: head * lerp(1.5, 1.1, c),
+    limbR: head * lerp(0.18, 0.3, c),
+    legR: head * lerp(0.18, 0.3, c) * 1.15,
+    torsoR: head * lerp(1.5, 1.1, c) * 0.52,
+    handR: head * lerp(0.18, 0.3, c) * 1.25,
+    headR: head * 0.5,
+  };
+}
+
 export function buildFigure(part: FigurePart): PartBuild {
   // ---------- Pose: validate tên khớp + chuẩn hoá scalar → [0,0,z] ----------
   const pose = new Map<JointName, Vec3>();
@@ -84,30 +125,10 @@ export function buildFigure(part: FigurePart): PartBuild {
   };
 
   // ---------- Tỷ lệ head-unit + chibiness ----------
-  const head = part.height / part.headCount;
-  const c = Math.min(1, Math.max(0, (8 - part.headCount) / 6));
-  const neckLen = head * lerp(0.3, 0.08, c);
-  // Thô theo head-unit, rồi RESCALE để tổng đúng height
-  const torsoRaw = head * lerp(2.6, 1.4, c);
-  const thighRaw = head * lerp(2.0, 1.0, c);
-  const shinRaw = head * lerp(1.8, 1.0, c);
-  const footHRaw = head * 0.22;
-  const bodyBudget = part.height - head - neckLen;
-  const s = bodyBudget / (torsoRaw + thighRaw + shinRaw + footHRaw);
-  const torso = torsoRaw * s;
-  const thigh = thighRaw * s;
-  const shin = shinRaw * s;
-  const footH = footHRaw * s;
-
-  const upperArm = head * lerp(1.5, 0.9, c) * s;
-  const forearm = head * lerp(1.5, 0.9, c) * s;
-  const shoulderW = head * lerp(2.0, 1.3, c);
-  const hipW = head * lerp(1.5, 1.1, c);
-  const limbR = head * lerp(0.18, 0.3, c);
-  const legR = limbR * 1.15;
-  const torsoR = hipW * 0.52;
-  const handR = limbR * 1.25;
-  const headR = head * 0.5;
+  const {
+    head, neckLen, torso, thigh, shin, footH, upperArm, forearm,
+    shoulderW, hipW, limbR, legR, torsoR, handR, headR,
+  } = figureProportions(part.height, part.headCount);
 
   const fills = {
     skin: part.fills?.skin ?? "#e8b88a",
