@@ -5,13 +5,14 @@ import { sampleKeys } from "@/lib/services/motion/interpolate";
 import { materializeOrbit, readTarget, valueKindOf, writeTarget, type PathValue } from "@/lib/services/motion/targetPath";
 import { applyRoll, applyShot, applyWalk, applyWiggle, shotMoveFromShotType } from "@/lib/services/motion/rigs";
 import { applyIk } from "@/lib/services/motion/ik";
+import { sampleLip, type LipCurves } from "@/lib/services/audio/lipsync";
 
 /**
  * evaluate — motion spec + thời điểm t → construct spec TĨNH của frame đó.
  * Pure + deterministic. Thứ tự đánh giá cố định (hợp đồng docs):
  *   1. generators  walk · shot         (dựng chuyển động nền)
  *   2. tracks      set | add            (key tay của agent THẮNG/CỘNG lên)
- *   3. dependents  roll · follow · ik   (suy từ trạng thái sau tracks)
+ *   3. dependents  roll · follow · ik · lipsync (suy từ trạng thái sau tracks)
  *   4. noise       wiggle               (lớp nhiễu phụ, cộng sau cùng)
  * rồi re-validate bằng constructSpecSchema — track đẩy giá trị ra ngoài
  * miền hợp lệ (overshoot outBack làm bán kính âm…) báo lỗi kèm thời điểm.
@@ -24,6 +25,8 @@ function err(message: string, hint: string): never {
 export interface MotionContext {
   /** Shot Type của frame storyboard — cho shot move "auto". */
   readonly shotType?: string;
+  /** Đường cong khẩu hình của giọng frame (audio/lipsync.ts) — cho rig lipsync. */
+  readonly lip?: LipCurves;
 }
 
 export interface PreparedMotion {
@@ -33,6 +36,7 @@ export interface PreparedMotion {
   readonly shotMoves: ReadonlyMap<number, Exclude<ShotMove, "auto">>;
   readonly warnings: readonly string[];
   readonly animatesCameraOrbit: boolean;
+  readonly lip?: LipCurves;
 }
 
 /** Camera/place luôn "on ones" — pan/dolly lấy mẫu mỗi frame. */
@@ -91,12 +95,27 @@ export function prepareMotion(motion: MotionSpec, ctx: MotionContext = {}): Prep
     }
   }
 
+  for (const rig of motion.rigs) {
+    if (rig.type !== "lipsync") continue;
+    const part = motion.scene.parts.find((p) => p.id === rig.part);
+    if (!part || part.type !== "figure") {
+      err(`Lipsync rig: "${rig.part}" is not a figure part.`, 'Lipsync drives the mouth of a part of type "figure".');
+    }
+    if (!part.face) {
+      err(`Lipsync rig: figure "${rig.part}" has no face.`, 'Add "face": {} to the figure so it has a mouth to animate.');
+    }
+    if (!ctx.lip) {
+      warnings.push(`Lipsync rig on "${rig.part}" has no voice yet — the mouth stays closed. Add dialogue (PUT /api/frames/:id/dialogue) or send "voice" with the preview.`);
+    }
+  }
+
   const prepared: PreparedMotion = {
     motion,
     frameCount: frameCountOf(motion),
     shotMoves,
     warnings,
     animatesCameraOrbit,
+    lip: ctx.lip,
   };
   // Validate sớm mọi đường dẫn + kiểu (lỗi path báo ngay, không đợi frame giữa)
   evaluateMotionAt(prepared, 0);
@@ -178,6 +197,16 @@ export function evaluateMotionAt(prep: PreparedMotion, t: number): ConstructSpec
   // IK sau roll/follow: target có thể là solid do chúng dịch chuyển
   for (const rig of motion.rigs) {
     if (rig.type === "ik") applyIk(spec, rig, tq, motion.duration);
+  }
+  // Lip-sync: miệng theo giọng — lấy mẫu t (on ones: khẩu hình cần từng frame)
+  if (prep.lip) {
+    for (const rig of motion.rigs) {
+      if (rig.type !== "lipsync") continue;
+      const part = spec.parts.find((p) => p.id === rig.part);
+      if (!part || part.type !== "figure" || !part.face) continue;
+      const { open, wide } = sampleLip(prep.lip, t);
+      part.face = { ...part.face, mouthOpen: Math.min(1, open * rig.gain), mouthWide: wide };
+    }
   }
   for (const rig of motion.rigs) {
     if (rig.type === "wiggle") applyWiggle(spec, rig, isCameraPath(rig.target) ? t : tq, motion.duration);

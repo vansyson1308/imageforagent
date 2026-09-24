@@ -45,6 +45,7 @@ export async function DELETE(_req: Request, ctx: RouteContext): Promise<Response
     if (existing.imagePath) await removeQuiet(existing.imagePath);
     if (existing.rawImagePath) await removeQuiet(existing.rawImagePath);
     if (existing.clipDir || existing.clipPath) await removeClipFiles(existing.projectId, id);
+    if (existing.voicePath) await removeQuiet(existing.voicePath);
 
     return Response.json({ ok: true });
   });

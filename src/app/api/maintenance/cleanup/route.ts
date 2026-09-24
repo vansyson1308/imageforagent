@@ -17,9 +17,9 @@ export async function POST(): Promise<Response> {
     const [assets, frames, projects] = await Promise.all([
       prisma.asset.findMany({ select: { filePath: true } }),
       prisma.frame.findMany({
-        select: { id: true, projectId: true, imagePath: true, rawImagePath: true, clipDir: true, clipPath: true },
+        select: { id: true, projectId: true, imagePath: true, rawImagePath: true, clipDir: true, clipPath: true, voicePath: true },
       }),
-      prisma.project.findMany({ select: { id: true } }),
+      prisma.project.findMany({ select: { id: true, musicPath: true } }),
     ]);
 
     const referenced = new Set<string>();
@@ -30,11 +30,13 @@ export async function POST(): Promise<Response> {
       if (f.imagePath) referenced.add(f.imagePath);
       if (f.rawImagePath) referenced.add(f.rawImagePath);
       if (f.clipPath) referenced.add(f.clipPath);
+      if (f.voicePath) referenced.add(f.voicePath);
       if (f.clipDir) referencedDirs.push(`${f.clipDir}/`);
       // Control passes của frame còn tồn tại
       referencedDirs.push(`${f.projectId}/passes/${f.id}/`);
     }
     const projectIds = new Set(projects.map((p) => p.id));
+    for (const p of projects) if (p.musicPath) referenced.add(p.musicPath);
 
     const root = storageRoot();
     let removedFiles = 0;

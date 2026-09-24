@@ -65,6 +65,17 @@ export function PreviewPlayer() {
     return () => clearTimeout(timer);
   }, [playing, currentDuration, next, playlist.length, clampedCursor]);
 
+  // Thoại: phát giọng của frame hiện tại (đúng offset) khi đang Play
+  useEffect(() => {
+    if (!playing || !current?.voiceUrl) return;
+    const audio = new Audio(current.voiceUrl);
+    const timer = setTimeout(() => void audio.play().catch(() => {}), (current.voiceOffset ?? 0) * 1000);
+    return () => {
+      clearTimeout(timer);
+      audio.pause();
+    };
+  }, [playing, current?.voiceUrl, current?.voiceOffset, clampedCursor]);
+
   // Preload ảnh kế tiếp
   useEffect(() => {
     const upcoming = playlist[clampedCursor + 1] ?? playlist[0];
@@ -157,7 +168,7 @@ export function PreviewPlayer() {
 
             {current && (
               <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-4 pb-3 pt-8 text-center text-sm text-white">
-                {current.description}
+                {current.dialogue ? <span className="font-semibold">“{current.dialogue}”</span> : current.description}
               </p>
             )}
           </div>

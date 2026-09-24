@@ -5,6 +5,7 @@ interface FrameLike {
   readonly imagePath: string | null;
   readonly generatedAt: Date | null;
   readonly clipPath?: string | null;
+  readonly voicePath?: string | null;
 }
 
 export function frameImageUrl(frame: FrameLike): string | null {
@@ -22,8 +23,13 @@ export function frameClipUrl(frame: FrameLike): string | null {
 
 export function withImageUrl<T extends FrameLike>(
   frame: T,
-): T & { imageUrl: string | null; clipUrl: string | null } {
-  return { ...frame, imageUrl: frameImageUrl(frame), clipUrl: frameClipUrl(frame) };
+): T & { imageUrl: string | null; clipUrl: string | null; voiceUrl: string | null } {
+  return {
+    ...frame,
+    imageUrl: frameImageUrl(frame),
+    clipUrl: frameClipUrl(frame),
+    voiceUrl: frame.voicePath ? `/api/files/${frame.voicePath}` : null,
+  };
 }
 
 interface AssetLike {

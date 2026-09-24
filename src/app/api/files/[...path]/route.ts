@@ -11,6 +11,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
+  ".wav": "audio/wav",
 };
 
 interface RouteContext {
@@ -44,6 +45,7 @@ export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
       "Content-Type": contentType,
       "Cache-Control": "no-store",
       "Accept-Ranges": "bytes",
+      "X-Content-Type-Options": "nosniff",
     };
 
     // Range đơn: "bytes=start-end"

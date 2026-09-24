@@ -176,6 +176,17 @@ export const rigSchema = z.discriminatedUnion("type", [
   z
     .object({
       /**
+       * Lip-sync: miệng figure theo GIỌNG của frame (envelope âm thanh) —
+       * hoặc theo văn bản thoại khi chưa có tiếng. Cần part có face.
+       */
+      type: z.literal("lipsync"),
+      part: constructId,
+      gain: z.number().min(0).max(3).default(1),
+    })
+    .strict(),
+  z
+    .object({
+      /**
        * IK 2 xương GIẢI TÍCH: đặt cổ tay (arm) / đế chân (leg) tới target —
        * điểm cố định, hoặc BÁM một solid đang chuyển động ("cart" hay
        * "wl:hub") + offset. Góc vai/khuỷu (hông/gối) được giải, cổ chân tự
@@ -289,5 +300,14 @@ export const motionRequestSchema = z.object({
   motion: motionSpecSchema,
   /** shotType của storyboard — cho rig shot move:"auto". */
   shotType: z.string().max(200).optional(),
+  /** Giọng cho rig lipsync: WAV base64 và/hoặc văn bản (fallback nhịp âm tiết / TTS). */
+  voice: z
+    .object({
+      wav: z.string().max(40_000_000).optional(),
+      text: z.string().max(2000).optional(),
+      tts: z.object({ voice: z.string().regex(/^[a-z]{2,3}([-+][\w-]{1,32})?$/).default("vi"), speed: z.number().int().min(80).max(400).default(160) }).optional(),
+      offset: z.number().min(0).max(MOTION_LIMITS.maxDuration).default(0),
+    })
+    .optional(),
   preview: motionPreviewSchema.optional(),
 });

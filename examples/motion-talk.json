@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "fps": 12,
+  "duration": 3,
+  "background": "#2b3552",
+  "scene": {
+    "version": 1,
+    "solids": [
+      { "id": "floor", "type": "box", "size": [1400, 10, 900], "at": [0, -5, 0], "fill": "#5d7a52", "shadow": false }
+    ],
+    "parts": [
+      { "id": "pip", "type": "figure", "height": 320, "headCount": 3, "face": {}, "fills": { "shirt": "#e67e22" } }
+    ],
+    "camera": { "orbit": { "azimuth": 15, "elevation": 6 }, "zoom": 3.2 },
+    "place": { "at": [960, 1260] },
+    "atmosphere": { "vignette": { "strength": 0.35 } }
+  },
+  "rigs": [
+    { "type": "lipsync", "part": "pip" },
+    { "type": "wiggle", "target": "parts.pip.pose.spine", "amplitude": [2, 4, 1.5], "frequency": 0.6, "seed": 3 },
+    { "type": "wiggle", "target": "parts.pip.pose.neck", "amplitude": [3, 6, 2], "frequency": 0.9, "seed": 8 },
+    { "type": "shot", "move": "dollyIn", "amount": 0.12 }
+  ],
+  "tracks": [
+    { "target": "parts.pip.face.blink", "keys": [{ "t": 1.9, "v": 0 }, { "t": 2.0, "v": 1, "ease": "linear" }, { "t": 2.1, "v": 0, "ease": "linear" }] },
+    { "target": "parts.pip.pose.elbowR", "keys": [{ "t": 0, "v": [0, 0, 0] }, { "t": 0.8, "v": [-70, 0, 20] }, { "t": 2.4, "v": [-70, 0, 20] }, { "t": 3, "v": [0, 0, 0] }] }
+  ],
+  "poster": 1
+}

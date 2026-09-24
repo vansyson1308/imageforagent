@@ -1,6 +1,8 @@
 import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { motionRequestSchema } from "@/lib/validation/motionSchema";
+import { resolveVoice } from "@/lib/services/voiceService";
+import { audioLipCurves, textLipCurves, type LipCurves } from "@/lib/services/audio/lipsync";
 import {
   encodeAnimatedWebp,
   encodeContactSheet,
@@ -31,9 +33,19 @@ export async function POST(req: Request): Promise<Response> {
       passes: [] as ("depth" | "segmentation" | "normal" | "pose")[],
     };
 
+    // Giọng cho rig lipsync: WAV/TTS → envelope; chỉ text → nhịp âm tiết
+    let lip: LipCurves | undefined;
+    if (body.voice) {
+      const v = await resolveVoice(body.voice);
+      if (v) lip = audioLipCurves(v.audio, body.motion.fps, body.voice.offset);
+      else if (body.voice.text) {
+        lip = textLipCurves(body.voice.text, Math.max(0.5, body.motion.duration - body.voice.offset), body.motion.fps, body.voice.offset);
+      }
+    }
+    const ctx = { shotType: body.shotType, lip };
     const result = await renderMotionClip({
       motion: body.motion,
-      ctx: { shotType: body.shotType },
+      ctx,
       defs: null,
       aspectRatio: preview.aspectRatio,
       resolution: preview.resolution,
@@ -51,7 +63,7 @@ export async function POST(req: Request): Promise<Response> {
     for (const pass of new Set(preview.passes)) {
       const pr = await renderPassClip({
         motion: body.motion,
-        ctx: { shotType: body.shotType },
+        ctx,
         pass,
         aspectRatio: preview.aspectRatio,
         resolution: preview.resolution,

@@ -15,6 +15,7 @@ model Project {
   resolution    String   @default("1K") // "1K" | "2K"
   playbackSpeed Float    @default(1.5) // giây/frame cho preview
   sheetUrl      String?
+  musicPath     String? // nhạc nền {projectId}/audio/music.wav — duck dưới thoại
   wmPosition    String   @default("bottom-right") // 4 góc + "center"
   wmScale       Float    @default(12) // % chiều rộng ảnh
   wmOpacity     Float    @default(0.85)
@@ -44,6 +45,11 @@ model Frame {
   clipFps        Int?
   clipFrameCount Int?
   clipDuration   Float? // giây — thời lượng shot trên timeline
+  // Thoại (audio v1): văn bản + giọng (TTS local hoặc WAV agent gửi)
+  dialogue       String? // câu thoại — phụ đề + lip-sync fallback
+  voicePath      String? // {projectId}/audio/{frameId}.wav
+  voiceDuration  Float?
+  voiceOffset    Float    @default(0) // giây từ đầu shot tới lúc bắt đầu nói
 
   @@unique([projectId, index])
 }

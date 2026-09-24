@@ -14,6 +14,8 @@ export interface TimelineInput {
     readonly frameCount: number;
     readonly duration: number;
   } | null;
+  /** Giọng thoại: bắt đầu `offset` giây sau đầu shot, dài `duration`. */
+  readonly voice?: { readonly offset: number; readonly duration: number } | null;
 }
 
 export interface TimelineEntry {
@@ -23,7 +25,13 @@ export interface TimelineEntry {
   readonly durationSec: number;
   readonly fps?: number;
   readonly frameCount?: number;
+  /** Thời điểm tuyệt đối giọng bắt đầu / thời lượng (nếu có thoại). */
+  readonly voiceStart?: number;
+  readonly voiceDuration?: number;
 }
+
+/** Khoảng thở sau câu thoại trên frame TĨNH (giây). */
+export const DIALOGUE_TAIL = 0.35;
 
 const round3 = (x: number) => Math.round(x * 1000) / 1000;
 
@@ -42,9 +50,18 @@ export function buildTimeline(frames: readonly TimelineInput[], secondsPerStill:
           fps: f.clip.fps,
           frameCount: f.clip.frameCount,
         }
-      : { index: f.index, kind: "still", startSec: round3(cursor), durationSec: round3(still) };
+      : {
+          index: f.index,
+          kind: "still",
+          startSec: round3(cursor),
+          // Frame tĩnh có thoại giữ tới hết câu (+ khoảng thở) — clip giữ nguyên độ dài
+          durationSec: round3(Math.max(still, f.voice ? f.voice.offset + f.voice.duration + DIALOGUE_TAIL : 0)),
+        };
+    const withVoice: TimelineEntry = f.voice
+      ? { ...entry, voiceStart: round3(cursor + f.voice.offset), voiceDuration: round3(Math.min(f.voice.duration, entry.durationSec - f.voice.offset)) }
+      : entry;
     cursor += entry.durationSec;
-    return entry;
+    return withVoice;
   });
 }
 
@@ -65,7 +82,7 @@ export interface AssembleShot {
  * segment chuẩn hoá (cùng fps, kích thước chẵn, yuv420p) → concat demuxer.
  * Shot clip giữ nhịp gốc (12fps on twos… được nhân frame lên fps phim).
  */
-export function buildAssembleScript(shots: readonly AssembleShot[], filmFps = 24): string {
+export function buildAssembleScript(shots: readonly AssembleShot[], filmFps = 24, audio?: { readonly mix: string }): string {
   const lines = [
     "#!/usr/bin/env sh",
     "# Dựng film.mp4 từ gói export Storyboard Studio — cần ffmpeg (https://ffmpeg.org).",
@@ -91,9 +108,17 @@ export function buildAssembleScript(shots: readonly AssembleShot[], filmFps = 24
     }
     lines.push(`echo "file '${badge}.mp4'" >> _shots/list.txt`);
   }
+  if (audio) {
+    // Mix 48 kHz đã khớp timeline (engine tính sẵn) → mux AAC vào phim
+    lines.push(
+      "ffmpeg -loglevel error -y -f concat -safe 0 -i _shots/list.txt -c copy _shots/picture.mp4",
+      `ffmpeg -loglevel error -y -i _shots/picture.mp4 -i ${audio.mix} -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest film.mp4`,
+    );
+  } else {
+    lines.push("ffmpeg -loglevel error -y -f concat -safe 0 -i _shots/list.txt -c copy film.mp4");
+  }
   lines.push(
-    "ffmpeg -loglevel error -y -f concat -safe 0 -i _shots/list.txt -c copy film.mp4",
-    'echo "film.mp4 ready ($(ls _shots/*.mp4 | wc -l) shots)"',
+    'echo "film.mp4 ready ($(wc -l < _shots/list.txt) shots)"',
     "",
   );
   return lines.join("\n");

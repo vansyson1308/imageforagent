@@ -53,6 +53,10 @@ export async function POST(req: Request): Promise<Response> {
               clipFps: old.clipFps,
               clipFrameCount: old.clipFrameCount,
               clipDuration: old.clipDuration,
+              dialogue: old.dialogue,
+              voicePath: old.voicePath,
+              voiceDuration: old.voiceDuration,
+              voiceOffset: old.voiceOffset,
             }),
           },
         });

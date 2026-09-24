@@ -6,7 +6,9 @@ import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { handleRoute } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
-import { resolveStoragePath } from "@/lib/services/storage";
+import { readBuffer, resolveStoragePath } from "@/lib/services/storage";
+import { decodeWav, encodeWav, type AudioBuffer } from "@/lib/services/audio/wav";
+import { mixTimeline, type MixClip } from "@/lib/services/audio/mix";
 import { buildTimedSrt } from "@/lib/services/srtBuilder";
 import { buildAssembleScript, buildTimeline, timelineDuration } from "@/lib/services/timeline";
 import { parseStoredMotion, passesDirOf } from "@/lib/services/clipService";
@@ -140,6 +142,19 @@ export async function GET(req: Request): Promise<Response> {
     }
 
     const exported = doneFrames.filter((f) => includedIndexes.has(f.index));
+
+    // Giọng thoại còn trên disk → audio/FNN.wav (+ vào mix)
+    const voices = new Map<number, AudioBuffer>();
+    for (const f of exported) {
+      if (!f.voicePath) continue;
+      try {
+        const buf = await readBuffer(f.voicePath);
+        voices.set(f.index, decodeWav(buf));
+        archive.append(buf, { name: `audio/${formatFrameBadge(f.index)}.wav` });
+      } catch {
+        logger.warn({ frameIndex: f.index }, "zip: voice file missing/invalid — skipped");
+      }
+    }
     const timeline = buildTimeline(
       exported.map((f) => ({
         index: f.index,
@@ -148,10 +163,36 @@ export async function GET(req: Request): Promise<Response> {
           clipIndexes.has(f.index) && f.clipFps && f.clipFrameCount
             ? { fps: f.clipFps, frameCount: f.clipFrameCount, duration: f.clipDuration ?? f.clipFrameCount / f.clipFps }
             : null,
+        voice: voices.has(f.index) ? { offset: f.voiceOffset, duration: f.voiceDuration ?? 0 } : null,
       })),
       project.playbackSpeed,
     );
     const timelineByIndex = new Map(timeline.map((e) => [e.index, e]));
+
+    // Mix 48 kHz / 24-bit stereo khớp timeline: thoại + nhạc duck (≤ 15 phút)
+    let music: AudioBuffer | null = null;
+    if (project.musicPath) {
+      try {
+        music = decodeWav(await readBuffer(project.musicPath));
+        archive.append(await readBuffer(project.musicPath), { name: "audio/music.wav" });
+      } catch {
+        logger.warn({ projectId }, "zip: soundtrack missing/invalid — skipped");
+      }
+    }
+    const filmSeconds = timelineDuration(timeline);
+    let hasMix = false;
+    if ((voices.size > 0 || music) && filmSeconds <= 15 * 60) {
+      const clips: MixClip[] = [];
+      for (const e of timeline) {
+        const v = voices.get(e.index);
+        if (v && e.voiceStart !== undefined) clips.push({ audio: v, start: e.voiceStart, role: "dialogue", end: e.startSec + e.durationSec });
+      }
+      if (music) clips.push({ audio: music, start: 0, role: "music", end: filmSeconds, fadeOut: 2 });
+      const loudness = new URL(req.url).searchParams.get("loudness") === "cinema" ? -27 : -16;
+      const mix = mixTimeline(clips, { duration: filmSeconds, targetLufs: loudness, peakDb: -1 });
+      archive.append(encodeWav(mix.audio, 24), { name: "audio/mix.wav" });
+      hasMix = true;
+    }
 
     const storyboardJson = {
       project: {
@@ -162,6 +203,7 @@ export async function GET(req: Request): Promise<Response> {
         resolution: project.resolution,
         playbackSpeed: project.playbackSpeed,
         durationSec: timelineDuration(timeline),
+        audio: hasMix ? { mix: "audio/mix.wav", sampleRate: 48000, bitDepth: 24, channels: 2 } : null,
         exportedAt: new Date().toISOString(),
       },
       frames: project.frames.map((f) => {
@@ -177,6 +219,8 @@ export async function GET(req: Request): Promise<Response> {
           generatedAt: f.generatedAt,
           startSec: t?.startSec ?? null,
           durationSec: t?.durationSec ?? null,
+          dialogue: f.dialogue,
+          voice: voices.has(f.index) ? { file: `audio/${badge}.wav`, startSec: t?.voiceStart ?? null, durationSec: t?.voiceDuration ?? null } : null,
           motion: clipIndexes.has(f.index)
             ? {
                 fps: f.clipFps,
@@ -204,8 +248,19 @@ export async function GET(req: Request): Promise<Response> {
       ),
       { name: "captions.srt" },
     );
+    // Phụ đề THOẠI: đúng lúc nhân vật nói (không có giọng → cả frame)
+    const dialogueCues = timeline.flatMap((e) => {
+      const f = exported.find((x) => x.index === e.index)!;
+      if (!f.dialogue) return [];
+      return [{ description: f.dialogue, startSec: e.voiceStart ?? e.startSec, durationSec: e.voiceDuration ?? e.durationSec }];
+    });
+    if (dialogueCues.length > 0) archive.append(buildTimedSrt(dialogueCues), { name: "subtitles.srt" });
     archive.append(
-      buildAssembleScript(timeline.map((entry) => ({ badge: formatFrameBadge(entry.index), entry }))),
+      buildAssembleScript(
+        timeline.map((entry) => ({ badge: formatFrameBadge(entry.index), entry })),
+        24,
+        hasMix ? { mix: "audio/mix.wav" } : undefined,
+      ),
       { name: "assemble.sh" },
     );
 

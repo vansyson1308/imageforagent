@@ -50,6 +50,14 @@ export function FrameCard({ frame, aspectRatio }: FrameCardProps) {
             🎬 {frame.clipDuration.toFixed(1)}s
           </span>
         ) : null}
+        {frame.dialogue ? (
+          <span
+            className="absolute bottom-2 left-2 max-w-[70%] truncate rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] text-white backdrop-blur"
+            title={frame.dialogue}
+          >
+            🗣 {frame.dialogue}
+          </span>
+        ) : null}
         <button
           onClick={() => setEditorOpen(!editorOpen)}
           className="absolute bottom-2 right-2 rounded-lg bg-black/70 px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 backdrop-blur transition hover:bg-black/90 group-hover:opacity-100"

@@ -37,4 +37,25 @@ describe("timeline", () => {
     expect(sh).toContain("scale=trunc(iw/2)*2:trunc(ih/2)*2");
     expect(sh.indexOf("F01.mp4")).toBeLessThan(sh.indexOf("F02.mp4"));
   });
+
+  it("thoại: frame tĩnh kéo dài tới hết câu + khoảng thở; clip giữ nguyên, giọng bị cắt ở cuối shot", () => {
+    const t = buildTimeline(
+      [
+        { index: 1, description: "A", voice: { offset: 0.2, duration: 2.5 } },
+        { index: 2, description: "B", clip: { fps: 12, frameCount: 24, duration: 2 }, voice: { offset: 0.5, duration: 3 } },
+      ],
+      1.5,
+    );
+    expect(t[0].durationSec).toBeCloseTo(0.2 + 2.5 + 0.35, 6);
+    expect(t[0].voiceStart).toBeCloseTo(0.2, 6);
+    expect(t[1].durationSec).toBe(2);
+    expect(t[1].voiceStart).toBeCloseTo(t[1].startSec + 0.5, 6);
+    expect(t[1].voiceDuration).toBeCloseTo(1.5, 6);
+  });
+
+  it("assemble.sh có mix → mux AAC vào film.mp4", () => {
+    const t = buildTimeline([{ index: 1, description: "A" }], 1.5);
+    const sh = buildAssembleScript(t.map((entry) => ({ badge: "F01", entry })), 24, { mix: "audio/mix.wav" });
+    expect(sh).toContain("-i audio/mix.wav -map 0:v -map 1:a -c:v copy -c:a aac");
+  });
 });

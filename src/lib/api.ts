@@ -28,6 +28,9 @@ export interface FrameDto {
   motionSpec?: string | null;
   clipDuration?: number | null;
   clipFrameCount?: number | null;
+  dialogue?: string | null;
+  voiceUrl?: string | null;
+  voiceOffset?: number;
   artworkSvg: string | null;
   errorMsg: string | null;
   generatedAt: string | null;

@@ -3,7 +3,9 @@ import { AppError } from "@/lib/services/apiError";
 import { motionSpecSchema, type MotionSpec } from "@/lib/validation/motionSchema";
 import { encodeAnimatedWebp, renderMotionClip, renderPassClip, type ControlPass } from "@/lib/services/motionRenderer";
 import { renderFrameArtwork } from "@/lib/services/artworkService";
-import { removeDirQuiet, removeQuiet, saveBuffer, toPosix } from "@/lib/services/storage";
+import { readBuffer, removeDirQuiet, removeQuiet, saveBuffer, toPosix } from "@/lib/services/storage";
+import { decodeWav } from "@/lib/services/audio/wav";
+import { audioLipCurves, textLipCurves, type LipCurves } from "@/lib/services/audio/lipsync";
 
 /**
  * clipService — render shot hoạt hình của một frame: chuỗi PNG full-res
@@ -27,6 +29,26 @@ interface ClipFrame {
   readonly id: string;
   readonly shotType: string;
   readonly motionSpec: string | null;
+  readonly dialogue?: string | null;
+  readonly voicePath?: string | null;
+  readonly voiceOffset?: number;
+}
+
+/**
+ * Đường cong khẩu hình của frame: từ giọng đã lưu (envelope), fallback văn
+ * bản thoại (nhịp âm tiết trong thời lượng còn lại của shot).
+ */
+export async function lipCurvesOf(frame: ClipFrame, fps: number, duration: number): Promise<LipCurves | undefined> {
+  const offset = frame.voiceOffset ?? 0;
+  if (frame.voicePath) {
+    try {
+      return audioLipCurves(decodeWav(await readBuffer(frame.voicePath)), fps, offset);
+    } catch {
+      // file mất / hỏng → fallback văn bản
+    }
+  }
+  if (frame.dialogue) return textLipCurves(frame.dialogue, Math.max(0.5, duration - offset), fps, offset);
+  return undefined;
 }
 
 export const pad4 = (n: number) => String(n).padStart(4, "0");
@@ -74,9 +96,10 @@ export async function renderFrameMotion(project: ClipProject, frame: ClipFrame):
   await removeDirQuiet(dir);
   await removeDirQuiet(passesDirOf(project.id, frame.id));
 
+  const lip = await lipCurvesOf(frame, motion.fps, motion.duration);
   const result = await renderMotionClip({
     motion,
-    ctx: { shotType: frame.shotType },
+    ctx: { shotType: frame.shotType, lip },
     defs: project.artworkDefs,
     aspectRatio: project.aspectRatio,
     resolution: project.resolution,
@@ -145,7 +168,7 @@ export async function renderFramePasses(
     await removeDirQuiet(dir);
     const pr = await renderPassClip({
       motion,
-      ctx: { shotType: frame.shotType },
+      ctx: { shotType: frame.shotType, lip: await lipCurvesOf(frame, motion.fps, motion.duration) },
       pass,
       aspectRatio: project.aspectRatio,
       resolution: project.resolution,
