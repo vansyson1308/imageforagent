@@ -5,7 +5,9 @@ import { expandParts } from "@/lib/services/construct/partsExpand";
 import { createShapeResolver } from "@/lib/services/construct/resolve2d";
 import { buildSolidMeshes, type ExportMesh } from "@/lib/services/construct/sceneMeshes";
 import { triangulateFace } from "@/lib/services/construct/triangulate";
-import { composePlacement4, cross3, faceNormal, normalize3 } from "@/lib/services/construct/math3d";
+import { composePlacement4, cross3, faceNormal, invertAffine4, mul4, normalize3, transformPoint } from "@/lib/services/construct/math3d";
+import { buildFigure } from "@/lib/services/construct/partFigure";
+import { groupMatricesOf, partPlacementMatrix } from "@/lib/services/construct/partsExpand";
 import { CAMERA_PRESETS, autoDistance } from "@/lib/services/construct/camera";
 import { meshRadius } from "@/lib/services/construct/geometry3d";
 import { CONSTRUCT_LIMITS } from "@/lib/config/limits";
@@ -37,6 +39,8 @@ export interface GltfOptions {
   readonly unlit?: boolean;
   /** Canvas logic (khung camera) — default 16:9 1920×1080. */
   readonly canvas?: { readonly w: number; readonly h: number };
+  /** Figure → Armature (skin + cây khớp, animation trên xương). Default true. */
+  readonly skin?: boolean;
 }
 
 export interface GltfStats {
@@ -331,6 +335,25 @@ class BinBuilder {
     return this.accessors.length - 1;
   }
 
+  /** MAT4 column-major (glTF) từ Mat4 row-major (engine). */
+  mat4Accessor(mats: readonly Mat4[]): number {
+    const buf = Buffer.alloc(mats.length * 64);
+    mats.forEach((m, k) => {
+      for (let col = 0; col < 4; col++) for (let row = 0; row < 4; row++) buf.writeFloatLE(m[row * 4 + col], k * 64 + (col * 4 + row) * 4);
+    });
+    const view = this.push(buf);
+    this.accessors.push({ bufferView: view, componentType: 5126, count: mats.length, type: "MAT4" });
+    return this.accessors.length - 1;
+  }
+
+  /** JOINTS_0: VEC4 UNSIGNED_BYTE (≤ 255 khớp mỗi skin). */
+  jointsAccessor(values: readonly number[]): number {
+    const buf = Buffer.from(values);
+    const view = this.push(buf, 34962);
+    this.accessors.push({ bufferView: view, componentType: 5121, count: values.length / 4, type: "VEC4" });
+    return this.accessors.length - 1;
+  }
+
   indexAccessor(indices: readonly number[], vertexCount: number): number {
     const wide = vertexCount > 65535;
     const buf = Buffer.alloc(indices.length * (wide ? 4 : 2));
@@ -476,7 +499,119 @@ export function exportGltf(spec: ConstructSpec, opts: GltfOptions = {}, anim?: G
   let anyDegraded = false;
   let anySheared = false;
   const meshNodeOf = new Map<string, number>();
+  const rootNodes: number[] = [];
+  const addChild = (parent: number, child: number) => {
+    const p = nodes[parent] as { children?: number[] };
+    (p.children ??= []).push(child);
+  };
+  const scaledTrs = (m: Mat4) => {
+    const trs = decomposeTrs(m);
+    if (trs.sheared) anySheared = true;
+    return { translation: [trs.t[0] * unit, trs.t[1] * unit, trs.t[2] * unit], rotation: fmtQuat(trs.r), scale: [...trs.s] };
+  };
+  /** Ma trận engine → đơn vị glTF (tịnh tiến × unit). */
+  const toUnit = (m: Mat4): Mat4 => m.map((v, i) => (i === 3 || i === 7 || i === 11 ? v * unit : v));
+
+  // ---------- Skins: figure → Armature (root → hips → … → segment joints) ----------
+  interface FigureSkin {
+    readonly partId: string;
+    readonly root: number;
+    readonly jointNode: Map<string, number>;
+    readonly segNode: Map<string, number>;
+  }
+  const skins: Record<string, unknown>[] = [];
+  const figureSkins: FigureSkin[] = [];
+  const skinned = new Set<string>();
+  const exportById = new Map(prep.exportMeshes.map((e) => [e.solidId, e]));
+  if (opts.skin !== false) {
+    const groupM = groupMatricesOf(prep.spec);
+    for (const part of prep.spec.parts) {
+      if (part.type !== "figure") continue;
+      const build = buildFigure(part);
+      const segs = build.solids.filter((g) => g.joint && g.offset && exportById.has(g.solid.id));
+      if (segs.length === 0) continue;
+      const partM = partPlacementMatrix(part, groupM);
+      nodes.push({ name: part.id, ...scaledTrs(partM) });
+      const root = nodes.length - 1;
+      rootNodes.push(root);
+      const jointNode = new Map<string, number>();
+      const bindOf = new Map<number, Mat4>();
+      for (const j of build.joints!) {
+        nodes.push({ name: `${part.id}:${j.name}`, ...scaledTrs(j.local) });
+        const idx = nodes.length - 1;
+        addChild(j.parent ? jointNode.get(j.parent)! : root, idx);
+        jointNode.set(j.name, idx);
+        bindOf.set(idx, mul4(partM, j.world));
+      }
+      const segNode = new Map<string, number>();
+      for (const g of segs) {
+        nodes.push({ name: g.solid.id, ...scaledTrs(g.offset!) });
+        const idx = nodes.length - 1;
+        const parentIdx = jointNode.get(g.joint!)!;
+        addChild(parentIdx, idx);
+        segNode.set(g.solid.id, idx);
+        bindOf.set(idx, mul4(bindOf.get(parentIdx)!, g.offset!));
+        skinned.add(g.solid.id);
+      }
+      const skinJoints = [...jointNode.values(), ...segNode.values()];
+      const jointIndex = new Map(skinJoints.map((n, i) => [n, i]));
+      // Gộp mọi segment thành MỘT skinned mesh, primitive theo fill
+      const byFill = new Map<string, { positions: number[]; normals: number[]; joints: number[]; weights: number[]; indices: number[] }>();
+      for (const g of segs) {
+        const em = exportById.get(g.solid.id)!;
+        const { prims, degraded } = meshPrimitives(em, 1, "#c0c0c0");
+        if (degraded) anyDegraded = true;
+        const bind = bindOf.get(segNode.get(g.solid.id)!)!;
+        const nInv = invertAffine4(bind);
+        const ji = jointIndex.get(segNode.get(g.solid.id)!)!;
+        for (const pr of prims) {
+          let acc = byFill.get(pr.fill);
+          if (!acc) {
+            acc = { positions: [], normals: [], joints: [], weights: [], indices: [] };
+            byFill.set(pr.fill, acc);
+          }
+          const base = acc.positions.length / 3;
+          for (let v = 0; v < pr.positions.length / 3; v++) {
+            const pw = transformPoint(bind, [pr.positions[v * 3], pr.positions[v * 3 + 1], pr.positions[v * 3 + 2]]);
+            acc.positions.push(pw[0] * unit, pw[1] * unit, pw[2] * unit);
+            const n: Vec3 = [pr.normals[v * 3], pr.normals[v * 3 + 1], pr.normals[v * 3 + 2]];
+            // Normal qua ma trận có scale không đều: (M⁻¹)ᵀ·n
+            const nt: Vec3 = nInv
+              ? [nInv[0] * n[0] + nInv[4] * n[1] + nInv[8] * n[2], nInv[1] * n[0] + nInv[5] * n[1] + nInv[9] * n[2], nInv[2] * n[0] + nInv[6] * n[1] + nInv[10] * n[2]]
+              : n;
+            const nn = normalize3(nt);
+            acc.normals.push(nn[0], nn[1], nn[2]);
+            acc.joints.push(ji, 0, 0, 0);
+            acc.weights.push(1, 0, 0, 0);
+          }
+          for (const i of pr.indices) acc.indices.push(base + i);
+        }
+      }
+      const primitives = [...byFill.entries()].map(([fill, a]) => {
+        triangles += a.indices.length / 3;
+        return {
+          attributes: {
+            POSITION: bin.floatAccessor(a.positions, "VEC3", { target: 34962, minMax: true }),
+            NORMAL: bin.floatAccessor(a.normals, "VEC3", { target: 34962 }),
+            JOINTS_0: bin.jointsAccessor(a.joints),
+            WEIGHTS_0: bin.floatAccessor(a.weights, "VEC4", { target: 34962 }),
+          },
+          indices: bin.indexAccessor(a.indices, a.positions.length / 3),
+          material: materialOf(fill),
+          mode: 4,
+        };
+      });
+      meshes.push({ name: `${part.id}:body`, primitives });
+      const ibm = bin.mat4Accessor(skinJoints.map((n) => toUnit(invertAffine4(bindOf.get(n)!)!)));
+      skins.push({ name: part.id, joints: skinJoints, inverseBindMatrices: ibm, skeleton: root });
+      nodes.push({ name: `${part.id}:mesh`, mesh: meshes.length - 1, skin: skins.length - 1 });
+      rootNodes.push(nodes.length - 1);
+      figureSkins.push({ partId: part.id, root, jointNode, segNode });
+    }
+  }
+
   for (const em of prep.exportMeshes) {
+    if (skinned.has(em.solidId)) continue;
     const { prims, degraded } = meshPrimitives(em, unit, "#c0c0c0");
     if (degraded) anyDegraded = true;
     if (prims.length === 0) continue;
@@ -503,6 +638,7 @@ export function exportGltf(spec: ConstructSpec, opts: GltfOptions = {}, anim?: G
       scale: [...trs.s],
     });
     meshNodeOf.set(em.solidId, nodes.length - 1);
+    rootNodes.push(nodes.length - 1);
   }
   if (anyDegraded) warnings.push("Some concave faces triangulated in degraded (fan) mode — check the mesh in your 3D tool.");
   if (anySheared) warnings.push("A non-uniformly scaled FK chain produced shear — TRS export approximates it.");
@@ -514,6 +650,7 @@ export function exportGltf(spec: ConstructSpec, opts: GltfOptions = {}, anim?: G
   cams.push({ name: "camera", ...cam0.camera });
   nodes.push({ name: "camera", camera: 0, translation: [...cam0.t], rotation: fmtQuat(cam0.r) });
   const cameraNode = nodes.length - 1;
+  rootNodes.push(cameraNode);
 
   const dir = normalize3(prep.spec.light.direction);
   // Directional light chiếu dọc −Z local ⇒ trục z node = −dir
@@ -526,6 +663,7 @@ export function exportGltf(spec: ConstructSpec, opts: GltfOptions = {}, anim?: G
     rotation: fmtQuat(quatFromBasis(xAxis, yAxis, zAxis)),
     extensions: { KHR_lights_punctual: { light: 0 } },
   });
+  rootNodes.push(nodes.length - 1);
 
   // Animation
   const animations: Record<string, unknown>[] = [];
@@ -539,6 +677,22 @@ export function exportGltf(spec: ConstructSpec, opts: GltfOptions = {}, anim?: G
     const tracks = new Map<string, { t: number[]; r: number[]; s: number[] }>();
     for (const id of ids) tracks.set(id, { t: [], r: [], s: [] });
     const camTrack = { t: [] as number[], r: [] as number[] };
+    /** Track theo NODE (xương + root figure + segment joint) — skin. */
+    const nodeTracks = new Map<number, { t: number[]; r: number[]; s: number[] }>();
+    const pushTrs = (key: number, m: Mat4) => {
+      let tr = nodeTracks.get(key);
+      if (!tr) {
+        tr = { t: [], r: [], s: [] };
+        nodeTracks.set(key, tr);
+      }
+      const trs = decomposeTrs(m);
+      tr.t.push(trs.t[0] * unit, trs.t[1] * unit, trs.t[2] * unit);
+      const prev = tr.r.length >= 4 ? tr.r.slice(-4) : null;
+      let q = trs.r;
+      if (prev && prev[0] * q[0] + prev[1] * q[1] + prev[2] * q[2] + prev[3] * q[3] < 0) q = [-q[0], -q[1], -q[2], -q[3]];
+      tr.r.push(...q);
+      tr.s.push(...trs.s);
+    };
     let zoomWarned = false;
     anim.scenes.forEach((sc, fi) => {
       const mats = matricesOf(sc, ids.filter((id) => !csgIds.has(id)));
@@ -566,6 +720,20 @@ export function exportGltf(spec: ConstructSpec, opts: GltfOptions = {}, anim?: G
         if (prev && prev[0] * q[0] + prev[1] * q[1] + prev[2] * q[2] + prev[3] * q[3] < 0) q = [-q[0], -q[1], -q[2], -q[3]];
         tr.r.push(...q);
         tr.s.push(...trs.s);
+      }
+      if (figureSkins.length > 0) {
+        const groupM = groupMatricesOf(sc);
+        for (const fs of figureSkins) {
+          const part = sc.parts.find((p) => p.id === fs.partId);
+          if (!part || part.type !== "figure") continue;
+          const build = buildFigure(part);
+          pushTrs(fs.root, partPlacementMatrix(part, groupM));
+          for (const j of build.joints!) pushTrs(fs.jointNode.get(j.name)!, j.local);
+          for (const g of build.solids) {
+            const n = fs.segNode.get(g.solid.id);
+            if (n !== undefined && g.offset) pushTrs(n, g.offset);
+          }
+        }
       }
       const cf = cameraFrame(sc, prep.radius, canvas, unit);
       if (cf.zoomKey !== cam0.zoomKey && !zoomWarned) {
@@ -607,6 +775,22 @@ export function exportGltf(spec: ConstructSpec, opts: GltfOptions = {}, anim?: G
       }
       if (moved) animatedNodes++;
     }
+    for (const [node, tr] of nodeTracks) {
+      let moved = false;
+      if (!constant(tr.t, 3)) {
+        addChannel(node, "translation", tr.t, "VEC3");
+        moved = true;
+      }
+      if (!constant(tr.r, 4)) {
+        addChannel(node, "rotation", tr.r, "VEC4");
+        moved = true;
+      }
+      if (!constant(tr.s, 3)) {
+        addChannel(node, "scale", tr.s, "VEC3");
+        moved = true;
+      }
+      if (moved) animatedNodes++;
+    }
     if (!constant(camTrack.t, 3)) addChannel(cameraNode, "translation", camTrack.t, "VEC3");
     if (!constant(camTrack.r, 4)) addChannel(cameraNode, "rotation", camTrack.r, "VEC4");
     if (channels.length > 0) animations.push({ name: "shot", samplers, channels });
@@ -621,10 +805,11 @@ export function exportGltf(spec: ConstructSpec, opts: GltfOptions = {}, anim?: G
       KHR_lights_punctual: { lights: [{ name: "sun", type: "directional", color: [1, 0.98, 0.94], intensity: 3 }] },
     },
     scene: 0,
-    scenes: [{ name: "construct", nodes: nodes.map((_, i) => i) }],
+    scenes: [{ name: "construct", nodes: rootNodes }],
     nodes,
     meshes,
     materials,
+    ...(skins.length > 0 && { skins }),
     cameras: cams,
     accessors: bin.accessors,
     bufferViews: bin.bufferViews,

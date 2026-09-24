@@ -7,9 +7,26 @@ import { decomposeTrs, exportGltf } from "@/lib/services/construct/gltf";
 import { exportMotionGltf } from "@/lib/services/motion/gltfMotion";
 import { constructSpecSchema, type ConstructSpec } from "@/lib/validation/constructSchema";
 import { motionSpecSchema } from "@/lib/validation/motionSchema";
-import { composePlacement4, transformPoint } from "@/lib/services/construct/math3d";
+import { composePlacement4, mul4, transformPoint } from "@/lib/services/construct/math3d";
+import { boxMesh, cylinderMesh, sphereMesh } from "@/lib/services/construct/geometry3d";
+import { expandParts } from "@/lib/services/construct/partsExpand";
+import { evaluateMotionAt, prepareMotion } from "@/lib/services/motion/evaluate";
 import { CAMERA_PRESETS, projectViewPoint, viewMatrix } from "@/lib/services/construct/camera";
 import type { Vec3 } from "@/lib/services/construct/types";
+
+interface GltfDoc {
+  buffers: { uri: string }[];
+  bufferViews: { byteOffset: number; byteLength: number }[];
+  accessors: { bufferView: number; componentType: number; count: number; type: string }[];
+  nodes: { translation?: number[]; rotation?: number[]; scale?: number[]; children?: number[]; mesh?: number; skin?: number }[];
+  meshes: { primitives: { attributes: { POSITION: number; JOINTS_0?: number } }[] }[];
+  skins?: { joints: number[]; inverseBindMatrices: number }[];
+  animations?: { samplers: { output: number }[]; channels: { sampler: number; target: { node: number; path: string } }[] }[];
+}
+
+const boxVerts = (s: readonly number[]): Vec3[] => boxMesh(s as unknown as Vec3).vertices as Vec3[];
+const sphereVerts = (r: number, seg: number): Vec3[] => sphereMesh(r, seg).vertices as Vec3[];
+const cylVerts = (r: number, h: number, seg: number): Vec3[] => cylinderMesh(r, h, seg).vertices as Vec3[];
 
 interface Report {
   issues: { numErrors: number; numWarnings: number; messages: { code: string; message: string; pointer?: string; severity: number }[] };
@@ -159,8 +176,89 @@ describe("glTF exporter", () => {
     expect(result.warnings.join()).toMatch(/lens params/);
     const nodes = result.gltf.nodes as { name: string }[];
     const animatedNames = new Set(anims[0].channels.map((c) => nodes[c.target.node].name));
-    expect(animatedNames.has("pip:shinL")).toBe(true);
+    expect(animatedNames.has("pip:kneeL")).toBe(true); // skin: animation trên XƯƠNG
     expect(animatedNames.has("ground")).toBe(false);
+  });
+
+  it("SKIN đúng hình học: đỉnh skinned (joint·IBM·v) tại frame k khớp mesh world của engine", () => {
+    const motion = motionSpecSchema.parse(JSON.parse(readFileSync(path.join(examplesDir, "motion-stroll.json"), "utf8")));
+    const unit = 0.01;
+    const { gltf } = exportMotionGltf(motion, {}, { unitScale: unit });
+    const g = gltf as unknown as GltfDoc;
+    const buf = Buffer.from((g.buffers[0].uri as string).split(",")[1], "base64");
+    const read = (ai: number): number[] => {
+      const a = g.accessors[ai];
+      const v = g.bufferViews[a.bufferView];
+      const n = { SCALAR: 1, VEC3: 3, VEC4: 4, MAT4: 16 }[a.type as "SCALAR"]! * a.count;
+      const size = a.componentType === 5126 ? 4 : a.componentType === 5121 ? 1 : a.componentType === 5123 ? 2 : 4;
+      return Array.from({ length: n }, (_, i) => {
+        const o = v.byteOffset + i * size;
+        return a.componentType === 5126 ? buf.readFloatLE(o) : a.componentType === 5121 ? buf.readUInt8(o) : a.componentType === 5123 ? buf.readUInt16LE(o) : buf.readUInt32LE(o);
+      });
+    };
+    const frame = 20;
+    // TRS local của node tại frame (animation ghi đè TRS tĩnh)
+    const local = g.nodes.map((n) => ({ t: n.translation ?? [0, 0, 0], r: n.rotation ?? [0, 0, 0, 1], s: n.scale ?? [1, 1, 1] }));
+    for (const ch of g.animations![0].channels) {
+      const smp = g.animations![0].samplers[ch.sampler];
+      const out = read(smp.output);
+      const k = ch.target.path === "rotation" ? 4 : 3;
+      (local[ch.target.node] as Record<string, number[]>)[ch.target.path[0]] = out.slice(frame * k, frame * k + k);
+    }
+    const trsMat = (l: { t: number[]; r: number[]; s: number[] }) => {
+      const [x, y, z, w] = l.r;
+      const R = [1 - 2 * (y * y + z * z), 2 * (x * y - z * w), 2 * (x * z + y * w), 2 * (x * y + z * w), 1 - 2 * (x * x + z * z), 2 * (y * z - x * w), 2 * (x * z - y * w), 2 * (y * z + x * w), 1 - 2 * (x * x + y * y)];
+      return [R[0] * l.s[0], R[1] * l.s[1], R[2] * l.s[2], l.t[0], R[3] * l.s[0], R[4] * l.s[1], R[5] * l.s[2], l.t[1], R[6] * l.s[0], R[7] * l.s[1], R[8] * l.s[2], l.t[2], 0, 0, 0, 1];
+    };
+    const parentOf = new Map<number, number>();
+    g.nodes.forEach((n, i) => n.children?.forEach((c) => parentOf.set(c, i)));
+    const globalOf = (i: number): number[] => {
+      const m = trsMat(local[i]);
+      const p = parentOf.get(i);
+      return p === undefined ? m : (mul4(globalOf(p), m) as number[]);
+    };
+    const meshNode = g.nodes.findIndex((n) => n.skin !== undefined);
+    const skin = g.skins![g.nodes[meshNode].skin!];
+    const ibm = read(skin.inverseBindMatrices);
+    const jointMats = skin.joints.map((j, k) => {
+      const cm = ibm.slice(k * 16, k * 16 + 16);
+      const rowMajor = Array.from({ length: 16 }, (_, i) => cm[(i % 4) * 4 + Math.floor(i / 4)]);
+      return mul4(globalOf(j), rowMajor);
+    });
+    const lo = [Infinity, Infinity, Infinity];
+    const hi = [-Infinity, -Infinity, -Infinity];
+    for (const prim of g.meshes[g.nodes[meshNode].mesh!].primitives) {
+      const pos = read(prim.attributes.POSITION);
+      const jn = read(prim.attributes.JOINTS_0!);
+      for (let v = 0; v < pos.length / 3; v++) {
+        const p = transformPoint(jointMats[jn[v * 4]], [pos[v * 3], pos[v * 3 + 1], pos[v * 3 + 2]]);
+        for (let c = 0; c < 3; c++) {
+          lo[c] = Math.min(lo[c], p[c]);
+          hi[c] = Math.max(hi[c], p[c]);
+        }
+      }
+    }
+    // Engine: mesh world của mọi solid "pip:*" tại cùng frame
+    const scene = evaluateMotionAt(prepareMotion(motion), frame / motion.fps);
+    const expanded = expandParts(scene);
+    const elo = [Infinity, Infinity, Infinity];
+    const ehi = [-Infinity, -Infinity, -Infinity];
+    for (const sol of expanded.solids.filter((x) => x.id.startsWith("pip:"))) {
+      const m = expanded.worldMatrixById.get(sol.id)!;
+      // Mẫu điểm: đỉnh mesh thật của primitive
+      const verts = sol.type === "box" ? boxVerts(sol.size) : sol.type === "sphere" ? sphereVerts(sol.r, sol.segments) : cylVerts(sol.type === "cylinder" ? sol.r : 1, sol.type === "cylinder" ? sol.h : 1, sol.type === "cylinder" ? sol.segments : 12);
+      for (const v of verts) {
+        const p = transformPoint(m, v);
+        for (let c = 0; c < 3; c++) {
+          elo[c] = Math.min(elo[c], p[c] * unit);
+          ehi[c] = Math.max(ehi[c], p[c] * unit);
+        }
+      }
+    }
+    for (let c = 0; c < 3; c++) {
+      expect(lo[c]).toBeCloseTo(elo[c], 4);
+      expect(hi[c]).toBeCloseTo(ehi[c], 4);
+    }
   });
 
   it("holdFrames 2 → sampler STEP (giữ pose on twos)", () => {

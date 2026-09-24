@@ -44,6 +44,8 @@ def main():
     # Clean start: drop the default cube/camera/light
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
+    # fps TRƯỚC khi import: importer đổi giây glTF → frame theo fps hiện tại
+    scene.render.fps = args.fps
     bpy.ops.import_scene.gltf(filepath=args.gltf)
 
     # glTF lux → Blender W/m² (importer chia 683) quá tối — đặt thẳng năng lượng
@@ -61,7 +63,6 @@ def main():
     scene.render.resolution_x = w
     scene.render.resolution_y = h
     scene.render.resolution_percentage = 100
-    scene.render.fps = args.fps
     scene.render.image_settings.file_format = "PNG"
     scene.render.filepath = args.out
 
