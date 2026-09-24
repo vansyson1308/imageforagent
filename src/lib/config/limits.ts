@@ -16,6 +16,14 @@ export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024; // 8MB/file
 export const MAX_SVG_BYTES = 512_000;
 /** 1500 shot ≈ phim dài 90–120 phút (phim truyện thường 1000–1500 shot). */
 export const MAX_FRAMES_PER_PROJECT = 1500;
+
+/**
+ * Trần độ dài mix trong export ZIP (giây). Mixer giữ timeline stereo 48 kHz
+ * Float32 + các bus trong RAM (~1 GB / 20 phút): 45 phút an toàn trên máy
+ * 16 GB. Phim dài hơn: mix theo reel (mỗi reel một project) — vượt trần thì
+ * export vẫn chạy, thiếu mix.wav và có cảnh báo trong log + storyboard.json.
+ */
+export const MAX_MIX_SECONDS = 45 * 60;
 export const MAX_DESCRIPTION_LENGTH = 2000;
 
 /**
