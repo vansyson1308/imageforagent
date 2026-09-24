@@ -210,27 +210,35 @@ export function buildFigure(part: FigurePart): PartBuild {
   // hướng +z. Biểu cảm = SCALE của offset → animate được cả trong glTF
   if (part.face) {
     const f = part.face;
+    // Mặt SAU của chi tiết chạm đúng mặt cầu thật (nằm ngoài lưới facet
+    // của đầu) → không xuyên khối: NNS xếp chi tiết SAU mọi mặt của đầu,
+    // silhouette smooth của đầu không vẽ đè lên mắt/miệng
+    const onHead = (x: number, y: number, halfDepth: number): Vec3 => [
+      headCenter[0] + x,
+      headCenter[1] + y,
+      headCenter[2] + Math.sqrt(Math.max(0, headR * headR - x * x - y * y)) + halfDepth,
+    ];
     const eyeR = headR * 0.13;
     for (const [id, side] of [
       ["eyeL", 1],
       ["eyeR", -1],
     ] as const) {
       attach(
-        { ...D, id: p(id), type: "sphere", r: eyeR, segments: 10, fill: f.eyes, shading: "none", shadow: false },
+        { ...D, id: p(id), type: "sphere", r: eyeR, segments: 10, fill: f.eyes, shading: "none", shadow: false, decalOf: p("head") },
         neck,
         mul4(
-          translation4([headCenter[0] + side * headR * 0.36, headCenter[1] + headR * 0.12, headCenter[2] + headR * 0.86]),
-          scaling4([1, Math.max(0.08, 1 - f.blink * 0.92), 0.45]),
+          translation4(onHead(side * headR * 0.34, headR * 0.12, eyeR * 0.3)),
+          scaling4([1, Math.max(0.08, 1 - f.blink * 0.92), 0.3]),
         ),
       );
     }
     const mouthR = headR * 0.24;
     attach(
-      { ...D, id: p("mouth"), type: "sphere", r: mouthR, segments: 10, fill: f.mouth, shading: "none", shadow: false },
+      { ...D, id: p("mouth"), type: "sphere", r: mouthR, segments: 10, fill: f.mouth, shading: "none", shadow: false, decalOf: p("head") },
       neck,
       mul4(
-        translation4([headCenter[0], headCenter[1] - headR * 0.4, headCenter[2] + headR * 0.84]),
-        scaling4([0.55 + 0.65 * f.mouthWide, 0.1 + 0.75 * f.mouthOpen, 0.4]),
+        translation4(onHead(0, -headR * 0.38, mouthR * 0.25)),
+        scaling4([0.55 + 0.65 * f.mouthWide, 0.1 + 0.75 * f.mouthOpen, 0.25]),
       ),
     );
   }

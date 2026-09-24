@@ -4,13 +4,14 @@ import type { MotionSpec, Rig, ShotMove, Track } from "@/lib/validation/motionSc
 import { sampleKeys } from "@/lib/services/motion/interpolate";
 import { materializeOrbit, readTarget, valueKindOf, writeTarget, type PathValue } from "@/lib/services/motion/targetPath";
 import { applyRoll, applyShot, applyWalk, applyWiggle, shotMoveFromShotType } from "@/lib/services/motion/rigs";
+import { applyIk } from "@/lib/services/motion/ik";
 
 /**
  * evaluate — motion spec + thời điểm t → construct spec TĨNH của frame đó.
  * Pure + deterministic. Thứ tự đánh giá cố định (hợp đồng docs):
  *   1. generators  walk · shot         (dựng chuyển động nền)
  *   2. tracks      set | add            (key tay của agent THẮNG/CỘNG lên)
- *   3. dependents  roll · follow        (suy từ trạng thái sau tracks)
+ *   3. dependents  roll · follow · ik   (suy từ trạng thái sau tracks)
  *   4. noise       wiggle               (lớp nhiễu phụ, cộng sau cùng)
  * rồi re-validate bằng constructSpecSchema — track đẩy giá trị ra ngoài
  * miền hợp lệ (overshoot outBack làm bán kính âm…) báo lỗi kèm thời điểm.
@@ -70,7 +71,7 @@ export function prepareMotion(motion: MotionSpec, ctx: MotionContext = {}): Prep
 
   const cameraOrbitPaths = [
     ...motion.tracks.map((t) => t.target),
-    ...motion.rigs.flatMap((r) => ("target" in r ? [r.target] : [])),
+    ...motion.rigs.flatMap((r) => ("target" in r && typeof r.target === "string" ? [r.target] : [])),
     ...motion.rigs.flatMap((r) => (r.type === "follow" ? [r.source] : [])),
   ];
   const animatesCameraOrbit = cameraOrbitPaths.some((p) => p.startsWith("camera.orbit"));
@@ -173,6 +174,10 @@ export function evaluateMotionAt(prep: PreparedMotion, t: number): ConstructSpec
   for (const rig of motion.rigs) {
     if (rig.type === "roll") applyRoll(spec, base, rig);
     else if (rig.type === "follow") applyFollow(prep, base, spec, rig, tq);
+  }
+  // IK sau roll/follow: target có thể là solid do chúng dịch chuyển
+  for (const rig of motion.rigs) {
+    if (rig.type === "ik") applyIk(spec, rig, tq, motion.duration);
   }
   for (const rig of motion.rigs) {
     if (rig.type === "wiggle") applyWiggle(spec, rig, isCameraPath(rig.target) ? t : tq, motion.duration);

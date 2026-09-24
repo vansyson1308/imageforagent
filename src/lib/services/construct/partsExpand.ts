@@ -95,6 +95,33 @@ function buildPart(part: ConstructSpec["parts"][number]): PartBuild {
   }
 }
 
+/** Ma trận đặt part 3D trong world: M(group) · SRT(part). Part 2D → identity. */
+export function partPlacementMatrix(part: ConstructSpec["parts"][number], groupM: Map<string, Mat4>): Mat4 {
+  const has3dPlacement = "at" in part && Array.isArray(part.at) && part.at.length === 3;
+  const groupRef = "group" in part ? part.group : undefined;
+  let partM = IDENTITY_4;
+  if (groupRef) {
+    const m = groupM.get(groupRef);
+    if (!m) {
+      err(
+        `Part "${part.id}" references unknown group "${groupRef}".`,
+        `Defined groups: ${[...groupM.keys()].join(", ") || "(none)"}.`,
+      );
+    }
+    partM = m;
+  }
+  if (has3dPlacement) {
+    const p3 = part as Extract<typeof part, { rotate: readonly [number, number, number] }>;
+    partM = mul4(partM, composePlacement4(p3.at, p3.rotate, p3.scale));
+  }
+  return partM;
+}
+
+/** Ma trận world của mọi group trong spec (export cho motion/IK, glTF). */
+export function groupMatricesOf(spec: ConstructSpec): Map<string, Mat4> {
+  return resolveGroupMatrices(spec.groups);
+}
+
 export function expandParts(spec: ConstructSpec): ExpandedSpec {
   const warnings: string[] = [];
   const groupM = resolveGroupMatrices(spec.groups);
@@ -139,23 +166,7 @@ export function expandParts(spec: ConstructSpec): ExpandedSpec {
     shapes.push(...build.shapes);
     if (build.solids.length === 0) continue;
 
-    const has3dPlacement = "at" in part && Array.isArray(part.at) && part.at.length === 3;
-    const groupRef = "group" in part ? part.group : undefined;
-    let partM = IDENTITY_4;
-    if (groupRef) {
-      const m = groupM.get(groupRef);
-      if (!m) {
-        err(
-          `Part "${part.id}" references unknown group "${groupRef}".`,
-          `Defined groups: ${[...groupM.keys()].join(", ") || "(none)"}.`,
-        );
-      }
-      partM = m;
-    }
-    if (has3dPlacement) {
-      const p3 = part as Extract<typeof part, { rotate: readonly [number, number, number] }>;
-      partM = mul4(partM, composePlacement4(p3.at, p3.rotate, p3.scale));
-    }
+    const partM = partPlacementMatrix(part, groupM);
     const partEffects = "effects" in part ? part.effects : undefined;
     for (const gen of build.solids) {
       // Passthrough effects của part xuống mọi solid sinh ra (trước finish

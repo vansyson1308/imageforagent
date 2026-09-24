@@ -219,6 +219,12 @@ const solidBase = {
   group: constructId.optional(),
   /** Lớp làm mềm per-solid (Softness) — vắng = không effect; {} = opt-out preset. */
   effects: effectsSchema.optional(),
+  /**
+   * Chi tiết BỀ MẶT của solid khác (mắt trên đầu, cúc áo, logo trên cầu):
+   * vẽ ngay SAU solid cha thay vì depth-sort riêng, và bị ẩn khi nằm ở
+   * phía cha quay lưng lại camera. Chữa giới hạn silhouette smooth.
+   */
+  decalOf: refId.optional(),
 };
 
 export const solidSchema = z.discriminatedUnion("type", [

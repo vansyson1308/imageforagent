@@ -192,3 +192,33 @@ export function centroid3(vertices: readonly Vec3[]): Vec3 {
   const n = vertices.length;
   return [x / n, y / n, z / n];
 }
+
+/**
+ * Nghịch đảo ma trận AFFINE (hàng cuối 0 0 0 1): khối 3×3 nghịch đảo bằng
+ * phần phụ đại số, tịnh tiến = −A⁻¹·t. Suy biến (det≈0) → null.
+ */
+export function invertAffine4(m: Mat4): Mat4 | null {
+  const [a, b, c, tx, d, e, f, ty, g, h, i, tz] = m;
+  const A = e * i - f * h;
+  const B = -(d * i - f * g);
+  const C = d * h - e * g;
+  const det = a * A + b * B + c * C;
+  if (Math.abs(det) < 1e-12) return null;
+  const inv = 1 / det;
+  const r00 = A * inv;
+  const r01 = -(b * i - c * h) * inv;
+  const r02 = (b * f - c * e) * inv;
+  const r10 = B * inv;
+  const r11 = (a * i - c * g) * inv;
+  const r12 = -(a * f - c * d) * inv;
+  const r20 = C * inv;
+  const r21 = -(a * h - b * g) * inv;
+  const r22 = (a * e - b * d) * inv;
+  // prettier-ignore
+  return [
+    r00, r01, r02, -(r00 * tx + r01 * ty + r02 * tz),
+    r10, r11, r12, -(r10 * tx + r11 * ty + r12 * tz),
+    r20, r21, r22, -(r20 * tx + r21 * ty + r22 * tz),
+    0, 0, 0, 1,
+  ];
+}

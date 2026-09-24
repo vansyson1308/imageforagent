@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { CONSTRUCT_LIMITS, MOTION_LIMITS } from "@/lib/config/limits";
 import { ASPECT_RATIOS, RESOLUTIONS } from "@/lib/validation/schemas";
-import { constructId, constructSpecSchema } from "@/lib/validation/constructSchema";
+import { constructId, constructSpecSchema, refId } from "@/lib/validation/constructSchema";
 
 /**
  * motionSchema — hợp đồng TRỤC THỜI GIAN cho construct engine (v4).
@@ -170,6 +170,29 @@ export const rigSchema = z.discriminatedUnion("type", [
       frequency: z.number().gt(0).max(30).default(1),
       seed: z.number().int().min(0).max(1_000_000).default(1),
       octaves: z.number().int().min(1).max(3).default(2),
+      ...timeWindow,
+    })
+    .strict(),
+  z
+    .object({
+      /**
+       * IK 2 xương GIẢI TÍCH: đặt cổ tay (arm) / đế chân (leg) tới target —
+       * điểm cố định, hoặc BÁM một solid đang chuyển động ("cart" hay
+       * "wl:hub") + offset. Góc vai/khuỷu (hông/gối) được giải, cổ chân tự
+       * giữ bàn chân phẳng. weight + fade để hoà với chuyển động nền.
+       */
+      type: z.literal("ik"),
+      part: constructId,
+      limb: z.enum(["armL", "armR", "legL", "legR"]),
+      target: z.union([
+        z.tuple([num, num, num]),
+        z.object({ solid: refId, offset: z.tuple([num, num, num]).default([0, 0, 0]) }).strict(),
+      ]),
+      /** Hướng gập khớp giữa (không gian part): default khuỷu ra sau, gối ra trước. */
+      pole: z.tuple([num, num, num]).optional(),
+      weight: z.number().min(0).max(1).default(1),
+      /** Giây hoà vào/ra ở hai đầu cửa sổ. */
+      fade: z.number().min(0).max(2).default(0.15),
       ...timeWindow,
     })
     .strict(),

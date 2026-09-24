@@ -4,6 +4,7 @@ import { AppError } from "@/lib/services/apiError";
 import { CONSTRUCT_LIMITS } from "@/lib/config/limits";
 import { convexHull2D } from "@/lib/services/construct/geometry2d";
 import { buildSolidMeshes } from "@/lib/services/construct/sceneMeshes";
+import { attachSurfaceFeatures } from "@/lib/services/construct/surfaceFeatures";
 import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
 import { buildScenePaths } from "@/lib/services/construct/emitScene";
 import { buildVignette } from "@/lib/services/construct/atmosphere";
@@ -343,6 +344,12 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       if (a.face.solidIndex !== b.face.solidIndex) return a.face.solidIndex - b.face.solidIndex;
       return a.face.faceIndex - b.face.faceIndex;
     });
+  }
+
+  // ---------- Surface features (decalOf) — vẽ ngay sau solid cha ----------
+  const features = spec.solids.filter((s) => s.decalOf !== undefined);
+  if (features.length > 0) {
+    entries = attachSurfaceFeatures(entries, features, worldMeshById, view, warnings);
   }
 
   // ---------- Cutouts (resolve2d.ts) ----------
