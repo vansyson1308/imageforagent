@@ -4,7 +4,7 @@
 
 ## 1. Câu trả lời thẳng
 
-- **Kỹ thuật thì đã giao được một DCP.** Chuỗi script → storyboard → animatic → 3D → render → film.mp4 → DCP có thể script hoá toàn bộ bằng công cụ mã nguồn mở. Repo này giờ lo trọn đoạn đầu: shot có chuyển động, `film.mp4`, và glTF để render path-traced.
+- **Repo này giờ tự giao được một DCP chiếu rạp** (N5, xem ADR-016). Chuỗi kịch bản → storyboard → shot có chuyển động và diễn xuất (IK, mặt, lip-sync) → thoại + nhạc + mix → dựng (chuyển cảnh, EDL/OTIO) → `npm run master:dcp` → DCP SMPTE chạy hoàn toàn tất định, bằng công cụ mã nguồn mở. Đã kiểm chứng bằng asdcplib, XSD SMPTE, ClairMeta (0 cảnh báo) và ffmpeg. Việc còn lại trước khi chiếu thật: test trên server rạp.
 - **Một phim dài *đáng xem* do agent tự làm hoàn toàn thì chưa khả thi trong 2026**, kể cả với các studio dùng AI. Ví dụ *Critterz* (OpenAI hậu thuẫn) vẫn "human-led, AI-assisted", ngân sách < $30M.
 - **Phim kiểu Avatar/Transformers (photoreal, VFX nặng) nằm ngoài tầm**: chúng cần render farm hàng chục nghìn core và đội ngũ hàng nghìn người.
 - Mục tiêu khả thi và đáng giá là **phim 3D stylized kiểu *Flow***, phim đoạt Oscar Phim hoạt hình 2025. *Flow* làm bằng Blender EEVEE, khoảng $3.7M, render 0.5–10s/frame 4K trên một máy, không render farm.
@@ -17,13 +17,14 @@
 | Kịch bản → storyboard | ✅ có từ v1 | TSV/Google Sheet → frame; SVG hoặc construct spec |
 | Animatic (board có timing) | ✅ **v4** | timeline thật, WebP từng shot, PreviewPlayer phát đúng thời lượng |
 | Layout / previs (camera, blocking) | ✅ **v4** | construct 3D + rig `shot` + tracks camera + `follow` |
-| Animation nhân vật | 🟡 **v4** (cơ bản) | FK figure, walk không trượt chân, easing, follow-through, squash & stretch bằng track. Chưa có IK, chưa có mặt/lip-sync |
-| Modeling / rigging chất lượng phim | ⏭ chuyển sang Blender | qua glTF; skin/blendshape là bước sau |
+| Animation nhân vật | ✅ **N1** | FK figure, walk không trượt chân, **IK 2 xương giải tích** (bám cả vật chuyển động), **mặt + chớp mắt + lip-sync** theo giọng, easing, follow-through |
+| Modeling / rigging chất lượng phim | ✅ cầu nối **N1** | glTF **skinned Armature** (joint thật, IBM) → Blender/Unreal chỉnh pose; blendshape vẫn là bước sau |
 | Lighting / render | ✅ cầu nối **v4** | glTF → `scripts/blender_render.py` (Cycles/EEVEE), đã kiểm chứng |
 | FX (nước, vải, tóc) | ⏭ Blender sim | ngoài phạm vi engine |
-| Compositing / dựng | 🟡 **v4** | `assemble.sh` (ffmpeg concat); còn thiếu EDL/chuyển cảnh |
-| Âm thanh (thoại, foley, nhạc, mix) | ❌ | **khoảng trống lớn nhất** cho một "phim" |
-| Mastering DCP | 📝 công thức | DCP-o-matic CLI (mục 5) |
+| Điều kiện cho AI video | ✅ **N2** | depth (ramp đúng từng mặt), segmentation, normal, OpenPose COCO-18 từ khớp FK |
+| Compositing / dựng | ✅ **N4** | cảnh, 8 kiểu chuyển cảnh (xfade), timeline lượng tử 24 fps, **EDL CMX3600 + OTIO**, lint liền mạch |
+| Âm thanh (thoại, nhạc, mix) | ✅ **N3** | thoại WAV/TTS local, ducking sidechain, −16 LUFS BS.1770-4, phụ đề khớp giọng. Foley/5.1 thật vẫn là việc phòng dub |
+| Mastering DCP | ✅ **N5** | `npm run master:dcp`: X′Y′Z′ J2K + MXF SMPTE (muxer TS thuần) + CPL/PKL/ASSETMAP, 5.1 PCM ở −24 LUFS |
 
 ## 3. Kiến trúc đích: ba tầng, tất định trước, AI sau
 
@@ -52,23 +53,25 @@ Vì sao đi theo thứ tự này:
 - [x] Frame storyboard = shot (chuỗi PNG + WebP + poster); export có timeline, SRT khớp timeline, `assemble.sh` → film.mp4 (kiểm chứng bằng ffmpeg thật).
 - [x] glTF 2.0 có animation: Khronos validator 0 lỗi, camera khớp pixel với SVG, đã render bằng Blender Cycles.
 
-## 5. Các mốc tiếp theo (xếp theo đòn bẩy)
+## 5. Các mốc N1–N5 (✅ đã xong, 24/09/2026; chi tiết và kiểm chứng ở ADR-016)
 
-1. **Skinned glTF + rig chuẩn.** Xuất figure thành `skins` với cây joint thật (thay vì node rời mang TRS world), để animator chỉnh được trong Blender. Thêm blendshape/viseme cho miệng. Kèm IK 2 xương để khoá bàn chân (foot-lock), khi đó walk không còn trượt dù chỉ vài phần trăm.
-2. **Control passes cho AI video (tuỳ chọn).** Cùng layout tất định, render thêm các chuỗi pass mà mô hình AI (Wan 2.2 VACE/Fun Control, LTX-2 IC-LoRA, Runway Aleph) nhận làm điều kiện:
+Giữ lại bản kế hoạch gốc bên dưới để đối chiếu. Mốc 6–7 vẫn là việc tiếp theo, cùng với: mã hoá/KDM, nhiều reel, track phụ đề SMPTE 428-7, metadata CPL ST 429-16 + MCA label, và test trên server rạp thật.
+
+1. ✅ **Skinned glTF + rig chuẩn.** Xuất figure thành `skins` với cây joint thật (thay vì node rời mang TRS world), để animator chỉnh được trong Blender. Thêm blendshape/viseme cho miệng. Kèm IK 2 xương để khoá bàn chân (foot-lock), khi đó walk không còn trượt dù chỉ vài phần trăm.
+2. ✅ **Control passes cho AI video (tuỳ chọn).** Cùng layout tất định, render thêm các chuỗi pass mà mô hình AI (Wan 2.2 VACE/Fun Control, LTX-2 IC-LoRA, Runway Aleph) nhận làm điều kiện:
    - depth (từ z_view sẵn có),
    - **OpenPose skeleton xuất thẳng từ khớp FK** (không cần ước lượng pose),
    - segmentation theo solid id.
-3. **Âm thanh.**
+3. ✅ **Âm thanh.**
    - Track thoại scratch với timing theo timeline, WAV 48kHz, mix trong `assemble.sh`.
    - Slot viseme cho lip-sync (nối với mốc 1).
    - Có thể dùng TTS local để giữ zero-key.
-4. **Mô hình sequence/EDL.** Act → scene → shot; kiểm tra liên tục như luật 180°, match-cut, độ dài shot; chuyển cảnh (dissolve, fade) trong assemble. Giúp agent dựng phim dài mà không lạc.
-5. **Mastering chiếu rạp (DCP).**
-   - Preset canvas "DCI Flat" 1998×1080 (1.85:1) và "Scope" 2048×858 (2.39:1), 24fps.
-   - Âm thanh WAV 24-bit/48kHz (stereo hoặc 5.1: L, R, C, LFE, Ls, Rs).
-   - Đóng gói SMPTE DCP không mã hoá bằng `dcpomatic2_create` + `dcpomatic2_cli`.
-   - Kiểm tra bằng verifier của DCP-o-matic hoặc ClairMeta.
+4. ✅ **Mô hình sequence/EDL.** Act → scene → shot; kiểm tra liên tục như luật 180°, match-cut, độ dài shot; chuyển cảnh (dissolve, fade) trong assemble. Giúp agent dựng phim dài mà không lạc.
+5. ✅ **Mastering chiếu rạp (DCP).**
+   - Preset canvas "DCI Flat" 1998×1080 (1.85:1) và "Scope" 2048×858 (2.39:1), 24fps. ✅ (kèm 4K)
+   - Âm thanh WAV 24-bit/48kHz (stereo hoặc 5.1: L, R, C, LFE, Ls, Rs). ✅ 5.1 PCM 24-bit
+   - Đóng gói SMPTE DCP không mã hoá. ✅ Tự viết muxer MXF + CPL/PKL bằng TS thay vì phụ thuộc DCP-o-matic: tất định, không cần GUI/build C++. Chỉ J2K dùng `opj_compress`.
+   - Kiểm tra bằng ClairMeta. ✅ 0 cảnh báo; thêm asdcplib, XSD SMPTE, ffmpeg.
    - Luôn test trên server rạp thật trước khi chiếu.
 6. **Scale render.** `evaluate(spec, t)` là hàm thuần, nên frame nào cũng render độc lập. Render farm chỉ là chia dải frame cho nhiều máy/worker (cả vector lẫn Blender `--frames a-b`).
 7. **OpenUSD.** Khi Core Spec 1.1 (có animation) ổn định: xuất USD cho pipeline studio. Trước mắt glTF là đủ.

@@ -201,10 +201,60 @@ L5 partsExpand / partFigure / partWheel   spec → spec rewrite TRƯỚC compile
 - Không animate được thông số lens (zoom/fov): xuất ở giá trị t=0, kèm warning gợi ý dolly camera trong tool 3D. `KHR_animation_pointer` là hướng đi sau.
 - Geometry animate (track bán kính) bị bake ở t=0.
 - Shape 2D và overlay softness chỉ có ở SVG.
-- Chưa có skin/joint hierarchy: figure là các node rời mang TRS world. Muốn chỉnh rig trong Blender thì cần xuất `skins` (bước sau).
+- Chưa có skin/joint hierarchy: figure là các node rời mang TRS world. Muốn chỉnh rig trong Blender thì cần xuất `skins` (bước sau). *(Đã giải quyết ở ADR-016/N1: figure xuất thành Armature skinned.)*
 
 **Lộ trình phim (vì sao glTF là bước đúng):**
 - Vector engine render ~30ms/frame, nên 90 phút × 24fps = 129.600 frame ≈ 1–2 giờ CPU. **Điểm nghẽn là nội dung và tay nghề, không phải compute.**
 - Con đường khả thi tới chất lượng chiếu rạp là 3D stylized render bằng Blender. *Flow* (Oscar Phim hoạt hình 2025) làm bằng Blender EEVEE, 0.5–10s/frame 4K trên một máy.
 - Engine giữ vai trò **layout/previs/animation tất định do agent viết**, còn glTF chuyển sang lighting/render thật.
 - Chi tiết, nguồn và các mốc tiếp theo nằm ở [FILM-ROADMAP.md](FILM-ROADMAP.md).
+
+## ADR-016: Tầng phim N1–N5, từ rig tới DCP chiếu rạp (24/09/2026)
+
+**Bối cảnh:** sau v4 (motion + glTF), khoảng cách tới một bộ phim chiếu được còn năm mắt xích: diễn xuất nhân vật, điều kiện cho AI video, âm thanh, dựng, và mastering. Nguyên tắc chung giữ nguyên: **tất định trước, AI sau**. Mỗi mắt xích là code thuần có test, kiểm chứng bằng **implementation tham chiếu của chính chuẩn đó**, không phải bằng test tự viết.
+
+**N1: Rig, IK, mặt, skin**
+- Figure có cây khớp tên cố định (`hips → spine → neck`, vai → khuỷu → cổ tay, hông → gối → cổ chân). `partFigure` trả luôn danh sách khớp `{name, parent, local, world}`, để glTF skin, OpenPose và IK dùng chung một nguồn.
+- **IK 2 xương giải tích** (`motion/ik.ts`): định lý cos cho góc khớp giữa, `a = −asin(d_z)` và `c = atan2(d_x, −d_y)` cho khớp gốc. Chính xác tới 1e-6. Không dùng solver lặp (CCD/FABRIK) vì nghiệm giải tích tất định và rẻ. Bài học: test IK fail ban đầu vì target nằm ngoài tầm với, không phải lỗi solver; test giờ dùng helper `reachable()`.
+- Mặt là `decalOf`: chi tiết bề mặt vẽ ngay sau solid cha, và bị cull khi cha quay lưng. Cách này chữa việc mắt bị silhouette smooth của đầu che mất.
+- glTF skin: một mesh skinned mỗi figure, `JOINTS_0` u8, IBM column-major. Test tự viết mini evaluator skinning để so vị trí đỉnh với renderer SVG.
+
+**N2: Control passes**
+- Depth/segmentation/normal chạy **cùng pipeline compile**, chỉ thay fill (`CompileOptions.pass`). Hình học, thứ tự vẽ và camera vì thế trùng tuyệt đối với bản beauty.
+- Depth là **ramp tuyến tính đúng theo ∇z trên mặt phẳng từng mặt**, không phải một màu phẳng mỗi mặt. Nền đất trước đây ra xám phẳng, giờ đúng gradient.
+- OpenPose COCO-18 chiếu từ khớp FK: không ước lượng, là ground truth.
+
+**N3: Âm thanh**
+- WAV codec, resampler Lanczos và loudness **BS.1770-4 streaming** viết bằng TS thuần. Kết quả khớp ffmpeg `ebur128` (−16.1 LUFS cả hai).
+- Mixer: ducking kiểu sidechain (gain làm mượt 80 ms xuống, 350 ms lên), limiter lookahead, rồi hai pass make-up để về đúng −16 LUFS.
+- TTS local espeak-ng: spawn không qua shell, văn bản đi qua stdin.
+- Lip-sync lấy RMS + zero-crossing ra viseme mở/rộng. Không có audio thì fallback theo âm tiết văn bản.
+
+**N4: Dựng**
+- Timeline **lượng tử theo frame 24 fps** là nguồn thời gian duy nhất cho storyboard.json, SRT, `assemble.sh`, EDL, OTIO và DCP. Trước đây cộng dồn giây thực làm OTIO lệch frame.
+- Chuyển cảnh chồng lên shot trước, số frame chẵn, tối đa ½ shot ngắn hơn.
+- OTIO kiểm bằng thư viện `opentimelineio` của ASWF. EDL kiểm bằng adapter `cmx_3600` (đọc lại đúng thời lượng).
+
+**N5: Mastering DCP**
+- **Canvas DCI là canvas logic**: `1.85:1` = 1998×1080, `2.39:1` = 2048×858. `renderTarget` trả đúng container ở 2K/4K, nên master không cần rescale. Vignette trước đây cố định 1920×1080 và để lại một dải trên canvas khác 16:9; giờ nó theo canvas thật (`CompileOptions.canvas`) mà snapshot cũ vẫn byte-identical.
+- Màu: sRGB → tuyến tính → XYZ (ma trận D65, không chromatic adaptation, giống DCP-o-matic mặc định) → ×48/52.37 → γ 1/2.6 → 12-bit. Trắng ra Y′ = 3960. Round-trip qua J2K có sai số tối đa 1.6/255.
+- **MXF viết bằng TS thuần** (`dcp/mxf.ts`), không dùng asdcplib, để không phải build C++ và để output tất định:
+  - OP-Atom: header 16384 byte kèm KLV fill, body partition, essence, footer, index, RIP.
+  - Index của picture là VBR (tách segment mỗi 4000 entry); của sound là CBR.
+  - Writer stream: giữ chỗ header, ghi footer, rồi quay lại ghi header. Bộ nhớ O(1) theo độ dài phim.
+  - Kiểm chứng bằng asdcplib (đã build từ source): `asdcp-info` đọc được SMPTE 429 JP2K/PCM, `asdcp-unwrap` trả lại từng codestream byte-giống-hệt, và header metadata khớp cấu trúc file tham chiếu do asdcplib tạo.
+- J2K dùng `opj_compress -cinema2K/-cinema4K 24` (profile DCI, trần bitrate). Đây là việc duy nhất ta không tự viết: encoder EBCOT tự viết không đem lại gì ngoài rủi ro.
+- CPL/PKL/ASSETMAP validate bằng XSD SMPTE 429-7/8/9. ClairMeta: 78 check, 0 warning, 0 info. Tên ISDCF 9.6 đủ 12 trường.
+- UUID tất định theo (project, tiêu đề, container, độ phân giải, **ngày phát hành**):
+  - Cùng `--date` thì DCP byte-giống-hệt (đã kiểm).
+  - Master lại ngày khác thì UUID mới. Nếu tái dùng UUID cho nội dung khác, TMS ở rạp sẽ coi là tài sản đã ingest và bỏ qua; đây là lỗi thật cần tránh.
+- Âm thanh đưa về mức rạp: đo `ebur128` bằng ffmpeg (stream), rồi gain tĩnh về −24 LUFS với trần −1 dBTP. Rạp hiệu chuẩn 85 dBC/kênh, nên mix web −16 LUFS phát nguyên sẽ to hơn ~8 dB.
+- Mastering là **CLI**, không phải route: chạy ~4 frame/s trên 4 lõi ở 2K, tức một phim 90 phút mất ~9 giờ. Làm thành route sẽ phá hợp đồng render đồng bộ.
+
+**Giới hạn trung thực:**
+- Không mã hoá/KDM: đủ cho festival và phát hành độc lập, chưa đủ cho phát hành thương mại có bảo vệ nội dung.
+- Một reel.
+- Stereo nằm ở L/R của 5.1, không upmix. Một mix 5.1 thật vẫn là việc của phòng dub.
+- Chưa có track phụ đề SMPTE 428-7 trong DCP.
+- Chưa có metadata CPL ST 429-16 và MCA label (ClairMeta không đòi; một số server mới hiển thị "channel config unknown").
+- Và giới hạn lớn nhất không nằm ở kỹ thuật: DCP hợp lệ chỉ là cái hộp đựng. **Chất lượng phim vẫn là nội dung, diễn xuất và tay nghề.** Engine lo phần tất định (layout, timing, chuyển động, đóng gói); phần nhìn đẹp như rạp đi qua glTF → Blender, hoặc qua control passes → AI video.
