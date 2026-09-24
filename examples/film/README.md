@@ -30,7 +30,11 @@ from the hilltop he watches the whole village light up for the festival.
 - 105 `PUT /api/frames/:id/motion` calls rendered **15,108 frames at 2K in 69.5 min** on 4 CPU cores (~276 ms/frame including TTS and writes; synchronous API, one shot at a time); 4.5 GB of PNG clips.
 - `GET /api/projects/:id/lint`: **0 errors**, 1 warning (a 180°-line cross in the festival).
 - Export ZIP 4.8 GB → `assemble.sh` → `film.mp4` (H.264 1998×1080 + AAC 48 kHz, 125 MB) in 19 min.
-- Two real bugs surfaced by making a feature-length film, both fixed with regression tests: a dissolve after a hard cut broke the ffmpeg graph (concat/xfade timebase), and the export silently skipped the mix for films over 15 minutes.
+- `npm run master:dcp … --mbps 80` → SMPTE DCP **`DenOngSao_SHR_F_VI-XX_VN_51_2K_SBS_20260924_SBS_SMPTE_OV`** in 2 h 12 min (≈ 3.6 frames/s J2K on 4 cores): picture MXF 12.1 GB (29,148 J2K frames, max 416,677 bytes = 32 % of the DCI per-frame cap, Rsiz = CINEMA2K), sound MXF 1.05 GB (5.1 PCM 24-bit, mix brought from −16.2 to −24.0 LUFS).
+- DCP validation: **ClairMeta — 78 checks, Success**; asdcplib `asdcp-info` reads both MXFs as SMPTE 429 (29,148 edit units each) and `asdcp-unwrap` extracts frames that ffmpeg decodes (below); CPL / PKL / ASSETMAP validate against the SMPTE 429-7 / 429-8 / 429-9 XSDs; the PKL SHA-1 of every asset matches the file on disk.
+- Three real limits surfaced by making a feature-length film, all fixed with regression tests: a dissolve after a hard cut broke the ffmpeg graph (concat/xfade timebase), the export silently skipped the mix for films over 15 minutes, and `-cinema2K` always spends the full 250 Mbit/s (~24 GB of picture for 20 minutes) — hence `--mbps`.
+
+<p align="center"><img src="../../docs/media/den-ong-sao-dcp-frames.jpg" width="640" alt="Frames decoded back out of the DCP"><br><sub>Frames 1200, 7000, 14000, 21000, 27500 unwrapped from the picture MXF by asdcplib and decoded by ffmpeg's X′Y′Z′ decoder.</sub></p>
 
 ## Chapters
 
@@ -47,7 +51,7 @@ from the hilltop he watches the whole village light up for the festival.
 ```bash
 npm run build && npx next start -p 3000          # the app, as any agent would run it
 npx tsx examples/film/produce.ts                  # ~1 h on 4 cores: every shot through the API
-npm run master:dcp -- /tmp/claude-0/film/export --out DCP --title "Đèn Ông Sao" --kind short --lang VI-XX --mbps 80
+npm run master:dcp -- <unzipped-export> --out DCP --title "Đèn Ông Sao" --kind short --lang VI-XX --mbps 80
 ```
 
 `produce.ts` drives only public endpoints: `POST /api/projects` → `POST
