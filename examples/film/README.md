@@ -1,0 +1,77 @@
+# Đèn Ông Sao · The Star Lantern
+
+*A 20-minute 3D animated short made entirely with this engine — written, staged,
+animated, voiced, scored, edited and mastered through the app's own API. No
+hand-drawn frames, no API keys, byte-for-byte reproducible.*
+
+> Ngày xửa ngày xưa, ở một ngôi làng nhỏ bên dòng sông, mỗi mùa trăng rằm
+> tháng Tám, trẻ con lại rước đèn…
+
+On the eve of the Mid-Autumn festival, Bà makes her grandson Tí a star lantern.
+That evening the river wind tears it from his hand and carries it away. A
+firefly leads him through the night — across the rice fields, into the bamboo
+forest, over a monkey bridge, past a sleeping buffalo — to the lotus pond where
+the lantern lies torn on a rock. The fireflies gather and light it for him, and
+from the hilltop he watches the whole village light up for the festival.
+
+| | |
+|---|---|
+| Running time | ~20 min · 105 shots · 7 chapters |
+| Picture | DCI Flat 1.85:1 · 1998×1080 · 24 fps (animation at 12 fps) |
+| Sound | narration + dialogue (local espeak-ng TTS, lip-synced) · original score · −16 LUFS web mix / −24 LUFS cinema |
+| Deliverables | `film.mp4` · SMPTE DCP · EDL/OTIO · subtitles · glTF per shot |
+
+## Chapters
+
+1. **Làng ven sông** — the village at dawn, fishing, making the lantern, the dragon game
+2. **Cơn gió chiều** — the legend of Chú Cuội, the gust, the lantern lost in the river
+3. **Đom đóm** — the firefly, the night fields, the owl, the forest lights up
+4. **Cầu khỉ** — the monkey bridge, the buffalo, the lotus pond
+5. **Ánh trăng** — the fireflies light the lantern, the hilltop, the village lights, farewell
+6. **Đêm hội trăng rằm** — lion dance, the lantern parade, reunion, mooncakes, floating lanterns
+7. **Trăng** — the porch under the full moon; credits
+
+## Reproduce it
+
+```bash
+npm run build && npx next start -p 3000          # the app, as any agent would run it
+npx tsx examples/film/produce.ts                  # ~1 h on 4 cores: every shot through the API
+npm run master:dcp -- /tmp/claude-0/film/export --out DCP --title "Đèn Ông Sao" --kind short --lang VI-XX
+```
+
+`produce.ts` drives only public endpoints: `POST /api/projects` → `POST
+/api/script/import` → per shot `PATCH /api/frames/:id` (scene, transition),
+`PUT …/dialogue` (TTS), `PUT …/motion` (renders the clip) → `PUT
+/api/projects/:id/soundtrack` → `GET …/lint` → `GET /api/export/zip` →
+`sh assemble.sh`. It is resumable (a content hash per shot), so editing one
+shot re-renders only that shot.
+
+## How it is built
+
+| File | What it is |
+|---|---|
+| `kit.ts` | Colour script (dawn / day / dusk / night / festival), sky backdrops whose mountains sit on the exact projected horizon, low-poly set pieces, the cast (hair, nón lá, the star lantern held via solid `attach`), exact framing helpers on the engine's own projection |
+| `sets.ts` | Ten locations as pure functions of the palette, with staging marks; buffalo, owl, lion-dance lion, drum, mooncakes, lantern strings |
+| `shots.ts` | The shot grammar: a compact shot → a validated motion spec. Camera moves are sampled so the subject stays locked on screen; tracking shots read the walker's position back from the engine's evaluator; blinks, breathing, lip-sync are added automatically |
+| `ch1.ts` … `ch7.ts`, `extras.ts` | The screenplay, shot by shot |
+| `acting.ts` | Gestures (wave, hop, sit, hold the lantern), firefly swarms, props |
+| `score.ts` | The original score: a deterministic pentatonic synthesizer (plucked zither, bamboo flute, pads, lion-dance drums, crickets, room reverb), one 8-bar main theme quoted across the film |
+| `produce.ts` | The producer (above) · `qa.ts` / `frame.ts` — fast visual QA through the same compile → sanitize → rasterize path |
+
+`tests/film.test.ts` keeps the film honest: every shot must stay a valid spec
+that compiles, the cut must stay ≥ 20 minutes on the project's own timeline,
+and the build and the score must stay deterministic.
+
+## Honest notes
+
+- The look is deliberately a low-poly storybook: flat-shaded 3D with a
+  quantized light, gradient skies, glow for lanterns and fireflies. The camera
+  is orthographic (no perspective foreshortening).
+- Voices are espeak-ng — intelligible, robotic. The film is mostly wordless
+  (like *Flow*) so the story does not lean on them; a production would drop
+  recorded WAVs into the same `PUT …/dialogue` call.
+- The score is composed and mixed by algorithm and measurement (per-mood
+  loudness, limiter, reverb), not by a musician's ear.
+- For a painterly or photoreal look, every shot also exports as glTF (Blender)
+  and as depth / segmentation / OpenPose passes (AI video restyling) from the
+  same geometry and camera.
