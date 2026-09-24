@@ -5,11 +5,12 @@ import {
   rotationX4,
   rotationY4,
   rotationZ4,
+  scaling4,
   translation4,
 } from "@/lib/services/construct/math3d";
 import { AppError } from "@/lib/services/apiError";
 import type { Part } from "@/lib/validation/constructSchema";
-import type { GeneratedSolid, PartBuild } from "@/lib/services/construct/partWheel";
+import type { FigureJoint, GeneratedSolid, PartBuild } from "@/lib/services/construct/partWheel";
 
 /**
  * partFigure — Layer 5b: nhân vật khớp nối bằng FORWARD KINEMATICS.
@@ -31,7 +32,7 @@ function err(message: string, hint: string): never {
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** Khớp hợp lệ (thứ tự cha trước con). */
-const JOINT_NAMES = [
+export const JOINT_NAMES = [
   "spine",
   "neck",
   "shoulderL",
@@ -48,10 +49,10 @@ const JOINT_NAMES = [
   "ankleR",
 ] as const;
 
-type JointName = (typeof JOINT_NAMES)[number];
+export type JointName = (typeof JOINT_NAMES)[number];
 
 /** A-pose mặc định (độ, trục z): tay chếch ra ±20°. */
-const NEUTRAL_POSE: Partial<Record<JointName, Vec3>> = {
+export const NEUTRAL_POSE: Partial<Record<JointName, Vec3>> = {
   shoulderL: [0, 0, 20],
   shoulderR: [0, 0, -20],
 };
@@ -140,10 +141,15 @@ export function buildFigure(part: FigurePart): PartBuild {
   // ---------- FK: ma trận world (local part) từng khớp ----------
   const hipsY = footH + shin + thigh;
   const M = new Map<string, Mat4>();
+  const joints: FigureJoint[] = [];
+  const jointOf = new Map<Mat4, string>();
   const joint = (name: JointName | "hips", parent: Mat4, pivot: Vec3): Mat4 => {
     const rot = name === "hips" ? IDENTITY_4 : poseRotation(angleOf(name));
-    const m = mul4(parent, mul4(translation4(pivot), rot));
+    const local = mul4(translation4(pivot), rot);
+    const m = mul4(parent, local);
     M.set(name, m);
+    joints.push({ name, parent: jointOf.get(parent) ?? null, local, world: m });
+    jointOf.set(m, name);
     return m;
   };
 
@@ -173,32 +179,61 @@ export function buildFigure(part: FigurePart): PartBuild {
     shadow: true,
   };
   const solids: GeneratedSolid[] = [];
+  /** Solid gắn vào khớp: localM = world(khớp) · offset (skin glTF dùng joint + offset). */
+  const attach = (solid: GeneratedSolid["solid"], jointM: Mat4, offset: Mat4) => {
+    solids.push({ solid, localM: mul4(jointM, offset), joint: jointOf.get(jointM), offset });
+  };
   /** Cylinder (trục y) đại diện xương: đặt GIỮA đoạn từ khớp dọc −y. */
   const bone = (id: string, jointM: Mat4, len: number, r: number, fill: string) => {
-    solids.push({
-      solid: { ...D, id: p(id), type: "cylinder", r, h: len, segments: 12, fill },
-      localM: mul4(jointM, translation4([0, -len / 2, 0])),
-    });
+    attach({ ...D, id: p(id), type: "cylinder", r, h: len, segments: 12, fill }, jointM, translation4([0, -len / 2, 0]));
   };
   const ball = (id: string, jointM: Mat4, r: number, fill: string, offset: Vec3 = [0, 0, 0]) => {
-    solids.push({
-      solid: { ...D, id: p(id), type: "sphere", r, segments: 12, fill },
-      localM: mul4(jointM, translation4(offset)),
-    });
+    attach({ ...D, id: p(id), type: "sphere", r, segments: 12, fill }, jointM, translation4(offset));
   };
 
   // Thân: cylinder từ hips lên hết torso
-  solids.push({
-    solid: { ...D, id: p("torso"), type: "cylinder", r: torsoR, h: torso, segments: 14, fill: fills.shirt },
-    localM: mul4(hips, translation4([0, torso * 0.5, 0])),
-  });
+  attach(
+    { ...D, id: p("torso"), type: "cylinder", r: torsoR, h: torso, segments: 14, fill: fills.shirt },
+    hips,
+    translation4([0, torso * 0.5, 0]),
+  );
   // Đầu + cổ (cổ mọc LÊN từ khớp neck — không dùng bone() vốn hướng −y)
   const neckBoneLen = neckLen + headR * 0.3;
-  solids.push({
-    solid: { ...D, id: p("neckBone"), type: "cylinder", r: limbR * 0.9, h: neckBoneLen, segments: 12, fill: fills.skin },
-    localM: mul4(neck, translation4([0, neckBoneLen / 2, 0])),
-  });
-  ball("head", neck, headR, fills.skin, [0, neckLen + headR * 0.55, 0]);
+  attach(
+    { ...D, id: p("neckBone"), type: "cylinder", r: limbR * 0.9, h: neckBoneLen, segments: 12, fill: fills.skin },
+    neck,
+    translation4([0, neckBoneLen / 2, 0]),
+  );
+  const headCenter: Vec3 = [0, neckLen + headR * 0.55, 0];
+  ball("head", neck, headR, fills.skin, headCenter);
+  // Khuôn mặt (tuỳ chọn): mắt + miệng là sphere dẹt gắn khớp neck, mặt
+  // hướng +z. Biểu cảm = SCALE của offset → animate được cả trong glTF
+  if (part.face) {
+    const f = part.face;
+    const eyeR = headR * 0.13;
+    for (const [id, side] of [
+      ["eyeL", 1],
+      ["eyeR", -1],
+    ] as const) {
+      attach(
+        { ...D, id: p(id), type: "sphere", r: eyeR, segments: 10, fill: f.eyes, shading: "none", shadow: false },
+        neck,
+        mul4(
+          translation4([headCenter[0] + side * headR * 0.36, headCenter[1] + headR * 0.12, headCenter[2] + headR * 0.86]),
+          scaling4([1, Math.max(0.08, 1 - f.blink * 0.92), 0.45]),
+        ),
+      );
+    }
+    const mouthR = headR * 0.24;
+    attach(
+      { ...D, id: p("mouth"), type: "sphere", r: mouthR, segments: 10, fill: f.mouth, shading: "none", shadow: false },
+      neck,
+      mul4(
+        translation4([headCenter[0], headCenter[1] - headR * 0.4, headCenter[2] + headR * 0.84]),
+        scaling4([0.55 + 0.65 * f.mouthWide, 0.1 + 0.75 * f.mouthOpen, 0.4]),
+      ),
+    );
+  }
   // Tay
   bone("upperArmL", shoulderL, upperArm, limbR, fills.shirt);
   bone("upperArmR", shoulderR, upperArm, limbR, fills.shirt);
@@ -217,17 +252,12 @@ export function buildFigure(part: FigurePart): PartBuild {
     ["footL", ankleL],
     ["footR", ankleR],
   ] as const) {
-    solids.push({
-      solid: {
-        ...D,
-        id: p(id),
-        type: "box",
-        size: [legR * 2.1, footH, footLen],
-        fill: fills.shoes,
-      },
-      localM: mul4(ankle, translation4([0, -footH / 2, footLen * 0.22])),
-    });
+    attach(
+      { ...D, id: p(id), type: "box", size: [legR * 2.1, footH, footLen], fill: fills.shoes },
+      ankle,
+      translation4([0, -footH / 2, footLen * 0.22]),
+    );
   }
 
-  return { shapes: [], solids };
+  return { shapes: [], solids, joints };
 }

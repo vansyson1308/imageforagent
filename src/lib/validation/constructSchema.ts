@@ -302,6 +302,23 @@ export const partSchema = z.discriminatedUnion("type", [
       .object({ skin: fillColor, shirt: fillColor, pants: fillColor, shoes: fillColor })
       .partial()
       .optional(),
+    /**
+     * Khuôn mặt (mắt + miệng) — có mặt là bật; mọi field animate được
+     * bằng track ("parts.hero.face.mouthOpen") → lip-sync, chớp mắt.
+     */
+    face: z
+      .object({
+        /** 0 = ngậm, 1 = há to. */
+        mouthOpen: z.number().min(0).max(1).default(0),
+        /** 0 = tròn (O/U), 1 = bẹt rộng (E/I). */
+        mouthWide: z.number().min(0).max(1).default(0.4),
+        /** 0 = mở mắt, 1 = nhắm. */
+        blink: z.number().min(0).max(1).default(0),
+        eyes: fillColor.default("#1d1d26"),
+        mouth: fillColor.default("#6b2d2d"),
+      })
+      .strict()
+      .optional(),
   }),
   z.object({
     ...partBase3d,
