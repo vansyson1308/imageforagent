@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { rgb24ToXyzPpm, srgbToDciXyz } from "@/lib/services/dcp/color";
@@ -14,7 +14,7 @@ import {
 } from "@/lib/services/dcp/mxf";
 import { MxfFileWriter } from "@/lib/services/dcp/mxfWriter";
 import { buildAssetMap, buildCpl, buildPkl, dcncName, sha1Base64 } from "@/lib/services/dcp/packaging";
-import { buildPictureArgs, containerSize } from "@/lib/services/dcp/picture";
+import { buildPictureArgs, containerSize, DCI_MAX_MBPS, j2kEncodeArgs, setDciProfile } from "@/lib/services/dcp/picture";
 import { uuidBytes, uuidString } from "@/lib/services/dcp/uuid";
 
 const has = (cmd: string) => {
@@ -168,13 +168,79 @@ describe("picture — lệnh ffmpeg container DCI", () => {
     const graph = args[args.indexOf("-filter_complex") + 1];
     expect(graph).toContain("force_original_aspect_ratio=decrease");
     expect(graph).toContain("pad=1998:1080:(ow-iw)/2:(oh-ih)/2:color=black");
-    expect(graph).toContain("[v0][v1]concat=n=2:v=1:a=0[x1]");
+    expect(graph).toContain("[v0][v1]concat=n=2:v=1:a=0,settb=1/24[x1]");
     expect(graph).toContain("[x1][v2]xfade=transition=fade:duration=0.5:offset=4.5[x2]");
     expect(args.slice(-4)).toEqual(["rawvideo", "-pix_fmt", "rgb24", "pipe:1"]);
     expect(args).toContain("-framerate");
     // không shell: mọi đường dẫn là một phần tử argv riêng
     expect(args).toContain("clips/F02/%04d.png");
   });
+});
+
+/** Main-header markers of a codestream, in order (up to the first SOT). */
+function mainMarkers(cs: Buffer): number[] {
+  const out: number[] = [];
+  for (let o = 2; o + 4 <= cs.length; ) {
+    const m = cs.readUInt16BE(o);
+    if (m === 0xff90) break;
+    out.push(m);
+    o += 2 + cs.readUInt16BE(o + 2);
+  }
+  return out;
+}
+
+describe("picture — J2K bitrate dưới trần DCI", () => {
+  it("không --mbps → -cinema2K/-cinema4K của OpenJPEG", () => {
+    expect(j2kEncodeArgs("a.ppm", "a.j2c", { is4K: false, w: 1998, h: 1080 })).toEqual(["-i", "a.ppm", "-o", "a.j2c", "-cinema2K", "24"]);
+    expect(j2kEncodeArgs("a.ppm", "a.j2c", { is4K: true, w: 3996, h: 2160 })).toContain("-cinema4K");
+  });
+
+  it("--mbps → tham số cinema 2K tường minh, tỉ lệ nén từ kích thước 12-bit thô", () => {
+    const a = j2kEncodeArgs("a.ppm", "a.j2c", { is4K: false, mbps: 80, w: 1998, h: 1080 });
+    const raw = (1998 * 1080 * 3 * 12) / 8;
+    expect(Number(a[a.indexOf("-r") + 1])).toBeCloseTo(raw / (80e6 / 24 / 8), 2);
+    for (const f of ["-I", "-TLM", "CPRL"]) expect(a).toContain(f);
+    expect(a[a.indexOf("-TP") + 1]).toBe("C");
+    expect(a[a.indexOf("-n") + 1]).toBe("6");
+    expect(() => j2kEncodeArgs("a", "b", { is4K: false, mbps: DCI_MAX_MBPS + 1, w: 1998, h: 1080 })).toThrow(/mbps/);
+    expect(() => j2kEncodeArgs("a", "b", { is4K: true, mbps: 80, w: 3996, h: 2160 })).toThrow(/2K/);
+  });
+
+  it("setDciProfile ghi Rsiz ngay sau SOC+SIZ, từ chối thứ không phải J2K", () => {
+    const cs = syntheticJ2k(1998, 1080, 16);
+    cs.writeUInt16BE(0, 6);
+    expect(parseJ2kHeader(setDciProfile(cs, false)).rsize).toBe(3);
+    expect(parseJ2kHeader(setDciProfile(cs, true)).rsize).toBe(4);
+    expect(() => setDciProfile(Buffer.from("not a codestream"), false)).toThrow(/JPEG 2000/);
+  });
+
+  it.skipIf(!has("opj_compress"))("opj thật: --mbps cho cùng cấu trúc với -cinema2K (SIZ/COD/QCD/TLM), Rsiz=3, dưới đích", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "j2k-"));
+    try {
+      const w = 666, h = 360; // small keeps it fast; the coding parameters do not depend on size
+      const rgb = Buffer.alloc(w * h * 3);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 3;
+        rgb[i] = (x * 255) / w; rgb[i + 1] = (y * 255) / h; rgb[i + 2] = ((x ^ y) & 0xff);
+      }
+      writeFileSync(path.join(dir, "f.ppm"), rgb24ToXyzPpm(rgb, w, h));
+      const enc = (out: string, mbps?: number) => {
+        execFileSync("opj_compress", j2kEncodeArgs(path.join(dir, "f.ppm"), path.join(dir, out), { is4K: false, mbps, w, h }), { stdio: "ignore" });
+        return readFileSync(path.join(dir, out));
+      };
+      const cinema = enc("c.j2c");
+      const low = setDciProfile(enc("l.j2c", 60), false);
+      const hc = parseJ2kHeader(cinema), hl = parseJ2kHeader(low);
+      expect(hl.rsize).toBe(3);
+      expect(hl.rsize).toBe(hc.rsize);
+      expect(hl.cod.equals(hc.cod)).toBe(true);
+      expect(hl.qcd.equals(hc.qcd)).toBe(true);
+      expect(mainMarkers(low)).toEqual(mainMarkers(cinema));
+      expect(low.length).toBeLessThanOrEqual(Math.ceil(60e6 / 24 / 8) + 64);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
 });
 
 describe("mxf — cấu trúc OP-Atom SMPTE (header 16384, body, index, RIP)", () => {

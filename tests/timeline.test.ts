@@ -1,3 +1,7 @@
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildAssembleScript, buildTimeline, timelineDuration } from "@/lib/services/timeline";
 import { buildTimedSrt } from "@/lib/services/srtBuilder";
@@ -59,4 +63,38 @@ describe("timeline", () => {
     const sh = buildAssembleScript(t.map((entry) => ({ badge: "F01", entry })), 24, { mix: "audio/mix.wav" });
     expect(sh).toContain("-i audio/mix.wav -map 0:v -map 1:a -c:v copy -c:a aac");
   });
+});
+
+describe("assemble.sh — real ffmpeg (cut followed by dissolve)", () => {
+  const hasFfmpeg = (() => {
+    try {
+      execFileSync("ffmpeg", ["-version"], { stdio: "ignore" });
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+
+  it.skipIf(!hasFfmpeg)("a dissolve after a cut assembles (concat → xfade timebases match)", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "asm-"));
+    try {
+      const frames = [
+        { index: 1, description: "a", clip: null, voice: null, transition: { kind: "cut", duration: 0.5 }, scene: null },
+        { index: 2, description: "b", clip: null, voice: null, transition: { kind: "cut", duration: 0.5 }, scene: null },
+        { index: 3, description: "c", clip: null, voice: null, transition: { kind: "dissolve", duration: 0.5 }, scene: null },
+        { index: 4, description: "d", clip: null, voice: null, transition: { kind: "cut", duration: 0.5 }, scene: null },
+        { index: 5, description: "e", clip: null, voice: null, transition: { kind: "fadeBlack", duration: 0.5 }, scene: null },
+      ];
+      const t = buildTimeline(frames, 1, 24);
+      for (const f of frames) {
+        execFileSync("ffmpeg", ["-loglevel", "error", "-y", "-f", "lavfi", "-i", `color=c=0x${(f.index * 40).toString(16).padStart(2, "0")}3050:s=64x36:d=1`, "-frames:v", "1", path.join(dir, `F0${f.index}.png`)]);
+      }
+      writeFileSync(path.join(dir, "assemble.sh"), buildAssembleScript(t.map((entry) => ({ badge: `F0${entry.index}`, entry }))));
+      execFileSync("sh", ["assemble.sh"], { cwd: dir, stdio: "ignore" });
+      const dur = Number(execFileSync("ffprobe", ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", path.join(dir, "film.mp4")]).toString());
+      expect(dur).toBeCloseTo(timelineDuration(t), 1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 60_000);
 });

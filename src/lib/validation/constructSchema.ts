@@ -225,6 +225,12 @@ const solidBase = {
    * phía cha quay lưng lại camera. Chữa giới hạn silhouette smooth.
    */
   decalOf: refId.optional(),
+  /**
+   * Gắn vào KHỚP của một figure (đạo cụ cầm tay, tóc, nón): at/rotate/scale
+   * của solid tính TRONG hệ của khớp — đi theo walk, IK, pose tracks.
+   * joint: tên khớp figure, "hips", hoặc "head" (tâm đầu).
+   */
+  attach: z.object({ part: constructId, joint: z.string().min(1).max(32) }).strict().optional(),
 };
 
 export const solidSchema = z.discriminatedUnion("type", [

@@ -267,5 +267,7 @@ export function buildFigure(part: FigurePart): PartBuild {
     );
   }
 
-  return { shapes: [], solids, joints };
+  const anchors = new Map<string, Mat4>(M);
+  anchors.set("head", mul4(neck, translation4(headCenter)));
+  return { shapes: [], solids, joints, anchors };
 }

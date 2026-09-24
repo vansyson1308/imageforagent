@@ -5,7 +5,8 @@ import { synthesizeSpeech } from "@/lib/services/tts";
 /** Trần giọng mỗi frame: 60 s (một shot) — âm thanh giải mã nằm trong RAM. */
 export const MAX_VOICE_SECONDS = 60;
 /** Trần nhạc nền: 15 phút. */
-export const MAX_MUSIC_SECONDS = 15 * 60;
+/** Nhạc nền cả phim truyện (≤ 3 giờ). WAV dài nên dùng tần số mẫu thấp hơn để vừa body 200 MB. */
+export const MAX_MUSIC_SECONDS = 3 * 60 * 60;
 
 export interface VoiceInput {
   readonly wav?: string;

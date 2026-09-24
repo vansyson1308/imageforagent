@@ -162,7 +162,8 @@ export function buildAssembleScript(shots: readonly AssembleShot[], filmFps = 24
       parts.push(
         t
           ? `[${chain}][v${i}]xfade=transition=${XFADE_NAME[t.kind]}:duration=${t.duration}:offset=${s.entry.startSec}[x${i}]`
-          : `[${chain}][v${i}]concat=n=2:v=1:a=0[x${i}]`,
+          : // concat ra timebase AV_TIME_BASE — đưa về 1/FPS để xfade kế tiếp khớp
+            `[${chain}][v${i}]concat=n=2:v=1:a=0,settb=1/$FPS[x${i}]`,
       );
       chain = `x${i}`;
     });

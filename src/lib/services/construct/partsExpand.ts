@@ -160,8 +160,10 @@ export function expandParts(spec: ConstructSpec): ExpandedSpec {
   }
 
   // Parts
+  const anchorsByPart = new Map<string, { partM: Mat4; anchors: ReadonlyMap<string, Mat4> | undefined }>();
   for (const part of spec.parts) {
     const build = buildPart(part);
+    if (build.solids.length > 0) anchorsByPart.set(part.id, { partM: partPlacementMatrix(part, groupM), anchors: build.anchors });
     // Macro 2D (không solids): shapes tự mang placement — không cần ma trận
     shapes.push(...build.shapes);
     if (build.solids.length === 0) continue;
@@ -174,6 +176,31 @@ export function expandParts(spec: ConstructSpec): ExpandedSpec {
       solids.push(partEffects !== undefined ? { ...gen.solid, effects: partEffects } : gen.solid);
       worldMatrixById.set(gen.solid.id, mul4(partM, gen.localM));
     }
+  }
+
+  // Solid user gắn khớp figure: world = M(part) · M(khớp) · SRT(solid)
+  for (const solid of spec.solids) {
+    if (!solid.attach) continue;
+    const { part: partId, joint } = solid.attach;
+    if (solid.group) {
+      err(`Solid "${solid.id}" has both "group" and "attach".`, "Use one: attach follows a figure joint, group follows an FK frame.");
+    }
+    const target = anchorsByPart.get(partId);
+    if (!target?.anchors) {
+      const figures = spec.parts.filter((p) => p.type === "figure").map((p) => p.id);
+      err(
+        `Solid "${solid.id}" attaches to "${partId}", which is not a figure part.`,
+        `Figure parts: ${figures.join(", ") || "(none)"}.`,
+      );
+    }
+    const anchor = target.anchors.get(joint);
+    if (!anchor) {
+      err(
+        `Solid "${solid.id}": figure "${partId}" has no joint "${joint}".`,
+        `Valid: ${[...target.anchors.keys()].join(", ")}.`,
+      );
+    }
+    worldMatrixById.set(solid.id, mul4(target.partM, mul4(anchor, composePlacement4(solid.at, solid.rotate, solid.scale))));
   }
 
   // Node cap sau expansion

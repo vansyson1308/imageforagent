@@ -16,6 +16,7 @@ import { parseStoredMotion, passesDirOf } from "@/lib/services/clipService";
 import { exportMotionGltf } from "@/lib/services/motion/gltfMotion";
 import { LOGICAL_CANVAS } from "@/lib/services/svgRenderer";
 import { formatFrameBadge } from "@/lib/services/frameService";
+import { MAX_MIX_SECONDS } from "@/lib/config/limits";
 
 function slugify(name: string): string {
   return (
@@ -162,7 +163,7 @@ export async function GET(req: Request): Promise<Response> {
     );
     const timelineByIndex = new Map(timeline.map((e) => [e.index, e]));
 
-    // Mix 48 kHz / 24-bit stereo khớp timeline: thoại + nhạc duck (≤ 15 phút)
+    // Mix 48 kHz / 24-bit stereo khớp timeline: thoại + nhạc duck (≤ MAX_MIX_SECONDS)
     let music: AudioBuffer | null = null;
     if (project.musicPath) {
       try {
@@ -174,7 +175,11 @@ export async function GET(req: Request): Promise<Response> {
     }
     const filmSeconds = timelineDuration(timeline);
     let hasMix = false;
-    if ((voices.size > 0 || music) && filmSeconds <= 15 * 60) {
+    const mixSkipped = (voices.size > 0 || music) && filmSeconds > MAX_MIX_SECONDS;
+    if (mixSkipped) {
+      logger.warn({ projectId, filmSeconds, max: MAX_MIX_SECONDS }, "zip: film longer than the mix limit — audio/mix.wav skipped (mix per reel)");
+    }
+    if ((voices.size > 0 || music) && !mixSkipped) {
       const clips: MixClip[] = [];
       for (const e of timeline) {
         const v = voices.get(e.index);
@@ -196,7 +201,11 @@ export async function GET(req: Request): Promise<Response> {
         resolution: project.resolution,
         playbackSpeed: project.playbackSpeed,
         durationSec: timelineDuration(timeline),
-        audio: hasMix ? { mix: "audio/mix.wav", sampleRate: 48000, bitDepth: 24, channels: 2 } : null,
+        audio: hasMix
+          ? { mix: "audio/mix.wav", sampleRate: 48000, bitDepth: 24, channels: 2 }
+          : mixSkipped
+            ? { mix: null, skipped: `film is ${Math.round(filmSeconds)} s, longer than the ${MAX_MIX_SECONDS} s mix limit — mix per reel` }
+            : null,
         exportedAt: new Date().toISOString(),
       },
       frames: project.frames.map((f) => {
