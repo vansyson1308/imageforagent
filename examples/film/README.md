@@ -47,7 +47,7 @@ from the hilltop he watches the whole village light up for the festival.
 ```bash
 npm run build && npx next start -p 3000          # the app, as any agent would run it
 npx tsx examples/film/produce.ts                  # ~1 h on 4 cores: every shot through the API
-npm run master:dcp -- /tmp/claude-0/film/export --out DCP --title "Đèn Ông Sao" --kind short --lang VI-XX
+npm run master:dcp -- /tmp/claude-0/film/export --out DCP --title "Đèn Ông Sao" --kind short --lang VI-XX --mbps 80
 ```
 
 `produce.ts` drives only public endpoints: `POST /api/projects` → `POST

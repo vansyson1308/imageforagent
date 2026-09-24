@@ -5,7 +5,7 @@
  *
  *   npx tsx scripts/master-dcp.ts <thư-mục-export-đã-giải-nén> [--out DCP]
  *       [--title "Tên phim"] [--kind short|feature|trailer|test]
- *       [--container flat|scope] [--4k] [--jobs N] [--issuer "…"]
+ *       [--container flat|scope] [--4k] [--mbps 80] [--jobs N] [--issuer "…"]
  *       [--lang EN-XX] [--territory US-PG13] [--studio ABC] [--facility XYZ]
  *       [--date 2026-09-24T00:00:00Z] [--cinema-lufs -24 | --cinema-lufs off]
  *
@@ -32,7 +32,7 @@ import { createHash } from "node:crypto";
 import { MxfFileWriter } from "@/lib/services/dcp/mxfWriter";
 import { parseJ2kHeader } from "@/lib/services/dcp/mxf";
 import { rgb24ToXyzPpm } from "@/lib/services/dcp/color";
-import { buildPictureArgs, containerSize, type DcpShot, type DciContainer } from "@/lib/services/dcp/picture";
+import { buildPictureArgs, containerSize, j2kEncodeArgs, setDciProfile, type DcpShot, type DciContainer } from "@/lib/services/dcp/picture";
 import { buildAssetMap, buildCpl, buildPkl, dcncName, VOLINDEX, type PackagedFile } from "@/lib/services/dcp/packaging";
 import { uuidBytes } from "@/lib/services/dcp/uuid";
 
@@ -51,6 +51,7 @@ interface Args {
   facility?: string;
   date?: Date;
   cinemaLufs: number | null;
+  mbps?: number;
 }
 
 function parseArgs(argv: string[]): Args {
@@ -63,6 +64,7 @@ function parseArgs(argv: string[]): Args {
     else if (k === "--kind") a.kind = v() as Args["kind"];
     else if (k === "--container") a.container = v() as DciContainer;
     else if (k === "--4k") a.is4K = true;
+    else if (k === "--mbps") a.mbps = Number(v());
     else if (k === "--jobs") a.jobs = Math.max(1, Number(v()));
     else if (k === "--issuer") a.issuer = v();
     else if (k === "--lang") a.language = v();
@@ -199,8 +201,9 @@ async function main() {
     const ppm = path.join(work, `f${i}.ppm`);
     const j2c = path.join(work, `f${i}.j2c`);
     await writeFile(ppm, rgb24ToXyzPpm(rgb, size.w, size.h));
-    await run("opj_compress", ["-i", ppm, "-o", j2c, args.is4K ? "-cinema4K" : "-cinema2K", "24"]);
+    await run("opj_compress", j2kEncodeArgs(ppm, j2c, { is4K: args.is4K, mbps: args.mbps, w: size.w, h: size.h }));
     const cs = await readFile(j2c);
+    if (args.mbps !== undefined) setDciProfile(cs, args.is4K);
     await rm(ppm, { force: true });
     await rm(j2c, { force: true });
     return cs;
