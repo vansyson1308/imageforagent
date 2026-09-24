@@ -1,0 +1,203 @@
+{
+  "version": 1,
+  "fps": 24,
+  "holdFrames": 2,
+  "duration": 2,
+  "background": "#14182b",
+  "scene": {
+    "version": 1,
+    "solids": [
+      {
+        "id": "floor",
+        "type": "box",
+        "size": [
+          1800,
+          20,
+          1400
+        ],
+        "at": [
+          0,
+          -10,
+          0
+        ],
+        "fill": "#3d4a73",
+        "shadow": false
+      },
+      {
+        "id": "ball",
+        "type": "sphere",
+        "r": 70,
+        "at": [
+          -420,
+          520,
+          0
+        ],
+        "fill": "#f4b23c",
+        "effects": {
+          "highlight": true,
+          "specular": true,
+          "rim": true,
+          "contact": {
+            "opacity": 0.5
+          }
+        }
+      }
+    ],
+    "shadow": {
+      "style": "blob",
+      "opacity": 0.3
+    },
+    "light": {
+      "direction": [
+        -0.4,
+        -1.6,
+        -0.9
+      ],
+      "mode": "gradient"
+    },
+    "camera": {
+      "orbit": {
+        "azimuth": 0,
+        "elevation": 24
+      },
+      "zoom": 1
+    },
+    "place": {
+      "at": [
+        960,
+        760
+      ]
+    },
+    "atmosphere": {
+      "vignette": {
+        "strength": 0.4
+      }
+    }
+  },
+  "tracks": [
+    {
+      "target": "solids.ball.at.0",
+      "keys": [
+        {
+          "t": 0,
+          "v": -420
+        },
+        {
+          "t": 2,
+          "v": 420,
+          "ease": "linear"
+        }
+      ]
+    },
+    {
+      "target": "solids.ball.at.1",
+      "keys": [
+        {
+          "t": 0,
+          "v": 520
+        },
+        {
+          "t": 0.5,
+          "v": 70,
+          "ease": "in"
+        },
+        {
+          "t": 0.95,
+          "v": 330,
+          "ease": "out"
+        },
+        {
+          "t": 1.4,
+          "v": 70,
+          "ease": "in"
+        },
+        {
+          "t": 1.7,
+          "v": 160,
+          "ease": "out"
+        },
+        {
+          "t": 2,
+          "v": 70,
+          "ease": "in"
+        }
+      ]
+    },
+    {
+      "target": "solids.ball.scale",
+      "keys": [
+        {
+          "t": 0,
+          "v": [
+            1,
+            1,
+            1
+          ]
+        },
+        {
+          "t": 0.42,
+          "v": [
+            0.9,
+            1.15,
+            0.9
+          ],
+          "ease": "inOut"
+        },
+        {
+          "t": 0.5,
+          "v": [
+            1.3,
+            0.7,
+            1.3
+          ],
+          "ease": "in"
+        },
+        {
+          "t": 0.6,
+          "v": [
+            1,
+            1,
+            1
+          ],
+          "ease": "outBack"
+        },
+        {
+          "t": 1.33,
+          "v": [
+            0.92,
+            1.1,
+            0.92
+          ],
+          "ease": "inOut"
+        },
+        {
+          "t": 1.4,
+          "v": [
+            1.22,
+            0.8,
+            1.22
+          ],
+          "ease": "in"
+        },
+        {
+          "t": 1.5,
+          "v": [
+            1,
+            1,
+            1
+          ],
+          "ease": "outBack"
+        }
+      ]
+    }
+  ],
+  "rigs": [
+    {
+      "type": "shot",
+      "move": "pan",
+      "amount": 120,
+      "ease": "inOut"
+    }
+  ],
+  "poster": 0.5
+}

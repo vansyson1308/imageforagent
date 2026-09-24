@@ -1,0 +1,90 @@
+import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
+import { enforceRateLimit } from "@/lib/services/rateLimit";
+import { motionRequestSchema } from "@/lib/validation/motionSchema";
+import { resolveVoice } from "@/lib/services/voiceService";
+import { audioLipCurves, textLipCurves, type LipCurves } from "@/lib/services/audio/lipsync";
+import {
+  encodeAnimatedWebp,
+  encodeContactSheet,
+  renderMotionClip,
+  renderPassClip,
+} from "@/lib/services/motionRenderer";
+
+/**
+ * POST /api/motion — motion compiler STATELESS: scene construct + tracks +
+ * rigs → một shot hoạt hình. Không lưu DB (lưu vào frame qua
+ * PUT /api/frames/:id/motion).
+ *
+ * Mặc định trả `contactSheetPng` (lưới frame lấy mẫu đều + thanh thời gian)
+ * — agent NHÌN chuyển động trong một ảnh; `preview.webp` thêm animated
+ * WebP; `preview.includeSvg` trả SVG từng frame để tự lắp ráp.
+ */
+export async function POST(req: Request): Promise<Response> {
+  return handleRoute(async () => {
+    enforceRateLimit("motion:compile", 6);
+    const body = await parseBody(req, motionRequestSchema);
+    const preview = body.preview ?? {
+      aspectRatio: "16:9" as const,
+      resolution: "1K" as const,
+      sheet: true,
+      sheetFrames: 12,
+      webp: false,
+      includeSvg: false,
+      passes: [] as ("depth" | "segmentation" | "normal" | "pose")[],
+    };
+
+    // Giọng cho rig lipsync: WAV/TTS → envelope; chỉ text → nhịp âm tiết
+    let lip: LipCurves | undefined;
+    if (body.voice) {
+      const v = await resolveVoice(body.voice);
+      if (v) lip = audioLipCurves(v.audio, body.motion.fps, body.voice.offset);
+      else if (body.voice.text) {
+        lip = textLipCurves(body.voice.text, Math.max(0.5, body.motion.duration - body.voice.offset), body.motion.fps, body.voice.offset);
+      }
+    }
+    const ctx = { shotType: body.shotType, lip };
+    const result = await renderMotionClip({
+      motion: body.motion,
+      ctx,
+      defs: null,
+      aspectRatio: preview.aspectRatio,
+      resolution: preview.resolution,
+    });
+    const pngs = result.frames.map((f) => f.png);
+
+    const [sheet, webp] = await Promise.all([
+      preview.sheet
+        ? encodeContactSheet(pngs, preview.sheetFrames, result.frames.map((f) => f.t), body.motion.duration)
+        : Promise.resolve(null),
+      preview.webp ? encodeAnimatedWebp(pngs, body.motion.fps) : Promise.resolve(null),
+    ]);
+
+    const passes: Record<string, unknown> = {};
+    for (const pass of new Set(preview.passes)) {
+      const pr = await renderPassClip({
+        motion: body.motion,
+        ctx,
+        pass,
+        aspectRatio: preview.aspectRatio,
+        resolution: preview.resolution,
+      });
+      const passSheet = await encodeContactSheet(pr.pngs, preview.sheetFrames, pr.times, body.motion.duration);
+      passes[pass] = {
+        contactSheetPng: `data:image/png;base64,${passSheet.toString("base64")}`,
+        ...(pr.openpose && { openpose: pr.openpose }),
+      };
+    }
+
+    return Response.json({
+      ...(preview.passes.length > 0 && { passes }),
+      stats: result.stats,
+      warnings: result.warnings,
+      posterPng: `data:image/png;base64,${result.posterPng.toString("base64")}`,
+      ...(sheet && { contactSheetPng: `data:image/png;base64,${sheet.toString("base64")}` }),
+      ...(webp && { clipWebp: `data:image/webp;base64,${webp.toString("base64")}` }),
+      ...(preview.includeSvg && {
+        frames: result.frames.map((f) => ({ index: f.index, t: f.t, svg: f.constructSvg })),
+      }),
+    });
+  });
+}

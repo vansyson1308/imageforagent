@@ -65,7 +65,7 @@ export function ArtworkPanel() {
           >
             {ASPECT_RATIOS.map((r) => (
               <option key={r} value={r}>
-                {r} {r === "16:9" ? "(YouTube)" : r === "9:16" ? "(TikTok/Reels)" : ""}
+                {r} {r === "16:9" ? "(YouTube)" : r === "9:16" ? "(TikTok/Reels)" : r === "1.85:1" ? "(Rạp — DCI Flat)" : r === "2.39:1" ? "(Rạp — DCI Scope)" : ""}
               </option>
             ))}
           </select>
@@ -80,7 +80,7 @@ export function ArtworkPanel() {
           >
             {RESOLUTIONS.map((r) => (
               <option key={r} value={r}>
-                {r} (cạnh dài {r === "2K" ? 2048 : 1024}px)
+                {r} (cạnh dài {r === "4K" ? 4096 : r === "2K" ? 2048 : 1024}px)
               </option>
             ))}
           </select>

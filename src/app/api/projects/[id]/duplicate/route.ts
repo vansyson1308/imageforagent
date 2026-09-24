@@ -42,6 +42,9 @@ export async function POST(_req: Request, ctx: RouteContext): Promise<Response> 
             shotType: f.shotType,
             description: f.description,
             artworkSvg: f.artworkSvg, // giữ artwork — 1 lần /api/render là dựng lại ảnh
+            motionSpec: f.motionSpec, // shot motion cũng dựng lại được bằng /api/render
+            dialogue: f.dialogue, // văn bản thoại (giọng: gửi lại hoặc TTS)
+            voiceOffset: f.voiceOffset,
             status: "draft",
           })),
         },

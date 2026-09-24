@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-export const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:5"] as const;
-export const RESOLUTIONS = ["1K", "2K"] as const;
+export const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:5", "1.85:1", "2.39:1"] as const;
+export const RESOLUTIONS = ["1K", "2K", "4K"] as const;
 export const WM_POSITIONS = [
   "top-left",
   "top-right",
@@ -48,13 +48,19 @@ export const createFrameSchema = z.object({
   afterIndex: z.number().int().min(0).optional(),
 });
 
+/** Chuyển cảnh VÀO một frame (ffmpeg xfade tương ứng trong assemble.sh). */
+export const TRANSITIONS = ["cut", "dissolve", "fadeBlack", "fadeWhite", "wipeLeft", "wipeRight", "slideLeft", "slideRight"] as const;
+
 export const patchFrameSchema = z
   .object({
     shotType: z.string().trim().max(120).optional(),
     description: z.string().max(2000).optional(),
+    scene: z.string().trim().max(120).nullable().optional(),
+    transition: z.enum(TRANSITIONS).optional(),
+    transitionDuration: z.number().min(0.04).max(5).optional(),
   })
   .strict()
-  .refine((v) => v.shotType !== undefined || v.description !== undefined, {
+  .refine((v) => Object.values(v).some((x) => x !== undefined), {
     message: "Không có trường nào để cập nhật.",
   });
 

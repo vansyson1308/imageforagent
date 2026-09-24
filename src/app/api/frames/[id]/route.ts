@@ -7,6 +7,7 @@ import { computeReindexAfterDelete } from "@/lib/services/frameService";
 import { applyIndexUpdates } from "@/lib/services/frameDb";
 import { removeQuiet } from "@/lib/services/storage";
 import { withImageUrl } from "@/lib/services/dto";
+import { removeClipFiles } from "@/lib/services/clipService";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -43,6 +44,8 @@ export async function DELETE(_req: Request, ctx: RouteContext): Promise<Response
     // Dọn file ảnh của frame đã xoá
     if (existing.imagePath) await removeQuiet(existing.imagePath);
     if (existing.rawImagePath) await removeQuiet(existing.rawImagePath);
+    if (existing.clipDir || existing.clipPath) await removeClipFiles(existing.projectId, id);
+    if (existing.voicePath) await removeQuiet(existing.voicePath);
 
     return Response.json({ ok: true });
   });

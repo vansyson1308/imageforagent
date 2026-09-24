@@ -8,15 +8,28 @@ import type { Part, Shape2D, Solid } from "@/lib/validation/constructSchema";
  * sinh sẵn (id "partId:segment") + localM cho solid (world = partM · localM).
  */
 
+export interface FigureJoint {
+  readonly name: string;
+  readonly parent: string | null;
+  readonly local: Mat4;
+  /** Ma trận trong hệ part (tích chuỗi cha). */
+  readonly world: Mat4;
+}
+
 export interface GeneratedSolid {
   readonly solid: Solid;
   /** Placement local trong hệ của part (world = partM · localM). */
   readonly localM: Mat4;
+  /** Figure: khớp mang solid + offset (localM = world(joint) · offset) — cho skin glTF. */
+  readonly joint?: string;
+  readonly offset?: Mat4;
 }
 
 export interface PartBuild {
   readonly shapes: Shape2D[];
   readonly solids: GeneratedSolid[];
+  /** Figure: cây khớp (cha trước con), local = translation(pivot) · rotation(pose). */
+  readonly joints?: readonly FigureJoint[];
 }
 
 /** Solid với mọi field default đã điền (expansion chạy SAU zod parse). */

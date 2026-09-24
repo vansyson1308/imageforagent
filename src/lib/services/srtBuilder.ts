@@ -1,6 +1,7 @@
 /**
  * Sinh file captions.srt từ danh sách frame + tốc độ phát (giây/frame).
- * Pure function — timing tuần tự: frame i chiếm [i*spf, (i+1)*spf).
+ * Pure function — timing tuần tự: frame i chiếm [i*spf, (i+1)*spf);
+ * buildTimedSrt nhận timeline thật (shot motion có thời lượng riêng).
  */
 
 export interface SrtFrame {
@@ -22,14 +23,25 @@ export function buildSrt(
   frames: readonly SrtFrame[],
   secondsPerFrame: number,
 ): string {
-  const spfMs = Math.max(0.1, secondsPerFrame) * 1000;
+  const spf = Math.max(0.1, secondsPerFrame);
   const ordered = frames.slice().sort((a, b) => a.index - b.index);
+  return buildTimedSrt(
+    ordered.map((frame, i) => ({ description: frame.description, startSec: i * spf, durationSec: spf })),
+  );
+}
 
-  const blocks = ordered.map((frame, i) => {
-    const start = formatTimestamp(i * spfMs);
-    const end = formatTimestamp((i + 1) * spfMs);
-    return `${i + 1}\n${start} --> ${end}\n${frame.description}`;
+export interface TimedSrtCue {
+  readonly description: string;
+  readonly startSec: number;
+  readonly durationSec: number;
+}
+
+/** SRT theo timeline thật (shot motion dài bằng clip) — cue theo thứ tự truyền vào. */
+export function buildTimedSrt(cues: readonly TimedSrtCue[]): string {
+  const blocks = cues.map((cue, i) => {
+    const start = formatTimestamp(cue.startSec * 1000);
+    const end = formatTimestamp((cue.startSec + cue.durationSec) * 1000);
+    return `${i + 1}\n${start} --> ${end}\n${cue.description}`;
   });
-
   return blocks.join("\n\n") + "\n";
 }

@@ -11,10 +11,11 @@ model Project {
   id            String   @id @default(cuid())
   name          String
   artworkDefs   String? // thư viện SVG <defs> dùng chung: mascot <symbol>, gradient, props…
-  aspectRatio   String   @default("16:9") // "16:9" | "9:16" | "1:1" | "4:5"
-  resolution    String   @default("1K") // "1K" | "2K"
+  aspectRatio   String   @default("16:9") // "16:9" | "9:16" | "1:1" | "4:5" | "1.85:1" | "2.39:1"
+  resolution    String   @default("1K") // "1K" | "2K" | "4K"
   playbackSpeed Float    @default(1.5) // giây/frame cho preview
   sheetUrl      String?
+  musicPath     String? // nhạc nền {projectId}/audio/music.wav — duck dưới thoại
   wmPosition    String   @default("bottom-right") // 4 góc + "center"
   wmScale       Float    @default(12) // % chiều rộng ảnh
   wmOpacity     Float    @default(0.85)
@@ -37,6 +38,22 @@ model Frame {
   rawImagePath String? // ảnh render gốc chưa watermark
   errorMsg     String?
   generatedAt  DateTime?
+  // Motion (construct v4): frame là MỘT shot hoạt hình — poster frame là ảnh tĩnh ở trên
+  motionSpec     String? // JSON motion spec agent gửi (nguồn chân lý của clip)
+  clipDir        String? // thư mục chuỗi PNG: {projectId}/clips/{frameId}/0001.png…
+  clipPath       String? // animated WebP xem nhanh
+  clipFps        Int?
+  clipFrameCount Int?
+  clipDuration   Float? // giây — thời lượng shot trên timeline
+  // Thoại (audio v1): văn bản + giọng (TTS local hoặc WAV agent gửi)
+  dialogue       String? // câu thoại — phụ đề + lip-sync fallback
+  voicePath      String? // {projectId}/audio/{frameId}.wav
+  voiceDuration  Float?
+  voiceOffset    Float    @default(0) // giây từ đầu shot tới lúc bắt đầu nói
+  // Sequence (dựng phim): cảnh + chuyển cảnh VÀO frame này
+  scene              String? // nhãn cảnh ("SC01 — Buổi sáng") — gom shot, lint liên tục
+  transition         String  @default("cut") // cut|dissolve|fadeBlack|fadeWhite|wipeLeft|wipeRight|slideLeft|slideRight
+  transitionDuration Float   @default(0.5)
 
   @@unique([projectId, index])
 }

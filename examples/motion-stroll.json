@@ -1,0 +1,210 @@
+{
+  "version": 1,
+  "fps": 12,
+  "duration": 3,
+  "background": "#1c2340",
+  "scene": {
+    "version": 1,
+    "gradients": [
+      {
+        "id": "sky",
+        "kind": "linear",
+        "angle": 90,
+        "stops": [
+          {
+            "offset": 0,
+            "color": "#27305a"
+          },
+          {
+            "offset": 1,
+            "color": "#e89a6a"
+          }
+        ]
+      }
+    ],
+    "shapes": [
+      {
+        "id": "skyBand",
+        "type": "rect",
+        "w": 4000,
+        "h": 1400,
+        "at": [
+          0,
+          -560
+        ],
+        "fill": "url(#sky)"
+      }
+    ],
+    "solids": [
+      {
+        "id": "ground",
+        "type": "box",
+        "size": [
+          3200,
+          20,
+          2600
+        ],
+        "at": [
+          0,
+          -10,
+          700
+        ],
+        "fill": "#6f9a5b",
+        "shadow": false
+      },
+      {
+        "id": "ball",
+        "type": "sphere",
+        "r": 34,
+        "at": [
+          360,
+          34,
+          140
+        ],
+        "fill": "#e74c3c",
+        "effects": {
+          "highlight": true,
+          "specular": true,
+          "contact": true
+        }
+      }
+    ],
+    "parts": [
+      {
+        "id": "pip",
+        "type": "figure",
+        "height": 300,
+        "headCount": 3,
+        "fills": {
+          "shirt": "#f39c12",
+          "pants": "#34495e"
+        },
+        "effects": {
+          "rim": true
+        }
+      },
+      {
+        "id": "treeA",
+        "type": "tree",
+        "trunkH": 120,
+        "trunkR": 14,
+        "canopyR": 80,
+        "at": [
+          -620,
+          0,
+          -200
+        ]
+      },
+      {
+        "id": "treeB",
+        "type": "tree",
+        "trunkH": 150,
+        "trunkR": 16,
+        "canopyR": 95,
+        "style": "layered",
+        "at": [
+          640,
+          0,
+          -240
+        ]
+      }
+    ],
+    "shadow": {
+      "opacity": 0.22,
+      "style": "blob"
+    },
+    "light": {
+      "direction": [
+        0.6,
+        -1.5,
+        -0.8
+      ],
+      "mode": "gradient"
+    },
+    "camera": {
+      "orbit": {
+        "azimuth": 12,
+        "elevation": 12
+      },
+      "zoom": 1.1
+    },
+    "place": {
+      "at": [
+        960,
+        600
+      ]
+    },
+    "atmosphere": {
+      "vignette": {
+        "strength": 0.35
+      }
+    }
+  },
+  "rigs": [
+    {
+      "type": "walk",
+      "part": "pip",
+      "path": [
+        [
+          -520,
+          60
+        ],
+        [
+          180,
+          60
+        ]
+      ],
+      "start": 0,
+      "end": 2.6
+    },
+    {
+      "type": "shot",
+      "move": "dollyIn",
+      "amount": 0.25
+    },
+    {
+      "type": "follow",
+      "source": "parts.pip.at.0",
+      "target": "place.at.0",
+      "lag": 0.4,
+      "gain": -0.35
+    },
+    {
+      "type": "wiggle",
+      "target": "camera.orbit.azimuth",
+      "amplitude": 1.2,
+      "frequency": 0.7,
+      "seed": 4
+    }
+  ],
+  "tracks": [
+    {
+      "target": "solids.ball.at.1",
+      "keys": [
+        {
+          "t": 0,
+          "v": 260
+        },
+        {
+          "t": 1.2,
+          "v": 34,
+          "ease": "outBounce"
+        }
+      ]
+    },
+    {
+      "target": "solids.ball.fill",
+      "keys": [
+        {
+          "t": 1.2,
+          "v": "#e74c3c"
+        },
+        {
+          "t": 3,
+          "v": "#9b59b6"
+        }
+      ]
+    }
+  ],
+  "poster": 1.5
+}

@@ -1,13 +1,10 @@
 import type { CompileResult, ProjectedFace, Vec2 } from "@/lib/services/construct/types";
-import type { ConstructSpec, Solid } from "@/lib/validation/constructSchema";
+import type { ConstructSpec } from "@/lib/validation/constructSchema";
 import { AppError } from "@/lib/services/apiError";
 import { CONSTRUCT_LIMITS } from "@/lib/config/limits";
-import { convexHull2D, flattenToContours } from "@/lib/services/construct/geometry2d";
-import { parsePathData } from "@/lib/services/construct/pathParse";
-import { normalizeSelfUnion } from "@/lib/services/construct/pathBoolean";
-import { relativeEps, weldVertices, type Polygon3 } from "@/lib/services/construct/plane3";
-import { csgOperation, meshToPolygons, prepareOperand } from "@/lib/services/construct/csg";
-import { repairPolygons, repairedToMesh } from "@/lib/services/construct/meshRepair";
+import { convexHull2D } from "@/lib/services/construct/geometry2d";
+import { buildSolidMeshes } from "@/lib/services/construct/sceneMeshes";
+import { attachSurfaceFeatures } from "@/lib/services/construct/surfaceFeatures";
 import { buildShadowLayer, type ShadowLayer } from "@/lib/services/construct/shadow";
 import { buildScenePaths } from "@/lib/services/construct/emitScene";
 import { buildVignette } from "@/lib/services/construct/atmosphere";
@@ -22,16 +19,8 @@ import {
   unknownRefError,
   type DrawEntry,
 } from "@/lib/services/construct/resolve2d";
-import {
-  boxMesh,
-  coneMesh,
-  cylinderMesh,
-  extrudeMesh,
-  meshRadius,
-  sphereMesh,
-  transformMesh,
-} from "@/lib/services/construct/geometry3d";
-import { composePlacement4, normalize3, transformPoint, centroid3, faceNormal } from "@/lib/services/construct/math3d";
+import { meshRadius } from "@/lib/services/construct/geometry3d";
+import { normalize3, transformPoint, centroid3, faceNormal } from "@/lib/services/construct/math3d";
 import {
   autoDistance,
   CAMERA_PRESETS,
@@ -40,14 +29,13 @@ import {
   viewNormal,
   type Projection,
 } from "@/lib/services/construct/camera";
-import { overlapWarnings, projectAndSort, type SolidSceneItem } from "@/lib/services/construct/painterSort";
+import { overlapWarnings, projectAndSort } from "@/lib/services/construct/painterSort";
 import { depthOrderNNS } from "@/lib/services/construct/depthOrder";
 import {
   applyLuminance,
   authorGradient,
   lambertFactor,
   luminance,
-  parseHex,
   sideGradient,
   sphereGradient,
   type GradientDescriptor,
@@ -60,6 +48,7 @@ import {
   type PathItem,
 } from "@/lib/services/construct/svgEmitter";
 import { sanitizeSvg } from "@/lib/services/svgRenderer";
+import { makePassFill } from "@/lib/services/construct/passes";
 
 /**
  * compile — orchestrator của construct engine: spec kỷ hà → SVG fragment.
@@ -71,15 +60,25 @@ function err(message: string, hint: string): never {
   throw new AppError("CONSTRUCTION_INVALID", message, hint);
 }
 
-interface SmoothSolidInfo {
-  readonly solid: Solid;
-  readonly solidIndex: number;
-  readonly kind: "sphere" | "cylinder" | "cone";
+
+export type RenderPass = "depth" | "segmentation" | "normal";
+
+export interface CompileOptions {
+  /**
+   * Control pass cho AI video (ControlNet/VACE): cùng hình học + thứ tự
+   * vẽ, fill mã hoá depth (gần = sáng) / id đối tượng / normal view-space.
+   * Tắt bóng, effects, 2D shapes, atmosphere.
+   */
+  readonly pass?: RenderPass;
+  /**
+   * Canvas logic đích (khung mà fragment sẽ được vẽ vào) — overlay phủ toàn
+   * khung (vignette) lấy kích thước này khi spec không khai `size`.
+   * Mặc định 1920×1080.
+   */
+  readonly canvas?: { readonly w: number; readonly h: number };
 }
 
-const FLATTEN_STEPS = 8;
-
-export function compileConstruction(spec: ConstructSpec): CompileResult {
+export function compileConstruction(spec: ConstructSpec, options: CompileOptions = {}): CompileResult {
   const t0 = performance.now();
   const checkClock = (stage: string) => {
     if (performance.now() - t0 > CONSTRUCT_LIMITS.maxCompileMs) {
@@ -173,209 +172,17 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     emittedShapeIds = spec.shapes.filter((s) => !consumed.has(s.id)).map((s) => s.id);
   }
 
-  // ---------- Solids → meshes (csg node resolve sau) ----------
+  // ---------- Solids → meshes + CSG (sceneMeshes.ts) ----------
   const light = spec.light;
-  const facetedItems: SolidSceneItem[] = [];
-  const smoothInfos = new Map<string, SmoothSolidInfo>();
-  /** World mesh của MỌI solid không-csg (kể cả operand bị tiêu thụ). */
-  const worldMeshById = new Map<string, { mesh: ReturnType<typeof transformMesh>; solidIndex: number }>();
-  const solidIndexById = new Map(spec.solids.map((s, i) => [s.id, i]));
-
-  // Operand của csg bị tiêu thụ — không vẽ riêng, không smooth
-  const csgConsumed = new Set<string>();
-  for (const s of spec.solids) {
-    if (s.type === "csg") s.of.forEach((ref) => csgConsumed.add(ref));
-  }
-
-  spec.solids.forEach((solid, solidIndex) => {
-    if (solid.shading !== "none" && solid.fill && !parseHex(solid.fill)) {
-      err(
-        `Solid "${solid.id}" uses fill "${solid.fill}" with shading enabled.`,
-        'Shading needs a hex base color to derive tones — use "#hex", or set shading:"none" to pass the fill through.',
-      );
-    }
-    if (solid.type === "csg") {
-      if (solid.shading === "smooth") {
-        err(
-          `CSG "${solid.id}" cannot use shading:"smooth".`,
-          'CSG results are faceted — use shading:"auto" (faceted) or "none".',
-        );
-      }
-      return; // resolve ở stage CSG bên dưới
-    }
-
-    let mesh;
-    let smoothKind: SmoothSolidInfo["kind"] | null = null;
-    switch (solid.type) {
-      case "box":
-        mesh = boxMesh(solid.size);
-        break;
-      case "cylinder":
-        mesh = cylinderMesh(solid.r, solid.h, solid.segments);
-        smoothKind = "cylinder";
-        break;
-      case "cone":
-        mesh = coneMesh(solid.r, solid.rTop, solid.h, solid.segments);
-        smoothKind = "cone";
-        break;
-      case "sphere":
-        mesh = sphereMesh(solid.r, solid.segments);
-        smoothKind = "sphere";
-        break;
-      case "prism":
-        mesh = cylinderMesh(solid.r, solid.h, solid.sides);
-        break;
-      case "pyramid":
-        mesh = coneMesh(solid.r, 0, solid.h, solid.sides);
-        break;
-      case "extrude": {
-        const profile = resolver.resolve(solid.profile, `"${solid.id}".profile`, 0);
-        if (profile.shape.type === "line") {
-          err(`Extrude profile "${solid.profile}" is an open path.`, "Extrusion needs a closed profile — close the path or use polygon/rect/circle.");
-        }
-        if (profile.isEmpty) {
-          err(`Extrude profile "${solid.profile}" is empty (boolean produced no area).`, 'Check the operand offsets — shapes are centered at [0,0] by default.');
-        }
-        const normalized = normalizeSelfUnion(profile.d, spec.precision, solid.profile);
-        const contours = flattenToContours(parsePathData(normalized, solid.profile), FLATTEN_STEPS);
-        mesh = extrudeMesh(contours, solid.depth);
-        break;
-      }
-    }
-
-    const world = transformMesh(
-      worldMatrixById.get(solid.id) ?? composePlacement4(solid.at, solid.rotate, solid.scale),
-      mesh,
-    );
-    worldMeshById.set(solid.id, { mesh: world, solidIndex });
-    if (csgConsumed.has(solid.id)) return; // chỉ làm nguyên liệu CSG
-
-    const isSmooth =
-      smoothKind !== null && (solid.shading === "smooth" || solid.shading === "auto");
-    if (isSmooth) {
-      smoothInfos.set(solid.id, { solid, solidIndex, kind: smoothKind! });
-    }
-    // Extrude có thể lõm/có lỗ — mọi primitive khác lồi
-    facetedItems.push({ solidId: solid.id, solidIndex, mesh: world, convex: solid.type !== "extrude" });
+  const { facetedItems, smoothInfos, worldMeshById, csgNodeCount } = buildSolidMeshes({
+    spec,
+    resolver,
+    solidMap,
+    allIds,
+    worldMatrixById,
+    warnings,
+    checkClock,
   });
-
-  // ---------- Stage CSG (Layer 1): resolve DAG bottom-up ----------
-  const csgNodes = spec.solids.filter((s) => s.type === "csg");
-  if (csgNodes.length > CONSTRUCT_LIMITS.maxCsgOps) {
-    err(
-      `Spec has ${csgNodes.length} csg nodes (max ${CONSTRUCT_LIMITS.maxCsgOps}).`,
-      "Merge operations or split into multiple constructions.",
-    );
-  }
-  if (csgNodes.length > 0) {
-    const sceneRadius = meshRadius([...worldMeshById.values()].map((e) => e.mesh));
-    const eps = relativeEps(sceneRadius);
-    const csgResolved = new Map<string, Polygon3[]>();
-    const csgResolving = new Set<string>();
-
-    const resolveCsgPolygons = (id: string, context: string, depth: number): Polygon3[] => {
-      const cached = csgResolved.get(id);
-      if (cached) return cached;
-      const solid = solidMap.get(id);
-      if (!solid) unknownRefError(id, context, allIds);
-      if (depth > CONSTRUCT_LIMITS.maxOpDepth) {
-        err(`CSG nesting deeper than ${CONSTRUCT_LIMITS.maxOpDepth} at "${id}".`, "Flatten the csg tree.");
-      }
-      if (solid.type !== "csg") {
-        const entry = worldMeshById.get(id);
-        if (!entry) unknownRefError(id, context, allIds);
-        const prep = prepareOperand(
-          entry.mesh,
-          { solidId: id, solidIndex: entry.solidIndex, fill: solid.fill },
-          eps,
-        );
-        if (prep.degraded) {
-          warnings.push(`CSG operand "${id}": concave face triangulation degraded — result may have artifacts.`);
-        }
-        return prep.polygons;
-      }
-      if (csgResolving.has(id)) {
-        err(`CSG "${id}" is part of a reference cycle: ${[...csgResolving, id].join(" → ")}.`, "CSG ops must form a tree — remove the back-reference.");
-      }
-      csgResolving.add(id);
-      const operands = solid.of.map((ref) => resolveCsgPolygons(ref, `"${id}".of`, depth + 1));
-      csgResolving.delete(id);
-
-      // Compact giữa các phép fold: BSP làm mặt phân mảnh TÍCH LUỸ qua
-      // chuỗi op — gộp đồng phẳng + re-triangulate giữ tăng trưởng bị chặn
-      const compact = (polys: Polygon3[]): Polygon3[] => {
-        const mesh = repairedToMesh(repairPolygons(polys, eps));
-        // meshToPolygons giữ fill/label per-face (face.fill ưu tiên)
-        return meshToPolygons(mesh, {
-          solidId: id,
-          solidIndex: solidIndexById.get(id)!,
-        }).polygons;
-      };
-
-      let result = operands[0];
-      for (let i = 1; i < operands.length; i++) {
-        let inputFaces = result.length + operands[i].length;
-        if (inputFaces > CONSTRUCT_LIMITS.maxCsgOperandFaces && i > 1) {
-          result = weldVertices(compact(result), eps);
-          inputFaces = result.length + operands[i].length;
-        }
-        if (inputFaces > CONSTRUCT_LIMITS.maxCsgOperandFaces) {
-          err(
-            `CSG "${id}" input has ${inputFaces.toLocaleString("en-US")} faces (max ${CONSTRUCT_LIMITS.maxCsgOperandFaces.toLocaleString("en-US")}).`,
-            'Reduce "segments" on curved operands.',
-          );
-        }
-        const opResult = csgOperation(solid.op, result, operands[i], eps, id);
-        warnings.push(...opResult.warnings);
-        result = opResult.polygons;
-        checkClock(`csg "${id}"`);
-      }
-
-      // csg.fill override: ghi đè fill kế thừa trên mọi mảnh
-      if (solid.fill) {
-        result = result.map((p) => ({ ...p, shared: { ...p.shared, fill: solid.fill } }));
-      }
-      csgResolved.set(id, result);
-      return result;
-    };
-
-    for (const node of csgNodes) {
-      if (csgConsumed.has(node.id)) {
-        // Node lồng trong csg khác — cha sẽ gọi; vòng ép-resolve bên dưới
-        // bắt được cycle thuần (a↔b không có root)
-        continue;
-      }
-      const polygons = resolveCsgPolygons(node.id, "solids", 0);
-      // Layer 3: gộp mảnh đồng phẳng (TRƯỚC placement — repair cần đỉnh
-      // welded so theo reference)
-      let repaired = repairPolygons(polygons, eps);
-      // Placement của csg node áp lên KẾT QUẢ (giống boolean 2D)
-      const placement = composePlacement4(node.at, node.rotate, node.scale);
-      const isIdentity =
-        node.at[0] === 0 && node.at[1] === 0 && node.at[2] === 0 &&
-        node.rotate[0] === 0 && node.rotate[1] === 0 && node.rotate[2] === 0 &&
-        (typeof node.scale === "number" ? node.scale === 1 : false);
-      if (!isIdentity) {
-        repaired = repaired.map((f) => ({
-          ...f,
-          outer: f.outer.map((v) => transformPoint(placement, v)),
-          holes: f.holes.map((ring) => ring.map((v) => transformPoint(placement, v))),
-        }));
-      }
-      const solidIndex = solidIndexById.get(node.id)!;
-      facetedItems.push({
-        solidId: node.id,
-        solidIndex,
-        mesh: repairedToMesh(repaired),
-      });
-    }
-    // Node csg chưa được resolve (toàn bộ bị tiêu thụ lẫn nhau) → ép resolve
-    // để cycle detection báo lỗi rõ thay vì "Nothing to emit"
-    for (const node of csgNodes) {
-      if (!csgResolved.has(node.id)) resolveCsgPolygons(node.id, "solids", 0);
-    }
-    checkClock("csg");
-  }
 
   let facesGenerated = 0;
   for (const item of facetedItems) facesGenerated += item.mesh.faces.length;
@@ -414,7 +221,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
 
   // ---------- Shadow layer (Layer 4a) ----------
   let shadowLayer: ShadowLayer | null = null;
-  if (spec.shadow && spec.shadow.style !== "none") {
+  if (spec.shadow && spec.shadow.style !== "none" && !options.pass) {
     const casting = facetedItems.filter((i) => solidMap.get(i.solidId)!.shadow !== false);
     shadowLayer = buildShadowLayer(
       casting,
@@ -557,6 +364,12 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     });
   }
 
+  // ---------- Surface features (decalOf) — vẽ ngay sau solid cha ----------
+  const features = spec.solids.filter((s) => s.decalOf !== undefined);
+  if (features.length > 0) {
+    entries = attachSurfaceFeatures(entries, features, worldMeshById, view, warnings);
+  }
+
   // ---------- Cutouts (resolve2d.ts) ----------
   for (const cutout of spec.cutouts) {
     applyCutout(cutout, entries, {
@@ -574,9 +387,9 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   const effectFilters: FilterDescriptor[] = [];
   const contactPaths: PathItem[] = [];
   let effectPathCount = 0;
-  const solidsWithEffects = spec.solids.filter(
-    (s) => s.effects && Object.values(s.effects).some((v) => v !== false),
-  );
+  const solidsWithEffects = options.pass
+    ? []
+    : spec.solids.filter((s) => s.effects && Object.values(s.effects).some((v) => v !== false));
   if (solidsWithEffects.length > 0) {
     if (depthSplits > 0) {
       warnings.push(
@@ -690,8 +503,8 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
 
   // ---------- Atmosphere (Layer 6 — vignette dựng trước, path chèn cuối) ----------
   let vignettePath: PathItem | undefined;
-  if (spec.atmosphere?.vignette) {
-    const v = buildVignette(spec.atmosphere.vignette, spec.place, spec.precision);
+  if (spec.atmosphere?.vignette && !options.pass) {
+    const v = buildVignette(spec.atmosphere.vignette, spec.place, spec.precision, options.canvas);
     gradients.push(v.gradient);
     vignettePath = v.path;
   }
@@ -701,9 +514,18 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   // part macro không đi qua schema default nên có thể thiếu field layer
   const backgroundShapeIds = emittedShapeIds.filter((id) => shapeMap.get(id)!.layer !== "foreground");
   const foregroundShapeIds = emittedShapeIds.filter((id) => shapeMap.get(id)!.layer === "foreground");
+  // Pass: gradient engine của shading (smooth/cutout) không dùng — chỉ
+  // giữ gradient TÁC GIẢ trong budget, phần còn lại cho depth ramps
+  if (options.pass) gradients.splice(spec.gradients.length);
+  const passFill = options.pass
+    ? makePassFill(options.pass, entries, {
+        zoom: spec.camera.zoom,
+        gradientBudget: CONSTRUCT_LIMITS.maxGradients - gradients.length,
+      })
+    : undefined;
   const paths = buildScenePaths({
-    backgroundShapeIds,
-    foregroundShapeIds,
+    backgroundShapeIds: passFill ? [] : backgroundShapeIds,
+    foregroundShapeIds: passFill ? [] : foregroundShapeIds,
     resolver,
     entries,
     solidMap,
@@ -716,8 +538,9 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
     precision: spec.precision,
     stroke: spec.stroke,
     contactPaths,
-    depthFade: spec.atmosphere?.depthFade,
+    depthFade: passFill ? undefined : spec.atmosphere?.depthFade,
     vignettePath,
+    passFill,
   });
 
   if (paths.length === 0) {
@@ -725,7 +548,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
   }
 
   // ---------- Emit + guard cuối ----------
-  const svg = emitFragment(gradients, paths, spec.place, spec.precision, [
+  const svg = emitFragment(passFill ? gradients.slice(spec.gradients.length) : gradients, paths, spec.place, spec.precision, passFill ? [] : [
     ...(shadowLayer?.filters ?? []),
     ...effectFilters,
   ]);
@@ -762,7 +585,7 @@ export function compileConstruction(spec: ConstructSpec): CompileResult {
       pathCommands,
       bytes,
       compileMs: Math.round((performance.now() - t0) * 10) / 10,
-      csgOps: csgNodes.length,
+      csgOps: csgNodeCount,
       depthSplits,
       partsExpanded: expanded.partsExpanded,
       effectPaths: effectPathCount,

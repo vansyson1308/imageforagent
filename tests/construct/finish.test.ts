@@ -1,3 +1,4 @@
+import { CONSTRUCT_LIMITS } from "@/lib/config/limits";
 import { describe, expect, it } from "vitest";
 import { compileConstruction } from "@/lib/services/construct/compile";
 import { constructSpecSchema } from "@/lib/validation/constructSchema";
@@ -114,16 +115,27 @@ describe("finish presets — rewrite thuần, chỉ điền field vắng", () =>
     expect(result.warnings.some((w) => w.includes("effect budget"))).toBe(true);
   });
 
-  it("PERF: cart hero + finish premium < 500ms, không error", () => {
-    // Warm-up khử JIT/cold-start; lấy min 2 lần đo khử tranh chấp CPU
-    const spec = () => constructSpecSchema.parse({ ...CART_SPEC, finish: "premium" });
-    compileConstruction(spec());
-    const a = compileConstruction(spec());
-    const b = compileConstruction(spec());
-    expect(Math.min(a.stats.compileMs, b.stats.compileMs)).toBeLessThan(500);
-    expect(a.stats.effectPaths).toBeGreaterThan(0);
-    expect(a.stats.effectPaths).toBeLessThanOrEqual(96);
-  });
+  it("PERF: finish premium trên cart hero ≤ 2× flat (đo xen kẽ), không error", () => {
+    // Ngưỡng TƯƠNG ĐỐI: đo premium xen kẽ với flat trên CÙNG scene — tải
+    // CPU (suite chạy song song) làm chậm cả hai như nhau, nên chỉ hồi quy
+    // thật của effects layer mới làm tỉ lệ vượt ngưỡng (đo cô lập ≈ 1.25×)
+    const spec = (finish: "flat" | "premium") => constructSpecSchema.parse({ ...CART_SPEC, finish });
+    compileConstruction(spec("flat"));
+    compileConstruction(spec("premium"));
+    const flat: number[] = [];
+    const premium: number[] = [];
+    let last = compileConstruction(spec("premium"));
+    for (let i = 0; i < 3; i++) {
+      flat.push(compileConstruction(spec("flat")).stats.compileMs);
+      last = compileConstruction(spec("premium"));
+      premium.push(last.stats.compileMs);
+    }
+    expect(Math.min(...premium)).toBeLessThan(Math.min(...flat) * 2);
+    // Trần tuyệt đối = guard compile của engine (không bao giờ được chạm)
+    expect(Math.min(...premium)).toBeLessThan(CONSTRUCT_LIMITS.maxCompileMs);
+    expect(last.stats.effectPaths).toBeGreaterThan(0);
+    expect(last.stats.effectPaths).toBeLessThanOrEqual(96);
+  }, 60_000);
 
   it("stats.filters đếm shadow.blur + glow blur", () => {
     const { stats } = compileConstruction(

@@ -8,6 +8,7 @@ import { useAppStore } from "@/lib/store/useAppStore";
 /**
  * PreviewPlayer — slideshow các frame done, đúng aspect ratio project,
  * crossfade 200ms, phím tắt Space/←/→, tốc độ 0.5–5 s/frame (persist).
+ * Shot motion phát clip WebP trọn thời lượng của nó (animatic thật).
  */
 export function PreviewPlayer() {
   const project = useAppStore((s) => s.project);
@@ -56,12 +57,24 @@ export function PreviewPlayer() {
     setCursor((c) => (c - 1 >= 0 ? c - 1 : loop ? Math.max(0, playlist.length - 1) : 0));
   }, [playlist.length, loop]);
 
-  // Timer phát
+  // Timer phát — mỗi frame giữ đúng thời lượng của nó (clip = độ dài shot)
+  const currentDuration = current?.clipUrl && current.clipDuration ? current.clipDuration : speed;
   useEffect(() => {
     if (!playing || playlist.length === 0) return;
-    const timer = setInterval(() => next(), speed * 1000);
-    return () => clearInterval(timer);
-  }, [playing, speed, next, playlist.length]);
+    const timer = setTimeout(() => next(), currentDuration * 1000);
+    return () => clearTimeout(timer);
+  }, [playing, currentDuration, next, playlist.length, clampedCursor]);
+
+  // Thoại: phát giọng của frame hiện tại (đúng offset) khi đang Play
+  useEffect(() => {
+    if (!playing || !current?.voiceUrl) return;
+    const audio = new Audio(current.voiceUrl);
+    const timer = setTimeout(() => void audio.play().catch(() => {}), (current.voiceOffset ?? 0) * 1000);
+    return () => {
+      clearTimeout(timer);
+      audio.pause();
+    };
+  }, [playing, current?.voiceUrl, current?.voiceOffset, clampedCursor]);
 
   // Preload ảnh kế tiếp
   useEffect(() => {
@@ -129,15 +142,25 @@ export function PreviewPlayer() {
             className="relative mx-auto mt-4 w-full max-w-3xl overflow-hidden rounded-xl bg-black"
             style={{ aspectRatio: `${rw || 16} / ${rh || 9}` }}
           >
-            {playlist.map((frame, i) => (
-              <img
-                key={frame.id}
-                src={frame.imageUrl!}
-                alt={`Frame ${frame.index}`}
-                className="absolute inset-0 h-full w-full object-contain transition-opacity duration-200"
-                style={{ opacity: i === clampedCursor ? 1 : 0 }}
-              />
-            ))}
+            {playlist.map((frame, i) =>
+              frame.clipUrl && i === clampedCursor ? (
+                // Clip: mount lại mỗi lần tới lượt (query đổi) để phát từ đầu
+                <img
+                  key={`${frame.id}-clip-${clampedCursor}`}
+                  src={`${frame.clipUrl}&play=${clampedCursor}-${playing ? 1 : 0}`}
+                  alt={`Frame ${frame.index}`}
+                  className="absolute inset-0 h-full w-full object-contain"
+                />
+              ) : (
+                <img
+                  key={frame.id}
+                  src={frame.imageUrl!}
+                  alt={`Frame ${frame.index}`}
+                  className="absolute inset-0 h-full w-full object-contain transition-opacity duration-200"
+                  style={{ opacity: i === clampedCursor ? 1 : 0 }}
+                />
+              ),
+            )}
 
             <span className="absolute right-3 top-3 rounded-lg bg-black/60 px-2 py-1 text-xs font-semibold text-white backdrop-blur">
               Frame {clampedCursor + 1}/{playlist.length}
@@ -145,7 +168,7 @@ export function PreviewPlayer() {
 
             {current && (
               <p className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-4 pb-3 pt-8 text-center text-sm text-white">
-                {current.description}
+                {current.dialogue ? <span className="font-semibold">“{current.dialogue}”</span> : current.description}
               </p>
             )}
           </div>

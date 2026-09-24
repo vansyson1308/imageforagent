@@ -5,11 +5,12 @@ import {
   rotationX4,
   rotationY4,
   rotationZ4,
+  scaling4,
   translation4,
 } from "@/lib/services/construct/math3d";
 import { AppError } from "@/lib/services/apiError";
 import type { Part } from "@/lib/validation/constructSchema";
-import type { GeneratedSolid, PartBuild } from "@/lib/services/construct/partWheel";
+import type { FigureJoint, GeneratedSolid, PartBuild } from "@/lib/services/construct/partWheel";
 
 /**
  * partFigure — Layer 5b: nhân vật khớp nối bằng FORWARD KINEMATICS.
@@ -31,7 +32,7 @@ function err(message: string, hint: string): never {
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 /** Khớp hợp lệ (thứ tự cha trước con). */
-const JOINT_NAMES = [
+export const JOINT_NAMES = [
   "spine",
   "neck",
   "shoulderL",
@@ -48,10 +49,10 @@ const JOINT_NAMES = [
   "ankleR",
 ] as const;
 
-type JointName = (typeof JOINT_NAMES)[number];
+export type JointName = (typeof JOINT_NAMES)[number];
 
 /** A-pose mặc định (độ, trục z): tay chếch ra ±20°. */
-const NEUTRAL_POSE: Partial<Record<JointName, Vec3>> = {
+export const NEUTRAL_POSE: Partial<Record<JointName, Vec3>> = {
   shoulderL: [0, 0, 20],
   shoulderR: [0, 0, -20],
 };
@@ -63,6 +64,47 @@ function poseRotation(deg: Vec3): Mat4 {
   if (deg[1]) m = mul4(rotationY4(deg[1]), m);
   if (deg[2]) m = mul4(rotationZ4(deg[2]), m);
   return m;
+}
+
+/**
+ * Tỷ lệ head-unit nội suy chibiness c = (8 − headCount)/6, RESCALE thân để
+ * tổng đúng height. Export cho motion rigs (walk cần chiều dài chân để
+ * chu kỳ bước khớp tốc độ — bàn chân không trượt).
+ */
+export function figureProportions(height: number, headCount: number) {
+  const head = height / headCount;
+  const c = Math.min(1, Math.max(0, (8 - headCount) / 6));
+  const neckLen = head * lerp(0.3, 0.08, c);
+  // Thô theo head-unit, rồi RESCALE để tổng đúng height
+  const torsoRaw = head * lerp(2.6, 1.4, c);
+  const thighRaw = head * lerp(2.0, 1.0, c);
+  const shinRaw = head * lerp(1.8, 1.0, c);
+  const footHRaw = head * 0.22;
+  const bodyBudget = height - head - neckLen;
+  const s = bodyBudget / (torsoRaw + thighRaw + shinRaw + footHRaw);
+  const torso = torsoRaw * s;
+  const thigh = thighRaw * s;
+  const shin = shinRaw * s;
+  const footH = footHRaw * s;
+  return {
+    head,
+    neckLen,
+    torso,
+    thigh,
+    shin,
+    footH,
+    /** Chiều cao khớp hông so với đất ở tư thế đứng thẳng. */
+    hipsY: footH + shin + thigh,
+    upperArm: head * lerp(1.5, 0.9, c) * s,
+    forearm: head * lerp(1.5, 0.9, c) * s,
+    shoulderW: head * lerp(2.0, 1.3, c),
+    hipW: head * lerp(1.5, 1.1, c),
+    limbR: head * lerp(0.18, 0.3, c),
+    legR: head * lerp(0.18, 0.3, c) * 1.15,
+    torsoR: head * lerp(1.5, 1.1, c) * 0.52,
+    handR: head * lerp(0.18, 0.3, c) * 1.25,
+    headR: head * 0.5,
+  };
 }
 
 export function buildFigure(part: FigurePart): PartBuild {
@@ -84,30 +126,10 @@ export function buildFigure(part: FigurePart): PartBuild {
   };
 
   // ---------- Tỷ lệ head-unit + chibiness ----------
-  const head = part.height / part.headCount;
-  const c = Math.min(1, Math.max(0, (8 - part.headCount) / 6));
-  const neckLen = head * lerp(0.3, 0.08, c);
-  // Thô theo head-unit, rồi RESCALE để tổng đúng height
-  const torsoRaw = head * lerp(2.6, 1.4, c);
-  const thighRaw = head * lerp(2.0, 1.0, c);
-  const shinRaw = head * lerp(1.8, 1.0, c);
-  const footHRaw = head * 0.22;
-  const bodyBudget = part.height - head - neckLen;
-  const s = bodyBudget / (torsoRaw + thighRaw + shinRaw + footHRaw);
-  const torso = torsoRaw * s;
-  const thigh = thighRaw * s;
-  const shin = shinRaw * s;
-  const footH = footHRaw * s;
-
-  const upperArm = head * lerp(1.5, 0.9, c) * s;
-  const forearm = head * lerp(1.5, 0.9, c) * s;
-  const shoulderW = head * lerp(2.0, 1.3, c);
-  const hipW = head * lerp(1.5, 1.1, c);
-  const limbR = head * lerp(0.18, 0.3, c);
-  const legR = limbR * 1.15;
-  const torsoR = hipW * 0.52;
-  const handR = limbR * 1.25;
-  const headR = head * 0.5;
+  const {
+    head, neckLen, torso, thigh, shin, footH, upperArm, forearm,
+    shoulderW, hipW, limbR, legR, torsoR, handR, headR,
+  } = figureProportions(part.height, part.headCount);
 
   const fills = {
     skin: part.fills?.skin ?? "#e8b88a",
@@ -119,10 +141,15 @@ export function buildFigure(part: FigurePart): PartBuild {
   // ---------- FK: ma trận world (local part) từng khớp ----------
   const hipsY = footH + shin + thigh;
   const M = new Map<string, Mat4>();
+  const joints: FigureJoint[] = [];
+  const jointOf = new Map<Mat4, string>();
   const joint = (name: JointName | "hips", parent: Mat4, pivot: Vec3): Mat4 => {
     const rot = name === "hips" ? IDENTITY_4 : poseRotation(angleOf(name));
-    const m = mul4(parent, mul4(translation4(pivot), rot));
+    const local = mul4(translation4(pivot), rot);
+    const m = mul4(parent, local);
     M.set(name, m);
+    joints.push({ name, parent: jointOf.get(parent) ?? null, local, world: m });
+    jointOf.set(m, name);
     return m;
   };
 
@@ -152,32 +179,69 @@ export function buildFigure(part: FigurePart): PartBuild {
     shadow: true,
   };
   const solids: GeneratedSolid[] = [];
+  /** Solid gắn vào khớp: localM = world(khớp) · offset (skin glTF dùng joint + offset). */
+  const attach = (solid: GeneratedSolid["solid"], jointM: Mat4, offset: Mat4) => {
+    solids.push({ solid, localM: mul4(jointM, offset), joint: jointOf.get(jointM), offset });
+  };
   /** Cylinder (trục y) đại diện xương: đặt GIỮA đoạn từ khớp dọc −y. */
   const bone = (id: string, jointM: Mat4, len: number, r: number, fill: string) => {
-    solids.push({
-      solid: { ...D, id: p(id), type: "cylinder", r, h: len, segments: 12, fill },
-      localM: mul4(jointM, translation4([0, -len / 2, 0])),
-    });
+    attach({ ...D, id: p(id), type: "cylinder", r, h: len, segments: 12, fill }, jointM, translation4([0, -len / 2, 0]));
   };
   const ball = (id: string, jointM: Mat4, r: number, fill: string, offset: Vec3 = [0, 0, 0]) => {
-    solids.push({
-      solid: { ...D, id: p(id), type: "sphere", r, segments: 12, fill },
-      localM: mul4(jointM, translation4(offset)),
-    });
+    attach({ ...D, id: p(id), type: "sphere", r, segments: 12, fill }, jointM, translation4(offset));
   };
 
   // Thân: cylinder từ hips lên hết torso
-  solids.push({
-    solid: { ...D, id: p("torso"), type: "cylinder", r: torsoR, h: torso, segments: 14, fill: fills.shirt },
-    localM: mul4(hips, translation4([0, torso * 0.5, 0])),
-  });
+  attach(
+    { ...D, id: p("torso"), type: "cylinder", r: torsoR, h: torso, segments: 14, fill: fills.shirt },
+    hips,
+    translation4([0, torso * 0.5, 0]),
+  );
   // Đầu + cổ (cổ mọc LÊN từ khớp neck — không dùng bone() vốn hướng −y)
   const neckBoneLen = neckLen + headR * 0.3;
-  solids.push({
-    solid: { ...D, id: p("neckBone"), type: "cylinder", r: limbR * 0.9, h: neckBoneLen, segments: 12, fill: fills.skin },
-    localM: mul4(neck, translation4([0, neckBoneLen / 2, 0])),
-  });
-  ball("head", neck, headR, fills.skin, [0, neckLen + headR * 0.55, 0]);
+  attach(
+    { ...D, id: p("neckBone"), type: "cylinder", r: limbR * 0.9, h: neckBoneLen, segments: 12, fill: fills.skin },
+    neck,
+    translation4([0, neckBoneLen / 2, 0]),
+  );
+  const headCenter: Vec3 = [0, neckLen + headR * 0.55, 0];
+  ball("head", neck, headR, fills.skin, headCenter);
+  // Khuôn mặt (tuỳ chọn): mắt + miệng là sphere dẹt gắn khớp neck, mặt
+  // hướng +z. Biểu cảm = SCALE của offset → animate được cả trong glTF
+  if (part.face) {
+    const f = part.face;
+    // Mặt SAU của chi tiết chạm đúng mặt cầu thật (nằm ngoài lưới facet
+    // của đầu) → không xuyên khối: NNS xếp chi tiết SAU mọi mặt của đầu,
+    // silhouette smooth của đầu không vẽ đè lên mắt/miệng
+    const onHead = (x: number, y: number, halfDepth: number): Vec3 => [
+      headCenter[0] + x,
+      headCenter[1] + y,
+      headCenter[2] + Math.sqrt(Math.max(0, headR * headR - x * x - y * y)) + halfDepth,
+    ];
+    const eyeR = headR * 0.13;
+    for (const [id, side] of [
+      ["eyeL", 1],
+      ["eyeR", -1],
+    ] as const) {
+      attach(
+        { ...D, id: p(id), type: "sphere", r: eyeR, segments: 10, fill: f.eyes, shading: "none", shadow: false, decalOf: p("head") },
+        neck,
+        mul4(
+          translation4(onHead(side * headR * 0.34, headR * 0.12, eyeR * 0.3)),
+          scaling4([1, Math.max(0.08, 1 - f.blink * 0.92), 0.3]),
+        ),
+      );
+    }
+    const mouthR = headR * 0.24;
+    attach(
+      { ...D, id: p("mouth"), type: "sphere", r: mouthR, segments: 10, fill: f.mouth, shading: "none", shadow: false, decalOf: p("head") },
+      neck,
+      mul4(
+        translation4(onHead(0, -headR * 0.38, mouthR * 0.25)),
+        scaling4([0.55 + 0.65 * f.mouthWide, 0.1 + 0.75 * f.mouthOpen, 0.25]),
+      ),
+    );
+  }
   // Tay
   bone("upperArmL", shoulderL, upperArm, limbR, fills.shirt);
   bone("upperArmR", shoulderR, upperArm, limbR, fills.shirt);
@@ -196,17 +260,12 @@ export function buildFigure(part: FigurePart): PartBuild {
     ["footL", ankleL],
     ["footR", ankleR],
   ] as const) {
-    solids.push({
-      solid: {
-        ...D,
-        id: p(id),
-        type: "box",
-        size: [legR * 2.1, footH, footLen],
-        fill: fills.shoes,
-      },
-      localM: mul4(ankle, translation4([0, -footH / 2, footLen * 0.22])),
-    });
+    attach(
+      { ...D, id: p(id), type: "box", size: [legR * 2.1, footH, footLen], fill: fills.shoes },
+      ankle,
+      translation4([0, -footH / 2, footLen * 0.22]),
+    );
   }
 
-  return { shapes: [], solids };
+  return { shapes: [], solids, joints };
 }

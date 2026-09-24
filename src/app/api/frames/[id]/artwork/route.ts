@@ -6,6 +6,7 @@ import { artworkSchema } from "@/lib/validation/schemas";
 import { sanitizeSvg } from "@/lib/services/svgRenderer";
 import { renderFrameArtwork } from "@/lib/services/artworkService";
 import { withImageUrl } from "@/lib/services/dto";
+import { clearFrameMotion } from "@/lib/services/clipService";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -13,6 +14,7 @@ interface RouteContext {
 
 /**
  * PUT artwork SVG cho 1 frame → sanitize → render sync (~50ms) → done.
+ * Frame đang là shot motion → gỡ motion (ảnh tĩnh thay thế clip).
  * Render lỗi: VẪN LƯU artworkSvg + status failed (agent không mất WIP),
  * trả 422 ARTWORK_INVALID kèm hint sửa.
  */
@@ -33,6 +35,9 @@ export async function PUT(req: Request, ctx: RouteContext): Promise<Response> {
 
     // Sanitize trước khi lưu — reject sớm với hint rõ ràng
     sanitizeSvg(body.svg, "frame");
+
+    // Artwork tĩnh thay thế shot motion: frame trở lại ảnh tĩnh (clip gỡ bỏ)
+    if (frame.motionSpec) await clearFrameMotion(frame.projectId, id);
 
     const saved = await prisma.frame.update({
       where: { id },

@@ -23,6 +23,14 @@ export interface FrameDto {
   description: string;
   status: string;
   imageUrl: string | null;
+  /** Animated WebP của shot motion — null với frame tĩnh. */
+  clipUrl?: string | null;
+  motionSpec?: string | null;
+  clipDuration?: number | null;
+  clipFrameCount?: number | null;
+  dialogue?: string | null;
+  voiceUrl?: string | null;
+  voiceOffset?: number;
   artworkSvg: string | null;
   errorMsg: string | null;
   generatedAt: string | null;
@@ -41,6 +49,7 @@ export interface AssetDto {
 export interface MetaDto {
   serviceAccountEmail: string | null;
   construct?: { version: number };
+  motion?: { version: number };
 }
 
 export interface ProjectListItemDto extends ProjectDto {

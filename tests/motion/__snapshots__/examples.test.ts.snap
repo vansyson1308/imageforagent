@@ -1,0 +1,25 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`motion examples > motion-bounce.json compile trọn clip, deterministic, không error 1`] = `
+{
+  "digest": "ab1357b8f69186dd",
+  "file": "motion-bounce.json",
+  "frames": 48,
+}
+`;
+
+exports[`motion examples > motion-stroll.json compile trọn clip, deterministic, không error 1`] = `
+{
+  "digest": "c92d0e4ea24c046d",
+  "file": "motion-stroll.json",
+  "frames": 36,
+}
+`;
+
+exports[`motion examples > motion-talk.json compile trọn clip, deterministic, không error 1`] = `
+{
+  "digest": "92eb5c9f1d1964fe",
+  "file": "motion-talk.json",
+  "frames": 36,
+}
+`;

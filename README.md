@@ -4,6 +4,8 @@
 
 **Character consistency is guaranteed by construction**: the agent defines the mascot ONCE as an SVG `<symbol>` in the project's artwork library — every frame reuses it with `<use href="#id">`, so the character is pixel-identical across the entire storyboard.
 
+**Now with a time dimension**: any frame can be an animated shot (keyframe tracks + procedural rigs such as a no-slip walk cycle and storyboard camera moves). The export builds `film.mp4` with one command and ships every shot as **glTF 2.0** for path-traced rendering in Blender: script → storyboard → animatic → 3D film pipeline, still with zero API keys.
+
 > 🇻🇳 Có phần **Tóm tắt tiếng Việt** ở cuối file.
 
 ## How it works
@@ -64,14 +66,16 @@ curl -s "$BASE/api/export/zip?projectId=$PID" -o storyboard.zip
 
 ### The artwork contract
 
-- **Logical canvas** (`viewBox` you draw in) is fixed per aspect ratio; output PNG long edge = 1024 (1K) / 2048 (2K):
+- **Logical canvas** (`viewBox` you draw in) is fixed per aspect ratio; output PNG long edge = 1024 (1K) / 2048 (2K) / 4096 (4K). The two cinema ratios render the **exact DCI container** instead (1K = half-size preview):
 
-  | Ratio | Logical canvas | 1K output | 2K output |
-  |---|---|---|---|
-  | 16:9 | 1920×1080 | 1024×576 | 2048×1152 |
-  | 9:16 | 1080×1920 | 576×1024 | 1152×2048 |
-  | 1:1 | 1080×1080 | 1024×1024 | 2048×2048 |
-  | 4:5 | 1080×1350 | 819×1024 | 1638×2048 |
+  | Ratio | Logical canvas | 1K output | 2K output | 4K output |
+  |---|---|---|---|---|
+  | 16:9 | 1920×1080 | 1024×576 | 2048×1152 | 4096×2304 |
+  | 9:16 | 1080×1920 | 576×1024 | 1152×2048 | 2304×4096 |
+  | 1:1 | 1080×1080 | 1024×1024 | 2048×2048 | 4096×4096 |
+  | 4:5 | 1080×1350 | 819×1024 | 1638×2048 | 3277×4096 |
+  | **1.85:1** (DCI Flat) | 1998×1080 | 999×540 | **1998×1080** | **3996×2160** |
+  | **2.39:1** (DCI Scope) | 2048×858 | 1024×429 | **2048×858** | **4096×1716** |
 
 - Submit **SVG fragments** — the engine owns the `<svg>` wrapper. `artworkDefs` is the inner content of `<defs>`; frame SVG is the scene body.
 - Allowed references: `href="#id"`, `fill="url(#id)"`, `data:image/png|jpeg|webp` data-URIs. Everything external (http, file, relative paths) is rejected with `422 ARTWORK_INVALID` + a hint. Also rejected: DOCTYPE/entities, `<script>`, `<foreignObject>`, event handlers, `@import`, `xml:base`, processing instructions, nested `<svg>` roots (even inside comments — the sanitizer rejects over-broadly by design), fragments over 500KB (UTF-8 bytes).
@@ -158,6 +162,106 @@ Layer order per scene (what the engine draws, back to front): background 2D → 
 
 The full showcase is [construct-lamp.json](examples/construct-lamp.json) — a night street-lamp scene: author gradients for the sky and two *free* halos, one blur spent on the bulb, a figure rim-lit in moonlight cool, trees receding through `depthFade`, a foreground mist band, and a vignette.
 
+## Motion — the time dimension (construct v4)
+
+A storyboard frame can now be **a shot that moves**. A motion spec is one shot: a base construct scene + keyframe **tracks** + procedural **rigs**, sampled at `fps`; every frame is a full, deterministic construct compile (so everything above — CSG, FK figures, softness — animates for free).
+
+```bash
+curl -s -X POST $BASE/api/motion -H "Content-Type: application/json" -d '{
+  "motion": {
+    "version": 1, "fps": 12, "duration": 3,
+    "scene": { "version": 1,
+      "solids": [{"id": "ball", "type": "sphere", "r": 34, "at": [360, 34, 140], "fill": "#e74c3c"}],
+      "parts":  [{"id": "pip", "type": "figure", "height": 300, "headCount": 3}],
+      "camera": {"orbit": {"azimuth": 12, "elevation": 12}} },
+    "rigs":   [{"type": "walk", "part": "pip", "path": [[-520, 60], [180, 60]]},
+               {"type": "shot", "move": "dollyIn", "amount": 0.25}],
+    "tracks": [{"target": "solids.ball.at.1", "keys": [{"t": 0, "v": 260}, {"t": 1.2, "v": 34, "ease": "outBounce"}]}]
+  },
+  "preview": {"sheetFrames": 12, "webp": true}
+}'
+# → { stats, warnings, posterPng, contactSheetPng, clipWebp }
+```
+
+**Look at `contactSheetPng`** — a grid of evenly sampled frames with a time bar under each tile: that is how an agent *sees* motion in one image. Then `PUT /api/frames/:id/motion {motion}` makes that storyboard frame an animated shot (full-res PNG sequence + animated WebP; the `poster` frame becomes the frame's still, so watermark/grid/export keep working).
+
+| Field | What you get |
+|---|---|
+| `fps` · `duration` · `holdFrames` | 12 fps = the animation standard; `holdFrames: 2` = **animate on twos** (each pose held 2 frames; camera/place stay on ones so pans don't judder). ≤ 240 frames per shot. |
+| `tracks[]` | `{target, keys:[{t, v, ease}], blend}` — `target` is a dotted path by id: `camera.orbit.azimuth` · `camera.zoom` · `place.at.0` · `light.direction` · `solids.ball.at.1` · `solids.ball.fill` · `parts.pip.pose.kneeL` · `groups.arm.rotate.2` · `gradients.sky.stops.0.color` · `atmosphere.vignette.strength`. Values are numbers, vectors (index a component with `.0/.1/.2`) or `#hex` colors (mixed in linear light). `blend: "add"` layers on top of the base value. |
+| `ease` | Applies to the segment **arriving** at the key. `inOut` (default — slow-in/slow-out) · `linear` · `step` (hold) · `in` · `out` · `inBack`/`outBack` (anticipation/overshoot) · `outElastic` · `outBounce` · `smooth` (Catmull-Rom through multi-key paths, no stops) · CSS `[x1,y1,x2,y2]`. |
+| rig `walk` | `{part, path:[[x,z]…], start?, end?, swing?, armSwing, bounce, lean, cadence}` — a figure walks a ground polyline. Stance is 60 % of the cycle and the hip angle is **solved** so the ankle retreats exactly at body speed: **the planted foot does not slide** (test-enforced < 3 %). Hip height is exact (lowest foot touches the ground); arms counter-swing; stride auto-derives from speed at ~2 steps/s. |
+| rig `shot` | Camera language: `dollyIn` · `dollyOut` · `orbit` · `crane` · `pan` · `tilt` · `shake` · `static` · **`auto`** (inferred from the storyboard Shot Type, EN + VI: "Slow zoom-in" → dollyIn, "Lia máy" → pan…). |
+| rig `roll` | Rolling without slipping: rotation = distance / radius, from the target's (or `follow`'s) motion. |
+| rig `follow` | Follow-through / overlap: target repeats a source's motion `lag` seconds late × `gain` (head lags the body, tails, antennas, a camera that trails the hero). |
+| rig `wiggle` | Seeded smooth noise (fBm) added to any value — handheld camera, breathing, idle sway. Deterministic: same seed, same frames. |
+| `backdrop` · `overlay` · `background` · `poster` | Static SVG under/over the scene each frame (may `<use href="#…">` the project library), full-bleed color, and the storyboard still's time. |
+
+Evaluation order is fixed: generators (`walk`, `shot`) → `tracks` → dependents (`roll`, `follow`) → `wiggle`; the scene is re-validated every frame, so a track that drives a radius negative fails with the exact time (`At t=0.5s … solids.0.r`). Identical frames (holds, static shots) compile once. Examples: [motion-stroll.json](examples/motion-stroll.json) (walk + camera follow + bounce) · [motion-bounce.json](examples/motion-bounce.json) (squash & stretch on twos).
+
+<p align="center"><img src="docs/media/stroll-contact-sheet.jpg" width="720" alt="Contact sheet of the stroll shot"></p>
+
+## 3D export — glTF 2.0 (the bridge to real renderers)
+
+`POST /api/export/gltf` with `{spec}` (a static scene) or `{motion}` (a shot) returns **glTF 2.0** (JSON + embedded buffer): one node per solid — including every figure segment (`pip:shinL`) — with the **same meshes the SVG renderer draws**, materials from your fills (or `unlit`), a camera framed exactly like the SVG frame (test-enforced: a world point lands on the same canvas pixel), a sun light, and the shot's animation as TRS samplers (`STEP` when on twos). Validated by the Khronos glTF-Validator in CI (0 errors). The export ZIP includes `gltf/FNN.gltf` for every motion shot.
+
+```bash
+jq '{motion: ., download: true}' examples/motion-stroll.json | \
+  curl -s -X POST $BASE/api/export/gltf -H "Content-Type: application/json" -d @- -o stroll.gltf
+blender -b -P scripts/blender_render.py -- stroll.gltf out/stroll_ --engine CYCLES --samples 32   # path-traced frames
+```
+
+<p align="center"><img src="docs/media/vector-frame.jpg" width="420" alt="Vector render"> <img src="docs/media/blender-cycles.jpg" width="420" alt="Same scene path-traced in Blender Cycles"><br><sub>The same agent-authored scene: vector render (left) and Blender Cycles via the glTF export (right).</sub></p>
+
+Honest limits: glTF core cannot animate lens parameters (zoom/fov animation is exported at its t=0 value, warned); animated *geometry* (e.g. a radius track) is baked at t=0 (transforms animate, meshes don't); 2D shapes and softness overlays are SVG-only. The long-range plan to feature-quality output is in [docs/FILM-ROADMAP.md](docs/FILM-ROADMAP.md).
+
+## The film pipeline — rig → passes → sound → edit → DCP
+
+Everything below is deterministic and runs locally with open tools (ffmpeg, OpenJPEG, optional espeak-ng). Each stage is verified against the reference implementation of its standard — see [docs/ADR.md](docs/ADR.md) ADR-016.
+
+### 1 · Rig, IK and faces
+
+The `figure` part has a named **joint hierarchy** (`hips → spine → neck`, `spine → shoulderL → elbowL → wristL`, `hips → hipL → kneeL → ankleL`, mirrored R; pose any of them via `pose` or a track on `parts.pip.pose.<joint>`) and an optional **face** (`"face": {}` → eyes + mouth drawn as `decalOf` surface features: they stick to the head, sort with it, and hide when the head turns away).
+
+| Rig | What it does |
+|---|---|
+| `ik` | `{part, limb: armL\|armR\|legL\|legR, target: [x,y,z] \| {solid, offset}, pole?, weight, fade, start?, end?}` — **analytic 2-bone IK** (exact to 1e-6): put a hand on a door handle, a foot on a stair, or *track a moving solid* (`{"solid": "cart"}`); the ankle keeps the foot flat. |
+| `lipsync` | `{part, gain}` — drives `face.mouthOpen/mouthWide` from the frame's dialogue audio (RMS + zero-crossing visemes), or from the text's syllables when there is no audio. Blinks are a track on `parts.pip.face.blink`. |
+
+In glTF every figure exports as a **real skinned Armature** (one skinned mesh, one bone per joint, inverse bind matrices, TRS animation), so Blender/Unreal receive a character they can re-pose.
+
+### 2 · Control passes for AI video
+
+`POST /api/frames/:id/passes {"passes": ["depth", "segmentation", "normal", "pose"]}` renders a shot's conditioning maps with the **same geometry and camera** as the beauty pass: exact per-face **depth** ramps (near = bright), per-object **segmentation** colours (stable hash of the id), view-space **normals**, and **OpenPose COCO-18** skeletons straight from the FK joints (+ `pose.json`). Feed them to ControlNet / VACE / Wan to restyle the animatic while keeping the layout and acting you authored. `preview.passes` on `POST /api/motion` returns them statelessly; the export ZIP carries `passes/FNN/`.
+
+### 3 · Dialogue, voice and the mix
+
+- `PUT /api/frames/:id/dialogue {text, wav?, tts?: {voice: "vi", speed}, offset}` — the text becomes the subtitle; the voice is your WAV (base64) or **local TTS** (espeak-ng, no API key, spawned without a shell). A shot with a `lipsync` rig re-renders so the mouth follows the new line.
+- `PUT /api/projects/:id/soundtrack {wav}` — music bed.
+- Export writes `audio/FNN.wav`, `audio/music.wav` and **`audio/mix.wav`**: dialogue on the timeline, music −6 dB with **sidechain ducking** under speech (80 ms down / 350 ms up), normalized to **−16 LUFS** (BS.1770-4, matches ffmpeg `ebur128`) through a lookahead true-peak limiter. `subtitles.srt` is timed to the voice; `assemble.sh` muxes the mix as AAC.
+
+### 4 · Scenes, transitions and the edit
+
+`PATCH /api/frames/:id {scene, transition, transitionDuration}` — group shots into scenes; transitions `cut · dissolve · fadeBlack · fadeWhite · wipeLeft/Right · slideLeft/Right`. The timeline is **frame-quantized at 24 fps** (no drift between picture, SRT and EDL; transitions overlap the previous shot and are clamped to half the shorter neighbour). The export adds **`edit/film.edl`** (CMX3600) and **`edit/film.otio`** (OpenTimelineIO — validated with the ASWF `opentimelineio` library and its `cmx_3600` adapter), so the cut opens in DaVinci Resolve / Premiere / Avid. `GET /api/projects/:id/lint` is a continuity check (`NO_ARTWORK`, `SHOT_TOO_SHORT`, `READING_SPEED`, `VOICE_OVERRUN`, `JUMP_CUT`, …) with a hint per issue.
+
+### 5 · Theatrical DCP mastering
+
+Author the project on a cinema canvas — **`1.85:1`** (DCI Flat, logical 1998×1080) or **`2.39:1`** (DCI Scope, 2048×858) at `2K` (exact container) or `4K` (3996×2160 / 4096×1716) — then:
+
+```bash
+unzip storyboard-export.zip -d film && npm run master:dcp -- film --out DCP --title "Pip Goes to School" \
+  --kind short --lang VI-EN --territory VN --studio PIP --facility SBS      # [--container scope] [--4k]
+python -m clairmeta.cli check -type dcp DCP      # → 78 checks, 0 warnings
+```
+
+`master:dcp` builds an unencrypted **SMPTE DCP** (ST 428/429 — not the legacy Interop flavour): picture assembled with the same transitions as the timeline → **X′Y′Z′ 12-bit** (sRGB → XYZ D65, 48 cd/m² white, γ 2.6) → **JPEG 2000** (`opj_compress -cinema2K/-cinema4K 24`, parallel) → **MXF OP-Atom** written by a pure-TypeScript muxer; the mix streamed into L/R of a **5.1 PCM 24-bit 48 kHz** MXF and brought to cinema level (**−24 LUFS**, ≤ −1 dBTP; `--cinema-lufs off` to keep the web master); **CPL / PKL / ASSETMAP / VOLINDEX** with SHA-1 hashes and a 12-field ISDCF name (`PipGoestoSchoo_SHR_F_VI-EN_VN_51_2K_PIP_20260924_SBS_SMPTE_OV`). Needs `ffmpeg` and `opj_compress` (`apt install ffmpeg libopenjp2-tools`).
+
+Verified: asdcplib's `asdcp-info` reads both MXFs as SMPTE 429 and `asdcp-unwrap` returns every J2K frame byte-identical; CPL/PKL/ASSETMAP validate against the SMPTE XSDs; ClairMeta passes with no warnings; ffmpeg decodes it as "JPEG 2000 digital cinema 2K"; the colour round-trip is ≤ 1.6/255 max error; the same `--date` produces a **byte-identical** DCP (asset UUIDs are seeded by project + issue date, so a re-master gets new UUIDs and theatre servers never confuse versions).
+
+<p align="center"><img src="docs/media/dcp-frame.jpg" width="640" alt="A frame decoded back out of the DCP"><br><sub>A frame decoded back out of the picture MXF by ffmpeg's own X′Y′Z′ decoder (1998×1080 Flat).</sub></p>
+
+Honest limits: no encryption/KDMs (festival and independent delivery don't need them); one reel; stereo mix placed in L/R (no upmix to C/Ls/Rs — a real 5.1 mix comes from a dub stage); no subtitles track in the DCP yet (burn them into the picture or ship `subtitles.srt` for the cinema's own system). Mastering is an offline CLI step, not an API route — it runs for minutes to hours (≈ 4 frames/s on 4 cores at 2K), which would break the synchronous-render contract.
+
 <details>
 <summary><b>Full API reference</b></summary>
 
@@ -171,19 +275,29 @@ The full showcase is [construct-lamp.json](examples/construct-lamp.json) — a n
 | POST | `/api/projects/:id/duplicate` | — | Clone script + artwork + assets (series workflow: one `/api/render` rebuilds all images) |
 | POST | `/api/script/import` | `{projectId, source:"tsv"\|"sheet", tsvText?, sheetUrl?, confirmOverwrite?}` | Replace all frames; `409 CONFIRM_REQUIRED` if frames exist |
 | POST | `/api/frames` | `{projectId, afterIndex?}` | Insert a frame |
-| PATCH | `/api/frames/:id` | `{shotType?, description?}` | Edit script fields |
-| **PUT** | **`/api/frames/:id/artwork`** | `{svg}` | **Set artwork + render synchronously** → returns frame with `imageUrl` |
+| PATCH | `/api/frames/:id` | `{shotType?, description?, scene?, transition?, transitionDuration?}` | Edit script fields, scene grouping and the transition into this shot |
+| **PUT** | **`/api/frames/:id/artwork`** | `{svg}` | **Set artwork + render synchronously** → returns frame with `imageUrl` (a motion frame reverts to a still) |
+| **PUT** | **`/api/frames/:id/motion`** | `{motion}` | **Make the frame an animated shot** — renders PNG sequence + WebP + poster still synchronously → frame with `clipUrl`, `stats`, `warnings` |
+| DELETE | `/api/frames/:id/motion` | — | Revert to a still (keeps the poster) |
 | DELETE | `/api/frames/:id` | — | Delete + reindex |
 | POST | `/api/frames/reorder` | `{projectId, frameId, targetIndex}` | Move a frame |
 | POST | `/api/storyboard/apply-edit` | `{projectId, frames:[{index,shotType,description}]}` | Bulk-replace the whole script (agents editing scripts) |
 | **POST** | **`/api/construct`** | `{spec, preview?}` | **Compile a geometric-construction spec → SVG fragment** (+ optional PNG preview data-URI); stateless |
-| **POST** | **`/api/render`** | `{projectId, frameIds?}` | **Re-render all frames with artwork** (after changing defs/ratio/resolution) |
+| **POST** | **`/api/motion`** | `{motion, shotType?, preview?}` | **Compile + render a shot** → `contactSheetPng`, `posterPng`, optional `clipWebp` / per-frame `frames[].svg`; stateless |
+| **POST** | **`/api/export/gltf`** | `{spec}\|{motion}, options?, download?` | **glTF 2.0** scene (animated for a motion) for Blender/three.js/Unreal |
+| **POST** | **`/api/render`** | `{projectId, frameIds?}` | **Re-render all frames with artwork** (after changing defs/ratio/resolution) — motion frames re-render their clips |
+| **POST** | **`/api/frames/:id/passes`** | `{passes:["depth","segmentation","normal","pose"]}` | Control passes for a motion shot (PNG sequences + OpenPose JSON) |
+| **PUT** | **`/api/frames/:id/dialogue`** | `{text, wav?, tts?:{voice,speed}, offset?}` | Dialogue line: subtitle + voice (WAV or local TTS); re-renders a lipsync shot |
+| DELETE | `/api/frames/:id/dialogue` | — | Remove the line + voice |
+| **PUT** | **`/api/projects/:id/soundtrack`** | `{wav}` (base64) | Music bed (ducked under dialogue in the mix) |
+| DELETE | `/api/projects/:id/soundtrack` | — | Remove music |
+| GET | `/api/projects/:id/lint` | — | Continuity/storyboard lint: `[{frameIndex, severity, code, message, hint}]` |
 | POST | `/api/assets/upload` | multipart `projectId, kind:"watermark", files[]` | Upload watermark logo (PNG/JPEG/WebP ≤8MB, magic-byte verified) |
 | DELETE | `/api/assets/:id` | — | Remove watermark |
 | POST | `/api/watermark/reapply` | `{projectId}` | Re-composite watermark on all rendered frames |
-| GET | `/api/export/zip?projectId=` | — | ZIP: `FNN.png` + `storyboard.json` (incl. all SVG sources) + `captions.srt` |
+| GET | `/api/export/zip?projectId=` | — | ZIP: `FNN.png` + `clips/FNN/%04d.png` + `clips/FNN.webp` + `gltf/FNN.gltf` + `passes/FNN/` + `audio/{FNN,music,mix}.wav` + `edit/film.{edl,otio}` + `storyboard.json` (timeline + all SVG/motion sources) + `captions.srt` + `subtitles.srt` + `assemble.sh` → input to `npm run master:dcp` |
 | GET | `/api/files/{path}` | — | Serve rendered images (HTTP Range supported) |
-| GET | `/api/meta` | — | `{serviceAccountEmail, construct:{version}}` (feature-detect) |
+| GET | `/api/meta` | — | `{serviceAccountEmail, construct:{version}, motion:{version, limits}}` (feature-detect) |
 | POST | `/api/maintenance/cleanup` | — | Remove orphaned files |
 
 Errors: `{"error":{"code","message","hint?"}}`. Codes: `ARTWORK_INVALID, CONSTRUCTION_INVALID, SHEET_NOT_SHARED, SHEET_NOT_FOUND, SHEET_BAD_FORMAT, ASSET_LIMIT, ASSET_BAD_TYPE, ASSET_TOO_LARGE, CONFIRM_REQUIRED, VALIDATION, NOT_FOUND, RATE_LIMITED, INTERNAL`.
@@ -191,13 +305,22 @@ Frame `status`: `draft → done | failed`.
 
 </details>
 
-## Video assembly hand-off (Remotion)
+## From storyboard to film
 
-The engine deliberately stops at images. The ZIP export is designed as Remotion input:
+The ZIP export is a complete, self-describing film package:
 
-- `storyboard.json` — project settings, `playbackSpeed` (seconds/frame), per-frame `shotType` + `description` + **full SVG sources** (`artworkDefs` + `artworkSvg`, so artwork is versionable and re-renderable anywhere).
-- `captions.srt` — subtitle timing derived from `playbackSpeed`.
-- `shotType` tells the agent which camera move to synthesize per frame (Ken Burns zoom for `Slow zoom-in`, pan for `Pan`, static hold for `Static shot`, …).
+- `F01.png…` — the storyboard stills (motion shots contribute their poster frame).
+- `clips/FNN/0001.png…` + `clips/FNN.webp` — every animated shot as a full-res PNG sequence + a quick-look WebP.
+- `storyboard.json` — settings, the **timeline** (`startSec`/`durationSec` per frame: stills hold `playbackSpeed`, shots last their clip length), full SVG sources and motion specs (re-renderable anywhere).
+- `captions.srt` — timed to the same timeline (subtitles never drift from picture).
+- `assemble.sh` — `sh assemble.sh` builds **`film.mp4`** with ffmpeg (the timeline's transitions via `xfade`, the mix as AAC). Verified end-to-end: durations match the timeline to the frame.
+- `gltf/FNN.gltf` — each shot in 3D for Blender/Unreal (see above), figures as skinned Armatures.
+- `passes/FNN/` — depth / segmentation / normal / OpenPose conditioning for AI video.
+- `audio/mix.wav` + `subtitles.srt` — the −16 LUFS mix and voice-timed subtitles (muxed by `assemble.sh`).
+- `edit/film.edl` + `edit/film.otio` — the cut for Resolve/Premiere/Avid.
+- → `npm run master:dcp -- <unzipped export>` turns the package into a theatrical **DCP** (see above).
+
+Prefer Remotion? Use `storyboard.json` directly: `durationSec` per frame, `motion.frames` for the sequences, `shotType` for camera moves on stills.
 
 ## Environment (`.env`)
 
@@ -217,10 +340,22 @@ src/lib/services/artworkService.ts render→watermark→persist pipeline per fra
 src/lib/services/construct/       geometric-construction compiler (pure, deterministic):
                                   geometry2d · pathBoolean (path-bool) · pathParse ·
                                   math3d · camera · geometry3d · painterSort · shading ·
-                                  plane3 · csg · depthOrder · meshRepair · shadow ·
-                                  faceGradient · silhouette · effects · atmosphere ·
-                                  finish · partsExpand/Figure/Wheel · emitScene ·
-                                  svgEmitter · compile (orchestrator)
+                                  plane3 · csg · sceneMeshes · depthOrder · meshRepair ·
+                                  shadow · faceGradient · silhouette · effects ·
+                                  atmosphere · finish · partsExpand/Figure/Wheel ·
+                                  emitScene · svgEmitter · gltf · compile (orchestrator)
+src/lib/services/motion/          time dimension (pure): easing · interpolate ·
+                                  targetPath · noise · rigs · ik · evaluate ·
+                                  compileMotion · gltfMotion (skins)
+src/lib/services/motionRenderer.ts clip rasterizing, animated WebP, contact sheet
+src/lib/services/timeline.ts      one timing source (24 fps frame-quantized) for
+                                  storyboard.json / SRT / EDL / OTIO / assemble.sh / DCP
+src/lib/services/editorial.ts     CMX3600 EDL + OpenTimelineIO; storyboardLint.ts
+src/lib/services/audio/           pure-TS WAV codec + resampler, BS.1770-4 loudness,
+                                  mixer (ducking, limiter), lip-sync visemes; tts.ts
+src/lib/services/dcp/             DCP mastering (pure): color (X′Y′Z′) · mxf (SMPTE
+                                  OP-Atom muxer) · packaging (CPL/PKL/ASSETMAP) ·
+                                  picture (ffmpeg graph) · uuid; scripts/master-dcp.ts
 src/app/api/                      REST routes (Zod, rate-limited, error envelope)
 src/components/                   Web UI (Next.js App Router + Zustand)
 src/lib/services/                 tsvParser, sheetReader, watermarker (sharp), storage…
@@ -255,5 +390,11 @@ tests/                            Vitest — sanitizer bypass-vector suite + con
 **Dựng hình kỷ hà (`POST /api/construct`):** thay vì viết tay từng path, agent mô tả hình theo đúng phương pháp hoạ sĩ vector — phân rã thành **hình kỷ hà cơ bản** (tròn, chữ nhật, đa giác, khối hộp, trụ, cầu…), rồi **kết hợp** (boolean 2D trên bezier thật + **CSG thể tích 3D** — trừ cầu khỏi hộp, khoan trụ xuyên khối, lòng khoét lộ màu dao cắt) và **biến đổi** (affine, chiếu isometric hoặc camera tự do, extrude, **khung xương FK cha-con**). Ánh sáng nhiều tầng: 3 tông lượng tử / gradient mượt theo mặt / **bóng đổ xuống đất** (silhouette chính xác — vòng đệm đổ bóng có lỗ). **Depth sort exact mặc định** — khối xuyên nhau vẫn vẽ đúng. Có sẵn **part tham số hoá**: nhân vật khớp nối (pose theo tên khớp, tỷ lệ 2-8 đầu), bánh xe, cây, mây, mũi tên. Engine compile deterministic + trả preview ngay trong response (~20-400ms/lần). Xem 7 mẫu trong [examples/](examples/) — hero kỷ hà là **người đẩy xe hàng**, hero làm mềm là **đèn đường đêm**.
 
 **Nguyên lý làm mềm (The Softness Principle):** vector bản chất là mảng cứng — bóng của vector chỉ là một shape sắc cạnh, trong khi 3D thật chuyển êm từ sáng sang tối. Muốn vector "mềm" thì phải GIẢ LẬP: **xếp chồng nhiều lớp shape cứng, phủi mép bằng gradient (rẻ) hoặc blur (đắt), và để màu sắc gánh phần nặng**. Engine compile sẵn nguyên lý này: một quy tắc boolean duy nhất trên silhouette sinh ra mọi lớp sáng-tối (`formShadow` lưỡi liềm tối phía khuất · `highlight` nửa sáng phía nguồn · `rim` viền ngược mỏng · `coreAccent` dải tối nhất · `specular` đốm gương · `glow` quầng phát sáng · `contact` bóng tiếp xúc) — mép mềm KHÔNG cần filter, chỉ là gradient tắt dần theo trục sáng. Kỷ luật màu nướng sẵn vào default: **bóng không bao giờ #000** (giảm sáng 25% + xoay hue 25° về lạnh), highlight ấm/bóng lạnh. Ngân sách blur 6 filter/fragment — dành cho nguồn sáng hero, còn lại dùng gradient. Kèm `gradients[]` tác giả tự khai, `atmosphere` (depth fade viễn cận + vignette), kênh 2D `layer:"foreground"` (sương/haze phủ trên khối 3D), và preset một chạm `finish: soft/premium`. Xem hero [construct-lamp.json](examples/construct-lamp.json).
+
+**Motion, trục thời gian (construct v4):** mỗi frame storyboard có thể là **một shot chuyển động**. Motion spec = scene construct gốc + **tracks** keyframe (target là đường dẫn theo id: `parts.pip.pose.kneeL`, `camera.orbit.azimuth`, `solids.ball.at.1`, màu `#hex` pha trong không gian tuyến tính; easing `inOut` mặc định theo nguyên lý slow-in/slow-out, có `outBack`/`outBounce`/`smooth` Catmull-Rom/cubic-bezier) + **rig thủ tục**: `walk` (đi bộ theo đường, **bàn chân trụ không trượt**: góc hông được *giải* để mắt cá lùi đúng tốc độ thân; test chặn < 3%), `shot` (dolly/orbit/crane/pan/tilt/shake, hoặc `auto` suy từ cột Shot Type tiếng Anh/Việt), `roll` (lăn không trượt), `follow` (follow-through trễ nhịp), `wiggle` (nhiễu mượt tất định theo seed). `holdFrames: 2` = animate on twos. `POST /api/motion` trả **contact sheet**, tức lưới frame kèm thanh thời gian, để agent *nhìn* chuyển động trong một ảnh. `PUT /api/frames/:id/motion` biến frame thành shot (chuỗi PNG + WebP + poster làm ảnh tĩnh).
+
+**Từ storyboard tới phim:** export ZIP có chuỗi PNG từng shot, `storyboard.json` kèm timeline, `captions.srt` khớp timeline, và **`assemble.sh`**: chạy `sh assemble.sh` là ra **`film.mp4`** (đã kiểm chứng end-to-end). **glTF 2.0** (`POST /api/export/gltf`, và `gltf/FNN.gltf` trong ZIP) là cầu nối sang Blender/Unreal: đúng mesh engine vẽ, camera khớp từng pixel với khung SVG, animation TRS; đã qua Khronos validator (0 lỗi) và render path-traced thật bằng Blender Cycles (`scripts/blender_render.py`). Lộ trình trung thực tới phim chiếu rạp nằm ở [docs/FILM-ROADMAP.md](docs/FILM-ROADMAP.md).
+
+**Pipeline phim (N1–N5):** (1) **rig nhân vật**: khung xương có tên khớp, **IK 2 xương giải tích** (tay chạm tay nắm cửa, chân đặt lên bậc, bám theo vật đang chạy), mặt (mắt/miệng/chớp mắt) và `lipsync` theo giọng; glTF xuất **Armature skinned thật**. (2) **Control passes cho AI video**: depth / segmentation / normal / OpenPose cùng hình học và camera với bản render, để ControlNet/VACE/Wan "vẽ lại" animatic mà vẫn giữ bố cục và diễn xuất. (3) **Âm thanh**: thoại theo frame (WAV hoặc TTS local espeak-ng, không key), nhạc nền duck dưới thoại, mix chuẩn −16 LUFS, phụ đề khớp giọng. (4) **Dựng**: cảnh, chuyển cảnh (dissolve/fade/wipe/slide), timeline lượng tử theo frame 24 fps, xuất **EDL CMX3600 + OpenTimelineIO** mở thẳng trong Resolve/Premiere, lint liền mạch. (5) **DCP chiếu rạp**: làm project ở canvas **1.85:1 (Flat 1998×1080)** hoặc **2.39:1 (Scope 2048×858)**, 2K/4K, rồi `npm run master:dcp -- <thư-mục-export>` → DCP SMPTE: hình X′Y′Z′ 12-bit JPEG 2000, MXF do muxer TypeScript thuần viết, tiếng 5.1 PCM 24-bit ở mức rạp −24 LUFS, CPL/PKL/ASSETMAP, tên ISDCF 12 trường. Đã kiểm chứng bằng asdcplib (unwrap trả lại từng frame byte-giống-hệt), XSD SMPTE, ClairMeta (0 cảnh báo) và ffmpeg; cùng `--date` thì DCP byte-giống-hệt.
 
 **Chạy:** `npm install` → `cp .env.example .env` (không cần điền gì) → `npx prisma migrate deploy` → `npm run dev`. Xem [examples/](examples/) — bộ mẫu mascot "Pip" hoàn chỉnh. Lưu ý: app không có đăng nhập — chỉ dùng local/nội bộ.

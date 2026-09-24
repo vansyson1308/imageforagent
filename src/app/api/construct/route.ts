@@ -18,7 +18,7 @@ export async function POST(req: Request): Promise<Response> {
     enforceRateLimit("construct:compile", 20);
     const body = await parseBody(req, constructRequestSchema);
 
-    const result = compileConstruction(body.spec);
+    const result = compileConstruction(body.spec, body.preview ? { canvas: LOGICAL_CANVAS[body.preview.aspectRatio] } : {});
 
     let previewPng: string | undefined;
     if (body.preview) {

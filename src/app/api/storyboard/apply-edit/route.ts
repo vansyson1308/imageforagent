@@ -42,6 +42,22 @@ export async function POST(req: Request): Promise<Response> {
             imagePath: unchanged ? old.imagePath : null,
             rawImagePath: unchanged ? old.rawImagePath : null,
             generatedAt: unchanged ? old.generatedAt : null,
+            // Frame giữ nguyên nội dung giữ nguyên artwork + shot motion
+            // (thiếu dòng này /api/render sau đó bỏ sót frame đã có ảnh)
+            ...(unchanged && {
+              artworkSvg: old.artworkSvg,
+              errorMsg: old.errorMsg,
+              motionSpec: old.motionSpec,
+              clipDir: old.clipDir,
+              clipPath: old.clipPath,
+              clipFps: old.clipFps,
+              clipFrameCount: old.clipFrameCount,
+              clipDuration: old.clipDuration,
+              dialogue: old.dialogue,
+              voicePath: old.voicePath,
+              voiceDuration: old.voiceDuration,
+              voiceOffset: old.voiceOffset,
+            }),
           },
         });
       }

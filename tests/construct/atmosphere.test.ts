@@ -60,6 +60,25 @@ describe("vignette — phủ đúng canvas dưới place transform", () => {
     expect(v.gradient.stops[2].opacity).toBe(0.3);
   });
 
+  it("size bỏ trống → phủ canvas THẬT của nơi render (DCI Flat 1998×1080), mặc định 1920×1080", () => {
+    const spec = constructSpecSchema.parse({
+      version: 1,
+      solids: [{ id: "b", type: "box", size: [200, 200, 200], fill: "#cc8844" }],
+      atmosphere: { vignette: {} },
+    });
+    const vignetteD = (svg: string) => /<path d="([^"]+)" fill="url\(#cg-vignette\)"/.exec(svg)![1];
+    const xs = (d: string) => [...d.matchAll(/[ML] (-?[\d.]+) (-?[\d.]+)/g)].map((c) => Number(c[1]));
+    const m = placementToAffine({ at: spec.place.at, rotate: spec.place.rotate, scale: spec.place.scale });
+    const dciMaxX = Math.max(...xs(vignetteD(compileConstruction(spec, { canvas: { w: 1998, h: 1080 } }).svg)).map((x) => applyAffine(m, [x, 0])[0]));
+    const defMaxX = Math.max(...xs(vignetteD(compileConstruction(spec).svg)).map((x) => applyAffine(m, [x, 0])[0]));
+    expect(dciMaxX).toBeCloseTo(1998, 0);
+    expect(defMaxX).toBeCloseTo(1920, 0);
+    // size khai rõ vẫn thắng canvas
+    const explicit = constructSpecSchema.parse({ ...spec, atmosphere: { vignette: { size: [1080, 1920] } } });
+    const expMaxX = Math.max(...xs(vignetteD(compileConstruction(explicit, { canvas: { w: 1998, h: 1080 } }).svg)).map((x) => applyAffine(m, [x, 0])[0]));
+    expect(expMaxX).toBeCloseTo(1080, 0);
+  });
+
   it("compile: vignette là path CUỐI CÙNG, id cg-vignette", () => {
     const { svg } = compileConstruction(
       constructSpecSchema.parse({

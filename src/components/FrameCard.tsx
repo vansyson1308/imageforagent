@@ -23,7 +23,7 @@ export function FrameCard({ frame, aspectRatio }: FrameCardProps) {
       <div className="relative w-full overflow-hidden" style={ratioStyle}>
         {frame.imageUrl && frame.status === "done" ? (
           <img
-            src={frame.imageUrl}
+            src={frame.clipUrl ?? frame.imageUrl}
             alt={`Frame ${frame.index}`}
             className="h-full w-full object-cover"
             loading="lazy"
@@ -42,6 +42,22 @@ export function FrameCard({ frame, aspectRatio }: FrameCardProps) {
         <span className="btn-gradient absolute left-2 top-2 rounded-md px-1.5 py-0.5 text-[11px] font-bold text-white">
           {formatFrameBadge(frame.index)}
         </span>
+        {frame.clipUrl && frame.clipDuration ? (
+          <span
+            className="absolute right-2 top-2 rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur"
+            title={`Shot hoạt hình — ${frame.clipFrameCount ?? "?"} frame`}
+          >
+            🎬 {frame.clipDuration.toFixed(1)}s
+          </span>
+        ) : null}
+        {frame.dialogue ? (
+          <span
+            className="absolute bottom-2 left-2 max-w-[70%] truncate rounded-md bg-black/70 px-1.5 py-0.5 text-[11px] text-white backdrop-blur"
+            title={frame.dialogue}
+          >
+            🗣 {frame.dialogue}
+          </span>
+        ) : null}
         <button
           onClick={() => setEditorOpen(!editorOpen)}
           className="absolute bottom-2 right-2 rounded-lg bg-black/70 px-2.5 py-1.5 text-[11px] font-semibold text-white opacity-0 backdrop-blur transition hover:bg-black/90 group-hover:opacity-100"

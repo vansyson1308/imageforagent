@@ -219,6 +219,12 @@ const solidBase = {
   group: constructId.optional(),
   /** Lớp làm mềm per-solid (Softness) — vắng = không effect; {} = opt-out preset. */
   effects: effectsSchema.optional(),
+  /**
+   * Chi tiết BỀ MẶT của solid khác (mắt trên đầu, cúc áo, logo trên cầu):
+   * vẽ ngay SAU solid cha thay vì depth-sort riêng, và bị ẩn khi nằm ở
+   * phía cha quay lưng lại camera. Chữa giới hạn silhouette smooth.
+   */
+  decalOf: refId.optional(),
 };
 
 export const solidSchema = z.discriminatedUnion("type", [
@@ -301,6 +307,23 @@ export const partSchema = z.discriminatedUnion("type", [
     fills: z
       .object({ skin: fillColor, shirt: fillColor, pants: fillColor, shoes: fillColor })
       .partial()
+      .optional(),
+    /**
+     * Khuôn mặt (mắt + miệng) — có mặt là bật; mọi field animate được
+     * bằng track ("parts.hero.face.mouthOpen") → lip-sync, chớp mắt.
+     */
+    face: z
+      .object({
+        /** 0 = ngậm, 1 = há to. */
+        mouthOpen: z.number().min(0).max(1).default(0),
+        /** 0 = tròn (O/U), 1 = bẹt rộng (E/I). */
+        mouthWide: z.number().min(0).max(1).default(0.4),
+        /** 0 = mở mắt, 1 = nhắm. */
+        blink: z.number().min(0).max(1).default(0),
+        eyes: fillColor.default("#1d1d26"),
+        mouth: fillColor.default("#6b2d2d"),
+      })
+      .strict()
       .optional(),
   }),
   z.object({
@@ -456,8 +479,12 @@ export const atmosphereSchema = z
         strength: z.number().min(0).max(1).default(0.3),
         /** Offset gradient bắt đầu tối (0.55 = hơn nửa khung trong suốt). */
         start: z.number().min(0).max(0.95).default(0.55),
-        /** Kích thước canvas logic — đổi khi vẽ 9:16/1:1/4:5. */
-        size: z.tuple([pos, pos]).default([1920, 1080]),
+        /**
+         * Kích thước canvas logic. Bỏ trống = canvas thật của nơi render
+         * (project/preview/motion — vd 1998×1080 cho DCI Flat); mặc định
+         * 1920×1080 khi compile không kèm canvas.
+         */
+        size: z.tuple([pos, pos]).optional(),
       })
       .strict()
       .optional(),

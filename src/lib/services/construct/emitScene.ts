@@ -47,6 +47,8 @@ export interface SceneEmitInput {
   readonly depthFade?: DepthFadeParams;
   /** Overlay vignette — path CUỐI CÙNG tuyệt đối. */
   readonly vignettePath?: PathItem;
+  /** Control pass: fill mỗi entry thay bằng mã hoá pass (depth/id/normal). */
+  readonly passFill?: (entry: DrawEntry) => { readonly fill: string; readonly gradient?: GradientDescriptor };
 }
 
 /** Ghép toàn bộ PathItems của scene (2D nền → ground 3D → bóng → nổi). */
@@ -130,6 +132,18 @@ export function buildScenePaths(input: SceneEmitInput): PathItem[] {
   let gradientSeq = 0;
   let gradientOverflow = false;
   const emit3d = (entry: DrawEntry) => {
+    if (input.passFill) {
+      // Control pass: đúng hình học + thứ tự vẽ, fill = dữ liệu pass,
+      // không preItems/decals effect (overlay cutout cũng bỏ — pass đo hình khối)
+      const pf = input.passFill(entry);
+      if (pf.gradient) gradients.push(pf.gradient);
+      paths.push({
+        d: entry.dOverride ?? faceToPathData(entry.face, precision),
+        fill: pf.fill,
+        fillRule: entry.face.holes ? "evenodd" : undefined,
+      });
+      return;
+    }
     const solid = solidMap.get(entry.face.solidId)!;
     // face.fill = fill kế thừa từ solid nguồn (CSG đa màu; csg.fill đã
     // override từ lúc resolve) — solid thường không có face.fill

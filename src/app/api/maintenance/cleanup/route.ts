@@ -17,18 +17,26 @@ export async function POST(): Promise<Response> {
     const [assets, frames, projects] = await Promise.all([
       prisma.asset.findMany({ select: { filePath: true } }),
       prisma.frame.findMany({
-        select: { imagePath: true, rawImagePath: true },
+        select: { id: true, projectId: true, imagePath: true, rawImagePath: true, clipDir: true, clipPath: true, voicePath: true },
       }),
-      prisma.project.findMany({ select: { id: true } }),
+      prisma.project.findMany({ select: { id: true, musicPath: true } }),
     ]);
 
     const referenced = new Set<string>();
+    /** Thư mục chuỗi PNG của shot motion — mọi file bên trong đều được tham chiếu. */
+    const referencedDirs: string[] = [];
     for (const a of assets) referenced.add(a.filePath);
     for (const f of frames) {
       if (f.imagePath) referenced.add(f.imagePath);
       if (f.rawImagePath) referenced.add(f.rawImagePath);
+      if (f.clipPath) referenced.add(f.clipPath);
+      if (f.voicePath) referenced.add(f.voicePath);
+      if (f.clipDir) referencedDirs.push(`${f.clipDir}/`);
+      // Control passes của frame còn tồn tại
+      referencedDirs.push(`${f.projectId}/passes/${f.id}/`);
     }
     const projectIds = new Set(projects.map((p) => p.id));
+    for (const p of projects) if (p.musicPath) referenced.add(p.musicPath);
 
     const root = storageRoot();
     let removedFiles = 0;
@@ -69,7 +77,8 @@ export async function POST(): Promise<Response> {
             // Grace period 10 phút: file vừa ghi có thể chưa kịp commit path
             // vào DB (job đang chạy) — không được xoá nhầm ảnh vừa trả tiền
             const isRecent = Date.now() - childStat.mtimeMs < 10 * 60 * 1000;
-            if (!referenced.has(relPath) && !isRecent) {
+            const inClipDir = referencedDirs.some((d) => relPath.startsWith(d));
+            if (!referenced.has(relPath) && !inClipDir && !isRecent) {
               await fs.unlink(childPath).catch(() => {});
               removedFiles++;
             }

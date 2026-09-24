@@ -67,6 +67,34 @@ export const CONSTRUCT_LIMITS = {
   maxEffectPaths: 96,
 } as const;
 
+/**
+ * Trần cho motion engine (POST /api/motion, PUT /api/frames/:id/motion) —
+ * mỗi frame của clip là MỘT lần compile construct đầy đủ, nên trần tổng
+ * frame + wall-clock tổng chặn cứng chi phí một request.
+ */
+export const MOTION_LIMITS = {
+  /** Số giây tối đa mỗi clip (một shot). */
+  maxDuration: 20,
+  /** fps tối đa — 12 = "animate on twos" (chuẩn hoạt hình), 24 = điện ảnh. */
+  maxFps: 30,
+  /** Tổng frame mỗi clip (duration × fps). */
+  maxFrames: 240,
+  /** Số track keyframe mỗi motion spec. */
+  maxTracks: 64,
+  /** Số key mỗi track. */
+  maxKeysPerTrack: 64,
+  /** Số rig thủ tục (walk/roll/wiggle/shot) mỗi motion spec. */
+  maxRigs: 16,
+  /** Waypoint tối đa mỗi đường đi của rig walk. */
+  maxPathPoints: 32,
+  /** Wall-clock tổng cho compile toàn bộ frame (ms). */
+  maxTotalCompileMs: 30_000,
+  /** Số ô tối đa trên contact sheet preview. */
+  maxSheetFrames: 24,
+  /** Backdrop/overlay SVG tĩnh của motion spec (bytes UTF-8). */
+  maxLayerBytes: 256_000,
+} as const;
+
 export function isAssetKind(value: string): value is AssetKind {
   return value in ASSET_LIMITS;
 }
