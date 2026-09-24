@@ -14,12 +14,23 @@ forest, over a monkey bridge, past a sleeping buffalo — to the lotus pond wher
 the lantern lies torn on a rock. The fireflies gather and light it for him, and
 from the hilltop he watches the whole village light up for the festival.
 
+<p align="center"><img src="../../docs/media/den-ong-sao-poster.jpg" width="640" alt="Poster"></p>
+
+[▶ trailer](../../docs/media/den-ong-sao-trailer.mp4) · [contact sheet — one frame every 40 s](../../docs/media/den-ong-sao-contact-sheet.jpg)
+
 | | |
 |---|---|
-| Running time | ~20 min · 105 shots · 7 chapters |
+| Running time | **20:14.5** · 105 shots · 7 chapters · 29,148 frames at 24 fps |
 | Picture | DCI Flat 1.85:1 · 1998×1080 · 24 fps (animation at 12 fps) |
-| Sound | narration + dialogue (local espeak-ng TTS, lip-synced) · original score · −16 LUFS web mix / −24 LUFS cinema |
+| Sound | narration + dialogue (local espeak-ng TTS, lip-synced) · original score · mix measured **−16.2 LUFS**, loudness range 8.9 LU, no silence ≥ 5 s · −24 LUFS in the DCP |
 | Deliverables | `film.mp4` · SMPTE DCP · EDL/OTIO · subtitles · glTF per shot |
+
+## Production record (this run)
+
+- 105 `PUT /api/frames/:id/motion` calls rendered 14,712 unique 2K frames in **58 min** on 4 CPU cores (~190 ms/frame, synchronous API, one shot at a time); 3.4 GB of PNG clips.
+- `GET /api/projects/:id/lint`: **0 errors**, 1 warning (a 180°-line cross in the festival).
+- Export ZIP 4.8 GB → `assemble.sh` → `film.mp4` (H.264 1998×1080 + AAC 48 kHz, 125 MB) in 19 min.
+- Two real bugs surfaced by making a feature-length film, both fixed with regression tests: a dissolve after a hard cut broke the ffmpeg graph (concat/xfade timebase), and the export silently skipped the mix for films over 15 minutes.
 
 ## Chapters
 

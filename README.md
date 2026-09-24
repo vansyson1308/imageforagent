@@ -8,6 +8,14 @@
 
 > 🇻🇳 Có phần **Tóm tắt tiếng Việt** ở cuối file.
 
+## 🎬 Proof: a 20-minute animated film made with this engine
+
+<p align="center"><img src="docs/media/den-ong-sao-poster.jpg" width="720" alt="Đèn Ông Sao — Tí raises the star lantern against the full moon"></p>
+
+**[Đèn Ông Sao · The Star Lantern](examples/film/)** — 20:14, 105 shots, 7 chapters, DCI Flat 1998×1080 at 24 fps, narration + dialogue with lip-sync, an original score, mastered as a theatrical DCP. Written, staged, animated, voiced, scored and edited by an agent **through this app's own API** (`examples/film/produce.ts` only calls public endpoints), with no hand-drawn frame and no API key. Re-running the producer rebuilds the same film byte-for-byte.
+
+[▶ 1-minute trailer](docs/media/den-ong-sao-trailer.mp4) · [one frame every 40 s](docs/media/den-ong-sao-contact-sheet.jpg) · [source + how to reproduce](examples/film/README.md)
+
 ## How it works
 
 ```
@@ -392,6 +400,8 @@ tests/                            Vitest — sanitizer bypass-vector suite + con
 **Nguyên lý làm mềm (The Softness Principle):** vector bản chất là mảng cứng — bóng của vector chỉ là một shape sắc cạnh, trong khi 3D thật chuyển êm từ sáng sang tối. Muốn vector "mềm" thì phải GIẢ LẬP: **xếp chồng nhiều lớp shape cứng, phủi mép bằng gradient (rẻ) hoặc blur (đắt), và để màu sắc gánh phần nặng**. Engine compile sẵn nguyên lý này: một quy tắc boolean duy nhất trên silhouette sinh ra mọi lớp sáng-tối (`formShadow` lưỡi liềm tối phía khuất · `highlight` nửa sáng phía nguồn · `rim` viền ngược mỏng · `coreAccent` dải tối nhất · `specular` đốm gương · `glow` quầng phát sáng · `contact` bóng tiếp xúc) — mép mềm KHÔNG cần filter, chỉ là gradient tắt dần theo trục sáng. Kỷ luật màu nướng sẵn vào default: **bóng không bao giờ #000** (giảm sáng 25% + xoay hue 25° về lạnh), highlight ấm/bóng lạnh. Ngân sách blur 6 filter/fragment — dành cho nguồn sáng hero, còn lại dùng gradient. Kèm `gradients[]` tác giả tự khai, `atmosphere` (depth fade viễn cận + vignette), kênh 2D `layer:"foreground"` (sương/haze phủ trên khối 3D), và preset một chạm `finish: soft/premium`. Xem hero [construct-lamp.json](examples/construct-lamp.json).
 
 **Motion, trục thời gian (construct v4):** mỗi frame storyboard có thể là **một shot chuyển động**. Motion spec = scene construct gốc + **tracks** keyframe (target là đường dẫn theo id: `parts.pip.pose.kneeL`, `camera.orbit.azimuth`, `solids.ball.at.1`, màu `#hex` pha trong không gian tuyến tính; easing `inOut` mặc định theo nguyên lý slow-in/slow-out, có `outBack`/`outBounce`/`smooth` Catmull-Rom/cubic-bezier) + **rig thủ tục**: `walk` (đi bộ theo đường, **bàn chân trụ không trượt**: góc hông được *giải* để mắt cá lùi đúng tốc độ thân; test chặn < 3%), `shot` (dolly/orbit/crane/pan/tilt/shake, hoặc `auto` suy từ cột Shot Type tiếng Anh/Việt), `roll` (lăn không trượt), `follow` (follow-through trễ nhịp), `wiggle` (nhiễu mượt tất định theo seed). `holdFrames: 2` = animate on twos. `POST /api/motion` trả **contact sheet**, tức lưới frame kèm thanh thời gian, để agent *nhìn* chuyển động trong một ảnh. `PUT /api/frames/:id/motion` biến frame thành shot (chuỗi PNG + WebP + poster làm ảnh tĩnh).
+
+**Bằng chứng: phim hoạt hình 20 phút [Đèn Ông Sao](examples/film/)** — 105 shot, 7 chương, 1998×1080 DCI Flat 24 fps, lời kể + thoại có khẩu hình, nhạc gốc, đóng gói DCP chiếu rạp. Toàn bộ do agent viết, dựng cảnh, diễn hoạt, lồng tiếng, phối nhạc và dựng phim **qua chính API của app** (`examples/film/produce.ts` chỉ gọi endpoint công khai) — không vẽ tay khung nào, không API key; chạy lại là ra đúng bộ phim đó từng byte. Xem [trailer 1 phút](docs/media/den-ong-sao-trailer.mp4).
 
 **Từ storyboard tới phim:** export ZIP có chuỗi PNG từng shot, `storyboard.json` kèm timeline, `captions.srt` khớp timeline, và **`assemble.sh`**: chạy `sh assemble.sh` là ra **`film.mp4`** (đã kiểm chứng end-to-end). **glTF 2.0** (`POST /api/export/gltf`, và `gltf/FNN.gltf` trong ZIP) là cầu nối sang Blender/Unreal: đúng mesh engine vẽ, camera khớp từng pixel với khung SVG, animation TRS; đã qua Khronos validator (0 lỗi) và render path-traced thật bằng Blender Cycles (`scripts/blender_render.py`). Lộ trình trung thực tới phim chiếu rạp nằm ở [docs/FILM-ROADMAP.md](docs/FILM-ROADMAP.md).
 
