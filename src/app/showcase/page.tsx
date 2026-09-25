@@ -2,8 +2,6 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
 
-/* eslint-disable @next/next/no-img-element */
-
 /**
  * Showcase gallery: films made end-to-end by the Nemotron crew, each with
  * its full trace (every model call, score, token count and cost). Public

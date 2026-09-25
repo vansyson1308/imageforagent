@@ -37,6 +37,8 @@ export interface DirectorRequest {
   readonly research: boolean;
   readonly maxShots?: number;
   readonly maxUsd?: number;
+  /** "super-only": every role on the Super tier, no critic (eval baseline). */
+  readonly profile?: "crew" | "super-only";
 }
 
 export interface DirectorDeps {
@@ -93,7 +95,7 @@ export async function createRun(req: DirectorRequest, deps: DirectorDeps): Promi
       style: req.style,
       provider: deps.provider.name,
       models: JSON.stringify(deps.models),
-      config: JSON.stringify({ budget, critic: req.critic, research: req.research && !!deps.tavily, fps: deps.fps ?? 12, visionAvailable: deps.visionAvailable, modelNotes: deps.modelNotes }),
+      config: JSON.stringify({ budget, profile: req.profile ?? "crew", critic: req.critic, research: req.research && !!deps.tavily, fps: deps.fps ?? 12, visionAvailable: deps.visionAvailable, modelNotes: deps.modelNotes }),
     },
   });
   return { runId: run.id, budget };

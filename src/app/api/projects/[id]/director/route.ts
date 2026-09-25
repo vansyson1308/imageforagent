@@ -25,6 +25,8 @@ const directorRequestSchema = z.object({
   research: z.boolean().default(false),
   maxShots: z.number().int().min(2).max(24).optional(),
   maxUsd: z.number().positive().max(10).optional(),
+  /** Eval baseline: "super-only" runs every role on the Super tier with no critic. */
+  profile: z.enum(["crew", "super-only"]).default("crew"),
 });
 
 const enc = new TextEncoder();
@@ -52,14 +54,18 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     if (live.some((r) => r.projectId === id)) throw new AppError("CONFLICT", "A Director run is already in progress on this project.", "Wait for it to finish or cancel it.");
     if (cfg.enabled && live.length >= cfg.maxConcurrentRuns) throw new AppError("QUOTA_EXCEEDED", "The demo server is busy with other films.", "Try again in a few minutes, or watch the showcase.");
 
-    const deps = await directorDeps();
+    const crew = await directorDeps();
+    const deps =
+      body.profile === "super-only"
+        ? { ...crew, models: { strong: crew.models.mid, mid: crew.models.mid, fast: crew.models.mid, vision: "" }, visionAvailable: false }
+        : crew;
     let gate: Awaited<ReturnType<typeof dailyGate>> | null = null;
     if (cfg.enabled) {
       await cleanupDemoProjects(cfg);
       gate = await dailyGate(cfg);
     }
     const runDeps = { ...deps, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }) };
-    const request = { projectId: id, ...body };
+    const request = { projectId: id, ...body, critic: body.profile === "super-only" ? false : body.critic };
     const { runId, budget } = await createRun(request, runDeps);
     const ctrl = registerRun(runId);
     const onAbort = () => ctrl.abort();
