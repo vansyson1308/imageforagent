@@ -1,7 +1,8 @@
 # Storyboard Studio (+ Director): production image.
 # Secrets (NEBIUS_API_KEY, TAVILY_API_KEY, DEMO_PASSCODE) are NEVER baked in:
 # set them as platform environment variables (Railway → Variables).
-# Mount a persistent volume at /data (SQLite DB + rendered storage).
+# Mount a persistent volume at /data (SQLite DB + rendered storage) — attach it
+# on the platform (Railway volume, docker run -v); no VOLUME line (Railway rejects it).
 #
 # Base: Ubuntu 24.04 (ffmpeg 6.1 + espeak-ng, the versions the test suite is
 # verified against), with Node 22 copied from the official image.
@@ -44,5 +45,4 @@ ENV NODE_ENV=production \
 COPY --from=build /app ./
 RUN chmod +x scripts/docker-entrypoint.sh
 EXPOSE 3000
-VOLUME ["/data"]
 ENTRYPOINT ["/usr/bin/tini", "--", "scripts/docker-entrypoint.sh"]

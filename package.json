@@ -13,7 +13,9 @@
     "db:studio": "prisma studio",
     "master:dcp": "tsx scripts/master-dcp.ts",
     "director:models": "tsx scripts/director/models.ts",
-    "director:smoke": "tsx scripts/director/smoke.ts"
+    "director:smoke": "tsx scripts/director/smoke.ts",
+    "director:showcase": "tsx scripts/director/showcase.ts",
+    "director:bench": "tsx scripts/eval/director_bench.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
