@@ -5,12 +5,13 @@
  *   npm run director:smoke
  * Writes docs/hackathon/evidence/smoke-<timestamp>.json (prompts, outputs, usage, latency).
  */
-import "dotenv/config";
+import "./env";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { NemotronProvider } from "@/lib/providers/nemotronProvider";
 import { configuredModels, resolveAgainstCatalog, type CrewModels } from "@/lib/providers";
 import { renderArtwork } from "@/lib/services/svgRenderer";
-import type { ModelTier } from "@/lib/providers/types";
+import type { ChatResult, ModelTier } from "@/lib/providers/types";
+import { appendLedger, assertSpendUnder } from "./ledger";
 
 async function main() {
   const key = process.env.NEBIUS_API_KEY;
@@ -18,6 +19,7 @@ async function main() {
     console.error("NEBIUS_API_KEY is not set — see docs/hackathon/BLOCKERS.md B1.");
     process.exit(2);
   }
+  console.log(`spend so far (ledger): $${assertSpendUnder().toFixed(4)}`);
   const p = new NemotronProvider({ apiKey: key, baseUrl: process.env.NEBIUS_BASE_URL });
   let models: CrewModels = configuredModels();
   let notes: string[] = [];
@@ -33,6 +35,8 @@ async function main() {
     const t0 = Date.now();
     try {
       const out = await fn();
+      const r = out as Partial<ChatResult>;
+      if (r.usage) appendLedger({ script: "smoke", label: `${tier}:${label}`, model: String(r.model), tokensIn: r.usage.promptTokens, tokensOut: r.usage.completionTokens, costUsd: r.costUsd ?? 0 });
       results.push({ tier, label, model: models[tier], ok: true, ms: Date.now() - t0, out });
       console.log(`✔ ${tier} ${label} (${Date.now() - t0} ms)`);
     } catch (e) {

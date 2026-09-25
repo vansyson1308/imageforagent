@@ -3,7 +3,7 @@
  *   NEBIUS_API_KEY=… npm run director:models
  * Writes docs/hackathon/evidence/models-<date>.json (ids only, no secrets).
  */
-import "dotenv/config";
+import "./env";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { NemotronProvider } from "@/lib/providers/nemotronProvider";
 import { configuredModels, resolveAgainstCatalog } from "@/lib/providers";
