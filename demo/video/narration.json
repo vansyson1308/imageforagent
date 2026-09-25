@@ -1,0 +1,18 @@
+{
+  "title": "Storyboard Studio Director — type a story, get a film",
+  "voice": "en-us",
+  "speed": 158,
+  "segments": [
+    { "id": "01-hook", "scene": "title", "start": 0, "end": 15, "text": "Type a story. Get a film. There is no image generator here. A crew of NVIDIA Nemotron models on Nebius Token Factory writes the entire film as code." },
+    { "id": "02-story", "scene": "live", "start": 15, "end": 30, "text": "I paste a short story and press Make my film. Nemotron 3 Ultra, the Director, plans the shots and writes a cast and set bible as strict JSON." },
+    { "id": "03-artist", "scene": "live", "start": 30, "end": 52, "text": "Nemotron 3 Super is the Artist. It draws each character once as a reusable symbol, then every frame as SVG. A sandboxed engine validates and renders it. When the engine rejects a frame, the error and its hint go straight back to the Artist." },
+    { "id": "04-critic", "scene": "live", "start": 52, "end": 75, "text": "Then Nemotron Nano Omni, the Visual Critic, actually looks at the rendered image, scores it against the shot, and asks for concrete fixes. Here a frame scores low; the revision scores higher, so it replaces the original. The trace keeps both." },
+    { "id": "05-editor", "scene": "live", "start": 75, "end": 90, "text": "Nemotron Nano, the Editor, fixes timing and subtitle problems found by the storyboard linter. Every step streams live with its model, tokens and cost." },
+    { "id": "06-film", "scene": "film", "start": 90, "end": 102, "text": "And the film plays, with voices, camera moves and transitions, assembled server side with ffmpeg. You can download the MP4 or the full production package." },
+    { "id": "07-arch", "scene": "arch", "start": 102, "end": 125, "text": "Under the hood, every call goes to Token Factory's OpenAI compatible endpoint with strict JSON schemas and image input. Ultra reasons once per film, Super does the heavy drawing, and the Nano models make fast, cheap calls. Tavily adds cited real-world references." },
+    { "id": "08-safe", "scene": "arch", "start": 125, "end": 135, "text": "Every model output passes the same sanitizer and validators as human input, with hard budgets on tokens, dollars and time." },
+    { "id": "09-results", "scene": "eval", "start": 135, "end": 150, "text": "We benchmarked ten stories in three configurations. The eval table shows first pass render success, critic uplift, and the cost per finished minute of film." },
+    { "id": "10-showcase", "scene": "showcase", "start": 150, "end": 160, "text": "The showcase has films made end to end by the crew, in English, Vietnamese and Japanese." },
+    { "id": "11-end", "scene": "end", "start": 160, "end": 172, "text": "Storyboard Studio Director. Open source under the MIT license. Try the demo, or run it yourself." }
+  ]
+}

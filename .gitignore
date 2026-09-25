@@ -48,3 +48,7 @@ next-env.d.ts
 .env
 prisma/dev.db*
 /src/generated
+
+# demo video build outputs
+/demo/video/_work/
+/demo/video/director_demo.mp4

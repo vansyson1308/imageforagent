@@ -1,0 +1,37 @@
+# Demo video runbook (≤ 3:00, public YouTube)
+
+The video must be recorded against the **hosted demo with real Nemotron runs**, after the showcase films and the benchmark exist (the video shows both).
+
+## 0 · Prerequisites (any Linux/macOS machine with internet)
+- Node 20+, `npm install` in the repo, `ffmpeg`, `ffprobe`, `espeak-ng`.
+- Playwright + Chromium: `npm i -g playwright && npx playwright install chromium`.
+- `.env.local` with `DEMO_PASSCODE` (the recorder unlocks the demo with it).
+- Done first: showcase films (`npm run director:showcase -- --base <demo-url> --passcode <p>`), benchmark (`npm run director:bench -- --base <demo-url> --passcode <p>`, which writes `docs/hackathon/eval/chart.png`).
+
+## 1 · Record (≈ 5–12 min, one real Director run)
+```bash
+npx tsx demo/video/record.ts --base https://studio-production-049c.up.railway.app --passcode "$DEMO_PASSCODE"
+```
+Writes `demo/video/_work/live.webm` (story → crew timeline → critic before/after → film playing), `film.mp4`, `showcase.webm`, `markers.json`.
+Check `live.webm`: a critic *before → after* badge must appear on at least one shot card (a shot that scored < 7 and got revised). If no shot needed a revision, record again with a harder story (`--story "…"`); the narration at 0:52 describes a revision.
+
+## 2 · Build
+```bash
+sh demo/video/build.sh
+```
+- Generates the cards, the voice-over (espeak-ng `en-us`, from `demo/video/narration.json`) and `demo/video/director_demo.en.srt`, then time-lapses the live recording to 75 s and cuts everything together.
+- Output: `demo/video/director_demo.mp4`, 1920×1080, H.264 + AAC. The script fails if the result is longer than 3:00 (target 2:52).
+- **Better voice (recommended):** record each line of `narration.json` yourself and save it as `demo/video/voice/<segment-id>.wav` (e.g. `01-hook.wav`). Overrides are picked up automatically; `prepare.ts` warns if a line overruns its slot.
+- Music: none by default (no copyright risk). To add one, render the engine's own synth score (`examples/film/score.ts`) to WAV and mix it at −20 dB with ffmpeg `amix`.
+
+## 3 · Verify
+```bash
+ffprobe -v error -show_entries format=duration:stream=width,height -of default=nw=1 demo/video/director_demo.mp4
+```
+Duration ≤ 180 s, 1920×1080, audio present. Watch it once end to end: the narration must mention Nebius Token Factory and the Nemotron roles (it does at 0:00, 0:15–1:30 and 1:42–2:15).
+
+## 4 · Upload
+YouTube → Create → Upload → **Public**. Title: *Storyboard Studio Director: a Nemotron film crew on Nebius Token Factory*. Upload `director_demo.en.srt` as English subtitles. Paste the URL into `DEVPOST_SUBMISSION.md` → "Video demo link".
+
+## Pipeline test (no keys needed)
+`LLM_PROVIDER=mock DEMO_MODE=true DEMO_PASSCODE=x npx next dev -p 3100`, then `record.ts --base http://localhost:3100 --passcode x` and `sh demo/video/build.sh --dry-run`. This produces `_work/director_demo.DRYRUN.mp4`, stamped **NOT FOR UPLOAD**. Verified in the build session on 2026-09-25: 172.0 s, 1920×1080.

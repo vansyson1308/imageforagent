@@ -1,0 +1,43 @@
+1
+00:00:00,300 --> 00:00:14,800
+Type a story. Get a film. There is no image generator here. A crew of NVIDIA Nemotron models on Nebius Token Factory writes the entire film as code.
+
+2
+00:00:15,300 --> 00:00:29,800
+I paste a short story and press Make my film. Nemotron 3 Ultra, the Director, plans the shots and writes a cast and set bible as strict JSON.
+
+3
+00:00:30,300 --> 00:00:51,800
+Nemotron 3 Super is the Artist. It draws each character once as a reusable symbol, then every frame as SVG. A sandboxed engine validates and renders it. When the engine rejects a frame, the error and its hint go straight back to the Artist.
+
+4
+00:00:52,300 --> 00:01:14,800
+Then Nemotron Nano Omni, the Visual Critic, actually looks at the rendered image, scores it against the shot, and asks for concrete fixes. Here a frame scores low; the revision scores higher, so it replaces the original. The trace keeps both.
+
+5
+00:01:15,300 --> 00:01:29,800
+Nemotron Nano, the Editor, fixes timing and subtitle problems found by the storyboard linter. Every step streams live with its model, tokens and cost.
+
+6
+00:01:30,300 --> 00:01:41,800
+And the film plays, with voices, camera moves and transitions, assembled server side with ffmpeg. You can download the MP4 or the full production package.
+
+7
+00:01:42,300 --> 00:02:04,800
+Under the hood, every call goes to Token Factory's OpenAI compatible endpoint with strict JSON schemas and image input. Ultra reasons once per film, Super does the heavy drawing, and the Nano models make fast, cheap calls. Tavily adds cited real-world references.
+
+8
+00:02:05,300 --> 00:02:14,800
+Every model output passes the same sanitizer and validators as human input, with hard budgets on tokens, dollars and time.
+
+9
+00:02:15,300 --> 00:02:29,800
+We benchmarked ten stories in three configurations. The eval table shows first pass render success, critic uplift, and the cost per finished minute of film.
+
+10
+00:02:30,300 --> 00:02:39,800
+The showcase has films made end to end by the crew, in English, Vietnamese and Japanese.
+
+11
+00:02:40,300 --> 00:02:51,800
+Storyboard Studio Director. Open source under the MIT license. Try the demo, or run it yourself.

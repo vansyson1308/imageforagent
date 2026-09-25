@@ -258,3 +258,29 @@ L5 partsExpand / partFigure / partWheel   spec → spec rewrite TRƯỚC compile
 - Chưa có track phụ đề SMPTE 428-7 trong DCP.
 - Chưa có metadata CPL ST 429-16 và MCA label (ClairMeta không đòi; một số server mới hiển thị "channel config unknown").
 - Và giới hạn lớn nhất không nằm ở kỹ thuật: DCP hợp lệ chỉ là cái hộp đựng. **Chất lượng phim vẫn là nội dung, diễn xuất và tay nghề.** Engine lo phần tất định (layout, timing, chuyển động, đóng gói); phần nhìn đẹp như rạp đi qua glTF → Blender, hoặc qua control passes → AI video.
+
+## ADR-017: Director: đội Nemotron trên Nebius Token Factory viết phim thành code (25/09/2026)
+
+**Bối cảnh:** tới ADR-016, engine làm được phim chiếu rạp nhưng phải có **agent bên ngoài** (Claude Code…) viết từng frame. Hackathon Nebius × NVIDIA cần một app mà *người dùng thường* dùng được: gõ một câu chuyện, nhận một bộ phim. ADR-010 đã bỏ sinh ảnh bằng AI. Director **không** đưa nó trở lại: LLM không vẽ pixel, LLM **viết phim thành code** vào đúng engine tất định này.
+
+**Quyết định: một đội bốn vai, mỗi vai một tầng model (xem `src/lib/services/director/`)**
+- **Director = Nemotron 3 Ultra (STRONG):** truyện → shot list + Cast & Set Bible, JSON strict (zod `planSchema`, gửi kèm `json_schema`, fallback `json_object`). Plan được ghi qua **đúng đường của người dùng**: `parseTsv` → `replaceScript` (logic apply-edit). Chỉ gọi Ultra cho việc suy luận nặng nhất: 1 lần mỗi phim.
+- **Artist = Nemotron 3 Super (MID):** vẽ thư viện `<symbol>` một lần (nhất quán nhân vật, như agent bên ngoài vẫn làm), rồi mỗi shot một fragment SVG (+ lớp ambient 2D cho shot motion). Mọi output qua `sanitizeSvg` (không sửa `svgRenderer.ts`), kiểm tham chiếu treo, render thật, kiểm frame trắng. Lỗi → **tối đa 3 lần sửa**, dùng đúng `message + hint` engine trả về.
+- **Visual Critic = Nemotron Nano Omni (VISION):** *nhìn* PNG đã render (JPEG ≤ 1024 px, part `image_url` data URI) → điểm 0–10 + danh sách sửa. Tối đa **2 vòng sửa**, và chỉ nhận bản sửa nếu **điểm cao hơn** (uplift không thể âm vì vô tình). Nếu model từ chối ảnh (400) → chuyển critic TEXT (Nano trên SVG + thống kê render) và **ghi rõ bước chuyển** vào trace, không đổi âm thầm.
+- **Editor = Nemotron Nano (FAST):** `lintStoryboard` → sửa có mục tiêu (rút thoại quá tốc độ đọc, dissolve cho jump cut, voiceOffset) → lint lại, ≤ 2 vòng. Sau đó thêm một lượt continuity (chỉ báo cáo). Thoại được thu **trước khi vẽ** (TTS espeak-ng qua `resolveVoice`), nên mỗi shot dài vừa câu thoại.
+- **Researcher = Nano + Tavily (tuỳ chọn):** ≤ 2 search + 1 extract; snippet là DATA (bọc tag, cắt độ dài, xoá tag đóng giả), ghi chú kèm URL vào Bible và UI.
+
+**Mọi shot đều chuyển động mà engine không đổi một dòng.** Bức vẽ của Artist vào defs dưới dạng `<pattern id="art-fN">`. Motion spec là một rect phủ canvas tô bằng pattern đó, và track trên `place.at`/`place.scale` tạo dolly/pan/tilt thật (pattern nằm trong user space của group). `construct/`, `motion/`, `svgRenderer.ts` giữ nguyên, và render vẫn tất định cho cùng một bức vẽ. Id trong mỗi bức vẽ được namespace (`f3-sky`) vì mọi shot chung một defs.
+
+**Không job queue (luật repo):** run sống **trong chính request SSE** (`POST /api/projects/:id/director`). Hủy = `POST …/cancel` hoặc client ngắt kết nối (abort signal), không có run mồ côi chạy nền. Registry in-memory runId → AbortController (một instance). Mỗi bước là một `DirectorStep` (role, model, hash prompt, output, điểm, token, USD, latency, ảnh snapshot), và UI dựng timeline từ chính các bản ghi đó.
+
+**Ngân sách cứng phía server:** max shot, token, USD, wall time mỗi run (env là trần, request chỉ hạ được). Demo mode thêm trần token mỗi ngày toàn server, trần project mỗi phiên, xoá sau 24 h và cổng mật khẩu (Next 16 `proxy`, cookie HMAC). Script live ghi sổ chi tiêu và dừng ở mức $15.
+
+**Chế độ zero-key vẫn nguyên vẹn:** không có `NEBIUS_API_KEY` thì Director tắt (panel hiện hướng dẫn), mọi API/UI cũ chạy như trước và test không gọi mạng. `LLM_PROVIDER=mock` chạy đội kịch bản tất định (luôn gắn nhãn "mock") cho test, UI demo và dry-run video.
+
+**Không thêm dependency.** Token Factory (OpenAI-compatible) và Tavily gọi bằng `fetch`. JSON Schema sinh từ zod 4 (`z.toJSONSchema`). Chart eval render SVG → PNG bằng sharp.
+
+**Giới hạn trung thực:**
+- Nhân vật không cử động *trong* shot. Chuyển động đến từ camera, lớp ambient và cắt dựng. Muốn diễn xuất thật thì Artist phải viết `figure` + rig (engine đã có, Director chưa dùng).
+- Điểm critic là tự đánh giá của chính đội, không phải thước đo chất lượng độc lập.
+- Model id, khả năng nhận ảnh của Omni, bảng giá: xem `docs/hackathon/STATUS.md` phần *Unverified* cho tới khi có bằng chứng live trong `docs/hackathon/evidence/`.

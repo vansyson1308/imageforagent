@@ -1,0 +1,106 @@
+# Devpost submission: ready to paste
+
+> Fields marked **⚠ OWNER** need one action before submitting. Never paste the demo passcode into this (public) file; paste it only into Devpost's private *Testing instructions* field.
+
+## Project name
+Storyboard Studio Director
+
+## Elevator pitch (≤ 200 chars)
+Type a story in any language and get an animated film. A crew of NVIDIA Nemotron models on Nebius Token Factory writes every frame as code, looks at its own renders, and fixes them.
+
+## Track
+**Best Apps and Agents** (+ Best Use of Tavily bonus)
+
+## Built with
+NVIDIA Nemotron 3 (Ultra, Super, Nano, Nano Omni) · Nebius Token Factory · Tavily · Next.js 16 · React 19 · TypeScript · Prisma 7 + SQLite · sharp/librsvg · ffmpeg · espeak-ng · Docker · Railway
+
+## Links
+- **Demo:** https://studio-production-049c.up.railway.app (passcode: see Testing instructions)
+- **Showcase (no passcode):** https://studio-production-049c.up.railway.app/showcase
+- **Code (MIT):** https://github.com/vansyson1308/imageforagent
+- **Video:** ⚠ OWNER: paste the public YouTube URL after uploading `demo/video/director_demo.mp4` (see `docs/hackathon/VIDEO_RUNBOOK.md`)
+
+## Description
+
+### Inspiration
+Daily storytelling creators, teachers and small NGOs need short animated films in their own language every day. Image generators give inconsistent characters, unclear rights and uneditable output. We asked: what if the model didn't paint pixels at all, but **wrote the film as code** into a deterministic engine, and then **watched its own rendering** like a human director?
+
+### What it does
+You type a story in any language, pick a style, and press **Make my film**. A crew of NVIDIA Nemotron agents on Nebius Token Factory does the work, live on screen:
+- **Director (Nemotron 3 Ultra):** plans the shots and writes a Cast & Set Bible (characters, palette, props) as strict JSON.
+- **Artist (Nemotron 3 Super):** draws every character once as a reusable vector symbol, so characters are pixel-identical in every shot. It then draws each frame as SVG, plus a small animated layer for shots with motion. If the engine rejects a frame, the exact error and hint go back to the Artist (up to 3 repairs).
+- **Visual Critic (Nemotron Nano Omni):** *looks at the rendered image*, scores it 0–10 against the shot, and lists concrete fixes. The Artist revises (up to 2 rounds), and a revision is kept only if it scores higher.
+- **Editor (Nemotron Nano):** fixes subtitle reading speed, jump cuts and voice timing flagged by the storyboard linter, then checks continuity.
+- **Researcher (Nano + Tavily, optional):** finds real-world visual references (period costumes, festival objects, architecture) and adds cited notes to the Bible.
+
+The result plays in the browser: an animated film with camera moves, local text-to-speech voices, subtitles and transitions, assembled server-side with ffmpeg. You can download the MP4 or the whole production package: PNG frames, clips, storyboard.json, SRT, EDL/OTIO for Resolve/Premiere, glTF for Blender, and an `assemble.sh`.
+
+### How we built it
+- **Provider layer on Token Factory:** OpenAI-compatible `chat/completions` over plain `fetch` (no SDK). It handles strict `json_schema` output (generated from our zod schemas) with a `json_object` fallback, image input as `image_url` data URIs, the `enable_thinking` toggle for direct-output calls, retries with backoff, timeouts and cancel. Every call is accounted in tokens and USD.
+- **Tier choice:** Ultra reasons once per film (planning is the hardest step). Super handles the many long structured drawing calls. Nano Omni is a cheap multimodal judge. Nano handles fast editorial calls. Crew model ids are checked against `GET /v1/models` at run start.
+- **Safety by construction:** LLM output never touches the renderer directly. Everything passes zod, then the engine's security-critical SVG sanitizer (unchanged), then the construct/motion validators. Stories and web snippets are quoted as data (prompt-injection guard). Hard server-side budgets cover shots, tokens, USD and wall time.
+- **Animation without changing the engine:** each painting becomes a defs pattern, and camera tracks move it. That gives real dolly/pan/tilt on vector art, deterministic and rendered at full resolution.
+- **Live UX:** progress streams over Server-Sent Events from the Director loop (no job queue). Every step is persisted (`DirectorRun`/`DirectorStep`), so traces are auditable and shown in the UI and the showcase.
+- **Public demo:** Docker (Ubuntu + ffmpeg + espeak-ng) on Railway with a persistent volume, a passcode gate, per-session caps, 24 h cleanup and a daily token budget. CI runs lint, typecheck, 537 tests and the build.
+
+### Challenges
+- LLMs writing SVG make real mistakes: dangling `#id` references render as nothing, and `<svg>` wrappers get rejected by the sanitizer. We turned every engine error into a repair hint and added checks for silent failures (dangling references, blank renders).
+- Keeping motion deterministic without touching the frozen engine led to the pattern-and-camera trick.
+- Budget control: every model call passes a budget gate first, and the demo has a global daily token cap.
+
+### Accomplishments
+- The loop is closed: a model writes code, a deterministic engine renders it, a multimodal model watches the render and drives revisions.
+- Character consistency comes by construction, not by prompt luck.
+- The zero-key engine still works with no key at all. The Director is an optional layer (ADR-017).
+
+### What we learned
+⚠ OWNER: finalise after the live runs from `docs/hackathon/FEEDBACK_LOG.md` and `EVAL_RESULTS.md` (critic uplift, first-pass success, cost per finished minute).
+
+### What's next
+Edit-by-chat ("give grandma a red scarf in scenes 2–4" patches only the affected symbols), articulated character acting via the engine's figure rig, uploaded voice recordings per line, batch evals on Nebius serverless jobs.
+
+### Real users (Potential impact)
+The first user is a daily storytelling YouTube channel that needs a new short illustrated story every day in Vietnamese and English. ⚠ OWNER: replace with the channel's name if you want to name it (default wording is generic, per SPEC §0.4).
+
+## Testing instructions (private field)
+1. Open https://studio-production-049c.up.railway.app. You are redirected to the passcode page. Passcode: **⚠ OWNER: paste `DEMO_PASSCODE` from `.env.local` / Railway variables**.
+2. In **AI Director**, paste a short story (any language; examples are in `scripts/director/showcase.ts`), choose a film language and style, keep *Visual critic* on, then click **Make my film**. A 6–8 shot film takes about 3–8 minutes. The crew timeline shows each model call with tokens and cost.
+3. When it finishes, play the film or download the MP4 / ZIP package. The **Showcase** page (no passcode) has three finished films in English, Vietnamese and Japanese, each with its full trace.
+4. Demo limits: ≤ 12 shots, 1K, 12 fps, 3 projects per session, projects deleted after 24 h, global daily token budget.
+
+## Feedback on Token Factory / Nemotron / Tavily
+(From `docs/hackathon/FEEDBACK_LOG.md`.) ⚠ OWNER: refresh from the log after the live runs.
+- **Docs reachability:** the vision message format and the per-model thinking toggle are documented only on docs.tokenfactory.nebius.com. Sandboxed coding agents that allowlist GitHub often can't reach it. Please mirror the OpenAPI spec and a model-capability table on GitHub. We relied on Nebius's own `nebius-physical-ai` repo for the `image_url` format and `chat_template_kwargs.enable_thinking`.
+- **Capabilities in `/v1/models`:** list membership doesn't tell you whether a model accepts images, supports `json_schema`, or how to turn reasoning off. Adding `capabilities: {vision, json_schema, reasoning_toggle}` would let agents pick tiers safely.
+- **Tavily:** the official Python client source was enough to derive exact request/response shapes for a no-SDK `fetch` integration. Clean API.
+
+## What was significantly updated during the Submission Period
+Everything after commit `c9093a3` (2026-07-15, tag `pre-hackathon-baseline`). `git diff --shortstat c9093a3..HEAD`: **192 files changed, 22,688 insertions** (as of 2026-09-25, before the final docs commits).
+
+**Human summary.** Before the period, the repo was a zero-key *still-storyboard* engine for external coding agents. During the period we added:
+1. **Motion** (keyframe tracks, procedural rigs, no-slip walk, camera language), **glTF 2.0** export with skinned figures, **IK**, faces and lip-sync.
+2. **Film pipeline:** control passes for AI video, dialogue TTS + broadcast-grade mix, scenes/transitions, EDL/OTIO, storyboard lint, and **SMPTE DCP mastering**. Plus a 20-minute film made with the engine.
+3. **The whole Director layer (this submission):** Nemotron provider layer on Token Factory, the crew loop (plan → cast → draw/repair → vision critic/revise → editor), Tavily researcher, SSE API, DirectorPanel UI (VI/EN), server-side MP4, demo mode, Docker + Railway deploy, CI, showcase gallery, eval bench, video pipeline.
+
+**Commits** (`git log --reverse --date=short c9093a3..HEAD`):
+```
+2026-09-24 a0d7ea8 feat: M1-M3 motion engine — keyframe tracks, procedural rigs, POST /api/motion
+2026-09-24 806c0ec feat: M4 motion in projects — PUT /api/frames/:id/motion, clip export, film assembly
+2026-09-24 c8fa059 feat: M5 glTF 2.0 export — bridge from the vector engine to real 3D renderers
+2026-09-24 6d5680b feat: N1a analytic 2-bone IK rig, figure face, decalOf surface features
+2026-09-24 b4844e5 feat: N1b glTF skins — every figure exports as a real Armature
+2026-09-24 f25f9b1 feat: N2 control passes for AI video — depth, segmentation, normal, OpenPose
+2026-09-24 ee4c717 feat: N3 audio — dialogue (local TTS or WAV), lip-sync, soundtrack, broadcast-grade mix
+2026-09-24 a977b02 feat: N4 sequence & editorial — scenes, transitions, EDL/OTIO, storyboard lint
+2026-09-24 d2e74ea feat: N5 DCP mastering — SMPTE DCP from any export (J2K X'Y'Z', MXF, CPL/PKL)
+2026-09-24 9e55ee9 feat: "Đèn Ông Sao" — a 20-minute animated film made entirely with this engine
+2026-09-25 43bc610 feat(providers): Nemotron provider layer on Token Factory + mock, hackathon docs
+2026-09-25 9eb89ef feat(director): Nemotron crew loop — plan, cast, artist+repair, vision critic, editor, research
+2026-09-25 673894b feat(director): SSE API, DirectorPanel (VI/EN), film.mp4 assembler, demo gate
+2026-09-25 c9f686d feat(deploy): Dockerfile (Ubuntu 24.04 + Node 22, ffmpeg, espeak-ng, migrate on boot), CI, showcase gallery
+2026-09-25 27c84f3 feat(eval): director_bench — 10 fixed prompts × super-only / crew / crew+tavily
+```
+(Full list including docs/fix commits: `git log c9093a3..HEAD`. Regenerate before submitting.)
+
+## City
+Leave empty (no in-person event attended).

@@ -1,4 +1,42 @@
-# Storyboard Studio
+# Storyboard Studio: Director
+
+> **Type a story. Get a film. No image generator.** A crew of **NVIDIA Nemotron** models on **Nebius Token Factory** writes the whole film *as code* (SVG, construct and motion specs) into a deterministic engine, then **looks at its own renders** and fixes them.
+>
+> 🎬 **Live demo:** <https://studio-production-049c.up.railway.app> (passcode-protected; the passcode is in the submission's testing instructions) · 🎞 **[Showcase films](https://studio-production-049c.up.railway.app/showcase)** · 📊 **[Eval results](docs/hackathon/EVAL_RESULTS.md)** · ⚖️ **[MIT licensed](LICENSE)**
+
+<p align="center"><img src="docs/media/director-architecture.svg" width="900" alt="Architecture: Story → Researcher (Nano + Tavily) → Director (Ultra) → Script → Cast (Super) → per shot: Artist (Super) → validate + render → animated clip → Visual Critic (Nano Omni, revise loop) → Editor (Nano) → film assembler → MP4 + package"></p>
+
+### How we use Nebius Token Factory + NVIDIA Nemotron
+
+Every model call goes to Token Factory's OpenAI-compatible endpoint (`POST {NEBIUS_BASE_URL}/chat/completions`, plain `fetch`, no SDK), through one provider layer (`src/lib/providers/`). It handles strict `json_schema` output with a `json_object` fallback, image input as `image_url` data URIs, the `enable_thinking` reasoning toggle, retries with backoff and timeouts, and **per-call token and USD accounting**.
+
+| Role | Nemotron tier | Why this tier | What it does |
+|---|---|---|---|
+| 🎬 **Director** | **Nemotron 3 Ultra** (`NEMOTRON_STRONG_MODEL`) | Hardest reasoning, called **once per film** | Story → shot list + Cast & Set Bible as strict JSON (zod-validated), written through the same TSV/script path a human import uses |
+| 🖌️ **Artist** | **Nemotron 3 Super** (`NEMOTRON_MID_MODEL`) | Long, precise structured output, many calls | Draws the `<symbol>` cast library once (pixel-identical characters in every shot), then every frame as an SVG fragment + ambient motion layer. Engine errors come back with a hint → **≤ 3 repairs** |
+| 👁️ **Visual Critic** | **Nemotron Nano Omni** (`NEMOTRON_VISION_MODEL`) | Cheap multimodal: **it sees the render** | Scores each rendered frame 0–10 against the shot description and returns concrete fixes. **≤ 2 revision rounds**, and a revision is kept only if it scores higher |
+| ✂️ **Editor** | **Nemotron Nano** (`NEMOTRON_FAST_MODEL`) | Fast everyday calls | Fixes `lintStoryboard` findings (reading speed, jump cuts, voice timing) and runs a continuity check |
+| 🔎 **Researcher** | Nano + **Tavily** | Grounding | Optional capped search/extract → cited visual reference notes in the Bible and the UI |
+
+The **vision-critic loop** is the core idea. LLMs don't paint pixels here: they write code, the engine renders it deterministically, and a multimodal Nemotron *looks* at the result. If Omni can't take images, the critic switches to text mode and the trace says so. Costs and tokens are logged per step and shown live in the UI. Measured numbers (first-pass render rate, repairs per shot, critic uplift, USD per finished minute) are in **[EVAL_RESULTS.md](docs/hackathon/EVAL_RESULTS.md)**, which comes from real runs only.
+
+**Try it**
+1. Open the demo, enter the passcode, type a story (any language), pick a style, then **Make my film**.
+2. Watch the crew timeline stream in: role, model, tokens, cost, thumbnails, critic before → after.
+3. Play the film, then download the **MP4** or the full **production package** (PNG, clips, SRT, EDL/OTIO, glTF, `assemble.sh`).
+
+**Run it yourself**
+```bash
+npm install && cp .env.example .env && npx prisma migrate deploy
+echo 'NEBIUS_API_KEY=…' >> .env.local        # optional: without it the zero-key engine works as before
+npm run director:models                      # verify model ids against GET /v1/models
+npm run dev                                  # http://localhost:3000
+```
+`LLM_PROVIDER=mock` runs a scripted crew with no key and no network (tests, UI demos). Deploy with the `Dockerfile` (ffmpeg + espeak-ng, migrations on boot, volume at `/data`); set secrets as platform variables. Design notes: [ADR-017](docs/ADR.md). Build log and honest status: [docs/hackathon/](docs/hackathon/STATUS.md).
+
+---
+
+## The engine underneath (zero-key)
 
 <p align="center">
   <a href="docs/media/den-ong-sao-720p.mp4"><img src="docs/media/den-ong-sao-highlights.gif" width="720" alt="Highlights from Đèn Ông Sao, a 20-minute 3D animated film made with this engine"></a><br>
@@ -397,7 +435,8 @@ tests/                            Vitest — sanitizer bypass-vector suite + con
 
 ## Security notes
 
-- No authentication — a **local/internal tool by design**. Don't deploy to a public URL as-is.
+- No user accounts: a **local/internal tool by design**. For a public URL, run with `DEMO_MODE=true` + `DEMO_PASSCODE` (passcode gate on every page and API route, per-session caps, 24 h cleanup, daily token budget).
+- LLM keys (`NEBIUS_API_KEY`, `TAVILY_API_KEY`) live only on the server; story text and web snippets are passed to models as quoted DATA (injection guard), and every model output goes through zod + `sanitizeSvg` + the construct/motion validators before it reaches the engine.
 - User-supplied SVG is sanitized (strict reject-list) and only ever rasterized server-side; uploads are magic-byte verified and UUID-renamed; file serving is traversal-guarded; all inputs Zod-validated; mutating routes rate-limited.
 
 ## License
