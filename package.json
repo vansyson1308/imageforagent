@@ -11,7 +11,9 @@
     "postinstall": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "master:dcp": "tsx scripts/master-dcp.ts"
+    "master:dcp": "tsx scripts/master-dcp.ts",
+    "director:models": "tsx scripts/director/models.ts",
+    "director:smoke": "tsx scripts/director/smoke.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

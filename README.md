@@ -348,6 +348,11 @@ Everything is optional except the database path:
 | `DATABASE_URL` | `file:./prisma/dev.db` | SQLite database |
 | `STORAGE_ROOT` | `./storage` | Rendered image storage |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | — | Only for reading scripts from Google Sheets (one-line service-account JSON; share the sheet with the service-account email shown in the UI) |
+| `NEBIUS_API_KEY` | — | **Director only.** Nebius Token Factory key. Stays server-side. Without it the Director is disabled and the zero-key engine works as before |
+| `NEBIUS_BASE_URL` | `https://api.tokenfactory.nebius.com/v1` | OpenAI-compatible endpoint |
+| `NEMOTRON_STRONG_MODEL` / `_MID_` / `_FAST_` / `_VISION_` | see `src/lib/providers/index.ts` | Crew model per tier (Director = Ultra, Artist = Super, Editor = Nano, Critic = Nano Omni). Check them with `npm run director:models`. An empty VISION auto-detects a Nemotron Omni; if none is available, the critic runs in text mode |
+| `NEBIUS_PRICES_JSON` | family estimates | `{"model-id":[inUSDper1M,outUSDper1M]}` for exact cost accounting |
+| `LLM_PROVIDER` | — | `mock` = scripted demo crew with no key and no network (tests, UI demos, video dry-runs). Labelled "mock" in every trace |
 
 ## Architecture
 
