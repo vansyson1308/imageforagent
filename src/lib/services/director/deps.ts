@@ -21,7 +21,7 @@ export async function directorDeps(env: NodeJS.ProcessEnv = process.env): Promis
   }
   const provider = createNemotronProvider(env);
   if (!provider) {
-    throw new AppError("VALIDATION", "The Director needs NEBIUS_API_KEY on the server.", "Set NEBIUS_API_KEY (Nebius Token Factory), or LLM_PROVIDER=mock for the scripted demo crew. The zero-key engine works without it.", 503);
+    throw new AppError("DIRECTOR_UNAVAILABLE", "The Director needs NEBIUS_API_KEY on the server.", "Set NEBIUS_API_KEY (Nebius Token Factory), or LLM_PROVIDER=mock for the scripted demo crew. The zero-key engine works without it.");
   }
   const now = Date.now();
   if (!catalogCache || now - catalogCache.at > 10 * 60_000) {

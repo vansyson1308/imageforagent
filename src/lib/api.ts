@@ -50,6 +50,14 @@ export interface MetaDto {
   serviceAccountEmail: string | null;
   construct?: { version: number };
   motion?: { version: number };
+  director?: {
+    enabled: boolean;
+    provider: "nemotron" | "mock" | null;
+    models: { strong: string; mid: string; fast: string; vision: string } | null;
+    research: boolean;
+    styles: string[];
+  };
+  demo?: { enabled: boolean };
 }
 
 export interface ProjectListItemDto extends ProjectDto {

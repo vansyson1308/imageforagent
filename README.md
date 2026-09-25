@@ -353,6 +353,11 @@ Everything is optional except the database path:
 | `NEMOTRON_STRONG_MODEL` / `_MID_` / `_FAST_` / `_VISION_` | see `src/lib/providers/index.ts` | Crew model per tier (Director = Ultra, Artist = Super, Editor = Nano, Critic = Nano Omni). Check them with `npm run director:models`. An empty VISION auto-detects a Nemotron Omni; if none is available, the critic runs in text mode |
 | `NEBIUS_PRICES_JSON` | family estimates | `{"model-id":[inUSDper1M,outUSDper1M]}` for exact cost accounting |
 | `LLM_PROVIDER` | — | `mock` = scripted demo crew with no key and no network (tests, UI demos, video dry-runs). Labelled "mock" in every trace |
+| `DIRECTOR_MAX_SHOTS` / `_TOKENS_PER_RUN` / `_USD_PER_RUN` / `_WALL_SECONDS` | 12 / 600000 / 1.5 / 1200 | Hard per-run caps, enforced on the server before every model call. A request can lower them but never raise them |
+| `SPEND_ALERT_USD` | 15 | Live scripts (`director:smoke`, showcase, bench) refuse to start once the spend ledger passes this |
+| `TAVILY_API_KEY` / `TAVILY_BASE_URL` | — / `https://api.tavily.com` | Optional Tavily researcher: capped search + extract, with cited reference notes added to the Bible |
+| `DEMO_MODE` / `DEMO_PASSCODE` | `false` / — | Public demo: every page and API sits behind a passcode (signed HttpOnly cookie). `/showcase` and `/unlock` stay public |
+| `DEMO_MAX_PROJECTS_PER_SESSION` / `DEMO_DAILY_TOKEN_BUDGET` / `DEMO_MAX_CONCURRENT_RUNS` / `DEMO_RETENTION_HOURS` | 3 / 3000000 / 2 / 24 | Demo caps. Demo projects are deleted after the retention window |
 
 ## Architecture
 
