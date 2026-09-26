@@ -7,7 +7,7 @@ import { MAX_SVG_BYTES } from "@/lib/config/limits";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
 import { artistSystem, artistUser } from "@/lib/services/director/prompts";
 import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/director/camera";
-import { extractJsonBlock, extractSvgFragment, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, visibleHeightPct, withoutUses } from "@/lib/services/director/svgTools";
+import { extractJsonBlock, extractSvgFragment, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
 
@@ -135,9 +135,10 @@ async function qualityGates(
       problems.push(`#${id} is in this shot but not placed: add <use href="#${id}" …/>`);
       continue;
     }
-    const pct = await visibleHeightPct(png, await renderArtwork(opts.castDefs, stripped, opts.aspectRatio, "1K"));
+    const { pct, touchesTop } = await visibleExtent(png, await renderArtwork(opts.castDefs, stripped, opts.aspectRatio, "1K"));
     if (pct === 0) problems.push(`#${id} is placed but not visible (off-canvas or covered)`);
-    else facts.push(`#${id} visible, ${pct}% of the frame height`);
+    else if (touchesTop) problems.push(`#${id}'s head is cut off by the top edge of the frame: move it down so the whole head is inside (y ≥ 0); in a close-up let the canvas crop the legs at the bottom, never the head`);
+    else facts.push(`#${id} visible, ${pct}% of the frame height, head fully in frame`);
     biggest = Math.max(biggest, pct);
   }
   const need = minSubjectPct(opts.shot.shotType);

@@ -6,6 +6,8 @@
 
 <p align="center"><img src="docs/media/director-architecture.svg" width="900" alt="Architecture: Story → Researcher (Nano + Tavily) → Director (Ultra) → Script → Cast (Super) → per shot: Artist (Super) → validate + render → animated clip → Critic (Nano + measured render gates, revise loop) → Editor (Nano) → film assembler → MP4 + package"></p>
 
+<p align="center"><img src="docs/media/director-tea-house.gif" width="640" alt="The first 14 seconds of a real showcase film made by the Nemotron crew: Grandma Hoa's tea house by the lake"><br><sub>First 14 s of <b>tea-house</b>, a real showcase film: 8 shots, 8/8 rendered, $0.11, made on the hosted demo. <a href="https://studio-production-049c.up.railway.app/showcase">Full films + traces</a></sub></p>
+
 ### How we use Nebius Token Factory + NVIDIA Nemotron
 
 Every model call goes to Token Factory's OpenAI-compatible endpoint (`POST {NEBIUS_BASE_URL}/chat/completions`, plain `fetch`, no SDK), through one provider layer (`src/lib/providers/`). It handles strict `json_schema` output with a `json_object` fallback, image input as `image_url` data URIs, the `enable_thinking` reasoning toggle, retries with backoff and timeouts, and **per-call token and USD accounting**.

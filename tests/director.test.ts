@@ -19,7 +19,7 @@ import { normalizePlan, planToTsv } from "@/lib/services/director/plan";
 import { validateDrawing } from "@/lib/services/director/artist";
 import { symbolProblems, validateLibrary } from "@/lib/services/director/cast";
 import { CAST_REFERENCE, quoteData } from "@/lib/services/director/prompts";
-import { ACCESSORIES, BOTTOMS, buildDoll, dollSchema, HAIR_STYLES, TOPS } from "@/lib/services/director/dollKit";
+import { ACCESSORIES, BOTTOMS, buildCritter, buildDoll, critterSchema, CRITTER_ACCESSORIES, dollSchema, EARS, HAIR_STYLES, MUZZLES, TAILS, TOPS } from "@/lib/services/director/dollKit";
 import type { DirectorEvent } from "@/lib/services/director/context";
 
 const canvas = LOGICAL_CANVAS["16:9"];
@@ -205,6 +205,8 @@ describe("director validators", () => {
     await expect(validateDrawing(shrunk, gated)).rejects.toThrow(/main character is only \d+% of the frame height as rendered/);
     await expect(validateDrawing('```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><circle cx="50" cy="50" r="40" fill="#fff"/>\n```', gated)).rejects.toThrow(/#hero is in this shot but not placed: add <use href="#hero"/);
     await expect(validateDrawing('```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><use href="#hero" x="800" y="200" width="480" height="720"/>\n```', gated)).resolves.toBeTruthy();
+    const beheaded = '```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><use href="#hero" x="700" y="-500" width="1000" height="1500"/>\n```';
+    await expect(validateDrawing(beheaded, { ...gated, shot: { ...shot, shotType: "Close-up" } })).rejects.toThrow(/#hero's head is cut off by the top edge of the frame/);
     const pip = '```svg\n<rect width="1920" height="1080" fill="#335"/><use href="#home" x="300" y="100" width="600" height="340"/><use href="#hero" x="800" y="200" width="480" height="720"/>\n```';
     await expect(validateDrawing(pip, { ...gated, sets: ["home"] })).rejects.toThrow(/#home is a set \(a background\), but it is placed 600 wide like an object/);
     await expect(validateDrawing(tiny, { ...gated, strict: false })).resolves.toBeTruthy();
@@ -285,6 +287,27 @@ describe("director validators", () => {
       expect(await symbolProblems(kid, symbols.get("k"), extras, canvas, "16:9"), JSON.stringify(spec)).toEqual([]);
     }
     expect(dollSchema.safeParse({ age: "teen", skin: "red" }).success).toBe(false);
+  }, 60_000);
+
+  it("draws kit animals (every ear/tail/muzzle/size) that pass every library gate", async () => {
+    const fox = { id: "f", name: "F", kind: "character" as const, look: "", colors: ["#e07a2e"] };
+    const sizes = ["small", "medium", "large"] as const;
+    for (let i = 0; i < EARS.length * TAILS.length; i++) {
+      const spec = critterSchema.parse({
+        fur: "#e07a2e",
+        belly: "#fbeedd",
+        ears: EARS[i % EARS.length],
+        tail: TAILS[Math.floor(i / EARS.length) % TAILS.length],
+        muzzle: MUZZLES[i % MUZZLES.length],
+        accent: "#c8432f",
+        size: sizes[i % 3],
+        accessories: [CRITTER_ACCESSORIES[i % CRITTER_ACCESSORIES.length]],
+      });
+      const lib = buildCritter("f", spec);
+      expect(() => sanitizeSvg(lib, "defs")).not.toThrow();
+      const { symbols, extras } = splitLibrary(lib);
+      expect(await symbolProblems(fox, symbols.get("f"), extras, canvas, "16:9"), JSON.stringify(spec)).toEqual([]);
+    }
   }, 60_000);
 
   it("rejects a drawn character whose head floats off its body", async () => {

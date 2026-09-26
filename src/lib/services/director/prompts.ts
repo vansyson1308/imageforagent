@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { CastMember, Plan, ShotPlan } from "@/lib/services/director/schemas";
 import type { CanvasSize } from "@/lib/services/svgRenderer";
-import { DOLL_VOCABULARY } from "@/lib/services/director/dollKit";
+import { CRITTER_VOCABULARY, DOLL_VOCABULARY } from "@/lib/services/director/dollKit";
 
 /**
  * Prompts for the crew. Every system prompt starts with a machine-readable
@@ -147,7 +147,9 @@ export function castSystem(canvas: CanvasSize, style: string): string {
     '- One <symbol> per cast member with id = the cast id, e.g. <symbol id="grandma" viewBox="0 0 400 600">…</symbol>.',
     "- HUMAN characters: do NOT draw them. Describe each one for the engine's character kit in the ```json block (below); the engine draws a consistent, well-proportioned figure. Pick values that match the Bible's look and colours:",
     DOLL_VOCABULARY,
-    "- NON-HUMAN characters (animals, robots, creatures, spirits): draw them as a <symbol>, viewBox 0 0 400 600, full body, feet/base touching y=600, centred, filling the viewBox height, ONE connected shape (head, body and limbs overlap), 15–40 shapes, soft gradients, eyes with highlights.",
+    "- ANIMAL characters (fox, cat, rabbit, bear, tanuki, mouse, dog, buffalo…): do NOT draw them either. Describe each one for the engine's animal kit (upright storybook animal) in the same ```json block under \"critters\":",
+    CRITTER_VOCABULARY,
+    "- OTHER characters (robots, creatures, spirits, objects that act): draw them as a <symbol>, viewBox 0 0 400 600, full body, feet/base touching y=600, centred, filling the viewBox height, ONE connected shape (head, body and limbs overlap), 15–40 shapes, soft gradients, eyes with highlights.",
     "- prop: viewBox 0 0 400 400, object centred, resting on y=400.",
     `- set: viewBox 0 0 ${canvas.w} ${canvas.h}, a full background with DEPTH: sky/wall gradient, far layer (silhouettes, lighter/cooler), middle layer, near ground at about y=${Math.round(canvas.h * 0.8)}; 25–60 shapes; lit for the story's time of day (night = deep blue gradient sky, moon, warm window lights). No characters.`,
     "- Gradients may be declared at top level (outside symbols) with ids prefixed by the cast id (grandma-skin).",
@@ -156,10 +158,10 @@ export function castSystem(canvas: CanvasSize, style: string): string {
     CAST_REFERENCE,
     "OUTPUT FORMAT (nothing else, no explanations):",
     "```svg",
-    "<!-- <symbol>s for sets, props and non-human characters, plus their gradients -->",
+    "<!-- <symbol>s for sets, props and OTHER characters, plus their gradients -->",
     "```",
     "```json",
-    '{"dolls": {"<human-character-id>": {…kit values…}}}',
+    '{"dolls": {"<human-id>": {…human kit values…}}, "critters": {"<animal-id>": {…animal kit values…}}}',
     "```",
   ].join("\n");
 }
@@ -176,7 +178,7 @@ export function castRepairUser(plan: Plan, redo: readonly CastMember[], kept: re
     castUser(plan, redo),
     kept.length ? `Already accepted and kept (do NOT redraw): ${kept.join(", ")}.` : "",
     `Your previous version of ${redo.map((c) => c.id).join(", ")} was rejected: ${problems.join("; ")}.`,
-    "Return ONLY the corrections for those ids, in the same format: <symbol>s (plus their gradients) in the ```svg block, human characters as kit values in the ```json dolls block.",
+    "Return ONLY the corrections for those ids, in the same format: <symbol>s (plus their gradients) in the ```svg block, humans and animals as kit values in the ```json block (dolls / critters).",
   ]
     .filter(Boolean)
     .join("\n");
@@ -192,7 +194,7 @@ export function artistSystem(canvas: CanvasSize, style: string): string {
     artworkContract(canvas),
     "FRAME RULES:",
     `- Start with the background: <use href="#<set-id>" x="0" y="0" width="${canvas.w}" height="${canvas.h}"/> when the shot's set exists, else a full-bleed <rect width="${canvas.w}" height="${canvas.h}" fill="…"/>.`,
-    '- Place characters with <use href="#<id>" x=… y=… width=… height=…/> keeping the 2:3 ratio (width = height × 2/3); props 1:1. Feet on the ground line. SIZE BY SHOT TYPE (character height as a share of the canvas height): wide 35–50%, medium 60–80%, close-up 120–180% (cropped by the canvas, face in the upper third). Never draw the main subject smaller than 30% of the canvas height.',
+    '- Place characters with <use href="#<id>" x=… y=… width=… height=…/> keeping the 2:3 ratio (width = height × 2/3); props 1:1. Feet on the ground line. SIZE BY SHOT TYPE (character height as a share of the canvas height): wide 35–50%, medium 60–80%, close-up 120–150% with y = 0 (the head fully inside the frame at the top, the canvas crops the legs at the bottom). Never cut off a head at the top edge. Never draw the main subject smaller than 30% of the canvas height.',
     '- Mirror a character to face left with <g transform="translate(X 0) scale(-1 1)"><use href="#id" x="0" … /></g>.',
     `- Compose on the rule of thirds; the main subject is the brightest/highest-contrast area. Match the time of day in the description (night: darken the set with a translucent navy overlay <rect width="${canvas.w}" height="${canvas.h}" fill="#0b1330" fill-opacity="0.45"/> (0.35–0.55) BEFORE drawing characters, then add warm radialGradient glows around light sources). Add 1–3 foreground elements for depth and shot-specific details (weather, props, light).`,
     "- The engine adds a slow camera move — keep important content away from the outer 8% of the canvas.",

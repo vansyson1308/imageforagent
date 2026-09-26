@@ -163,6 +163,11 @@ export function withoutUses(svg: string, id: string): string {
  * sees it, whatever transforms, groups or cropping are involved.
  */
 export async function visibleHeightPct(withUse: Buffer, without: Buffer): Promise<number> {
+  return (await visibleExtent(withUse, without)).pct;
+}
+
+/** Vertical extent of what `withUse` adds over `without`: % of frame height, and whether it touches the top edge. */
+export async function visibleExtent(withUse: Buffer, without: Buffer): Promise<{ pct: number; touchesTop: boolean }> {
   const a = await rgba(withUse);
   const b = await rgba(without);
   let top = -1;
@@ -178,7 +183,7 @@ export async function visibleHeightPct(withUse: Buffer, without: Buffer): Promis
       }
     }
   }
-  return top < 0 ? 0 : Math.round(((bottom - top + 1) / a.h) * 100);
+  return top < 0 ? { pct: 0, touchesTop: false } : { pct: Math.round(((bottom - top + 1) / a.h) * 100), touchesTop: top <= 1 };
 }
 
 /** Mean perceived brightness (0..255) of a render. */

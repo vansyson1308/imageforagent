@@ -200,3 +200,138 @@ export function buildDoll(id: string, spec: DollSpec): string {
   out.push("</symbol>");
   return out.join("\n");
 }
+
+// ---------- Critters: upright storybook animals from the same kind of spec ----------
+
+export const EARS = ["pointy", "round", "long", "horns", "none"] as const;
+export const TAILS = ["bushy", "thin", "round", "none"] as const;
+export const MUZZLES = ["pointed", "round", "flat"] as const;
+export const CRITTER_ACCESSORIES = ["scarf", "bow", "hat", "glasses", "bag", "apron"] as const;
+
+export const critterSchema = z.object({
+  fur: hex,
+  belly: hex,
+  ears: z.enum(EARS),
+  tail: z.enum(TAILS),
+  muzzle: z.enum(MUZZLES),
+  accent: hex,
+  size: z.enum(["small", "medium", "large"]).default("medium"),
+  accessories: z.array(z.enum(CRITTER_ACCESSORIES)).max(3).default([]),
+});
+export type CritterSpec = z.infer<typeof critterSchema>;
+
+export const CRITTER_VOCABULARY = [
+  `{"fur": "#rrggbb", "belly": "#rrggbb", "ears": "${EARS.join("|")}", "tail": "${TAILS.join("|")}", "muzzle": "${MUZZLES.join("|")}",`,
+  ` "accent": "#rrggbb", "size": "small|medium|large", "accessories": [up to 3 of ${CRITTER_ACCESSORIES.map((a) => `"${a}"`).join(", ")}]}`,
+  "(fox: pointy ears, bushy tail, pointed muzzle · cat: pointy, thin, round · rabbit: long, round, round · bear: round, round, round · tanuki: round, bushy, pointed · mouse: round, thin, pointed · buffalo/cow: horns, thin, flat)",
+].join("\n");
+
+/** An upright storybook animal as a <symbol> (viewBox 0 0 400 600, feet on y≈592), ids prefixed by `id`. */
+export function buildCritter(id: string, spec: CritterSpec): string {
+  const cx = 200;
+  const k = spec.size === "small" ? 0.9 : spec.size === "large" ? 1.08 : 1;
+  const R = 100 * k; // head radius
+  const hy = Math.max(600 - 560 * (spec.size === "small" ? 0.86 : 1) + R + 20, spec.ears === "long" ? 1.9 * R + 8 : 0); // head centre (long ears stay inside the viewBox)
+  const by = hy + R * 2.05; // body centre
+  const bry = Math.min(592 - 40 - by, R * 1.25); // body half-height
+  const brx = R * 0.92;
+  const fy = 592;
+  const dark = mix(spec.fur, "#1d1a26", 0.35);
+  const light = mix(spec.fur, "#ffffff", 0.25);
+  const has = (a: (typeof CRITTER_ACCESSORIES)[number]) => spec.accessories.includes(a);
+  const out: string[] = [];
+  out.push(`<radialGradient id="${id}-fur" cx="0.38" cy="0.32" r="0.8"><stop offset="0" stop-color="${light}"/><stop offset="1" stop-color="${spec.fur}"/></radialGradient>`);
+  out.push(`<symbol id="${id}" viewBox="0 0 400 600">`);
+  out.push(`<ellipse cx="${cx}" cy="${fy + 2}" rx="${n(brx * 1.1)}" ry="8" fill="#1d2233" fill-opacity="0.22"/>`);
+
+  // Tail (behind)
+  const tx = cx + brx * 0.7;
+  const ty = by + bry * 0.4;
+  if (spec.tail === "bushy") {
+    out.push(`<path d="M${n(tx)} ${n(ty)} Q${n(tx + R * 1.3)} ${n(ty - R * 0.2)} ${n(tx + R * 0.9)} ${n(ty - R * 1.5)} Q${n(tx + R * 0.35)} ${n(ty - R * 0.7)} ${n(tx - R * 0.1)} ${n(ty - R * 0.25)} Z" fill="${spec.fur}"/>`);
+    out.push(`<path d="M${n(tx + R * 0.9)} ${n(ty - R * 1.5)} Q${n(tx + R * 1.05)} ${n(ty - R * 1.05)} ${n(tx + R * 0.95)} ${n(ty - R * 0.85)} Q${n(tx + R * 0.7)} ${n(ty - R * 1.0)} ${n(tx + R * 0.9)} ${n(ty - R * 1.5)} Z" fill="${spec.belly}"/>`);
+  }
+  if (spec.tail === "thin") out.push(`<path d="M${n(tx)} ${n(ty)} Q${n(tx + R * 1.1)} ${n(ty + R * 0.2)} ${n(tx + R * 0.9)} ${n(ty - R * 0.9)}" fill="none" stroke="${spec.fur}" stroke-width="${n(R * 0.16)}" stroke-linecap="round"/>`);
+  if (spec.tail === "round") out.push(`<circle cx="${n(tx + R * 0.1)}" cy="${n(ty)}" r="${n(R * 0.3)}" fill="${spec.belly}"/>`);
+
+  // Legs + feet, body, belly
+  for (const s of [-1, 1]) {
+    const lx = cx + s * brx * 0.45;
+    out.push(`<rect x="${n(lx - R * 0.2)}" y="${n(by + bry * 0.4)}" width="${n(R * 0.4)}" height="${n(fy - 10 - by - bry * 0.4)}" rx="${n(R * 0.2)}" fill="${spec.fur}"/>`);
+    out.push(`<ellipse cx="${n(lx + s * 6)}" cy="${n(fy - 10)}" rx="${n(R * 0.32)}" ry="${n(R * 0.16)}" fill="${dark}"/>`);
+  }
+  out.push(`<ellipse cx="${cx}" cy="${n(by)}" rx="${n(brx)}" ry="${n(bry)}" fill="url(#${id}-fur)"/>`);
+  out.push(`<ellipse cx="${cx}" cy="${n(by + bry * 0.12)}" rx="${n(brx * 0.6)}" ry="${n(bry * 0.72)}" fill="${spec.belly}"/>`);
+  if (has("apron")) out.push(`<path d="M${n(cx - brx * 0.55)} ${n(by - bry * 0.3)} L${n(cx + brx * 0.55)} ${n(by - bry * 0.3)} L${n(cx + brx * 0.7)} ${n(by + bry * 0.85)} L${n(cx - brx * 0.7)} ${n(by + bry * 0.85)} Z" fill="#f4efe4"/>`);
+  if (has("bag")) {
+    out.push(`<path d="M${n(cx - brx * 0.7)} ${n(by - bry * 0.75)} L${n(cx + brx * 0.75)} ${n(by + bry * 0.3)}" stroke="${spec.accent}" stroke-width="7"/>`);
+    out.push(`<rect x="${n(cx + brx * 0.55)}" y="${n(by + bry * 0.2)}" width="44" height="38" rx="8" fill="${spec.accent}"/>`);
+  }
+  // Arms + paws
+  for (const s of [-1, 1]) {
+    const x0 = cx + s * brx * 0.78;
+    const y0 = by - bry * 0.55;
+    const x1 = cx + s * brx * 1.1;
+    const y1 = by + bry * 0.25;
+    out.push(`<path d="M${n(x0)} ${n(y0)} Q${n(x1 + s * 10)} ${n((y0 + y1) / 2)} ${n(x1)} ${n(y1)}" fill="none" stroke="${spec.fur}" stroke-width="${n(R * 0.28)}" stroke-linecap="round"/>`);
+    out.push(`<circle cx="${n(x1)}" cy="${n(y1 + 4)}" r="${n(R * 0.17)}" fill="${dark}"/>`);
+  }
+  if (has("scarf")) {
+    out.push(`<rect x="${n(cx - R * 0.8)}" y="${n(hy + R * 0.82)}" width="${n(R * 1.6)}" height="${n(R * 0.3)}" rx="${n(R * 0.15)}" fill="${spec.accent}"/>`);
+    out.push(`<rect x="${n(cx + R * 0.25)}" y="${n(hy + R * 0.95)}" width="${n(R * 0.26)}" height="${n(R * 0.75)}" rx="10" fill="${mix(spec.accent, "#000000", 0.15)}"/>`);
+  }
+
+  // Ears (behind the head outline, drawn first)
+  for (const s of [-1, 1]) {
+    const ex = cx + s * R * 0.62;
+    const ey = hy - R * 0.62;
+    if (spec.ears === "pointy") {
+      out.push(`<path d="M${n(ex - R * 0.34)} ${n(ey + R * 0.2)} L${n(ex + s * R * 0.1)} ${n(ey - R * 0.72)} L${n(ex + R * 0.34)} ${n(ey + R * 0.2)} Z" fill="${spec.fur}"/>`);
+      out.push(`<path d="M${n(ex - R * 0.17)} ${n(ey + R * 0.08)} L${n(ex + s * R * 0.08)} ${n(ey - R * 0.45)} L${n(ex + R * 0.17)} ${n(ey + R * 0.08)} Z" fill="${dark}"/>`);
+    }
+    if (spec.ears === "round") {
+      out.push(`<circle cx="${n(ex)}" cy="${n(ey)}" r="${n(R * 0.32)}" fill="${spec.fur}"/>`);
+      out.push(`<circle cx="${n(ex)}" cy="${n(ey)}" r="${n(R * 0.17)}" fill="${spec.belly}"/>`);
+    }
+    if (spec.ears === "long") {
+      out.push(`<ellipse cx="${n(cx + s * R * 0.4)}" cy="${n(hy - R * 1.25)}" rx="${n(R * 0.2)}" ry="${n(R * 0.62)}" fill="${spec.fur}" transform="rotate(${s * 10} ${n(cx + s * R * 0.4)} ${n(hy - R * 1.25)})"/>`);
+      out.push(`<ellipse cx="${n(cx + s * R * 0.4)}" cy="${n(hy - R * 1.22)}" rx="${n(R * 0.09)}" ry="${n(R * 0.45)}" fill="${spec.belly}" transform="rotate(${s * 10} ${n(cx + s * R * 0.4)} ${n(hy - R * 1.25)})"/>`);
+    }
+    if (spec.ears === "horns") {
+      out.push(`<path d="M${n(cx + s * R * 0.55)} ${n(hy - R * 0.55)} Q${n(cx + s * R * 1.35)} ${n(hy - R * 0.75)} ${n(cx + s * R * 1.15)} ${n(hy - R * 1.35)} Q${n(cx + s * R * 1.05)} ${n(hy - R * 0.95)} ${n(cx + s * R * 0.62)} ${n(hy - R * 0.8)} Z" fill="#efe6d2"/>`);
+      out.push(`<ellipse cx="${n(cx + s * R * 0.98)}" cy="${n(hy - R * 0.2)}" rx="${n(R * 0.26)}" ry="${n(R * 0.13)}" fill="${spec.fur}"/>`);
+    }
+  }
+
+  // Head, muzzle, face
+  out.push(`<circle cx="${cx}" cy="${n(hy)}" r="${n(R)}" fill="url(#${id}-fur)"/>`);
+  const eyeY = hy - R * 0.08;
+  if (spec.muzzle === "pointed") {
+    out.push(`<path d="M${n(cx - R * 0.72)} ${n(hy + R * 0.05)} Q${cx} ${n(hy - R * 0.12)} ${n(cx + R * 0.72)} ${n(hy + R * 0.05)} Q${n(cx + R * 0.35)} ${n(hy + R * 0.6)} ${cx} ${n(hy + R * 0.66)} Q${n(cx - R * 0.35)} ${n(hy + R * 0.6)} ${n(cx - R * 0.72)} ${n(hy + R * 0.05)} Z" fill="${spec.belly}"/>`);
+  } else if (spec.muzzle === "round") {
+    out.push(`<ellipse cx="${cx}" cy="${n(hy + R * 0.34)}" rx="${n(R * 0.42)}" ry="${n(R * 0.3)}" fill="${spec.belly}"/>`);
+  } else {
+    out.push(`<ellipse cx="${cx}" cy="${n(hy + R * 0.42)}" rx="${n(R * 0.55)}" ry="${n(R * 0.32)}" fill="${spec.belly}"/>`);
+    for (const s of [-1, 1]) out.push(`<ellipse cx="${n(cx + s * R * 0.2)}" cy="${n(hy + R * 0.42)}" rx="${n(R * 0.06)}" ry="${n(R * 0.09)}" fill="${dark}"/>`);
+  }
+  for (const s of [-1, 1]) {
+    const ex = cx + s * R * 0.36;
+    out.push(`<ellipse cx="${n(ex)}" cy="${n(eyeY)}" rx="${n(R * 0.1)}" ry="${n(R * 0.13)}" fill="#1d1a26"/>`);
+    out.push(`<circle cx="${n(ex + R * 0.035)}" cy="${n(eyeY - R * 0.045)}" r="${n(R * 0.042)}" fill="#ffffff"/>`);
+    out.push(`<circle cx="${n(cx + s * R * 0.6)}" cy="${n(eyeY + R * 0.3)}" r="${n(R * 0.13)}" fill="#ff8a80" fill-opacity="0.35"/>`);
+  }
+  const noseY = spec.muzzle === "pointed" ? hy + R * 0.55 : spec.muzzle === "round" ? hy + R * 0.22 : hy + R * 0.3;
+  if (spec.muzzle !== "flat") out.push(`<ellipse cx="${cx}" cy="${n(noseY)}" rx="${n(R * 0.11)}" ry="${n(R * 0.08)}" fill="#1d1a26"/>`);
+  out.push(`<path d="M${n(cx - R * 0.12)} ${n(noseY + R * 0.12)} Q${cx} ${n(noseY + R * 0.22)} ${n(cx + R * 0.12)} ${n(noseY + R * 0.12)}" fill="none" stroke="#1d1a26" stroke-width="${n(R * 0.045)}" stroke-linecap="round"/>`);
+  if (has("glasses")) {
+    for (const s of [-1, 1]) out.push(`<circle cx="${n(cx + s * R * 0.36)}" cy="${n(eyeY)}" r="${n(R * 0.2)}" fill="none" stroke="#2a2233" stroke-width="4"/>`);
+    out.push(`<path d="M${n(cx - R * 0.16)} ${n(eyeY)} L${n(cx + R * 0.16)} ${n(eyeY)}" stroke="#2a2233" stroke-width="4"/>`);
+  }
+  if (has("bow")) out.push(`<path d="M${n(cx + R * 0.35)} ${n(hy - R * 0.78)} l-24 -16 l0 32 Z M${n(cx + R * 0.35)} ${n(hy - R * 0.78)} l24 -16 l0 32 Z" fill="${spec.accent}"/>`);
+  if (has("hat")) {
+    out.push(`<ellipse cx="${cx}" cy="${n(hy - R * 0.72)}" rx="${n(R * 1.05)}" ry="${n(R * 0.18)}" fill="${spec.accent}"/>`);
+    out.push(`<path d="M${n(cx - R * 0.6)} ${n(hy - R * 0.72)} Q${n(cx - R * 0.6)} ${n(hy - R * 1.45)} ${cx} ${n(hy - R * 1.45)} Q${n(cx + R * 0.6)} ${n(hy - R * 1.45)} ${n(cx + R * 0.6)} ${n(hy - R * 0.72)} Z" fill="${spec.accent}"/>`);
+  }
+  out.push("</symbol>");
+  return out.join("\n");
+}

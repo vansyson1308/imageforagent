@@ -21,3 +21,8 @@
 {"at":"2026-09-26T02:10:44.379Z","script":"showcase-dropped","label":"kitsune","model":"crew","tokensIn":0,"tokensOut":0,"costUsd":0}
 {"at":"2026-09-26T02:10:44.471Z","script":"showcase-dropped","label":"kitsune","model":"crew","tokensIn":0,"tokensOut":0,"costUsd":0}
 {"at":"2026-09-26T02:14:00.000Z","script":"bench-dropped","label":"A:en-robot-garden on Railway (bench stopped mid-run to move to the local server; ESTIMATE)","model":"super-only","tokensIn":0,"tokensOut":0,"costUsd":0.055}
+{"at":"2026-09-26T02:14:46.978Z","script":"bench-judge","label":"A:en-lighthouse","model":"google/gemma-3-27b-it","tokensIn":2269,"tokensOut":0,"costUsd":0.001752}
+{"at":"2026-09-26T02:14:46.979Z","script":"bench","label":"A:en-lighthouse","model":"super-only","tokensIn":64781,"tokensOut":0,"costUsd":0.0445653}
+{"at":"2026-09-26T02:15:35.182Z","script":"showcase","label":"den-long","model":"crew","tokensIn":36123,"tokensOut":59999,"costUsd":0.06700848}
+{"at":"2026-09-26T02:30:00.000Z","script":"bench-dropped","label":"B:en-lighthouse local (stopped to rebuild with the head-cut gate; ESTIMATE)","model":"crew","tokensIn":0,"tokensOut":0,"costUsd":0.06}
+{"at":"2026-09-26T02:19:20.855Z","script":"showcase","label":"kitsune","model":"crew","tokensIn":32546,"tokensOut":65412,"costUsd":0.07166598}

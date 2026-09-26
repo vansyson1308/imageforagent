@@ -6,7 +6,7 @@ import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@
 import { castRepairUser, castSystem, castUser } from "@/lib/services/director/prompts";
 import sharp from "sharp";
 import { castSheetFrame, extractJsonBlock, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
-import { buildDoll, dollSchema } from "@/lib/services/director/dollKit";
+import { buildCritter, buildDoll, critterSchema, dollSchema } from "@/lib/services/director/dollKit";
 import { zodIssues } from "@/lib/services/director/schemas";
 import type { CastMember, Plan } from "@/lib/services/director/schemas";
 
@@ -157,16 +157,21 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     const dolls = new Map<string, string>();
     const dollProblems: string[] = [];
     try {
-      const raw = extractJsonBlock(out.text) as { dolls?: Record<string, unknown> } | null;
+      const raw = extractJsonBlock(out.text) as { dolls?: Record<string, unknown>; critters?: Record<string, unknown> } | null;
       for (const [id, spec] of Object.entries(raw?.dolls ?? {})) {
-        const member = pending.find((c) => c.id === id && c.kind === "character");
-        if (!member) continue;
+        if (!pending.some((c) => c.id === id && c.kind === "character")) continue;
         const r = dollSchema.safeParse(spec);
         if (r.success) dolls.set(id, buildDoll(id, r.data));
         else dollProblems.push(`#${id} doll spec invalid: ${zodIssues(r.error)}`);
       }
+      for (const [id, spec] of Object.entries(raw?.critters ?? {})) {
+        if (dolls.has(id) || !pending.some((c) => c.id === id && c.kind === "character")) continue;
+        const r = critterSchema.safeParse(spec);
+        if (r.success) dolls.set(id, buildCritter(id, r.data));
+        else dollProblems.push(`#${id} critter spec invalid: ${zodIssues(r.error)}`);
+      }
     } catch (e) {
-      dollProblems.push(`the \`\`\`json dolls block is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
+      dollProblems.push(`the \`\`\`json kit block is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
     }
     const drawn = extractSvgFragment(out.text);
     const defs = [drawn, ...dolls.values()].filter(Boolean).join("\n");

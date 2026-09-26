@@ -67,7 +67,8 @@ async function main() {
   mkdirSync(out, { recursive: true });
   const { chromium } = await loadPlaywright();
   // Behind an egress proxy (CI sandboxes) Chromium needs it explicitly; normal machines have no HTTPS_PROXY
-  const browser = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY } } : {});
+  const local = /^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(base);
+  const browser = await chromium.launch(process.env.HTTPS_PROXY && !local ? { proxy: { server: process.env.HTTPS_PROXY } } : {});
   const t0 = Date.now();
   const markers: Record<string, number> = {};
   const mark = (k: string) => (markers[k] = (Date.now() - t0) / 1000);
@@ -82,6 +83,12 @@ async function main() {
     await page.click("button[type=submit], form button");
     await page.waitForSelector("textarea", { timeout: 60_000 });
   }
+  await page.waitForSelector("textarea", { timeout: 60_000 });
+  // Always film a fresh project: the workspace otherwise opens the latest one (maybe mid-run)
+  const fresh = await page.evaluate<string>(
+    `fetch("/api/projects", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name: "Demo film" }) }).then((r) => r.json()).then((j) => j.id)`,
+  );
+  await page.goto(`${base}/?p=${fresh}`);
   await page.waitForSelector("textarea", { timeout: 60_000 });
   mark("ready");
   await page.getByRole("button", { name: "en", exact: true }).click();
