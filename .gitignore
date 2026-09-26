@@ -51,4 +51,4 @@ prisma/dev.db*
 
 # demo video build outputs
 /demo/video/_work/
-/demo/video/director_demo.mp4
+/demo/video/director_demo*.mp4

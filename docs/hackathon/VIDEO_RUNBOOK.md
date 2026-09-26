@@ -1,6 +1,8 @@
 # Demo video runbook (≤ 3:00, public YouTube)
 
-The video must be recorded against the **hosted demo with real Nemotron runs**, after the showcase films and the benchmark exist (the video shows both).
+**Status 2026-09-26: built.** `director_demo.mp4` (172 s, 1920×1080, narrated, + `director_demo.en.srt`) was produced by this pipeline. The live segment is a real Nemotron run recorded on a local `next start` of the same commit (long SSE streams from the build sandbox to Railway were cut by its egress tunnel). The showcase segment was recorded on the hosted page. The file is gitignored and was handed to the owner (a 22 MB copy, `director_demo_1080p.mp4`). **Owner: upload it to YouTube (public or unlisted), then paste the URL into DEVPOST_SUBMISSION.md.**
+
+To re-record, run the steps below against either the hosted demo or a local server, after the showcase films and the benchmark exist (the video shows both).
 
 ## 0 · Prerequisites (any Linux/macOS machine with internet)
 - Node 20+, `npm install` in the repo, `ffmpeg`, `ffprobe`, `espeak-ng`.
