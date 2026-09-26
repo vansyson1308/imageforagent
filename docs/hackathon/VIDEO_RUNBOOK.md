@@ -12,18 +12,21 @@ To re-record, run the steps below against either the hosted demo or a local serv
 
 ## 1 · Record (≈ 5–12 min, one real Director run)
 ```bash
-npx tsx demo/video/record.ts --base https://studio-production-049c.up.railway.app --passcode "$DEMO_PASSCODE"
+npx tsx demo/video/record-smooth.ts --base <app URL> [--showcase <app URL>/showcase]
+npx tsx demo/video/smooth-film.ts --project <projectId from _work/live.json> --fps 30   # same DATABASE_URL/STORAGE_ROOT as that server
 ```
-Writes `demo/video/_work/live.webm` (story → crew timeline → critic before/after → film playing), `film.mp4`, `showcase.webm`, `markers.json`.
-Check `live.webm`: a critic *before → after* badge must appear on at least one shot card (a shot that scored < 7 and got revised). If no shot needed a revision, record again with a harder story (`--story "…"`); the narration at 0:52 describes a revision.
+- `record-smooth.ts` is a **frame-stepped** capture: every output frame is a screenshot taken after a spring-eased virtual camera moved a little. The UI is 1280×720 × DPR 1.5, so frames are 1920×1080. It writes `_work/live.mp4` + `live.json` (phase A = typing at 1×, B = the run, C = a result tour at 1×) and `_work/showcase.mp4`. It replaced `record.ts` (Playwright recordVideo ≈ 25 fps + wheel steps + time-lapse), which looked jerky.
+- `smooth-film.ts` re-renders that project's clips at 30 fps with the engine (motion is a pure function of time, so this is exact, not interpolation) and assembles `_work/film.mp4`.
+- A critic *before → after* badge on at least one shot card is nice to have (the narration at 0:52 describes a revision).
 
 ## 2 · Build
 ```bash
+python3 demo/video/voice.py --model en_US-lessac-high.onnx   # Piper neural voice-over (see the script header)
 sh demo/video/build.sh
 ```
-- Generates the cards, the voice-over (espeak-ng `en-us`, from `demo/video/narration.json`) and `demo/video/director_demo.en.srt`, then time-lapses the live recording to 75 s and cuts everything together.
+- Generates the cards and `demo/video/director_demo.en.srt`, and uses the Piper voice files as overrides (espeak-ng is only the fallback and sounds robotic).
+- Cards get a smooth cosine push-in (zoompan on a 4× upscale, because zoompan rounds to whole pixels). The live capture plays phases A and C at 1× and time-lapses B into the rest. Scenes are joined with 0.5 s crossfades, all at 30 fps.
 - Output: `demo/video/director_demo.mp4`, 1920×1080, H.264 + AAC. The script fails if the result is longer than 3:00 (target 2:52).
-- **Better voice (recommended):** record each line of `narration.json` yourself and save it as `demo/video/voice/<segment-id>.wav` (e.g. `01-hook.wav`). Overrides are picked up automatically; `prepare.ts` warns if a line overruns its slot.
 - Music: none by default (no copyright risk). To add one, render the engine's own synth score (`examples/film/score.ts`) to WAV and mix it at −20 dB with ffmpeg `amix`.
 
 ## 3 · Verify
