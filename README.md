@@ -392,6 +392,7 @@ Everything is optional except the database path:
 | `NEBIUS_PRICES_JSON` | family estimates | `{"model-id":[inUSDper1M,outUSDper1M]}` for exact cost accounting |
 | `LLM_PROVIDER` | — | `mock` = scripted demo crew with no key and no network (tests, UI demos, video dry-runs). Labelled "mock" in every trace |
 | `DIRECTOR_MAX_SHOTS` / `_TOKENS_PER_RUN` / `_USD_PER_RUN` / `_WALL_SECONDS` | 12 / 600000 / 1.5 / 1200 | Hard per-run caps, enforced on the server before every model call. A request can lower them but never raise them |
+| `DIRECTOR_CONCURRENCY` | 3 | Shots drawn in parallel per run (1–6). Cuts wall time; cost is unchanged |
 | `SPEND_ALERT_USD` | 15 | Live scripts (`director:smoke`, showcase, bench) refuse to start once the spend ledger passes this |
 | `TAVILY_API_KEY` / `TAVILY_BASE_URL` | — / `https://api.tavily.com` | Optional Tavily researcher: capped search + extract, with cited reference notes added to the Bible |
 | `DEMO_MODE` / `DEMO_PASSCODE` | `false` / — | Public demo: every page and API sits behind a passcode (signed HttpOnly cookie). `/showcase` and `/unlock` stay public |

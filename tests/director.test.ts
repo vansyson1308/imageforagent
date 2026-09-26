@@ -2,22 +2,23 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
+import sharp from "sharp";
 import { prisma } from "@/lib/db";
 import { MockLlmProvider, type MockHandler } from "@/lib/providers/mockLlmProvider";
 import { LlmError } from "@/lib/providers/types";
 import { motionSpecSchema } from "@/lib/validation/motionSchema";
 import { parseTsv } from "@/lib/services/tsvParser";
-import { LOGICAL_CANVAS } from "@/lib/services/svgRenderer";
+import { LOGICAL_CANVAS, renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
 import { demoHandler, demoPlan, DEMO_LIBRARY, MOCK_MODELS } from "@/lib/services/director/demoCrew";
-import { createRun, executeRun, cancelRun, registerRun, unregisterRun, type DirectorDeps } from "@/lib/services/director/loop";
+import { createRun, executeRun, cancelRun, registerRun, runPool, unregisterRun, type DirectorDeps } from "@/lib/services/director/loop";
 import { BudgetExceededError, BudgetTracker, clampBudget, DEFAULT_BUDGET, type DirectorBudget } from "@/lib/services/director/budget";
 import { extractJson, jsonSchemaOf, planSchema, critiqueSchema } from "@/lib/services/director/schemas";
-import { artPattern, buildShotMotion, cameraMoveFor, cameraTracks, namespaceIds, toCameraSpace } from "@/lib/services/director/camera";
-import { extractSvgFragment, missingRefs, symbolIds } from "@/lib/services/director/svgTools";
+import { artPattern, buildShotMotion, cameraMoveFor, cameraTracks, flattenOpacity, namespaceIds, toCameraSpace } from "@/lib/services/director/camera";
+import { compositionStats, extractSvgFragment, minSubjectPct, missingRefs, neededExtras, normalizeSet, splitLibrary, symbolIds, transparentShare } from "@/lib/services/director/svgTools";
 import { normalizePlan, planToTsv } from "@/lib/services/director/plan";
 import { validateDrawing } from "@/lib/services/director/artist";
-import { validateLibrary } from "@/lib/services/director/cast";
-import { quoteData } from "@/lib/services/director/prompts";
+import { symbolProblems, validateLibrary } from "@/lib/services/director/cast";
+import { CAST_REFERENCE, quoteData } from "@/lib/services/director/prompts";
 import type { DirectorEvent } from "@/lib/services/director/context";
 
 const canvas = LOGICAL_CANVAS["16:9"];
@@ -87,6 +88,23 @@ describe("director camera", () => {
     expect(cameraMoveFor("Lia máy", 2)).toBe("panLeft");
   });
 
+  it("keeps translucent overlays full-bleed when the camera zooms the painting (librsvg layer clip)", async () => {
+    const painting = '<rect width="1920" height="1080" fill="#ffffff"/><rect width="1920" height="1080" fill="#000000" opacity="0.5"/>';
+    const edge = async (defs: string) => {
+      const body = '<rect width="1920" height="1080" fill="#ff00ff"/><g transform="translate(960 540) scale(1.12)"><path d="M -960 -540 L 960 -540 L 960 540 L -960 540 Z" fill="url(#art-f1)"/></g>';
+      const { data, info } = await sharp(await renderArtwork(defs, body, "16:9", "1K")).raw().toBuffer({ resolveWithObject: true });
+      const at = (x: number, y: number) => data[(Math.floor(y) * info.width + Math.floor(x)) * info.channels];
+      return { right: at(info.width - 3, info.height / 2), bottom: at(info.width / 2, info.height - 3), mid: at(info.width / 2, info.height / 2) };
+    };
+    const raw = `<pattern id="art-f1" patternUnits="userSpaceOnUse" x="-960" y="-540" width="1920" height="1080">${painting}</pattern>`;
+    const before = await edge(raw);
+    expect(before.right).toBeGreaterThan(before.mid + 60); // the bug: the overlay stops short of the edge
+    const after = await edge(artPattern(1, painting, canvas));
+    expect(Math.abs(after.right - after.mid)).toBeLessThanOrEqual(2);
+    expect(Math.abs(after.bottom - after.mid)).toBeLessThanOrEqual(2);
+    expect(flattenOpacity('<circle r="3" fill-opacity="0.5" opacity="0.5"/>')).toBe('<circle r="3" fill-opacity="0.25" stroke-opacity="0.5"/>');
+  });
+
   it("shifts the ambient layer into camera space and builds a schema-valid motion spec", () => {
     const amb = { shapes: [{ id: "p", type: "circle", r: 5, at: [100, 200] }], tracks: [{ target: "shapes.p.at", keys: [{ t: 0, v: [100, 200] }, { t: 1, v: [300, 400] }] }, { target: "shapes.p.at.1", keys: [{ t: 0, v: 540 }] }] };
     const cs = toCameraSpace(amb, canvas);
@@ -105,6 +123,16 @@ describe("director svg tools", () => {
     const text = "Here you go:\n```svg\n<!-- note <svg> -->\n<svg viewBox=\"0 0 1 1\"><rect width=\"5\" height=\"5\"/></svg>\n```";
     expect(extractSvgFragment(text)).toBe('<rect width="5" height="5"/>');
     expect(extractSvgFragment("no markup")).toBe("");
+  });
+
+  it("measures symbol sizes and brightness for the text critic", async () => {
+    const svg = '<use href="#home" x="0" y="0" width="1920" height="1080"/><use href="#hero" x="800" y="540" width="200" height="300"/>';
+    const { renderArtwork } = await import("@/lib/services/svgRenderer");
+    const png = await renderArtwork(DEMO_LIBRARY, svg, "16:9", "1K");
+    const s = await compositionStats(svg, png, canvas);
+    expect(s).toContain("#home = full background");
+    expect(s).toContain("#hero 28% of frame height at (47%, 78%)");
+    expect(s).toMatch(/mean brightness \d+\/255/);
   });
 
   it("finds dangling references and library symbols", () => {
@@ -167,10 +195,78 @@ describe("director validators", () => {
     await expect(validateDrawing("I cannot draw that.", opts)).rejects.toThrow(/No SVG fragment/);
   });
 
+  it("gates framing: missing or too-small characters are rejected with a sizing hint (lenient on the last attempt)", async () => {
+    const gated = { ...opts, characters: ["hero"], shot: { ...shot, shotType: "Medium shot" } };
+    const tiny = '```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><use href="#hero" x="800" y="700" width="100" height="150"/>\n```';
+    await expect(validateDrawing(tiny, gated)).rejects.toThrow(/main character is only \d+% of the frame height as rendered; a "Medium shot" needs at least 45% \(use height="486"/);
+    // A shrinking transform cannot hide a tiny character: the gate measures pixels, not attributes
+    const shrunk = '```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><g transform="scale(0.2)"><use href="#hero" x="800" y="380" width="640" height="960"/></g>\n```';
+    await expect(validateDrawing(shrunk, gated)).rejects.toThrow(/main character is only \d+% of the frame height as rendered/);
+    await expect(validateDrawing('```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><circle cx="50" cy="50" r="40" fill="#fff"/>\n```', gated)).rejects.toThrow(/#hero is in this shot but not placed: add <use href="#hero"/);
+    await expect(validateDrawing('```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><use href="#hero" x="800" y="200" width="480" height="720"/>\n```', gated)).resolves.toBeTruthy();
+    await expect(validateDrawing(tiny, { ...gated, strict: false })).resolves.toBeTruthy();
+    expect(minSubjectPct("Close-up")).toBe(90);
+    expect(minSubjectPct("Cận cảnh")).toBe(90);
+    expect(minSubjectPct("Wide shot")).toBe(25);
+  });
+
+  it("gates night lighting on the measured brightness of the render", async () => {
+    const night = { ...opts, shot: { ...shot, description: "The hero waits under the moonlight at night." } };
+    const bright = '```svg\n<rect width="1920" height="1080" fill="#f4f0e0"/><circle cx="960" cy="540" r="200" fill="#e0c080"/>\n```';
+    await expect(validateDrawing(bright, night)).rejects.toThrow(/night\/dark scene but the frame's mean brightness is \d+\/255/);
+    const dark = '```svg\n<rect width="1920" height="1080" fill="#101a40"/><circle cx="960" cy="540" r="200" fill="#f0c060"/>\n```';
+    await expect(validateDrawing(dark, night)).resolves.toBeTruthy();
+  });
+
+  it("gates the library: sets must be 16:9, characters 2:3, and not stick figures", async () => {
+    const cast = planSchema.parse(demoPlan("Xx. Yy.", 2)).cast;
+    const squashedSet = DEMO_LIBRARY.replace('<symbol id="home" viewBox="0 0 1920 1080">', '<symbol id="home" viewBox="0 0 1920 300">');
+    await expect(validateLibrary(squashedSet, cast, canvas, "16:9")).rejects.toThrow(/#home is a set: its viewBox must be "0 0 1920 1080" \(got 1920×300\)/);
+    const stick = '<symbol id="hero" viewBox="0 0 400 600"><rect width="10" height="10"/></symbol>' + DEMO_LIBRARY.slice(DEMO_LIBRARY.indexOf("<linearGradient"));
+    await expect(validateLibrary(stick, cast, canvas, "16:9")).rejects.toThrow(/#hero has only 1 shapes; draw at least 12/);
+    await expect(validateLibrary(stick, cast, canvas, "16:9", false)).resolves.toBeInstanceOf(Buffer);
+    const holey = DEMO_LIBRARY.replace(/(<symbol id="home"[^>]*>)<rect[^>]*\/>/, '$1<circle cx="60" cy="60" r="20" fill="#fff"/>');
+    expect(holey).not.toBe(DEMO_LIBRARY);
+    await expect(validateLibrary(holey, cast, canvas, "16:9")).rejects.toThrow(/#home leaves \d+% of the frame transparent/);
+  });
+
+  it("splits a library into symbols and the paint servers each one needs", () => {
+    const lib = splitLibrary(DEMO_LIBRARY);
+    expect([...lib.symbols.keys()]).toEqual(["hero", "home"]);
+    expect([...neededExtras(lib.symbols.get("home")!, lib.extras).keys()]).toEqual(["home-sky"]);
+    expect(splitLibrary('<linearGradient id="a" href="#b"/><linearGradient id="b"><stop offset="0"/></linearGradient><symbol id="s" viewBox="0 0 1 1"><rect fill="url(#a)"/></symbol>').extras.size).toBe(2);
+    const deps2 = neededExtras('<symbol id="s"><rect fill="url(#a)"/></symbol>', new Map([["a", '<linearGradient id="a" href="#b"/>'], ["b", '<linearGradient id="b"/>'], ["c", "<x/>"]]));
+    expect([...deps2.keys()].sort()).toEqual(["a", "b"]);
+  });
+
+  it("normalises a mis-sized, holey set so it still covers the frame", async () => {
+    const set = '<symbol id="st" viewBox="0 0 1920 400"><circle cx="960" cy="200" r="100" fill="#fff"/></symbol>';
+    const fixed = normalizeSet(set, "#223355");
+    expect(fixed).toContain('preserveAspectRatio="xMidYMid slice"');
+    const png = await renderArtwork(fixed, '<use href="#st" x="0" y="0" width="1920" height="1080"/>', "16:9", "1K");
+    expect(await transparentShare(png)).toBe(0);
+  });
+
+  it("ships a style reference that passes the sanitizer and every library gate", async () => {
+    expect(() => sanitizeSvg(CAST_REFERENCE, "defs")).not.toThrow();
+    const { symbols, extras } = splitLibrary(CAST_REFERENCE);
+    const kid = { id: "ref-kid", name: "Kid", kind: "character" as const, look: "", colors: ["#f06a4a"] };
+    const street = { id: "ref-street", name: "Street", kind: "set" as const, look: "", colors: ["#0e1433"] };
+    expect(await symbolProblems(kid, symbols.get("ref-kid"), extras, canvas, "16:9")).toEqual([]);
+    expect(await symbolProblems(street, symbols.get("ref-street"), extras, canvas, "16:9")).toEqual([]);
+    expect(await symbolProblems(kid, '<symbol id="ref-kid" viewBox="0 0 400 600"><rect fill="url(#nope)"/></symbol>', extras, canvas, "16:9")).toEqual([
+      "#ref-kid references undefined #nope: declare those gradients in the same reply",
+    ]);
+  });
+
   it("validates motion-shot ambient layers through motionSpecSchema", async () => {
     const motionShot = { ...shot, mode: "motion" as const };
     const good = '```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/>\n```\n```json\n{"shapes":[{"id":"s","type":"circle","r":9,"at":[10,10],"fill":"#ffffff"}],"tracks":[]}\n```';
     expect((await validateDrawing(good, { ...opts, shot: motionShot })).ambient?.shapes).toHaveLength(1);
+    const fading = good.replace('"tracks":[]', '"tracks":[{"target":"shapes.s.fill","keys":[{"t":0,"v":"#FFFFFF80"},{"t":1,"v":"#FFFFFF00"}]}]');
+    expect((await validateDrawing(fading, { ...opts, shot: motionShot })).ambient?.tracks[0].keys.map((k) => k.v)).toEqual(["#FFFFFF", "#FFFFFF"]);
+    const trackEase = good.replace('"tracks":[]', '"tracks":[{"target":"shapes.s.at","ease":"out","keys":[{"t":0,"v":[10,10]},{"t":1,"v":[40,10]},{"t":2,"v":[60,10],"ease":"linear"}]}]');
+    expect((await validateDrawing(trackEase, { ...opts, shot: motionShot })).ambient?.tracks[0].keys.map((k) => (k as { ease?: string }).ease)).toEqual([undefined, "out", "linear"]);
     const bad = good.replace('"fill":"#ffffff"', '"fill":"red"');
     await expect(validateDrawing(bad, { ...opts, shot: motionShot })).rejects.toThrow(/Ambient layer invalid — shapes\[0\]\.fill/);
   });
@@ -261,6 +357,67 @@ describe("director loop (mock crew)", () => {
     expect(steps.filter((s) => s.action === "draw" || s.action === "repair")).toHaveLength(DEFAULT_BUDGET.maxRepairs + 1);
     expect(steps.some((s) => s.action === "give-up")).toBe(true);
   }, 120_000);
+
+  it("accepts library symbols one by one: a repair redraws only the failing member", async () => {
+    const base = demoHandler({ criticScores: [9] });
+    const lib = splitLibrary(DEMO_LIBRARY);
+    const gradients = [...lib.extras.values()].join("\n");
+    const stick = '<symbol id="hero" viewBox="0 0 400 600"><rect width="10" height="10"/></symbol>';
+    const castUsers: string[] = [];
+    const handler: MockHandler = (m, o, i) => {
+      if (m[0].content.startsWith("ROLE: CAST")) {
+        castUsers.push(m[1].content);
+        return castUsers.length === 1 ? `${gradients}\n${stick}\n${lib.symbols.get("home")}` : `${gradients}\n${lib.symbols.get("hero")}`;
+      }
+      return base(m, o, i);
+    };
+    const { projectId, runId, summary } = await run(handler, {}, { maxShots: 2 });
+    expect(summary.status).toBe("done");
+    expect(castUsers).toHaveLength(2);
+    expect(castUsers[1]).toContain("Already accepted and kept (do NOT redraw): home.");
+    expect(castUsers[1]).toMatch(/#hero has only 1 shapes/);
+    expect(castUsers[1]).not.toMatch(/- home \(set/);
+    const project = await prisma.project.findUniqueOrThrow({ where: { id: projectId } });
+    expect(symbolIds(project.artworkDefs ?? "").sort()).toEqual(["hero", "home"]);
+    expect(project.artworkDefs).toContain(lib.symbols.get("hero"));
+    const steps = await prisma.directorStep.findMany({ where: { runId, role: "cast" }, orderBy: { seq: "asc" } });
+    expect(steps.map((s) => s.action)).toEqual(["defs", "defs:invalid", "defs:repair", "library"]);
+    expect(steps[1].outputSummary).toBe("Kept 1/2 symbols; redrawing hero");
+  }, 120_000);
+
+  it("draws shots in parallel with a bounded pool and still renders every shot", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const base = demoHandler({ criticScores: [9, 9, 9, 9] });
+    const handler: MockHandler = async (m, o, i) => {
+      if (!m[0].content.startsWith("ROLE: ARTIST")) return base(m, o, i);
+      inFlight++;
+      peak = Math.max(peak, inFlight);
+      await new Promise((r) => setTimeout(r, 30));
+      inFlight--;
+      return base(m, o, i);
+    };
+    const { projectId, summary } = await run(handler, { concurrency: 3 }, { maxShots: 4, story: "One. Two. Three. Four." });
+    expect(summary.status).toBe("done");
+    expect(summary.rendered).toBe(4);
+    expect(peak).toBe(3);
+    const frames = await prisma.frame.findMany({ where: { projectId } });
+    expect(frames.every((f) => f.status === "done")).toBe(true);
+    const defs = (await prisma.project.findUniqueOrThrow({ where: { id: projectId } })).artworkDefs ?? "";
+    for (const n of [1, 2, 3, 4]) expect(defs).toContain(`id="art-f${n}"`);
+  }, 120_000);
+
+  it("runPool stops scheduling after the first failure and rethrows it", async () => {
+    const seen: number[] = [];
+    await expect(
+      runPool([1, 2, 3, 4, 5, 6], 2, async (n) => {
+        seen.push(n);
+        await new Promise((r) => setTimeout(r, 5));
+        if (n === 2) throw new Error("boom");
+      }),
+    ).rejects.toThrow("boom");
+    expect(seen.length).toBeLessThan(6);
+  });
 
   it("falls back to the text critic when the vision model rejects images (and says so)", async () => {
     const base = demoHandler({ criticScores: [9] });

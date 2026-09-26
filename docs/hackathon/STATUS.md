@@ -1,11 +1,11 @@
 # STATUS: Storyboard Studio Director
 
-_Last updated: 2026-09-25 (end of build session 1)_
+_Last updated: 2026-09-26 (live session: keys + full network)_
 
 ## Checklist
 
 - [x] **Phase 0**: tags (local; push refused, B4), docs/hackathon/*, SPEC.md
-- [x] **Phase 1**: provider layer (Nemotron + mock; json_schema → json_object fallback; image input; retries/backoff/timeouts/abort; token & USD accounting) · `director:models` / `director:smoke` scripts · **live smoke NOT RUN** (B3)
+- [x] **Phase 1**: provider layer (Nemotron + mock; json_schema → json_object fallback; image input; retries/backoff/timeouts/abort; token & USD accounting) · `director:models` / `director:smoke` scripts · **live smoke PASSED 2026-09-26** (3 tiers json_schema OK; no Nemotron Omni in the catalog → text critic, D15)
 - [x] **Phase 2**: Director core: plan (Ultra) → script via parseTsv/replaceScript → dialogue → cast library (Super) → per-shot draw/validate/repair ≤ 3 → animated clip · `DirectorRun`/`DirectorStep` + migration
 - [x] **Phase 3**: Visual critic (vision + explicit text fallback, ≤ 2 rounds, keeps the better version, before/after images stored) · Editor (lint → edits → re-lint, dialogue via resolveVoice, continuity)
 - [x] **Phase 4**: `POST /api/projects/:id/director` (SSE), `GET …/director`, `GET …/runs/:runId`, `POST …/cancel` · DirectorPanel (story, language, style presets, live crew timeline, critic before→after, tokens/cost, film player, MP4 + ZIP) · VI/EN toggle
@@ -17,11 +17,13 @@ _Last updated: 2026-09-25 (end of build session 1)_
 - [~] **Phase 10**: script.md, narration.json, record.ts, prepare.ts, build.sh, VIDEO_RUNBOOK.md · full pipeline **dry-run rendered: 172.0 s, 1920×1080** (mock, not for upload) · final video needs a real recording
 - [~] **Phase 11**: DEVPOST_SUBMISSION.md drafted (owner fields marked) · PR open (draft)
 
+- [x] **Live quality pass** (2026-09-26): 6 real local films; measured quality gates (D17), per-symbol cast library (D18), track normalisation (D19), parallel shots (D20: 407 s → 98 s for 4 shots), pattern opacity fix (D21)
+
 ## Numbers (real, this session)
 - Tests: **537 passed / 4 skipped** (46 files); baseline was 487/6. The skips are asdcplib/ClairMeta-gated.
 - `npm run lint`: clean · `npx tsc --noEmit`: clean · `npm run build`: clean.
 - Docker image: built and booted; mock end to end inside the container produced an 8.5 s MP4.
-- **Live Nemotron spend so far: $0.00** (no live call possible from this session).
+- **Live Nemotron spend so far: $0.28** (smoke + vision probe + 6 dev films; ledger `evidence/spend-ledger.jsonl`). Latest 4-shot film: 98 s, $0.031, 4/4 shots first-pass, critic mean 7.75.
 
 ## Blockers
 See BLOCKERS.md. The critical one is **B3**: this session's egress policy blocks `api.tokenfactory.nebius.com`, `api.tavily.com` **and** the Railway URL. Everything that needs a real model call is scripted to run in one command from any machine with internet:

@@ -54,6 +54,8 @@ export interface DirectorDeps {
   /** Called after every model call with the tokens spent (demo daily counter). */
   readonly onSpend?: (tokens: number) => void;
   readonly now?: () => number;
+  /** Shots drawn in parallel (DIRECTOR_CONCURRENCY; default 1 keeps the scripted tests ordered). */
+  readonly concurrency?: number;
 }
 
 // ---------- in-memory registry of live runs (cancel) ----------
@@ -195,8 +197,8 @@ export async function executeRun(
     const patterns = new Map<number, string>();
     const background = plan.palette[0] ?? "#1a1a2e";
 
-    // 6 · Per shot: draw → commit → critic → revise
-    for (const frame of frames) {
+    // 6 · Per shot: draw → commit → critic → revise (a small pool of shots in parallel)
+    const doShot = async (frame: Frame) => {
       throwIfCancelled(ctx);
       const shot = plan.shots[frame.index - 1];
       const st: ShotStats = { firstPassOk: false, repairs: 0, before: null, after: null, revisions: 0 };
@@ -208,35 +210,35 @@ export async function executeRun(
       if (!first.drawing) {
         await recordStep(ctx, { role: "artist", model: ctx.models.mid, action: "give-up", shotIndex: frame.index, summary: `Shot ${frame.index} left undrawn after ${first.attempts} attempts`, error: first.lastError });
         emit({ type: "frame", index: frame.index, imageUrl: null, clipUrl: null, score: null, status: "failed" });
-        continue;
+        return;
       }
       let committed: Frame = await commitAndAnnounce(ctx, { frame, shot, index: frame.index, drawing: first.drawing, castDefs: library.defs, patterns, background }, null);
       let best: { drawing: Drawing; critique: Critique | null } = { drawing: first.drawing, critique: null };
-      if (options.critic) {
-        const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0 });
-        best = { drawing: first.drawing, critique: c0.critique };
-        st.before = c0.critique?.score ?? null;
-        st.after = st.before;
-        for (let round = 1; round <= budget.maxCriticRounds; round++) {
-          const c = best.critique;
-          if (!c || c.score >= options.acceptScore || c.verdict === "accept") break;
-          const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg });
-          st.repairs += Math.max(0, rev.attempts - 1);
-          if (!rev.drawing) break;
-          const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round });
-          st.revisions++;
-          if (cr.critique && cr.critique.score > c.score) {
-            best = { drawing: rev.drawing, critique: cr.critique };
-            st.after = cr.critique.score;
-            committed = await commitAndAnnounce(ctx, { frame: committed, shot, index: frame.index, drawing: rev.drawing, castDefs: library.defs, patterns, background }, cr.critique.score);
-            await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "uplift", shotIndex: frame.index, score: cr.critique.score, summary: `Revision accepted: ${c.score} → ${cr.critique.score}` });
-          } else {
-            await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "keep", shotIndex: frame.index, score: c.score, summary: `Revision scored ${cr.critique?.score ?? "n/a"} ≤ ${c.score}: kept the previous version` });
-            break;
-          }
+      if (!options.critic) return;
+      const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0 });
+      best = { drawing: first.drawing, critique: c0.critique };
+      st.before = c0.critique?.score ?? null;
+      st.after = st.before;
+      for (let round = 1; round <= budget.maxCriticRounds; round++) {
+        const c = best.critique;
+        if (!c || c.score >= options.acceptScore || c.verdict === "accept") break;
+        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg });
+        st.repairs += Math.max(0, rev.attempts - 1);
+        if (!rev.drawing) break;
+        const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round });
+        st.revisions++;
+        if (cr.critique && cr.critique.score > c.score) {
+          best = { drawing: rev.drawing, critique: cr.critique };
+          st.after = cr.critique.score;
+          committed = await commitAndAnnounce(ctx, { frame: committed, shot, index: frame.index, drawing: rev.drawing, castDefs: library.defs, patterns, background }, cr.critique.score);
+          await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "uplift", shotIndex: frame.index, score: cr.critique.score, summary: `Revision accepted: ${c.score} → ${cr.critique.score}` });
+        } else {
+          await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "keep", shotIndex: frame.index, score: c.score, summary: `Revision scored ${cr.critique?.score ?? "n/a"} ≤ ${c.score}: kept the previous version` });
+          break;
         }
       }
-    }
+    };
+    await runPool(frames, Math.max(1, Math.min(6, deps.concurrency ?? 1)), doShot);
 
     // 7 · Editor (Nano): lint fixes + continuity
     emit({ type: "status", message: "Editor is checking timing and continuity…" });
@@ -263,6 +265,28 @@ export async function executeRun(
   if (error) emit({ type: "error", message: error });
   emit({ type: "done", status, summary });
   return summary;
+}
+
+/**
+ * Run `work` over `items` with at most `limit` in flight. The first failure
+ * stops scheduling new items; in-flight ones finish (they hit the same budget
+ * or cancel checkpoint) and the first error is rethrown.
+ */
+export async function runPool<T>(items: readonly T[], limit: number, work: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  let failure: { error: unknown } | null = null;
+  const lane = async () => {
+    while (!failure && next < items.length) {
+      const item = items[next++];
+      try {
+        await work(item);
+      } catch (e) {
+        failure ??= { error: e };
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, lane));
+  if (failure) throw (failure as { error: unknown }).error;
 }
 
 async function commitAndAnnounce(ctx: DirectorContext, opts: Parameters<typeof commitShot>[1], score: number | null): Promise<Frame> {

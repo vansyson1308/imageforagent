@@ -52,18 +52,20 @@ export function demoPlan(story: string, shots: number) {
 }
 
 export const DEMO_LIBRARY = [
-  `<symbol id="hero" viewBox="0 0 400 600"><ellipse cx="200" cy="360" rx="140" ry="200" fill="#e2571b"/><circle cx="200" cy="170" r="110" fill="#f4b23c"/><circle cx="165" cy="160" r="14" fill="#241d33"/><circle cx="240" cy="160" r="14" fill="#241d33"/><path d="M160 215 Q200 245 240 215" stroke="#241d33" stroke-width="10" fill="none"/><rect x="120" y="540" width="60" height="60" rx="20" fill="#241d33"/><rect x="220" y="540" width="60" height="60" rx="20" fill="#241d33"/></symbol>`,
+  `<symbol id="hero" viewBox="0 0 400 600"><ellipse cx="200" cy="370" rx="130" ry="190" fill="#e2571b"/><rect x="120" y="300" width="160" height="40" rx="12" fill="#f4b23c"/><circle cx="200" cy="170" r="110" fill="#f4b23c"/><path d="M95 150 Q200 20 305 150 Q250 90 200 95 Q150 90 95 150 Z" fill="#241d33"/><circle cx="165" cy="165" r="16" fill="#ffffff"/><circle cx="240" cy="165" r="16" fill="#ffffff"/><circle cx="168" cy="168" r="9" fill="#241d33"/><circle cx="243" cy="168" r="9" fill="#241d33"/><path d="M150 135 L180 130 M225 130 L255 135" stroke="#241d33" stroke-width="6"/><path d="M160 215 Q200 245 240 215" stroke="#241d33" stroke-width="10" fill="none"/><ellipse cx="70" cy="360" rx="28" ry="70" fill="#e2571b"/><ellipse cx="330" cy="360" rx="28" ry="70" fill="#e2571b"/><rect x="120" y="540" width="60" height="60" rx="20" fill="#241d33"/><rect x="220" y="540" width="60" height="60" rx="20" fill="#241d33"/></symbol>`,
   `<linearGradient id="home-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d2b4f"/><stop offset="1" stop-color="#3d4a73"/></linearGradient>`,
-  `<symbol id="home" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="url(#home-sky)"/><circle cx="1500" cy="220" r="90" fill="#fef6e4"/><rect y="860" width="1920" height="220" fill="#7ccf7c"/><rect x="200" y="520" width="360" height="340" fill="#e2571b"/><polygon points="180,520 380,380 580,520" fill="#241d33"/></symbol>`,
+  `<symbol id="home" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="url(#home-sky)"/><circle cx="1500" cy="220" r="90" fill="#fef6e4"/><circle cx="300" cy="120" r="4" fill="#fef6e4"/><circle cx="700" cy="200" r="3" fill="#fef6e4"/><circle cx="1100" cy="90" r="4" fill="#fef6e4"/><path d="M0 700 Q300 560 600 700 T1200 690 T1920 680 L1920 1080 L0 1080 Z" fill="#2c3a63"/><rect y="860" width="1920" height="220" fill="#7ccf7c"/><rect y="860" width="1920" height="20" fill="#5cb85c"/><rect x="200" y="520" width="360" height="340" fill="#e2571b"/><polygon points="180,520 380,380 580,520" fill="#241d33"/><rect x="250" y="600" width="80" height="80" fill="#f4b23c"/><rect x="420" y="700" width="90" height="160" fill="#241d33"/><rect x="1300" y="600" width="40" height="260" fill="#3d2b1f"/><circle cx="1320" cy="560" r="120" fill="#2f6b3a"/><ellipse cx="960" cy="1000" rx="500" ry="40" fill="#5cb85c"/></symbol>`,
 ].join("\n");
 
-export function demoFrame(index: number, motion: boolean): string {
+export function demoFrame(index: number, motion: boolean, heightPct = 55): string {
   const x = 500 + ((index * 173) % 700);
+  const h = Math.round((heightPct / 100) * 1080);
+  const w = Math.round((h * 2) / 3);
   const svg = [
     "```svg",
     `<use href="#home" x="0" y="0" width="1920" height="1080"/>`,
     `<circle cx="${300 + index * 90}" cy="200" r="40" fill="#f4b23c" opacity="0.8"/>`,
-    `<use href="#hero" x="${x}" y="380" width="320" height="480"/>`,
+    `<use href="#hero" x="${x}" y="${h > 1080 ? -Math.round(h * 0.05) : Math.min(860 - h, 380)}" width="${w}" height="${h}"/>`,
     "```",
   ];
   if (motion) {
@@ -94,7 +96,8 @@ export function demoHandler(opts: { criticScores?: number[]; shots?: number } = 
       case "ARTIST": {
         drawn++;
         const index = Number(user.match(/shot (\d+) of/)?.[1] ?? drawn);
-        return demoFrame(index, /MOTION shot/.test(user));
+        const shotType = user.match(/Shot type: ([^.]*)\./)?.[1] ?? "";
+        return demoFrame(index, /MOTION shot/.test(user), /close/i.test(shotType) ? 110 : 55);
       }
       case "CRITIC": {
         const s = scores.length > 1 ? scores.shift()! : (scores[0] ?? 8);

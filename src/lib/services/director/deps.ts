@@ -15,9 +15,11 @@ let catalogCache: { at: number; models: CrewModels; notes: string[]; vision: boo
 
 export async function directorDeps(env: NodeJS.ProcessEnv = process.env): Promise<DirectorDeps> {
   const ceiling = budgetFromEnv(env);
+  const conc = Number(env.DIRECTOR_CONCURRENCY);
+  const concurrency = Number.isInteger(conc) && conc >= 1 ? Math.min(conc, 6) : 3;
   const tavily = env.TAVILY_API_KEY ? { apiKey: env.TAVILY_API_KEY, baseUrl: env.TAVILY_BASE_URL } : null;
   if (env.LLM_PROVIDER === "mock") {
-    return { provider: createDemoProvider(), models: MOCK_MODELS, visionAvailable: true, modelNotes: ["mock provider: scripted demo crew, no model calls"], tavily: null, ceiling };
+    return { provider: createDemoProvider(), models: MOCK_MODELS, visionAvailable: true, modelNotes: ["mock provider: scripted demo crew, no model calls"], tavily: null, ceiling, concurrency };
   }
   const provider = createNemotronProvider(env);
   if (!provider) {
@@ -39,5 +41,5 @@ export async function directorDeps(env: NodeJS.ProcessEnv = process.env): Promis
       };
     }
   }
-  return { provider, models: catalogCache.models, visionAvailable: catalogCache.vision, modelNotes: catalogCache.notes, tavily, ceiling };
+  return { provider, models: catalogCache.models, visionAvailable: catalogCache.vision, modelNotes: catalogCache.notes, tavily, ceiling, concurrency };
 }

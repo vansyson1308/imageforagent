@@ -7,7 +7,7 @@ import { MAX_SVG_BYTES } from "@/lib/config/limits";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
 import { artistSystem, artistUser } from "@/lib/services/director/prompts";
 import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/director/camera";
-import { extractJsonBlock, extractSvgFragment, isNearlyBlank, missingRefs } from "@/lib/services/director/svgTools";
+import { extractJsonBlock, extractSvgFragment, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, visibleHeightPct, withoutUses } from "@/lib/services/director/svgTools";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
 
@@ -16,6 +16,8 @@ export interface Drawing {
   readonly ambient: AmbientLayer | null;
   /** Still render of the painting (critic input, before/after snapshots). */
   readonly png: Buffer;
+  /** Measured framing/lighting facts (the text critic's ground truth); `problems` is empty when every gate passed. */
+  readonly checks?: { readonly problems: readonly string[]; readonly facts: readonly string[] };
 }
 
 export interface DrawOutcome {
@@ -23,6 +25,27 @@ export interface DrawOutcome {
   /** LLM calls spent (1 = first try accepted). */
   readonly attempts: number;
   readonly lastError: string | null;
+}
+
+/**
+ * Mechanical clean-up (like stripping fences): motion tracks only take #rgb /
+ * #rrggbb, but models love "#ffffff80" to fade. Drop the alpha pair; every
+ * other value goes to motionSpecSchema untouched.
+ */
+/**
+ * Deterministic normalisation of the two track mistakes real runs showed:
+ * #rrggbbaa colours (tracks take 6-digit hex) and a track-level `ease`
+ * (ease belongs to each key: it is copied onto keys that lack one).
+ */
+function normalizeTrack(track: unknown): unknown {
+  if (!track || typeof track !== "object" || !Array.isArray((track as { keys?: unknown }).keys)) return track;
+  const { ease, ...t } = track as { keys: Array<Record<string, unknown>>; ease?: unknown };
+  const keys = t.keys.map((k, i) => {
+    let key = typeof k?.v === "string" && /^#[0-9a-fA-F]{8}$/.test(k.v) ? { ...k, v: k.v.slice(0, 7) } : k;
+    if (typeof ease === "string" && i > 0 && key && typeof key === "object" && key.ease === undefined) key = { ...key, ease };
+    return key;
+  });
+  return { ...t, keys };
 }
 
 const errText = (e: unknown) => (e instanceof AppError ? `${e.message}${e.hint ? ` ${e.hint}` : ""}` : e instanceof Error ? e.message : String(e));
@@ -34,7 +57,19 @@ const errText = (e: unknown) => (e instanceof AppError ? `${e.message}${e.hint ?
  */
 export async function validateDrawing(
   text: string,
-  opts: { castDefs: string; symbols: readonly string[]; aspectRatio: string; shot: ShotPlan; index: number; canvas: { w: number; h: number }; fps: number },
+  opts: {
+    castDefs: string;
+    symbols: readonly string[];
+    aspectRatio: string;
+    shot: ShotPlan;
+    index: number;
+    canvas: { w: number; h: number };
+    fps: number;
+    /** Cast ids of kind "character" (framing checks). */
+    characters?: readonly string[];
+    /** Quality checks on (off for the last repair attempt, so a shot is never lost to framing alone). */
+    strict?: boolean;
+  },
 ): Promise<Drawing> {
   const svg = extractSvgFragment(text);
   if (!svg) throw new Error("No SVG fragment found. Put the frame inside a ```svg block.");
@@ -58,7 +93,7 @@ export async function validateDrawing(
     }
     if (raw && typeof raw === "object") {
       const r = raw as { shapes?: unknown; tracks?: unknown };
-      ambient = { shapes: Array.isArray(r.shapes) ? r.shapes.slice(0, 12) : [], tracks: Array.isArray(r.tracks) ? r.tracks.slice(0, 12) : [] } as AmbientLayer;
+      ambient = { shapes: Array.isArray(r.shapes) ? r.shapes.slice(0, 12) : [], tracks: Array.isArray(r.tracks) ? r.tracks.slice(0, 12).map(normalizeTrack) : [] } as AmbientLayer;
       const probe = motionSpecSchema.safeParse(
         buildShotMotion({ index: opts.index, shotType: opts.shot.shotType, duration: opts.shot.durationSec, fps: opts.fps, canvas: opts.canvas, background: "#000000", ambient }),
       );
@@ -72,7 +107,52 @@ export async function validateDrawing(
     throw new Error(errText(e));
   }
   if (await isNearlyBlank(png)) throw new Error("The frame renders as one flat colour. Draw the background, the characters and the details.");
-  return { svg, ambient, png };
+  const checks = await qualityGates(svg, png, opts);
+  if (opts.strict !== false && checks.problems.length) throw new Error(`Framing/lighting check failed: ${checks.problems.join("; ")}.`);
+  return { svg, ambient, png, checks };
+}
+
+/**
+ * Deterministic framing/lighting gates, measured on the RENDER (not the
+ * markup), so transforms and groups cannot hide a tiny character:
+ *  - every character of the shot's cast is visible,
+ *  - the biggest one is tall enough for the shot type,
+ *  - a night scene is actually dark.
+ */
+async function qualityGates(
+  svg: string,
+  png: Buffer,
+  opts: { castDefs: string; aspectRatio: string; shot: ShotPlan; characters?: readonly string[]; canvas: { w: number; h: number } },
+): Promise<{ problems: string[]; facts: string[] }> {
+  const problems: string[] = [];
+  const facts: string[] = [];
+  const inShot = opts.shot.cast.filter((id) => opts.characters?.includes(id));
+  let biggest = 0;
+  for (const id of inShot) {
+    const stripped = withoutUses(svg, id);
+    if (stripped === svg) {
+      problems.push(`#${id} is in this shot but not placed: add <use href="#${id}" …/>`);
+      continue;
+    }
+    const pct = await visibleHeightPct(png, await renderArtwork(opts.castDefs, stripped, opts.aspectRatio, "1K"));
+    if (pct === 0) problems.push(`#${id} is placed but not visible (off-canvas or covered)`);
+    else facts.push(`#${id} visible, ${pct}% of the frame height`);
+    biggest = Math.max(biggest, pct);
+  }
+  const need = minSubjectPct(opts.shot.shotType);
+  if (inShot.length && biggest > 0) {
+    if (biggest < need) {
+      problems.push(
+        `the main character is only ${biggest}% of the frame height as rendered; a "${opts.shot.shotType}" needs at least ${need}% (use height="${Math.round((need / 100) * opts.canvas.h)}" or more with width = height × 2/3, and no shrinking transform${need >= 90 ? "; let the canvas crop the legs" : ""})`,
+      );
+    } else facts.push(`main character size OK for a ${opts.shot.shotType} (${biggest}% ≥ ${need}%)`);
+  }
+  const lum = await meanBrightness(png);
+  if (NIGHT_WORDS.test(opts.shot.description)) {
+    if (lum > 120) problems.push(`this is a night/dark scene but the frame's mean brightness is ${lum}/255 (should be ≤ 120): add a full-canvas <rect width="${opts.canvas.w}" height="${opts.canvas.h}" fill="#0b1330" fill-opacity="0.45"/> over the set BEFORE the characters, and warm glows around the light sources`);
+    else facts.push(`night lighting OK (mean brightness ${lum}/255)`);
+  }
+  return { problems, facts };
 }
 
 /** Artist (Super): draw → validate → repair (≤ maxRepairs) using the validator's hint. */
@@ -117,6 +197,8 @@ export async function drawShot(
         index: opts.index,
         canvas: ctx.canvas,
         fps: ctx.options.fps,
+        characters: opts.plan.cast.filter((c) => c.kind === "character").map((c) => c.id),
+        strict: attempt < maxAttempts - 1,
       });
       return { drawing, attempts: attempt + 1, lastError: null };
     } catch (e) {
@@ -143,6 +225,25 @@ export function shotDuration(shot: ShotPlan, frame: Pick<Frame, "voiceDuration" 
  * plain still.
  */
 export async function commitShot(
+  ctx: DirectorContext,
+  opts: { frame: Frame; shot: ShotPlan; index: number; drawing: Drawing; castDefs: string; patterns: Map<number, string>; background: string },
+): Promise<{ frame: Frame; kind: "clip" | "still"; note: string | null }> {
+  // Shots are drawn in parallel, but a commit rewrites the project's shared defs
+  // and renders against them: one commit per project at a time.
+  const prev = commitLocks.get(ctx.projectId) ?? Promise.resolve();
+  const run = prev.then(() => commitShotLocked(ctx, opts));
+  const tail = run.catch(() => undefined);
+  commitLocks.set(ctx.projectId, tail);
+  try {
+    return await run;
+  } finally {
+    if (commitLocks.get(ctx.projectId) === tail) commitLocks.delete(ctx.projectId);
+  }
+}
+
+const commitLocks = new Map<string, Promise<unknown>>();
+
+async function commitShotLocked(
   ctx: DirectorContext,
   opts: { frame: Frame; shot: ShotPlan; index: number; drawing: Drawing; castDefs: string; patterns: Map<number, string>; background: string },
 ): Promise<{ frame: Frame; kind: "clip" | "still"; note: string | null }> {

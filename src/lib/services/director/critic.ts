@@ -3,7 +3,7 @@ import { saveBuffer } from "@/lib/services/storage";
 import { callJson, recordStep, ReplyInvalidError, type DirectorContext } from "@/lib/services/director/context";
 import { criticSystem, criticUser } from "@/lib/services/director/prompts";
 import { critiqueSchema, type Critique, type ShotPlan } from "@/lib/services/director/schemas";
-import { toJpegDataUri } from "@/lib/services/director/svgTools";
+import { compositionStats, toJpegDataUri } from "@/lib/services/director/svgTools";
 import { snapshotPath } from "@/lib/services/director/cast";
 import type { Drawing } from "@/lib/services/director/artist";
 
@@ -50,7 +50,7 @@ export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan;
     }
   }
   try {
-    const stats = `svg ${Math.round(Buffer.byteLength(opts.drawing.svg) / 1024)} KB, ${(opts.drawing.svg.match(/<use\b/g) ?? []).length} symbol uses, ${(opts.drawing.svg.match(/<(path|rect|circle|ellipse|polygon)\b/g) ?? []).length} shapes${opts.drawing.ambient ? `, ambient ${opts.drawing.ambient.shapes.length} shapes/${opts.drawing.ambient.tracks.length} tracks` : ""}`;
+    const stats = `svg ${Math.round(Buffer.byteLength(opts.drawing.svg) / 1024)} KB, ${(opts.drawing.svg.match(/<(path|rect|circle|ellipse|polygon)\b/g) ?? []).length} shapes${opts.drawing.ambient ? `, ambient ${opts.drawing.ambient.shapes.length} shapes/${opts.drawing.ambient.tracks.length} tracks` : ""}. ${await compositionStats(opts.drawing.svg, opts.drawing.png, ctx.canvas)}.${checksText(opts.drawing)}`;
     const critique = await callJson(
       ctx,
       { ...base, model: ctx.models.fast, system: criticSystem("text"), user: criticUser({ shot: opts.shot, index: opts.index, svgExcerpt: opts.drawing.svg.slice(0, 6000), stats }) },
@@ -64,6 +64,14 @@ export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan;
     if (e instanceof ReplyInvalidError || e instanceof LlmError) return { critique: null, mode: "text", imagePath };
     throw e;
   }
+}
+
+/** The engine's measured gate results, stated as authoritative facts for the text critic. */
+function checksText(d: Drawing): string {
+  if (!d.checks) return "";
+  const ok = d.checks.facts.length ? ` PASSED: ${d.checks.facts.join("; ")}.` : "";
+  const bad = d.checks.problems.length ? ` FAILED: ${d.checks.problems.join("; ")}.` : "";
+  return `\nENGINE CHECKS (measured on the render, authoritative):${ok}${bad}`;
 }
 
 async function noteScore(ctx: DirectorContext, index: number, c: Critique, mode: string, imagePath: string): Promise<void> {

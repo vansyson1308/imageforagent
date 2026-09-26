@@ -37,8 +37,32 @@ export function namespaceIds(svg: string, prefix: string): string {
 export function artPattern(index: number, svg: string, canvas: CanvasSize): string {
   return (
     `<pattern id="${artPatternId(index)}" patternUnits="userSpaceOnUse" x="${-canvas.w / 2}" y="${-canvas.h / 2}" width="${canvas.w}" height="${canvas.h}">\n` +
-    `${namespaceIds(svg, `f${index}-`)}\n</pattern>`
+    `${flattenOpacity(namespaceIds(svg, `f${index}-`))}\n</pattern>`
   );
+}
+
+/**
+ * librsvg renders `opacity` through an offscreen layer, and inside a pattern
+ * that is then zoomed by the camera (scale > ~1.05) the layer is clipped to
+ * the unscaled canvas: a translucent night overlay stops short of the right
+ * and bottom edges. On basic shapes `opacity` is rewritten to the equivalent
+ * fill-/stroke-opacity, which paints without a layer.
+ */
+export function flattenOpacity(svg: string): string {
+  return svg.replace(/<(rect|circle|ellipse|path|polygon|polyline|line)\b([^>]*?)(\/?)>/g, (tag, name: string, attrs: string, close: string) => {
+    const m = attrs.match(/\sopacity\s*=\s*(["'])([^"']*)\1/);
+    if (!m) return tag;
+    const o = Number(m[2]);
+    if (!Number.isFinite(o)) return tag;
+    let rest = attrs.replace(m[0], "");
+    for (const k of ["fill-opacity", "stroke-opacity"]) {
+      const cur = rest.match(new RegExp(`\\s${k}\\s*=\\s*(["'])([^"']*)\\1`));
+      const base = cur && Number.isFinite(Number(cur[2])) ? Number(cur[2]) : 1;
+      const v = Math.round(Math.min(1, Math.max(0, base * o)) * 1000) / 1000;
+      rest = cur ? rest.replace(cur[0], ` ${k}="${v}"`) : `${rest} ${k}="${v}"`;
+    }
+    return `<${name}${rest}${close}>`;
+  });
 }
 
 export type CameraMove = "dollyIn" | "dollyOut" | "panLeft" | "panRight" | "tiltUp" | "tiltDown" | "drift";
