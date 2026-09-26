@@ -132,7 +132,7 @@ describe("director svg tools", () => {
     const png = await renderArtwork(DEMO_LIBRARY, svg, "16:9", "1K");
     const s = await compositionStats(svg, png, canvas);
     expect(s).toContain("#home = full background");
-    expect(s).toContain("#hero 28% of frame height at (47%, 78%)");
+    expect(s).toContain("#hero 28% of frame height, centre 47% across, feet 78% down");
     expect(s).toMatch(/mean brightness \d+\/255/);
   });
 
@@ -205,6 +205,8 @@ describe("director validators", () => {
     await expect(validateDrawing(shrunk, gated)).rejects.toThrow(/main character is only \d+% of the frame height as rendered/);
     await expect(validateDrawing('```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><circle cx="50" cy="50" r="40" fill="#fff"/>\n```', gated)).rejects.toThrow(/#hero is in this shot but not placed: add <use href="#hero"/);
     await expect(validateDrawing('```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><use href="#hero" x="800" y="200" width="480" height="720"/>\n```', gated)).resolves.toBeTruthy();
+    const pip = '```svg\n<rect width="1920" height="1080" fill="#335"/><use href="#home" x="300" y="100" width="600" height="340"/><use href="#hero" x="800" y="200" width="480" height="720"/>\n```';
+    await expect(validateDrawing(pip, { ...gated, sets: ["home"] })).rejects.toThrow(/#home is a set \(a background\), but it is placed 600 wide like an object/);
     await expect(validateDrawing(tiny, { ...gated, strict: false })).resolves.toBeTruthy();
     expect(minSubjectPct("Close-up")).toBe(75);
     expect(minSubjectPct("Cận cảnh")).toBe(75);

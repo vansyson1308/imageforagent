@@ -67,6 +67,7 @@ export async function validateDrawing(
     fps: number;
     /** Cast ids of kind "character" (framing checks). */
     characters?: readonly string[];
+    sets?: readonly string[];
     /** Quality checks on (off for the last repair attempt, so a shot is never lost to framing alone). */
     strict?: boolean;
   },
@@ -122,7 +123,7 @@ export async function validateDrawing(
 async function qualityGates(
   svg: string,
   png: Buffer,
-  opts: { castDefs: string; aspectRatio: string; shot: ShotPlan; characters?: readonly string[]; canvas: { w: number; h: number } },
+  opts: { castDefs: string; aspectRatio: string; shot: ShotPlan; characters?: readonly string[]; sets?: readonly string[]; canvas: { w: number; h: number } },
 ): Promise<{ problems: string[]; facts: string[] }> {
   const problems: string[] = [];
   const facts: string[] = [];
@@ -146,6 +147,13 @@ async function qualityGates(
         `the main character is only ${biggest}% of the frame height as rendered; a "${opts.shot.shotType}" needs at least ${need}% (use height="${Math.round((need / 100) * opts.canvas.h)}" or more with width = height × 2/3, and no shrinking transform${need >= 75 ? "; let the canvas crop the legs" : ""})`,
       );
     } else facts.push(`main character size OK for a ${opts.shot.shotType} (${biggest}% ≥ ${need}%)`);
+  }
+  // A set is a background: used full-frame, never as a small picture on top of another set
+  for (const m of svg.matchAll(/<use\b([^>]*)>/g)) {
+    const id = m[1].match(/href\s*=\s*["']#([^"']+)/)?.[1];
+    if (!id || !opts.sets?.includes(id)) continue;
+    const w = Number(m[1].match(/\bwidth\s*=\s*["']?([\d.]+)/)?.[1] ?? opts.canvas.w);
+    if (w < opts.canvas.w * 0.9) problems.push(`#${id} is a set (a background), but it is placed ${Math.round(w)} wide like an object: use it full-frame <use href="#${id}" x="0" y="0" width="${opts.canvas.w}" height="${opts.canvas.h}"/> as the first element, and only one set per shot`);
   }
   const lum = await meanBrightness(png);
   if (NIGHT_WORDS.test(opts.shot.description)) {
@@ -198,6 +206,7 @@ export async function drawShot(
         canvas: ctx.canvas,
         fps: ctx.options.fps,
         characters: opts.plan.cast.filter((c) => c.kind === "character").map((c) => c.id),
+        sets: opts.plan.cast.filter((c) => c.kind === "set").map((c) => c.id),
         strict: attempt < maxAttempts - 1,
       });
       return { drawing, attempts: attempt + 1, lastError: null };

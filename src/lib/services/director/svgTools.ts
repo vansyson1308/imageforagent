@@ -92,7 +92,7 @@ export async function compositionStats(svg: string, png: Buffer, canvas: { w: nu
     const x = Number.isFinite(attr("x")) ? attr("x") : 0;
     const y = Number.isFinite(attr("y")) ? attr("y") : 0;
     const full = Number.isFinite(w) && w >= canvas.w * 0.9 && h >= canvas.h * 0.9;
-    uses.push(full ? `#${id} = full background` : `#${id} ${Math.round((h / canvas.h) * 100)}% of frame height at (${Math.round(((x + (w || 0) / 2) / canvas.w) * 100)}%, ${Math.round(((y + h) / canvas.h) * 100)}%)`);
+    uses.push(full ? `#${id} = full background` : `#${id} ${Math.round((h / canvas.h) * 100)}% of frame height, centre ${Math.round(((x + (w || 0) / 2) / canvas.w) * 100)}% across, feet ${Math.round(((y + h) / canvas.h) * 100)}% down (80–100% = standing on the ground, normal)`);
   }
   const stats = await sharp(png).stats();
   const lum = Math.round(0.2126 * stats.channels[0].mean + 0.7152 * stats.channels[1].mean + 0.0722 * stats.channels[2].mean);
