@@ -18,7 +18,7 @@ NVIDIA Nemotron 3 (Ultra, Super, Nano) · Nebius Token Factory · Tavily · Next
 - **Demo:** https://studio-production-049c.up.railway.app (passcode: see Testing instructions)
 - **Showcase (no passcode):** https://studio-production-049c.up.railway.app/showcase
 - **Code (MIT):** https://github.com/vansyson1308/imageforagent
-- **Video:** ⚠ OWNER: paste the public YouTube URL after uploading `demo/video/director_demo.mp4` (see `docs/hackathon/VIDEO_RUNBOOK.md`)
+- **Video:** ⚠ OWNER: paste the public YouTube URL after uploading it (Devpost requires YouTube/Vimeo). Direct copy: https://studio-production-049c.up.railway.app/showcase/demo-video.mp4
 
 ## Description
 
