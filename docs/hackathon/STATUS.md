@@ -12,9 +12,9 @@ _Last updated: 2026-09-26 (live session: keys + full network)_
 - [x] **Phase 5**: `filmAssembler.ts` · `GET /api/projects/:id/film.mp4`
 - [x] **Phase 6**: demo mode (passcode, caps, 24 h cleanup, daily token budget) · Dockerfile · CI · **Railway: deployed and verified end to end** (unlock → SSE → real Nemotron → film; the tea-house showcase film was made there)
 - [x] **Phase 7**: showcase gallery + 3 real films (EN on Railway; VI + JA on the same code locally, see "Where things ran") · Tavily researcher tested against a fake server only (no key, B2)
-- [~] **Phase 8**: bench 10 prompts × {super-only, crew} + an **independent VLM judge**. See [EVAL_RESULTS.md](EVAL_RESULTS.md). Config C (Tavily) needs a key (B2)
+- [x] **Phase 8**: bench 10 prompts × {super-only, crew}, 20 real runs, **independent VLM judge**: crew 5.49 vs 5.08 (wins 6, losses 2), 1.8× cost. See [EVAL_RESULTS.md](EVAL_RESULTS.md). Config C (Tavily) needs a key (B2)
 - [x] **Phase 9**: README top (Token Factory + Nemotron roles, architecture, real-film GIF), ADR-017 (updated with live findings), AGENTS.md
-- [~] **Phase 10**: video pipeline; real recording done (local app, real models); final build after the eval chart exists
+- [x] **Phase 10**: `demo/video/director_demo.mp4` built: **172 s, 1920×1080**, narrated (espeak-ng) + `director_demo.en.srt`, from a real recording (local app, real models) and the hosted showcase page. Not committed (38 MB, gitignored): the owner uploads it
 - [~] **Phase 11**: DEVPOST_SUBMISSION.md (owner fields marked ⚠) · PR #3 (draft)
 
 ## Where things ran (honest)
@@ -24,8 +24,9 @@ _Last updated: 2026-09-26 (live session: keys + full network)_
 ## Numbers (real, this session)
 - Tests: **554 passed / 4 skipped** (46 files); baseline was 487/6. lint, tsc and build are clean.
 - Latest 4-shot local film: 98 s, $0.031 (sequential was 407 s).
-- Showcase: tea-house 8/8 shots $0.111 · den-long 7/7 $0.058 · kitsune: see the showcase index.
-- **Spend**: see `evidence/spend-ledger.jsonl` (every paid call, dropped runs included; estimates are labelled). Well under the $15 stop line.
+- Showcase: tea-house 8/8 shots $0.111 · den-long 7/7 $0.058 · kitsune 7/7 $0.125.
+- Bench: 20 runs, $1.34 of crew/Super spend + $0.01 judge.
+- **Spend: $3.16 total** (`evidence/spend-ledger.jsonl`: every paid call, dropped runs included, estimates labelled). Well under the $15 stop line.
 
 ## What changed after the first live runs (quality)
 D17 measured render gates · D18 per-symbol library · D19 track normalisation · D20 parallel shots · D21 pattern-opacity fix · D22 human kit · D23 retry on dropped streams · D24 animal kit + head-cut gate · D25 bench-driven gate fixes. Each came from a real failure in a real run (evidence in `evidence/showcase-v1/`, `bench-*-pregate*.jsonl`).

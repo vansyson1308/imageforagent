@@ -213,8 +213,8 @@ async function main() {
       judge: rs.some((r) => r.judge !== null) ? r2(mean(rs.filter((r) => r.judge !== null).map((r) => r.judge!))) : null,
       wall: r2(mean(rs.map((r) => r.wallSec))),
       tokens: Math.round(mean(rs.map((r) => r.tokens))),
-      usd: r2(rs.reduce((a, r) => a + r.usd, 0) * 1000) / 1000,
-      usdPerMin: r2(mean(rs.filter((r) => r.usdPerMinute !== null).map((r) => r.usdPerMinute!)) * 1000) / 1000,
+      usd: Math.round(rs.reduce((a, r) => a + r.usd, 0) * 1e4) / 1e4,
+      usdPerMin: Math.round(mean(rs.filter((r) => r.usdPerMinute !== null).map((r) => r.usdPerMinute!)) * 1e4) / 1e4,
     };
   });
 
@@ -231,9 +231,11 @@ async function main() {
     "",
     "| Config | Runs (done) | Judge score (0–10) | First-pass render % | Repairs / shot | Critic before → after | Lint left | Wall s | Tokens / run | USD total | USD / finished min |",
     "|---|---|---|---|---|---|---|---|---|---|---|",
-    ...agg.map((a) => `| ${a.config} | ${a.runs} (${a.done}) | ${a.judge ?? "—"} | ${a.firstPass} | ${a.repairs} | ${a.before ?? "—"} → ${a.after ?? "—"} | ${a.lint} | ${a.wall} | ${a.tokens.toLocaleString("en")} | $${a.usd} | $${a.usdPerMin} |`),
+    ...agg.map((a) => `| ${a.config} | ${a.runs} (${a.done}) | ${a.judge ?? "—"} | ${a.firstPass} | ${a.repairs} | ${a.before ?? "—"} → ${a.after ?? "—"} | ${a.lint} | ${a.wall} | ${a.tokens.toLocaleString("en")} | $${a.usd.toFixed(3)} | $${a.usdPerMin.toFixed(3)} |`),
     "",
     "![Director benchmark chart](eval/chart.png)",
+    "",
+    ...pairedSection(rows),
     "",
     "## Per run",
     "",
@@ -246,6 +248,28 @@ async function main() {
   ].join("\n");
   writeFileSync(`${out}/EVAL_RESULTS.md`, md);
   console.log(`wrote ${out}/EVAL_RESULTS.md`);
+}
+
+/** Per prompt, crew vs super-only on the independent judge: wins, losses, mean difference. */
+function pairedSection(rows: Row[]): string[] {
+  const by = (cfg: string) => new Map(rows.filter((r) => r.config === cfg && r.judge !== null).map((r) => [r.prompt, r]));
+  const a = by("super-only");
+  const b = by("crew");
+  const pairs = [...b.keys()].filter((k) => a.has(k)).map((k) => ({ prompt: k, a: a.get(k)!, b: b.get(k)! }));
+  if (!pairs.length) return [];
+  const diffs = pairs.map((p) => p.b.judge! - p.a.judge!);
+  const wins = diffs.filter((d) => d > 0.25).length;
+  const losses = diffs.filter((d) => d < -0.25).length;
+  return [
+    "## Paired by prompt (independent judge)",
+    "",
+    `Crew − super-only on the same prompt: mean **${diffs.reduce((x, y) => x + y, 0) / diffs.length >= 0 ? "+" : ""}${r2(diffs.reduce((x, y) => x + y, 0) / diffs.length)}**; the crew is better on **${wins}**, worse on **${losses}**, and ties (±0.25) on **${pairs.length - wins - losses}** of ${pairs.length} prompts. Cost ratio: **${r2(pairs.reduce((x, p) => x + p.b.usd, 0) / Math.max(1e-9, pairs.reduce((x, p) => x + p.a.usd, 0)))}×**.`,
+    "",
+    "| Prompt | Judge super-only | Judge crew | Δ | USD super-only | USD crew |",
+    "|---|---|---|---|---|---|",
+    ...pairs.map((p) => `| ${p.prompt} | ${p.a.judge} | ${p.b.judge} | ${p.b.judge! - p.a.judge! >= 0 ? "+" : ""}${r2(p.b.judge! - p.a.judge!)} | $${p.a.usd.toFixed(4)} | $${p.b.usd.toFixed(4)} |`),
+    "",
+  ];
 }
 
 /** Small multiples (one panel per metric, one bar per config): no dual axes. Validated palette slots 1–3. */

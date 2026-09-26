@@ -41,7 +41,12 @@ The result plays in the browser: an animated film with camera moves, local text-
 - **Safety by construction:** LLM output never touches the renderer directly. Everything passes zod, then the engine's security-critical SVG sanitizer (unchanged), then the construct/motion validators. Stories and web snippets are quoted as data (prompt-injection guard). Hard server-side budgets cover shots, tokens, USD and wall time.
 - **Animation without changing the engine:** each painting becomes a defs pattern, and camera tracks move it. That gives real dolly/pan/tilt on vector art, deterministic and rendered at full resolution.
 - **Live UX:** progress streams over Server-Sent Events from the Director loop (no job queue). Every step is persisted (`DirectorRun`/`DirectorStep`), so traces are auditable and shown in the UI and the showcase.
-- **Public demo:** Docker (Ubuntu + ffmpeg + espeak-ng) on Railway with a persistent volume, a passcode gate, per-session caps, 24 h cleanup and a daily token budget. CI runs lint, typecheck, 537 tests and the build.
+- **Public demo:** Docker (Ubuntu + ffmpeg + espeak-ng) on Railway with a persistent volume, a passcode gate, per-session caps, 24 h cleanup and a daily token budget. CI runs lint, typecheck, 554 tests and the build.
+
+### Results (real runs, `docs/hackathon/EVAL_RESULTS.md`)
+- 10 stories (EN/VI/JA) × {Super-alone, full crew}, 20 real runs. An **independent vision judge** (`google/gemma-3-27b-it` on Token Factory, not part of the crew, blind to config) scores every final frame.
+- The crew wins on **6 of 10** stories, loses on 2 and ties on 2 (mean **5.49 vs 5.08**). It costs **1.8×** more: **$0.23 vs $0.12 per finished minute** of film.
+- Showcase: three finished films with full traces (8/8, 7/7 and 7/7 shots, $0.06–0.13 each).
 
 ### Challenges
 - LLMs writing SVG make real mistakes: dangling `#id` references render as nothing, and `<svg>` wrappers get rejected by the sanitizer. We turned every engine error into a repair hint and added checks for silent failures (dangling references, blank renders).
@@ -82,30 +87,55 @@ The first user is a daily storytelling YouTube channel that needs a new short il
 - **Tavily:** the official Python client source was enough to derive exact request/response shapes for a no-SDK `fetch` integration. Clean API.
 
 ## What was significantly updated during the Submission Period
-Everything after commit `c9093a3` (2026-07-15, tag `pre-hackathon-baseline`). `git diff --shortstat c9093a3..HEAD`: **192 files changed, 22,688 insertions** (as of 2026-09-25, before the final docs commits).
+Everything after commit `c9093a3` (2026-07-15, tag `pre-hackathon-baseline`). `git diff --shortstat c9093a3..HEAD`: **233 files changed, 39767 insertions(+), 507 deletions(-)** (as of 2026-09-26, before the final docs commit).
 
 **Human summary.** Before the period, the repo was a zero-key *still-storyboard* engine for external coding agents. During the period we added:
 1. **Motion** (keyframe tracks, procedural rigs, no-slip walk, camera language), **glTF 2.0** export with skinned figures, **IK**, faces and lip-sync.
 2. **Film pipeline:** control passes for AI video, dialogue TTS + broadcast-grade mix, scenes/transitions, EDL/OTIO, storyboard lint, and **SMPTE DCP mastering**. Plus a 20-minute film made with the engine.
-3. **The whole Director layer (this submission):** Nemotron provider layer on Token Factory, the crew loop (plan → cast → draw/repair with measured render gates → critic/revise → editor), Tavily researcher, SSE API, DirectorPanel UI (VI/EN), server-side MP4, demo mode, Docker + Railway deploy, CI, showcase gallery, eval bench, video pipeline.
+3. **The whole Director layer (this submission):** Nemotron provider layer on Token Factory, the crew loop (plan → cast with the parametric human/animal kit → draw/repair with measured render gates → critic/revise → editor), Tavily researcher, SSE API, DirectorPanel UI (VI/EN), server-side MP4, demo mode, Docker + Railway deploy, CI, showcase gallery, eval bench, video pipeline.
 
 **Commits** (`git log --reverse --date=short c9093a3..HEAD`):
 ```
 2026-09-24 a0d7ea8 feat: M1-M3 motion engine — keyframe tracks, procedural rigs, POST /api/motion
 2026-09-24 806c0ec feat: M4 motion in projects — PUT /api/frames/:id/motion, clip export, film assembly
 2026-09-24 c8fa059 feat: M5 glTF 2.0 export — bridge from the vector engine to real 3D renderers
+2026-09-24 2366b9a feat: motion-bounce example (squash & stretch, on twos) + verified Blender bridge
+2026-09-24 d2efc71 docs: motion + glTF docs (README EN/VI, AGENTS, ADR-014/015) + film roadmap; fix: face cap on glTF export
+2026-09-24 5f721e0 test: make finish-premium PERF test load-invariant; refactor: figure exposes joints + optional face
 2026-09-24 6d5680b feat: N1a analytic 2-bone IK rig, figure face, decalOf surface features
 2026-09-24 b4844e5 feat: N1b glTF skins — every figure exports as a real Armature
 2026-09-24 f25f9b1 feat: N2 control passes for AI video — depth, segmentation, normal, OpenPose
 2026-09-24 ee4c717 feat: N3 audio — dialogue (local TTS or WAV), lip-sync, soundtrack, broadcast-grade mix
 2026-09-24 a977b02 feat: N4 sequence & editorial — scenes, transitions, EDL/OTIO, storyboard lint
 2026-09-24 d2e74ea feat: N5 DCP mastering — SMPTE DCP from any export (J2K X'Y'Z', MXF, CPL/PKL)
+2026-09-24 323f975 docs: film pipeline N1–N5 (README EN/VI, AGENTS, ADR-016, roadmap status)
+2026-09-24 dd4c99c Merge PR #1: from storyboard to theatrical DCP
+2026-09-24 47a2b7b feat: solid attach to figure joints + feature-length limits
 2026-09-24 9e55ee9 feat: "Đèn Ông Sao" — a 20-minute animated film made entirely with this engine
+2026-09-24 59e1907 docs: film README — synopsis, chapters, how to reproduce, honest notes
+2026-09-24 2c5a732 fix: a dissolve after a cut broke film assembly (concat/xfade timebase)
+2026-09-24 54c3834 fix: export silently dropped the mix for films over 15 minutes
+2026-09-24 9f922bd docs: the finished film — poster, 1-minute trailer, contact sheet, production record
+2026-09-24 96a21c6 docs: film production numbers from the log (15,108 frames, 69.5 min); drop unverified byte-for-byte claim
+2026-09-24 85c37f1 feat(dcp): --mbps for 2K masters below the 250 Mbit/s cap
+2026-09-24 081cec3 docs: the film's DCP — mastered, validated (ClairMeta, asdcplib, SMPTE XSDs, PKL hashes)
+2026-09-24 141d71b docs: put the film at the top of the README — autoplaying highlights + the full 20-minute film
+2026-09-25 09f3590 Merge pull request #2 from vansyson1308/claude/modest-faraday-yqz2ds
 2026-09-25 43bc610 feat(providers): Nemotron provider layer on Token Factory + mock, hackathon docs
 2026-09-25 9eb89ef feat(director): Nemotron crew loop — plan, cast, artist+repair, vision critic, editor, research
 2026-09-25 673894b feat(director): SSE API, DirectorPanel (VI/EN), film.mp4 assembler, demo gate
 2026-09-25 c9f686d feat(deploy): Dockerfile (Ubuntu 24.04 + Node 22, ffmpeg, espeak-ng, migrate on boot), CI, showcase gallery
+2026-09-25 54c0fa1 fix(deploy): drop VOLUME from Dockerfile (Railway rejects it); showcase generator + HTTP client
 2026-09-25 27c84f3 feat(eval): director_bench — 10 fixed prompts × super-only / crew / crew+tavily
+2026-09-25 a4b8bfb docs: README Director section + architecture diagram, ADR-017, video pipeline, Devpost draft, status
+2026-09-26 3b0efc8 docs(hackathon): B3 re-check 2026-09-26 — egress to Nebius and Railway still 403
+2026-09-26 fc8d059 feat(director): measured quality gates, per-symbol cast library, parallel shots
+2026-09-26 6a297d8 feat(director): parametric character kit, connected-shape gate, honest critic wording
+2026-09-26 39ffa7a fix(director): sets must be full-frame backgrounds; clearer feet-position stat for the critic
+2026-09-26 494e91b feat(showcase): first real film on the hosted demo (tea-house, EN) + wording fixes
+2026-09-26 5295e90 feat(director): animal kit, head-cut gate, recorder fixes, README GIF
+2026-09-26 d8c6def fix(director): animals must use the kit, swarm-aware gates, tolerant ambient JSON
+2026-09-26 5423e27 feat(showcase): three real films (EN on the hosted demo, VI + JA locally)
 ```
 (Full list including docs/fix commits: `git log c9093a3..HEAD`. Regenerate before submitting.)
 
