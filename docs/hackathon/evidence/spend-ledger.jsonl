@@ -75,3 +75,4 @@
 {"at":"2026-09-26T03:50:34.476Z","script":"bench","label":"A:ja-sakura","model":"super-only","tokensIn":67057,"tokensOut":0,"costUsd":0.0456555}
 {"at":"2026-09-26T03:55:43.211Z","script":"bench-judge","label":"B:ja-sakura","model":"google/gemma-3-27b-it","tokensIn":3590,"tokensOut":0,"costUsd":0.0027191999999999997}
 {"at":"2026-09-26T03:55:43.211Z","script":"bench","label":"B:ja-sakura","model":"crew","tokensIn":172824,"tokensOut":0,"costUsd":0.1190697}
+{"at":"2026-09-26T04:25:00.000Z","script":"video-recording","label":"smooth demo video live run (record-smooth.ts, local)","model":"crew","tokensIn":30451,"tokensOut":59127,"costUsd":0.0675}
