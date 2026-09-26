@@ -23,6 +23,8 @@ model Project {
   updatedAt     DateTime @updatedAt
   frames        Frame[]
   assets        Asset[]
+  directorRuns  DirectorRun[]
+  demoSession   String? // DEMO_MODE: phiên tạo project (giới hạn/xoá sau 24h)
 }
 
 model Frame {
@@ -67,4 +69,56 @@ model Asset {
   mimeType  String
   order     Int      @default(0)
   createdAt DateTime @default(now())
+}
+
+// ── Storyboard Studio Director (Nemotron crew) ──
+// Một lần chạy Director trên một project: story → plan → cast → vẽ → critic → editor.
+model DirectorRun {
+  id           String         @id @default(cuid())
+  projectId    String
+  project      Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  story        String
+  language     String         @default("en")
+  style        String         @default("storybook")
+  status       String         @default("running") // running|done|failed|cancelled|budget_exceeded
+  provider     String         @default("nemotron") // nemotron|mock
+  models       String // JSON {strong, mid, fast, vision}
+  config       String // JSON budgets + options (critic, research…)
+  bible        String? // JSON Cast & Set Bible (+ reference notes)
+  summary      String? // JSON final metrics (shots, repairs, critic uplift, lint)
+  tokensIn     Int            @default(0)
+  tokensOut    Int            @default(0)
+  costUsd      Float          @default(0)
+  error        String?
+  startedAt    DateTime       @default(now())
+  finishedAt   DateTime?
+  steps        DirectorStep[]
+
+  @@index([projectId])
+}
+
+model DirectorStep {
+  id            String      @id @default(cuid())
+  runId         String
+  run           DirectorRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  seq           Int // thứ tự trong run
+  shotIndex     Int? // frame index (1-based) — null cho bước cấp project
+  role          String // researcher|director|cast|artist|critic|editor|dialogue|system
+  model         String
+  action        String // plan|defs|draw|repair|critique|revise|lint-fix|continuity|voice|research…
+  promptHash    String?
+  outputSummary String?
+  output        String? // JSON/text đầu ra (cắt ngắn) — trace đầy đủ
+  critiqueScore Float?
+  attempt       Int         @default(0)
+  latencyMs     Int         @default(0)
+  tokensIn      Int         @default(0)
+  tokensOut     Int         @default(0)
+  costUsd       Float       @default(0)
+  imagePath     String? // snapshot PNG (critic before/after) — storage relative
+  error         String?
+  createdAt     DateTime    @default(now())
+
+  @@unique([runId, seq])
+  @@index([runId])
 }

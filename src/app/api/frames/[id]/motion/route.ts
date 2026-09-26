@@ -4,8 +4,8 @@ import { AppError } from "@/lib/services/apiError";
 import { handleRoute } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { motionSpecSchema } from "@/lib/validation/motionSchema";
-import { sanitizeSvg } from "@/lib/services/svgRenderer";
-import { clearFrameMotion, renderFrameMotion } from "@/lib/services/clipService";
+import { clearFrameMotion } from "@/lib/services/clipService";
+import { writeFrameMotion } from "@/lib/services/frameWrites";
 import { withImageUrl } from "@/lib/services/dto";
 
 interface RouteContext {
@@ -30,47 +30,9 @@ export async function PUT(req: Request, ctx: RouteContext): Promise<Response> {
     } catch {
       throw new AppError("VALIDATION", "Body không phải JSON hợp lệ.");
     }
-    const body = putMotionSchema.parse(raw);
-    const rawMotion = (raw as { motion: unknown }).motion;
-
-    const frame = await prisma.frame.findUnique({ where: { id } });
-    if (!frame) throw new AppError("NOT_FOUND", "Không tìm thấy frame.");
-    const project = await prisma.project.findUnique({
-      where: { id: frame.projectId },
-      include: { assets: true },
-    });
-    if (!project) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
-
-    // Reject layer tĩnh không an toàn TRƯỚC khi lưu
-    if (body.motion.backdrop) sanitizeSvg(body.motion.backdrop, "frame");
-    if (body.motion.overlay) sanitizeSvg(body.motion.overlay, "frame");
-
-    const saved = await prisma.frame.update({
-      where: { id },
-      data: { motionSpec: JSON.stringify(rawMotion) },
-    });
-
-    let result;
-    try {
-      result = await renderFrameMotion(project, saved);
-    } catch (err: unknown) {
-      const message =
-        err instanceof AppError
-          ? err.hint
-            ? `${err.message} — ${err.hint}`
-            : err.message
-          : err instanceof Error
-            ? err.message
-            : "Render lỗi.";
-      await prisma.frame
-        .update({ where: { id }, data: { status: "failed", errorMsg: message } })
-        .catch(() => {});
-      throw err;
-    }
-
-    const fresh = await prisma.frame.findUnique({ where: { id } });
-    if (!fresh) throw new AppError("NOT_FOUND", "Frame đã bị xoá trong lúc render.");
-    return Response.json({ ...withImageUrl(fresh), stats: result.stats, warnings: result.warnings });
+    putMotionSchema.parse(raw);
+    const result = await writeFrameMotion(id, (raw as { motion: unknown }).motion);
+    return Response.json({ ...withImageUrl(result.frame), stats: result.stats, warnings: result.warnings });
   });
 }
 
