@@ -90,7 +90,9 @@ export async function validateDrawing(
     try {
       raw = extractJsonBlock(text);
     } catch (e) {
-      throw new Error(`The \`\`\`json ambient block is not valid JSON: ${errText(e)}`);
+      // Last (lenient) attempt: keep the shot and drop the broken ambient layer (the camera move stays)
+      if (opts.strict === false) raw = null;
+      else throw new Error(`The \`\`\`json ambient block is not valid JSON: ${errText(e)}`);
     }
     if (raw && typeof raw === "object") {
       const r = raw as { shapes?: unknown; tracks?: unknown };
@@ -128,6 +130,10 @@ async function qualityGates(
   const problems: string[] = [];
   const facts: string[] = [];
   const inShot = opts.shot.cast.filter((id) => opts.characters?.includes(id));
+  // Size targets are the kit-built figures (people, animals); drawn "others" (swarms, spirits) only need to be visible
+  const isKit = (id: string) => opts.castDefs.includes(`id="${id}-torso"`) || opts.castDefs.includes(`id="${id}-fur"`);
+  const kitIds = new Set(inShot.filter(isKit));
+  const filmHasKit = (opts.characters ?? []).some(isKit);
   let biggest = 0;
   for (const id of inShot) {
     const stripped = withoutUses(svg, id);
@@ -139,9 +145,10 @@ async function qualityGates(
     if (pct === 0) problems.push(`#${id} is placed but not visible (off-canvas or covered)`);
     else if (touchesTop) problems.push(`#${id}'s head is cut off by the top edge of the frame: move it down so the whole head is inside (y ≥ 0); in a close-up let the canvas crop the legs at the bottom, never the head`);
     else facts.push(`#${id} visible, ${pct}% of the frame height, head fully in frame`);
-    biggest = Math.max(biggest, pct);
+    if (kitIds.has(id) || kitIds.size === 0) biggest = Math.max(biggest, pct);
   }
-  const need = minSubjectPct(opts.shot.shotType);
+  // A shot whose only characters are drawn "others" (a swarm, a spirit) in a film with kit figures: half the size rule
+  const need = Math.round(minSubjectPct(opts.shot.shotType) * (kitIds.size === 0 && filmHasKit ? 0.5 : 1));
   if (inShot.length && biggest > 0) {
     if (biggest < need) {
       problems.push(

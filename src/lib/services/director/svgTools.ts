@@ -24,7 +24,17 @@ export function extractSvgFragment(text: string): string {
 export function extractJsonBlock(text: string): unknown | null {
   const m = text.match(/```json\s*\n([\s\S]*?)```/i);
   if (!m) return null;
-  return JSON.parse(m[1]);
+  try {
+    return JSON.parse(m[1]);
+  } catch (e) {
+    // The two slips real replies make: trailing commas and // line comments. Anything else stays an error.
+    const lenient = m[1].replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1");
+    try {
+      return JSON.parse(lenient);
+    } catch {
+      throw e;
+    }
+  }
 }
 
 /** Ids declared in a fragment. */

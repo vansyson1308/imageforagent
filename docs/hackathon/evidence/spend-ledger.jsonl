@@ -26,3 +26,9 @@
 {"at":"2026-09-26T02:15:35.182Z","script":"showcase","label":"den-long","model":"crew","tokensIn":36123,"tokensOut":59999,"costUsd":0.06700848}
 {"at":"2026-09-26T02:30:00.000Z","script":"bench-dropped","label":"B:en-lighthouse local (stopped to rebuild with the head-cut gate; ESTIMATE)","model":"crew","tokensIn":0,"tokensOut":0,"costUsd":0.06}
 {"at":"2026-09-26T02:19:20.855Z","script":"showcase","label":"kitsune","model":"crew","tokensIn":32546,"tokensOut":65412,"costUsd":0.07166598}
+{"at":"2026-09-26T02:38:25.234Z","script":"showcase","label":"den-long","model":"crew","tokensIn":30508,"tokensOut":52018,"costUsd":0.05833836}
+{"at":"2026-09-26T02:38:34.782Z","script":"bench-judge","label":"A:en-lighthouse","model":"google/gemma-3-27b-it","tokensIn":2300,"tokensOut":0,"costUsd":0.0017687999999999998}
+{"at":"2026-09-26T02:38:34.783Z","script":"bench","label":"A:en-lighthouse","model":"super-only","tokensIn":75245,"tokensOut":0,"costUsd":0.0548799}
+{"at":"2026-09-26T02:43:31.133Z","script":"bench-judge","label":"B:en-lighthouse","model":"google/gemma-3-27b-it","tokensIn":1810,"tokensOut":0,"costUsd":0.0013848}
+{"at":"2026-09-26T02:43:31.134Z","script":"bench","label":"B:en-lighthouse","model":"crew","tokensIn":129113,"tokensOut":0,"costUsd":0.09208542}
+{"at":"2026-09-26T02:43:42.976Z","script":"showcase","label":"kitsune","model":"crew","tokensIn":49516,"tokensOut":100988,"costUsd":0.10887672}

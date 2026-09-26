@@ -220,6 +220,10 @@ export const critterSchema = z.object({
 });
 export type CritterSpec = z.infer<typeof critterSchema>;
 
+/** Characters whose name/look names an animal (EN · VI · JA) must use the animal kit. */
+export const ANIMAL_WORDS =
+  /\b(fox|kitsune|cat|kitten|rabbit|bunny|hare|bear|tanuki|raccoon|dog|puppy|mouse|rat|buffalo|cow|ox|bull|goat|sheep|pig|monkey|squirrel|hedgehog|otter|wolf|deer|panda|koala|lion|tiger)\b|con cáo|cáo|mèo|thỏ|gấu|chó|chuột|trâu|bò|dê|cừu|lợn|heo|khỉ|sóc|hổ|狐|きつね|キツネ|猫|ねこ|兎|うさぎ|熊|くま|狸|たぬき|犬|いぬ|鼠|ねずみ|牛|うし|猿|さる|虎/i;
+
 export const CRITTER_VOCABULARY = [
   `{"fur": "#rrggbb", "belly": "#rrggbb", "ears": "${EARS.join("|")}", "tail": "${TAILS.join("|")}", "muzzle": "${MUZZLES.join("|")}",`,
   ` "accent": "#rrggbb", "size": "small|medium|large", "accessories": [up to 3 of ${CRITTER_ACCESSORIES.map((a) => `"${a}"`).join(", ")}]}`,

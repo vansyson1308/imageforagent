@@ -74,7 +74,7 @@ async function main() {
   const mark = (k: string) => (markers[k] = (Date.now() - t0) / 1000);
 
   // ---- live run ----
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, recordVideo: { dir: out, size: { width: 1920, height: 1080 } } });
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, recordVideo: { dir: out, size: { width: 1280, height: 720 } } });
   const page = await ctx.newPage();
   page.on("dialog", (d) => void d.accept());
   await page.goto(`${base}/`);
@@ -131,7 +131,7 @@ async function main() {
   }
 
   // ---- showcase ----
-  const sctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, recordVideo: { dir: out, size: { width: 1920, height: 1080 } } });
+  const sctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, recordVideo: { dir: out, size: { width: 1280, height: 720 } } });
   const sp = await sctx.newPage();
   await sp.goto(`${base}/showcase`);
   await sp.waitForTimeout(2500);

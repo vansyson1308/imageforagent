@@ -6,7 +6,7 @@ import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@
 import { castRepairUser, castSystem, castUser } from "@/lib/services/director/prompts";
 import sharp from "sharp";
 import { castSheetFrame, extractJsonBlock, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
-import { buildCritter, buildDoll, critterSchema, dollSchema } from "@/lib/services/director/dollKit";
+import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema } from "@/lib/services/director/dollKit";
 import { zodIssues } from "@/lib/services/director/schemas";
 import type { CastMember, Plan } from "@/lib/services/director/schemas";
 
@@ -54,7 +54,8 @@ export async function symbolProblems(
       const crop = await sharp(alone).extract({ left: 0, top: 0, width: Math.round(((meta.width ?? 1024) * 720) / canvas.w), height: meta.height ?? 576 }).png().toBuffer();
       const pieces = await opaquePieces(crop);
       const big = pieces.filter((p) => p >= 0.04);
-      if (big.length >= 2) problems.push(`#${id} falls apart into ${big.length} separate pieces (${big.map((p) => `${Math.round(p * 100)}%`).join(", ")} of the figure): head, neck, body, arms and legs must overlap so the character is one connected shape`);
+      // 2–3 big pieces = a figure that fell apart; many similar pieces = an intentional group (a swarm, a flock)
+      if (big.length >= 2 && big.length <= 3) problems.push(`#${id} falls apart into ${big.length} separate pieces (${big.map((p) => `${Math.round(p * 100)}%`).join(", ")} of the figure): head, neck, body, arms and legs must overlap so the character is one connected shape`);
     }
   }
   if (member.kind === "set" && !problems.length) {
@@ -187,9 +188,14 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     }
     problems = [...dollProblems];
     const known = new Set([...accepted.keys(), ...parsed.symbols.keys()]);
+    const strict = attempt < ctx.budget.budget.maxRepairs;
     for (const c of pending) {
       const symbol = parsed.symbols.get(c.id);
       const found = await symbolProblems(c, symbol, parsed.extras, ctx.canvas, aspectRatio, known);
+      // Animals go through the animal kit: a hand-drawn one is rejected (until the lenient last attempt)
+      if (strict && symbol && !dolls.has(c.id) && c.kind === "character" && ANIMAL_WORDS.test(`${c.name} ${c.look}`)) {
+        found.unshift(`#${c.id} is an animal: do not draw it, describe it for the animal kit under "critters" in the \`\`\`json block`);
+      }
       if (!symbol) {
         problems.push(...found);
         continue;

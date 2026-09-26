@@ -14,7 +14,7 @@ import { createRun, executeRun, cancelRun, registerRun, runPool, unregisterRun, 
 import { BudgetExceededError, BudgetTracker, clampBudget, DEFAULT_BUDGET, type DirectorBudget } from "@/lib/services/director/budget";
 import { extractJson, jsonSchemaOf, planSchema, critiqueSchema } from "@/lib/services/director/schemas";
 import { artPattern, buildShotMotion, cameraMoveFor, cameraTracks, flattenOpacity, namespaceIds, toCameraSpace } from "@/lib/services/director/camera";
-import { compositionStats, extractSvgFragment, minSubjectPct, missingRefs, neededExtras, normalizeSet, splitLibrary, symbolIds, transparentShare } from "@/lib/services/director/svgTools";
+import { compositionStats, extractJsonBlock, extractSvgFragment, minSubjectPct, missingRefs, neededExtras, normalizeSet, splitLibrary, symbolIds, transparentShare } from "@/lib/services/director/svgTools";
 import { normalizePlan, planToTsv } from "@/lib/services/director/plan";
 import { validateDrawing } from "@/lib/services/director/artist";
 import { symbolProblems, validateLibrary } from "@/lib/services/director/cast";
@@ -289,6 +289,14 @@ describe("director validators", () => {
     expect(dollSchema.safeParse({ age: "teen", skin: "red" }).success).toBe(false);
   }, 60_000);
 
+  it("treats a swarm as a group (many pieces), and parses ambient JSON with trailing commas", async () => {
+    const swarm = { id: "ff", name: "Fireflies", kind: "character" as const, look: "", colors: ["#f4d06f"] };
+    const dots = Array.from({ length: 12 }, (_, i) => `<circle cx="${60 + (i % 4) * 90}" cy="${80 + Math.floor(i / 4) * 200}" r="30" fill="#f4d06f"/>`).join("");
+    expect(await symbolProblems(swarm, `<symbol id="ff" viewBox="0 0 400 600">${dots}</symbol>`, new Map(), canvas, "16:9")).toEqual([]);
+    expect(extractJsonBlock('```json\n{"shapes": [1, 2,],\n// a note\n"tracks": [],}\n```')).toEqual({ shapes: [1, 2], tracks: [] });
+    expect(() => extractJsonBlock('```json\n{"shapes": [1 2]}\n```')).toThrow();
+  });
+
   it("draws kit animals (every ear/tail/muzzle/size) that pass every library gate", async () => {
     const fox = { id: "f", name: "F", kind: "character" as const, look: "", colors: ["#e07a2e"] };
     const sizes = ["small", "medium", "large"] as const;
@@ -325,6 +333,9 @@ describe("director validators", () => {
     expect((await validateDrawing(good, { ...opts, shot: motionShot })).ambient?.shapes).toHaveLength(1);
     const fading = good.replace('"tracks":[]', '"tracks":[{"target":"shapes.s.fill","keys":[{"t":0,"v":"#FFFFFF80"},{"t":1,"v":"#FFFFFF00"}]}]');
     expect((await validateDrawing(fading, { ...opts, shot: motionShot })).ambient?.tracks[0].keys.map((k) => k.v)).toEqual(["#FFFFFF", "#FFFFFF"]);
+    const broken = good.replace('"tracks":[]', '"tracks":[{]');
+    await expect(validateDrawing(broken, { ...opts, shot: motionShot })).rejects.toThrow(/ambient block is not valid JSON/);
+    expect((await validateDrawing(broken, { ...opts, shot: motionShot, strict: false })).ambient).toBeNull();
     const trackEase = good.replace('"tracks":[]', '"tracks":[{"target":"shapes.s.at","ease":"out","keys":[{"t":0,"v":[10,10]},{"t":1,"v":[40,10]},{"t":2,"v":[60,10],"ease":"linear"}]}]');
     expect((await validateDrawing(trackEase, { ...opts, shot: motionShot })).ambient?.tracks[0].keys.map((k) => (k as { ease?: string }).ease)).toEqual([undefined, "out", "linear"]);
     const bad = good.replace('"fill":"#ffffff"', '"fill":"red"');
@@ -462,6 +473,29 @@ describe("director loop (mock crew)", () => {
     expect(defs).toContain(buildDoll("hero", dollSchema.parse(spec)).split("\n")[1]);
     const steps = await prisma.directorStep.findMany({ where: { runId, role: "cast" }, orderBy: { seq: "asc" } });
     expect(steps.map((s) => s.action)).toEqual(["defs", "library"]);
+  }, 120_000);
+
+  it("sends animals to the animal kit: a hand-drawn fox is rejected with that hint", async () => {
+    const base = demoHandler({ criticScores: [9, 9] });
+    const castUsers: string[] = [];
+    const handler: MockHandler = (m, o, i) => {
+      if (m[0].content.startsWith("ROLE: DIRECTOR")) {
+        const plan = demoPlan("A fox. A fox again.", 2);
+        return { ...plan, cast: plan.cast.map((c) => (c.id === "hero" ? { ...c, name: "Kitsune", look: "a small fox spirit" } : c)) };
+      }
+      if (m[0].content.startsWith("ROLE: CAST")) {
+        castUsers.push(m[1].content);
+        if (castUsers.length === 1) return DEMO_LIBRARY;
+        const fox = { fur: "#e07a2e", belly: "#fbeedd", ears: "pointy", tail: "bushy", muzzle: "pointed", accent: "#c8432f" };
+        return `\`\`\`json\n${JSON.stringify({ critters: { hero: fox } })}\n\`\`\``;
+      }
+      return base(m, o, i);
+    };
+    const { projectId, summary } = await run(handler, {}, { maxShots: 2 });
+    expect(summary.status).toBe("done");
+    expect(castUsers[1]).toMatch(/#hero is an animal: do not draw it, describe it for the animal kit/);
+    const defs = (await prisma.project.findUniqueOrThrow({ where: { id: projectId } })).artworkDefs ?? "";
+    expect(defs).toContain('<radialGradient id="hero-fur"');
   }, 120_000);
 
   it("draws shots in parallel with a bounded pool and still renders every shot", async () => {
