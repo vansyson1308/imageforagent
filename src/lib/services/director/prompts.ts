@@ -244,7 +244,7 @@ export function artistUser(opts: {
     .join("\n\n");
 }
 
-// ---------- Visual Critic (Nano Omni) ----------
+// ---------- Critic (Nano text mode + render measurements; vision model when served) ----------
 
 export function criticSystem(mode: "vision" | "text"): string {
   return [

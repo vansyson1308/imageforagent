@@ -66,7 +66,8 @@ async function main() {
   const story = arg("--story", STORY);
   mkdirSync(out, { recursive: true });
   const { chromium } = await loadPlaywright();
-  const browser = await chromium.launch();
+  // Behind an egress proxy (CI sandboxes) Chromium needs it explicitly; normal machines have no HTTPS_PROXY
+  const browser = await chromium.launch(process.env.HTTPS_PROXY ? { proxy: { server: process.env.HTTPS_PROXY } } : {});
   const t0 = Date.now();
   const markers: Record<string, number> = {};
   const mark = (k: string) => (markers[k] = (Date.now() - t0) / 1000);

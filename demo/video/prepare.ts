@@ -55,8 +55,8 @@ async function main() {
         `<text x="290" y="370" font-size="84" font-weight="700" fill="#ececf1">Storyboard Studio Director</text>` +
         `<text x="160" y="500" font-size="54" fill="#ececf1">Type a story. Get a film. No image generator.</text>` +
         `<text x="160" y="590" font-size="36" fill="#8b8b98">A crew of NVIDIA Nemotron models on Nebius Token Factory</text>` +
-        `<text x="160" y="640" font-size="36" fill="#8b8b98">writes the whole film as code, then looks at its own renders.</text>` +
-        `<text x="160" y="760" font-size="30" fill="#76b900">Ultra · Super · Nano Omni · Nano</text>`,
+        `<text x="160" y="640" font-size="36" fill="#8b8b98">writes the whole film as code; the engine measures every render.</text>` +
+        `<text x="160" y="760" font-size="30" fill="#76b900">Ultra · Super · Nano</text>`,
     ),
   );
 

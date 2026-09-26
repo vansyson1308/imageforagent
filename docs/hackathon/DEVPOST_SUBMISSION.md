@@ -54,7 +54,11 @@ The result plays in the browser: an animated film with camera moves, local text-
 - The zero-key engine still works with no key at all. The Director is an optional layer (ADR-017).
 
 ### What we learned
-⚠ OWNER: finalise after the live runs from `docs/hackathon/FEEDBACK_LOG.md` and `EVAL_RESULTS.md` (critic uplift, first-pass success, cost per finished minute).
+- **Measure, don't tell.** Super writes valid, sanitizer-clean SVG almost every time. Its mistakes are compositional: tiny heroes, "night" scenes lit like noon, sets drawn 1920×300. Prose rules barely moved that. Feedback measured on the render did: "the hero is 23 % of the frame; a medium shot needs 45 %, use height=486". The next attempt usually complies.
+- **Small models misread numbers in prose.** Nano scored a correct frame 6/10 because "70 % exceeds the 30 % limit". Computing checks in the engine and handing Nano the results as facts fixed that, and it now critiques what numbers can't capture (story fit, missing props).
+- **Let the model write specs where it's weak.** Drawn people fell apart (heads floating off bodies). Nemotron now *specifies* human characters for a parametric kit, and the engine draws them. That is consistent by construction and ~10× fewer tokens.
+- **Tier economics are real.** Ultra plans a whole film for about $0.01. Super does the heavy drawing. Nano critiques for under $0.0002 a call. A finished 8-shot film costs about $0.07–0.11 at our price table.
+- **Parallelism matters more than model speed.** Drawing 3 shots at a time cut a 4-shot film from 407 s to 98 s at identical cost.
 
 ### What's next
 Edit-by-chat ("give grandma a red scarf in scenes 2–4" patches only the affected symbols), articulated character acting via the engine's figure rig, uploaded voice recordings per line, batch evals on Nebius serverless jobs.
@@ -69,9 +73,12 @@ The first user is a daily storytelling YouTube channel that needs a new short il
 4. Demo limits: ≤ 12 shots, 1K, 12 fps, 3 projects per session, projects deleted after 24 h, global daily token budget.
 
 ## Feedback on Token Factory / Nemotron / Tavily
-(From `docs/hackathon/FEEDBACK_LOG.md`.) ⚠ OWNER: refresh from the log after the live runs.
-- **Docs reachability:** the vision message format and the per-model thinking toggle are documented only on docs.tokenfactory.nebius.com. Sandboxed coding agents that allowlist GitHub often can't reach it. Please mirror the OpenAPI spec and a model-capability table on GitHub. We relied on Nebius's own `nebius-physical-ai` repo for the `image_url` format and `chat_template_kwargs.enable_thinking`.
+(Full log with reproduction notes: `docs/hackathon/FEEDBACK_LOG.md`.)
+- **No image-input Nemotron is served.** `GET /v1/models` lists Ultra, Super, Nano and Nemotron-3.5 Lightning, but no Nano Omni / VL model. Nano and Super answer `400 {"detail":"This model does not support image input"}` (clear and fast, thank you). A served Nemotron VLM would close the critic loop on pixels.
 - **Capabilities in `/v1/models`:** list membership doesn't tell you whether a model accepts images, supports `json_schema`, or how to turn reasoning off. Adding `capabilities: {vision, json_schema, reasoning_toggle}` would let agents pick tiers safely.
+- **Id casing:** the family mixes `Nemotron-3-Ultra…`, `nemotron-3-super…` and `NVIDIA-Nemotron-3-Nano…`, so exact-match configs break easily.
+- **Structured output works:** `response_format: json_schema` succeeded on the first attempt on all three tiers. The json_object fallback was never needed.
+- **Docs reachability:** the vision message format and the thinking toggle are documented only on docs.tokenfactory.nebius.com, which sandboxed coding agents often can't reach. A mirror of the OpenAPI spec on GitHub would help.
 - **Tavily:** the official Python client source was enough to derive exact request/response shapes for a no-SDK `fetch` integration. Clean API.
 
 ## What was significantly updated during the Submission Period

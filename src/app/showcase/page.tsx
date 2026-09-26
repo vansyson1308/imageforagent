@@ -61,7 +61,7 @@ export default async function ShowcasePage() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Showcase · Phim mẫu</h1>
           <p className="text-sm text-muted">
-            Films made end to end by the NVIDIA Nemotron crew on Nebius Token Factory: Ultra plans, Super draws every frame as code, Nano Omni critiques the renders, Nano edits. Every
+            Films made end to end by the NVIDIA Nemotron crew on Nebius Token Factory: Ultra plans, Super draws every frame as code, the engine measures each render and Nano critiques it, Nano edits. Every
             film links its full trace. / Phim do đội Nemotron làm từ đầu đến cuối, kèm toàn bộ nhật ký.
           </p>
         </div>

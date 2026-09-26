@@ -24,7 +24,7 @@ import type { Frame } from "@/generated/prisma/client";
  *
  *   research? → plan (Ultra) → script (parseTsv → replaceScript) → dialogue
  *   (TTS) → cast library (Super) → per shot: draw (Super) → validate/repair
- *   ≤ 3 → commit (clip) → critic (Nano Omni) → revise ≤ 2 → editor (Nano):
+ *   ≤ 3 → commit (clip) → critic (Nano + measured render; vision model when served) → revise ≤ 2 → editor (Nano):
  *   lint-fix ≤ 2 → continuity → done
  */
 

@@ -8,11 +8,11 @@ I paste a short story and press Make my film. Nemotron 3 Ultra, the Director, pl
 
 3
 00:00:30,300 --> 00:00:51,800
-Nemotron 3 Super is the Artist. It draws each character once as a reusable symbol, then every frame as SVG. A sandboxed engine validates and renders it. When the engine rejects a frame, the error and its hint go straight back to the Artist.
+Nemotron 3 Super is the Artist. It draws each character once as a reusable symbol, then every frame as SVG, three shots in parallel. A sandboxed engine validates, renders and measures each frame. When a check fails, the error and its measured fix go straight back to the Artist.
 
 4
 00:00:52,300 --> 00:01:14,800
-Then Nemotron Nano Omni, the Visual Critic, actually looks at the rendered image, scores it against the shot, and asks for concrete fixes. Here a frame scores low; the revision scores higher, so it replaces the original. The trace keeps both.
+Then the engine measures the render: how big the hero really is, whether night is dark, whether the set fills the frame. Nemotron Nano, the Critic, reads those numbers and the drawing, scores the shot, and asks for fixes. A revision replaces a frame only when it scores higher.
 
 5
 00:01:15,300 --> 00:01:29,800
@@ -24,7 +24,7 @@ And the film plays, with voices, camera moves and transitions, assembled server 
 
 7
 00:01:42,300 --> 00:02:04,800
-Under the hood, every call goes to Token Factory's OpenAI compatible endpoint with strict JSON schemas and image input. Ultra reasons once per film, Super does the heavy drawing, and the Nano models make fast, cheap calls. Tavily adds cited real-world references.
+Under the hood, every call goes to Token Factory's OpenAI compatible endpoint with strict JSON schemas. Ultra reasons once per film, Super does the heavy drawing, and Nano makes fast, cheap calls. Token Factory has no image-input Nemotron yet, so the engine's pixel measurements are the critic's eyes.
 
 8
 00:02:05,300 --> 00:02:14,800
@@ -32,7 +32,7 @@ Every model output passes the same sanitizer and validators as human input, with
 
 9
 00:02:15,300 --> 00:02:29,800
-We benchmarked ten stories in three configurations. The eval table shows first pass render success, critic uplift, and the cost per finished minute of film.
+We benchmarked ten stories, Super alone against the full crew, with an independent vision judge scoring every final frame. The eval table shows judge scores, first pass render success and the cost per finished minute of film.
 
 10
 00:02:30,300 --> 00:02:39,800

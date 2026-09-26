@@ -1,0 +1,48 @@
+{
+  "films": [
+    {
+      "slug": "tea-house",
+      "title": "Two Cups at Dawn",
+      "language": "en",
+      "logline": "A widow's four-decade ritual of pouring tea for two becomes a granddaughter's bridge to the love story that started with a spilled cup.",
+      "story": "Every morning for forty years, Grandma Hoa opened her tiny tea house by the lake in Hanoi and poured two cups: one for herself, one for her husband who used to sit by the window. Her granddaughter Lan visits on a rainy day and asks why. Grandma tells her about the first morning they met, when he spilled tea on her book of poems. Lan sits in the window seat and drinks the second cup. For the first time in years, Grandma laughs.",
+      "film": "/showcase/tea-house/film.mp4",
+      "poster": "/showcase/tea-house/poster.jpg",
+      "trace": "/showcase/tea-house/trace.json",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/nemotron-3-super-120b-a12b",
+        "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        "vision": ""
+      },
+      "provider": "nemotron",
+      "summary": {
+        "status": "done",
+        "shots": 8,
+        "rendered": 8,
+        "firstPassOk": 6,
+        "repairs": 10,
+        "criticBefore": 7.38,
+        "criticAfter": 7.5,
+        "revisions": 2,
+        "lintErrors": 0,
+        "lintWarnings": 0,
+        "durationSec": 30.833333,
+        "wallMs": 429097,
+        "tokens": 160318,
+        "costUsd": 0.11126124,
+        "continuity": [
+          "Shot 5: Grandma Hoa's hands cradle cup but no jade ring visible on thumb",
+          "Shot 6: Jade ring not mentioned during tea splash on poetry book",
+          "Shot 8: Jade ring catching light described but not visually confirmed in close-up",
+          "Shot 2: Lantern light fading behind her contradicts 'cool blue-grey dawn' exterior lighting",
+          "Shot 3: Tea stain on window-seat cushion not referenced during steam close-up",
+          "Shot 7: Second cup placement shifts between ledge (shot 2) and table (shot 5)"
+        ],
+        "textCritic": true
+      },
+      "createdAt": "2026-09-26T02:07:58.403Z",
+      "source": "studio-production-049c.up.railway.app"
+    }
+  ]
+}

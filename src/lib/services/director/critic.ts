@@ -15,10 +15,12 @@ export interface CritiqueOutcome {
 }
 
 /**
- * Visual Critic (Nano Omni): looks at the rendered painting and scores it
- * against the shot description. If the vision model rejects image input,
- * the run switches to the TEXT critic (fast tier over SVG + render stats)
- * and records that switch as a step. It never switches silently.
+ * Critic: scores the rendered painting against the shot description. With a
+ * vision model configured it sends the image; Token Factory serves no
+ * image-input Nemotron today (DECISIONS D15), so by default it is the TEXT
+ * critic: Nano over the SVG, render stats and the engine's measured checks.
+ * If a vision model rejects image input, the run switches to TEXT and records
+ * that switch as a step. It never switches silently.
  * A critic failure never blocks the film: the outcome is `critique: null`.
  */
 export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan; index: number; drawing: Drawing; round: number }): Promise<CritiqueOutcome> {
