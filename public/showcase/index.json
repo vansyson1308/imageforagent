@@ -43,6 +43,87 @@
       },
       "createdAt": "2026-09-26T02:07:58.403Z",
       "source": "studio-production-049c.up.railway.app"
+    },
+    {
+      "slug": "den-long",
+      "title": "Đèn Ông Sao Của Tí",
+      "language": "vi",
+      "logline": "Đêm Trung thu, chiếc đèn giấy tắt ngấm được ông nội chụp lại bằng tình yêu giàu, sáng rạng ngời dưới trăng tròn.",
+      "story": "Đêm Trung thu, bé Tí làm một chiếc đèn ông sao bằng giấy kiếng đỏ nhưng nến cứ tắt vì gió. Các bạn trong xóm rước đèn đi qua, chỉ mình Tí đứng ở hiên nhà. Ông nội lặng lẽ mang ra chiếc chụp đèn cũ bằng tre của ông ngày bé, lắp vào che gió. Ngọn nến sáng trở lại. Tí chạy theo đoàn rước đèn dưới trăng tròn, ông đứng ở cổng mỉm cười.",
+      "film": "/showcase/den-long/film.mp4",
+      "poster": "/showcase/den-long/poster.jpg",
+      "trace": "/showcase/den-long/trace.json",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/nemotron-3-super-120b-a12b",
+        "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        "vision": ""
+      },
+      "provider": "nemotron",
+      "summary": {
+        "status": "done",
+        "shots": 7,
+        "rendered": 7,
+        "firstPassOk": 6,
+        "repairs": 1,
+        "criticBefore": 8.14,
+        "criticAfter": 8.14,
+        "revisions": 0,
+        "lintErrors": 0,
+        "lintWarnings": 1,
+        "durationSec": 23.5,
+        "wallMs": 184886,
+        "tokens": 82526,
+        "costUsd": 0.05833836,
+        "continuity": [
+          "Star-lantern panel wrinkling noted in shot 2 and 4 continuity",
+          "Bamboo-shade removed then reappears in shot 3 but absent in shot 6",
+          "Grandfather's lantern-carrying pose consistent across shots 3 and 4",
+          "Moonlight position stable on porch/gate/set elements",
+          "Red thread on Tí's sleeve visible in wide shots 1 and 5",
+          "Candle flame behavior matches extinguishing then relighting sequence"
+        ],
+        "textCritic": true
+      },
+      "createdAt": "2026-09-26T02:38:33.744Z",
+      "source": "localhost:3100"
+    },
+    {
+      "slug": "kitsune",
+      "title": "雪の森の狐と迷子の子",
+      "language": "ja",
+      "logline": "小さな狐が灯りで導く、優しさの物語。",
+      "story": "雪の森に、小さな狐が住んでいました。狐は毎晩、村の灯りを遠くから見ていました。ある夜、迷子の子どもが森で泣いていました。狐は尻尾に小さな火をともし、子どもを村まで案内しました。次の朝、村の門の前に、狐のための油揚げがひとつ置いてありました。",
+      "film": "/showcase/kitsune/film.mp4",
+      "poster": "/showcase/kitsune/poster.jpg",
+      "trace": "/showcase/kitsune/trace.json",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/nemotron-3-super-120b-a12b",
+        "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        "vision": ""
+      },
+      "provider": "nemotron",
+      "summary": {
+        "status": "done",
+        "shots": 7,
+        "rendered": 7,
+        "firstPassOk": 1,
+        "repairs": 18,
+        "criticBefore": 7.14,
+        "criticAfter": 7.57,
+        "revisions": 2,
+        "lintErrors": 0,
+        "lintWarnings": 0,
+        "durationSec": 36.833333,
+        "wallMs": 279237,
+        "tokens": 175610,
+        "costUsd": 0.12506226,
+        "continuity": [],
+        "textCritic": true
+      },
+      "createdAt": "2026-09-26T02:56:47.624Z",
+      "source": "localhost:3100"
     }
   ]
 }
