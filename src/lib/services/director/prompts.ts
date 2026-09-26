@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { CastMember, Plan, ShotPlan } from "@/lib/services/director/schemas";
 import type { CanvasSize } from "@/lib/services/svgRenderer";
+import { DOLL_VOCABULARY } from "@/lib/services/director/dollKit";
 
 /**
  * Prompts for the crew. Every system prompt starts with a machine-readable
@@ -144,14 +145,22 @@ export function castSystem(canvas: CanvasSize, style: string): string {
     artworkContract(canvas),
     "LIBRARY CONVENTIONS:",
     '- One <symbol> per cast member with id = the cast id, e.g. <symbol id="grandma" viewBox="0 0 400 600">…</symbol>.',
-    "- character: viewBox 0 0 400 600, full body standing, feet touching y=600, facing right, centred, filling the viewBox height. Appealing proportions (big head ~1/3 of height for children), hair, clothes with 2–3 tones, simple face (eyes with highlights, brows, mouth), hands. 15–40 shapes, soft gradients for skin/clothes.",
+    "- HUMAN characters: do NOT draw them. Describe each one for the engine's character kit in the ```json block (below); the engine draws a consistent, well-proportioned figure. Pick values that match the Bible's look and colours:",
+    DOLL_VOCABULARY,
+    "- NON-HUMAN characters (animals, robots, creatures, spirits): draw them as a <symbol>, viewBox 0 0 400 600, full body, feet/base touching y=600, centred, filling the viewBox height, ONE connected shape (head, body and limbs overlap), 15–40 shapes, soft gradients, eyes with highlights.",
     "- prop: viewBox 0 0 400 400, object centred, resting on y=400.",
     `- set: viewBox 0 0 ${canvas.w} ${canvas.h}, a full background with DEPTH: sky/wall gradient, far layer (silhouettes, lighter/cooler), middle layer, near ground at about y=${Math.round(canvas.h * 0.8)}; 25–60 shapes; lit for the story's time of day (night = deep blue gradient sky, moon, warm window lights). No characters.`,
     "- Gradients may be declared at top level (outside symbols) with ids prefixed by the cast id (grandma-skin).",
     `- Style: ${styleText(style)}. Use each member's colors.`,
-    "STYLE REFERENCE (level of detail and layering expected: separate limbs, face features, shading side, contact shadow; sets with sky, far, middle, near and foreground layers). Do NOT copy it or its ids; draw the Bible's cast in its own colours:",
+    "STYLE REFERENCE for what you draw (level of detail and layering expected: connected limbs, face features, shading side, contact shadow; sets with sky, far, middle, near and foreground layers). Do NOT copy it or its ids; draw the Bible's cast in its own colours:",
     CAST_REFERENCE,
-    "Output: ONLY the SVG fragment (symbols + gradients). No markdown fences, no explanations.",
+    "OUTPUT FORMAT (nothing else, no explanations):",
+    "```svg",
+    "<!-- <symbol>s for sets, props and non-human characters, plus their gradients -->",
+    "```",
+    "```json",
+    '{"dolls": {"<human-character-id>": {…kit values…}}}',
+    "```",
   ].join("\n");
 }
 
@@ -167,7 +176,7 @@ export function castRepairUser(plan: Plan, redo: readonly CastMember[], kept: re
     castUser(plan, redo),
     kept.length ? `Already accepted and kept (do NOT redraw): ${kept.join(", ")}.` : "",
     `Your previous version of ${redo.map((c) => c.id).join(", ")} was rejected: ${problems.join("; ")}.`,
-    "Return ONLY the corrected <symbol>s for those ids (plus the gradients they use).",
+    "Return ONLY the corrections for those ids, in the same format: <symbol>s (plus their gradients) in the ```svg block, human characters as kit values in the ```json dolls block.",
   ]
     .filter(Boolean)
     .join("\n");

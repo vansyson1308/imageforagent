@@ -1,10 +1,10 @@
 # Storyboard Studio: Director
 
-> **Type a story. Get a film. No image generator.** A crew of **NVIDIA Nemotron** models on **Nebius Token Factory** writes the whole film *as code* (SVG, construct and motion specs) into a deterministic engine, then **looks at its own renders** and fixes them.
+> **Type a story. Get a film. No image generator.** A crew of **NVIDIA Nemotron** models on **Nebius Token Factory** writes the whole film *as code* (SVG, construct and motion specs) into a deterministic engine, which **measures every render**. The crew then critiques those measurements and fixes the frames.
 >
 > 🎬 **Live demo:** <https://studio-production-049c.up.railway.app> (passcode-protected; the passcode is in the submission's testing instructions) · 🎞 **[Showcase films](https://studio-production-049c.up.railway.app/showcase)** · 📊 **[Eval results](docs/hackathon/EVAL_RESULTS.md)** · ⚖️ **[MIT licensed](LICENSE)**
 
-<p align="center"><img src="docs/media/director-architecture.svg" width="900" alt="Architecture: Story → Researcher (Nano + Tavily) → Director (Ultra) → Script → Cast (Super) → per shot: Artist (Super) → validate + render → animated clip → Visual Critic (Nano Omni, revise loop) → Editor (Nano) → film assembler → MP4 + package"></p>
+<p align="center"><img src="docs/media/director-architecture.svg" width="900" alt="Architecture: Story → Researcher (Nano + Tavily) → Director (Ultra) → Script → Cast (Super) → per shot: Artist (Super) → validate + render → animated clip → Critic (Nano + measured render gates, revise loop) → Editor (Nano) → film assembler → MP4 + package"></p>
 
 ### How we use Nebius Token Factory + NVIDIA Nemotron
 
@@ -13,12 +13,12 @@ Every model call goes to Token Factory's OpenAI-compatible endpoint (`POST {NEBI
 | Role | Nemotron tier | Why this tier | What it does |
 |---|---|---|---|
 | 🎬 **Director** | **Nemotron 3 Ultra** (`NEMOTRON_STRONG_MODEL`) | Hardest reasoning, called **once per film** | Story → shot list + Cast & Set Bible as strict JSON (zod-validated), written through the same TSV/script path a human import uses |
-| 🖌️ **Artist** | **Nemotron 3 Super** (`NEMOTRON_MID_MODEL`) | Long, precise structured output, many calls | Draws the `<symbol>` cast library once (pixel-identical characters in every shot), then every frame as an SVG fragment + ambient motion layer. Engine errors come back with a hint → **≤ 3 repairs** |
-| 👁️ **Visual Critic** | **Nemotron Nano Omni** (`NEMOTRON_VISION_MODEL`) | Cheap multimodal: **it sees the render** | Scores each rendered frame 0–10 against the shot description and returns concrete fixes. **≤ 2 revision rounds**, and a revision is kept only if it scores higher |
+| 🖌️ **Artist** | **Nemotron 3 Super** (`NEMOTRON_MID_MODEL`) | Long, precise structured output, many calls | Builds the `<symbol>` cast library once (pixel-identical characters in every shot). Human characters are specified for the engine's parametric character kit; animals, sets and props are drawn as SVG, and symbols are accepted one by one, then every frame as an SVG fragment + ambient motion layer, 3 shots in parallel. Engine errors **and failed render measurements** come back with a hint → **≤ 3 repairs** |
+| 📏 **Critic** | **Nemotron 3 Nano** (`NEMOTRON_FAST_MODEL`) + the engine's render gates | Cheap, fast, and grounded in pixels it cannot see | The engine measures each render (visible character height per shot type, night brightness, set coverage). Nano reads those measurements plus the SVG, scores the frame 0–10 against the shot and lists concrete fixes. **≤ 2 revision rounds**, and a revision is kept only if it scores higher. When Token Factory serves an image-input model, `NEMOTRON_VISION_MODEL` switches the same loop to send the image |
 | ✂️ **Editor** | **Nemotron Nano** (`NEMOTRON_FAST_MODEL`) | Fast everyday calls | Fixes `lintStoryboard` findings (reading speed, jump cuts, voice timing) and runs a continuity check |
 | 🔎 **Researcher** | Nano + **Tavily** | Grounding | Optional capped search/extract → cited visual reference notes in the Bible and the UI |
 
-The **vision-critic loop** is the core idea. LLMs don't paint pixels here: they write code, the engine renders it deterministically, and a multimodal Nemotron *looks* at the result. If Omni can't take images, the critic switches to text mode and the trace says so. Costs and tokens are logged per step and shown live in the UI. Measured numbers (first-pass render rate, repairs per shot, critic uplift, USD per finished minute) are in **[EVAL_RESULTS.md](docs/hackathon/EVAL_RESULTS.md)**, which comes from real runs only.
+The **measure-and-revise loop** is the core idea. LLMs don't paint pixels here: they write code, the engine renders it deterministically and **measures the pixels**, and the numbers drive repairs and critique. Token Factory lists no image-input Nemotron today (Nano and Super answer `400 "does not support image input"`, see [evidence](docs/hackathon/evidence/vision-probe-2026-09-26.json)), so the critic is Nano in text mode by design. The trace says so, and the UI chip shows "📏 Nano critic". Costs and tokens are logged per step and shown live in the UI. Measured numbers (first-pass render rate, repairs per shot, critic uplift, USD per finished minute) are in **[EVAL_RESULTS.md](docs/hackathon/EVAL_RESULTS.md)**, which comes from real runs only.
 
 **Try it**
 1. Open the demo, enter the passcode, type a story (any language), pick a style, then **Make my film**.
@@ -388,7 +388,7 @@ Everything is optional except the database path:
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | — | Only for reading scripts from Google Sheets (one-line service-account JSON; share the sheet with the service-account email shown in the UI) |
 | `NEBIUS_API_KEY` | — | **Director only.** Nebius Token Factory key. Stays server-side. Without it the Director is disabled and the zero-key engine works as before |
 | `NEBIUS_BASE_URL` | `https://api.tokenfactory.nebius.com/v1` | OpenAI-compatible endpoint |
-| `NEMOTRON_STRONG_MODEL` / `_MID_` / `_FAST_` / `_VISION_` | see `src/lib/providers/index.ts` | Crew model per tier (Director = Ultra, Artist = Super, Editor = Nano, Critic = Nano Omni). Check them with `npm run director:models`. An empty VISION auto-detects a Nemotron Omni; if none is available, the critic runs in text mode |
+| `NEMOTRON_STRONG_MODEL` / `_MID_` / `_FAST_` / `_VISION_` | see `src/lib/providers/index.ts` | Crew model per tier (Director = Ultra, Artist = Super, Editor + text Critic = Nano; VISION empty = auto-detect an image-input Nemotron, none listed today). Check them with `npm run director:models`. |
 | `NEBIUS_PRICES_JSON` | family estimates | `{"model-id":[inUSDper1M,outUSDper1M]}` for exact cost accounting |
 | `LLM_PROVIDER` | — | `mock` = scripted demo crew with no key and no network (tests, UI demos, video dry-runs). Labelled "mock" in every trace |
 | `DIRECTOR_MAX_SHOTS` / `_TOKENS_PER_RUN` / `_USD_PER_RUN` / `_WALL_SECONDS` | 12 / 600000 / 1.5 / 1200 | Hard per-run caps, enforced on the server before every model call. A request can lower them but never raise them |

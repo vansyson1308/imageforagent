@@ -4,3 +4,9 @@
 {"at":"2026-09-26T00:15:59.267Z","script":"vision-probe","label":"openbmb/MiniCPM-V-4_5","model":"openbmb/MiniCPM-V-4_5","tokensIn":232,"tokensOut":39,"costUsd":0.0002328}
 {"at":"2026-09-26T00:16:00.037Z","script":"vision-probe","label":"google/gemma-3-27b-it","model":"google/gemma-3-27b-it","tokensIn":291,"tokensOut":30,"costUsd":0.0002466}
 {"at":"2026-09-26T01:20:00.000Z","script":"dev-runs","label":"6 local Director runs (4 shots each, 2026-09-26 00:16–01:15 UTC), summed from DirectorRun.costUsd","model":"crew","tokensIn":106467,"tokensOut":262036,"costUsd":0.2821}
+{"at":"2026-09-26T01:35:28.072Z","script":"showcase","label":"tea-house","model":"crew","tokensIn":39829,"tokensOut":91451,"costUsd":0.09759624}
+{"at":"2026-09-26T01:36:37.540Z","script":"bench-judge","label":"A:en-lighthouse","model":"google/gemma-3-27b-it","tokensIn":2273,"tokensOut":0,"costUsd":0.0017076}
+{"at":"2026-09-26T01:36:37.541Z","script":"bench","label":"A:en-lighthouse","model":"super-only","tokensIn":66652,"tokensOut":0,"costUsd":0.0471138}
+{"at":"2026-09-26T01:38:38.267Z","script":"showcase","label":"den-long","model":"crew","tokensIn":31516,"tokensOut":67313,"costUsd":0.07180704}
+{"at": "2026-09-26T01:50:00.000Z", "script": "showcase-dropped", "label": "kitsune (stream dropped at 01:36, summed from the SSE log)", "model": "crew", "tokensIn": 0, "tokensOut": 0, "costUsd": 0.005513}
+{"at": "2026-09-26T01:50:00.000Z", "script": "bench-dropped", "label": "A:en-robot-garden (stream dropped at 01:36; no log, ESTIMATE = the first A run's cost)", "model": "super-only", "tokensIn": 0, "tokensOut": 0, "costUsd": 0.0471}

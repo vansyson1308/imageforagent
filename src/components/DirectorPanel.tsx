@@ -304,8 +304,8 @@ export function DirectorPanel() {
         {director?.models && (
           <div className="flex flex-wrap gap-1.5 text-[11px]">
             {(["strong", "mid", "vision", "fast"] as const).map((k) => (
-              <span key={k} className="rounded-full border border-line bg-card-2 px-2 py-0.5 text-muted" title={director.models?.[k] || "auto"}>
-                {{ strong: "🎬 Ultra", mid: "🖌️ Super", vision: "👁️ Omni", fast: "✂️ Nano" }[k]}
+              <span key={k} className="rounded-full border border-line bg-card-2 px-2 py-0.5 text-muted" title={director.models?.[k] || t(lang, "criticTextTitle")}>
+                {{ strong: "🎬 Ultra", mid: "🖌️ Super", vision: director.models?.vision ? "👁️ Vision critic" : "📏 Nano critic", fast: "✂️ Nano" }[k]}
               </span>
             ))}
           </div>

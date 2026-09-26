@@ -45,8 +45,8 @@ export function useLang(): [Lang, (l: Lang) => void] {
 const DICT = {
   directorTitle: { vi: "Đạo diễn AI: đội Nemotron", en: "AI Director: the Nemotron crew" },
   directorSub: {
-    vi: "Kể một câu chuyện, bất kỳ ngôn ngữ nào. Ultra lên phân cảnh, Super vẽ từng khung bằng code, Nano Omni nhìn bản render và yêu cầu sửa, Nano biên tập thoại + nhịp.",
-    en: "Tell a story in any language. Ultra plans the shots, Super draws every frame as code, Nano Omni looks at the renders and asks for fixes, Nano edits dialogue and timing.",
+    vi: "Kể một câu chuyện, bất kỳ ngôn ngữ nào. Ultra lên phân cảnh, Super vẽ từng khung bằng code, engine đo bản render và Nano chấm điểm + yêu cầu sửa, Nano biên tập thoại + nhịp.",
+    en: "Tell a story in any language. Ultra plans the shots, Super draws every frame as code, the engine measures each render and Nano critiques it and asks for fixes, Nano edits dialogue and timing.",
   },
   storyLabel: { vi: "Câu chuyện", en: "Your story" },
   storyPlaceholder: {
@@ -56,7 +56,11 @@ const DICT = {
   filmLanguage: { vi: "Ngôn ngữ phim", en: "Film language" },
   style: { vi: "Phong cách", en: "Style" },
   shots: { vi: "Số shot tối đa", en: "Max shots" },
-  critic: { vi: "Critic thị giác (Nano Omni)", en: "Visual critic (Nano Omni)" },
+  critic: { vi: "Critic (Nano + số đo render)", en: "Critic (Nano + render measurements)" },
+  criticTextTitle: {
+    vi: "Token Factory chưa có Nemotron nhận ảnh: Nano chấm dựa trên SVG + số đo của engine trên bản render",
+    en: "Token Factory serves no image-input Nemotron yet: Nano judges from the SVG + the engine's measurements of the render",
+  },
   research: { vi: "Tra cứu tham chiếu (Tavily)", en: "Reference research (Tavily)" },
   make: { vi: "🎬 Làm phim của tôi", en: "🎬 Make my film" },
   cancel: { vi: "Dừng", en: "Cancel" },

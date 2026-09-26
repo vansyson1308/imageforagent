@@ -68,17 +68,31 @@ async function main() {
     assertSpendUnder();
     const log = `docs/hackathon/evidence/showcase-${s.slug}.log`;
     writeFileSync(log, `# ${new Date().toISOString()} ${base} ${s.slug}\n`);
-    const pid = await client.createProject(`Showcase · ${s.slug}`);
-    console.log(`▶ ${s.slug} (${s.language}) project ${pid}`);
+    // A dropped stream cancels the run server-side (no orphan runs): retry once on a fresh project
+    let pid = "";
+    let runId = "";
     let done: SseEvent | null = null;
-    const runId = await client.direct(pid, { story: s.story, language: s.language, style: s.style, maxShots, maxUsd, critic: true, research: false }, (e) => {
-      appendFileSync(log, JSON.stringify(e) + "\n");
-      if (e.type === "step") {
-        const st = e.step as { role: string; action: string; shotIndex: number | null; score: number | null; costUsd: number; error: string | null };
-        console.log(`  ${st.role.padEnd(10)} ${st.action.padEnd(16)} ${st.shotIndex ?? ""} ${st.score ?? ""} $${st.costUsd.toFixed(5)} ${st.error ? "⚠ " + st.error.slice(0, 80) : ""}`);
+    for (let attempt = 0; attempt < 2 && !done; attempt++) {
+      let streamed = 0;
+      try {
+        pid = await client.createProject(`Showcase · ${s.slug}`);
+        console.log(`▶ ${s.slug} (${s.language}) project ${pid}${attempt ? " (retry)" : ""}`);
+        runId = await client.direct(pid, { story: s.story, language: s.language, style: s.style, maxShots, maxUsd, critic: true, research: false }, (e) => {
+          appendFileSync(log, JSON.stringify(e) + "\n");
+          if (e.type === "step") {
+            const st = e.step as { role: string; action: string; shotIndex: number | null; score: number | null; costUsd: number; error: string | null };
+            streamed += st.costUsd;
+            console.log(`  ${st.role.padEnd(10)} ${st.action.padEnd(16)} ${st.shotIndex ?? ""} ${st.score ?? ""} $${st.costUsd.toFixed(5)} ${st.error ? "⚠ " + st.error.slice(0, 80) : ""}`);
+          }
+          if (e.type === "done") done = e;
+        });
+      } catch (e) {
+        console.log(`  stream failed: ${String(e).slice(0, 120)}`);
+        appendLedger({ script: "showcase-dropped", label: s.slug, model: "crew", tokensIn: 0, tokensOut: 0, costUsd: streamed });
+        appendFileSync(log, `# stream failed: ${String(e).slice(0, 300)}\n`);
       }
-      if (e.type === "done") done = e;
-    });
+    }
+    if (!runId) continue;
     const trace = await client.json<Record<string, unknown> & { costUsd: number; tokensIn: number; tokensOut: number; bible: { title: string; logline: string } | null; summary: Record<string, unknown>; models: Record<string, string>; provider: string; status: string }>(
       "GET",
       `/api/projects/${pid}/director/runs/${runId}`,

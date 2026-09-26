@@ -143,7 +143,7 @@ async function qualityGates(
   if (inShot.length && biggest > 0) {
     if (biggest < need) {
       problems.push(
-        `the main character is only ${biggest}% of the frame height as rendered; a "${opts.shot.shotType}" needs at least ${need}% (use height="${Math.round((need / 100) * opts.canvas.h)}" or more with width = height × 2/3, and no shrinking transform${need >= 90 ? "; let the canvas crop the legs" : ""})`,
+        `the main character is only ${biggest}% of the frame height as rendered; a "${opts.shot.shotType}" needs at least ${need}% (use height="${Math.round((need / 100) * opts.canvas.h)}" or more with width = height × 2/3, and no shrinking transform${need >= 75 ? "; let the canvas crop the legs" : ""})`,
       );
     } else facts.push(`main character size OK for a ${opts.shot.shotType} (${biggest}% ≥ ${need}%)`);
   }

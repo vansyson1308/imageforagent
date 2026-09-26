@@ -2,10 +2,13 @@
  * Director benchmark: 10 fixed story prompts (EN ×4, VI ×3, JA ×3; 4–12 shots)
  * × 3 configs, run through the public HTTP API of a running Storyboard Studio:
  *   A  super-only   every role on Nemotron Super, no critic (baseline)
- *   B  crew         Ultra plans · Super draws · Nano Omni critiques · Nano edits
+ *   B  crew         Ultra plans · Super draws · Nano critiques (text mode, D15) · Nano edits
  *   C  crew+tavily  B + Tavily reference research
  * Metrics per run: first-pass render success, repairs/shot, critic score
- * before → after, lint left, wall time, tokens, USD, USD per finished minute.
+ * before → after, lint left, wall time, tokens, USD, USD per finished minute,
+ * and an INDEPENDENT judge score: a vision model (default google/gemma-3-27b-it
+ * on Token Factory, not part of the crew) rates every final frame 0–10
+ * against its shot description, blind to the config (`--judge ""` skips it).
  *
  *   npm run director:bench -- --base http://localhost:3000 [--passcode p] [--configs A,B,C] [--limit 10] [--out docs/hackathon]
  *   npm run director:bench -- --base http://localhost:3100 --out /tmp/bench-dry --allow-mock   # pipeline dry run (never published)
@@ -15,9 +18,10 @@
  * every output "MOCK — NOT RESULTS".
  */
 import "../director/env";
-import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import sharp from "sharp";
 import { StudioClient } from "../director/client";
+import { NemotronProvider } from "@/lib/providers/nemotronProvider";
 import { appendLedger, assertSpendUnder } from "../director/ledger";
 
 export const BENCH_PROMPTS = [
@@ -58,7 +62,39 @@ interface Row {
   filmSec: number;
   usdPerMinute: number | null;
   textCritic: boolean;
+  judge: number | null;
   runId: string;
+}
+
+const JUDGE_PROMPT =
+  "You are an impartial judge of storyboard frames. Rate how well this frame shows the shot description: the named characters/props are present and readable, the action and setting match, the time of day and mood match, the composition is clear. " +
+  'Answer ONLY JSON {"score": 0-10, "reason": "<one short sentence>"}. 9-10 excellent, 7-8 good, 4-6 partly matches or hard to read, 0-3 wrong or broken.';
+
+/** Mean independent-judge score over a run's final frames (null when judging is off or nothing rendered). */
+async function judgeRun(client: StudioClient, judge: NemotronProvider | null, model: string, projectId: string): Promise<{ score: number | null; usd: number; tokens: number }> {
+  if (!judge) return { score: null, usd: 0, tokens: 0 };
+  const project = await client.json<{ frames: Array<{ index: number; shotType: string; description: string; imageUrl: string | null }> }>("GET", `/api/projects/${projectId}`);
+  const scores: number[] = [];
+  let usd = 0;
+  let tokens = 0;
+  for (const f of project.frames) {
+    if (!f.imageUrl) continue;
+    const img = await client.download(f.imageUrl);
+    const jpeg = await sharp(img).resize({ width: 1024, height: 1024, fit: "inside" }).jpeg({ quality: 82 }).toBuffer();
+    try {
+      const r = await judge.chat(
+        [{ role: "user", content: `${JUDGE_PROMPT}\n\nShot ${f.index} (${f.shotType}): ${f.description}`, images: [`data:image/jpeg;base64,${jpeg.toString("base64")}`] }],
+        { model, maxTokens: 200, temperature: 0, responseFormat: { type: "json_object" } },
+      );
+      usd += r.costUsd;
+      tokens += r.usage.promptTokens + r.usage.completionTokens;
+      const m = r.text.match(/"score"\s*:\s*(\d+(?:\.\d+)?)/);
+      if (m) scores.push(Math.min(10, Number(m[1])));
+    } catch (e) {
+      console.log(`  judge failed on ${projectId}#${f.index}: ${String(e).slice(0, 120)}`);
+    }
+  }
+  return { score: scores.length ? r2(mean(scores)) : null, usd, tokens };
 }
 
 const argv = process.argv.slice(2);
@@ -75,6 +111,8 @@ async function main() {
   const limit = Number(arg("--limit", "10"));
   const configs = (arg("--configs", "A,B,C").split(",") as ConfigKey[]).filter((c) => c in CONFIGS);
   const allowMock = argv.includes("--allow-mock");
+  const judgeModel = argv.includes("--judge") ? arg("--judge", "") : "google/gemma-3-27b-it";
+  const judge = judgeModel && process.env.NEBIUS_API_KEY ? new NemotronProvider({ apiKey: process.env.NEBIUS_API_KEY, baseUrl: process.env.NEBIUS_BASE_URL }) : null;
   const client = new StudioClient({ base, passcode: arg("--passcode") || process.env.DEMO_PASSCODE });
   await client.unlock();
   const meta = await client.json<{ director: { provider: string; research: boolean } }>("GET", "/api/meta");
@@ -82,7 +120,15 @@ async function main() {
   if (mock && !allowMock) throw new Error(`Server provider is "${meta.director.provider}". The bench only reports real Nemotron runs (use --allow-mock for a labelled dry run).`);
   mkdirSync(`${out}/eval`, { recursive: true });
   const jsonl = `${out}/eval/runs.jsonl`;
-  const rows: Row[] = [];
+  // Resume: rows already in runs.jsonl (same mock-ness) are kept and not re-run
+  const rows: Row[] = existsSync(jsonl)
+    ? readFileSync(jsonl, "utf8")
+        .split("\n")
+        .filter(Boolean)
+        .map((l) => JSON.parse(l) as Row & { mock?: boolean })
+        .filter((r) => Boolean(r.mock) === mock && r.status !== "error")
+    : [];
+  if (rows.length) console.log(`resuming: ${rows.length} runs already in ${jsonl}`);
 
   for (const p of BENCH_PROMPTS.slice(0, limit)) {
     for (const c of configs) {
@@ -92,12 +138,32 @@ async function main() {
         console.log(`skip ${c}/${p.id}: server has no TAVILY_API_KEY`);
         continue;
       }
-      const pid = await client.createProject(`bench ${c} ${p.id}`);
+      if (rows.some((r) => r.config === cfg.name && r.prompt === p.id)) continue;
+      // A dropped stream cancels the run server-side (no orphan runs): retry once on a fresh project
+      let pid = "";
+      let runId = "";
       let summary: Record<string, unknown> | null = null;
-      const runId = await client.direct(pid, { story: p.story, language: p.language, style: "flat", maxShots: p.shots, ...cfg.body }, (e) => {
-        if (e.type === "done") summary = e.summary as Record<string, unknown>;
-      });
+      for (let attempt = 0; attempt < 2 && !summary; attempt++) {
+        let streamed = 0;
+        try {
+          pid = await client.createProject(`bench ${c} ${p.id}`);
+          runId = await client.direct(pid, { story: p.story, language: p.language, style: "flat", maxShots: p.shots, ...cfg.body }, (e) => {
+            if (e.type === "step") streamed += Number((e.step as { costUsd?: number }).costUsd ?? 0);
+            if (e.type === "done") summary = e.summary as Record<string, unknown>;
+          });
+        } catch (e) {
+          if (!mock) appendLedger({ script: "bench-dropped", label: `${c}:${p.id}`, model: cfg.name, tokensIn: 0, tokensOut: 0, costUsd: streamed });
+          console.log(`  ${c}/${p.id}: stream failed (${String(e).slice(0, 100)})${attempt === 0 ? ", retrying once" : ""}`);
+        }
+      }
+      if (!summary) {
+        console.log(`${c} ${p.id}: no result after 2 attempts, recorded as error`);
+        appendFileSync(jsonl, JSON.stringify({ config: cfg.name, prompt: p.id, language: p.language, status: "error", at: new Date().toISOString(), mock }) + "\n");
+        continue;
+      }
       const s = (summary ?? {}) as Record<string, number & string & boolean>;
+      const judged = await judgeRun(client, judge, judgeModel, pid);
+      if (judged.usd && !mock) appendLedger({ script: "bench-judge", label: `${c}:${p.id}`, model: judgeModel, tokensIn: judged.tokens, tokensOut: 0, costUsd: judged.usd });
       const shots = Number(s.shots ?? 0);
       const filmSec = Number(s.durationSec ?? 0);
       const usd = Number(s.costUsd ?? 0);
@@ -119,12 +185,13 @@ async function main() {
         filmSec: r2(filmSec),
         usdPerMinute: filmSec > 0 ? r2((usd / filmSec) * 60 * 1000) / 1000 : null,
         textCritic: Boolean(s.textCritic),
+        judge: judged.score,
         runId,
       };
       rows.push(row);
       appendFileSync(jsonl, JSON.stringify({ ...row, at: new Date().toISOString(), mock }) + "\n");
       if (!mock) appendLedger({ script: "bench", label: `${c}:${p.id}`, model: cfg.name, tokensIn: row.tokens, tokensOut: 0, costUsd: usd });
-      console.log(`${c} ${p.id.padEnd(16)} ${row.status.padEnd(15)} shots ${row.rendered}/${shots} first-pass ${row.firstPassPct}% critic ${row.criticBefore ?? "-"}→${row.criticAfter ?? "-"} $${usd.toFixed(4)} ${row.wallSec}s`);
+      console.log(`${c} ${p.id.padEnd(16)} ${row.status.padEnd(15)} shots ${row.rendered}/${shots} first-pass ${row.firstPassPct}% critic ${row.criticBefore ?? "-"}→${row.criticAfter ?? "-"} judge ${row.judge ?? "-"} $${usd.toFixed(4)} ${row.wallSec}s`);
     }
   }
 
@@ -143,6 +210,7 @@ async function main() {
       before: scored.length ? r2(mean(scored.map((r) => r.criticBefore!))) : null,
       after: scored.length ? r2(mean(scored.map((r) => r.criticAfter!))) : null,
       lint: r2(mean(rs.map((r) => r.lintLeft))),
+      judge: rs.some((r) => r.judge !== null) ? r2(mean(rs.filter((r) => r.judge !== null).map((r) => r.judge!))) : null,
       wall: r2(mean(rs.map((r) => r.wallSec))),
       tokens: Math.round(mean(rs.map((r) => r.tokens))),
       usd: r2(rs.reduce((a, r) => a + r.usd, 0) * 1000) / 1000,
@@ -157,21 +225,23 @@ async function main() {
     stamp,
     `Generated ${new Date().toISOString()} against \`${base}\` · provider **${meta.director.provider}** · ${rows.length} runs · raw data: [eval/runs.csv](eval/runs.csv), [eval/runs.jsonl](eval/runs.jsonl).`,
     "",
-    "Configs: **super-only** = every role on Nemotron Super, no critic · **crew** = Ultra plans, Super draws, Nano Omni critiques (≤ 2 revisions), Nano edits · **crew+tavily** = crew plus Tavily references.",
+    "Configs: **super-only** = every role on Nemotron Super, no critic · **crew** = Ultra plans, Super draws, Nano critiques in text mode (≤ 2 revisions; no Nemotron vision model is served, DECISIONS D15), Nano edits · **crew+tavily** = crew plus Tavily references.",
     "",
-    "| Config | Runs (done) | First-pass render % | Repairs / shot | Critic before → after | Lint left | Wall s | Tokens / run | USD total | USD / finished min |",
-    "|---|---|---|---|---|---|---|---|---|---|",
-    ...agg.map((a) => `| ${a.config} | ${a.runs} (${a.done}) | ${a.firstPass} | ${a.repairs} | ${a.before ?? "—"} → ${a.after ?? "—"} | ${a.lint} | ${a.wall} | ${a.tokens.toLocaleString("en")} | $${a.usd} | $${a.usdPerMin} |`),
+    `**Independent judge**: ${judge ? `\`${judgeModel}\` (a vision model on Token Factory, not part of the crew) scores every final frame 0–10 against its shot description, blind to the config` : "off"}.`,
+    "",
+    "| Config | Runs (done) | Judge score (0–10) | First-pass render % | Repairs / shot | Critic before → after | Lint left | Wall s | Tokens / run | USD total | USD / finished min |",
+    "|---|---|---|---|---|---|---|---|---|---|---|",
+    ...agg.map((a) => `| ${a.config} | ${a.runs} (${a.done}) | ${a.judge ?? "—"} | ${a.firstPass} | ${a.repairs} | ${a.before ?? "—"} → ${a.after ?? "—"} | ${a.lint} | ${a.wall} | ${a.tokens.toLocaleString("en")} | $${a.usd} | $${a.usdPerMin} |`),
     "",
     "![Director benchmark chart](eval/chart.png)",
     "",
     "## Per run",
     "",
-    "| Config | Prompt | Status | Shots | First-pass % | Repairs/shot | Critic | Lint | Wall s | USD |",
-    "|---|---|---|---|---|---|---|---|---|---|",
-    ...rows.map((r) => `| ${r.config} | ${r.prompt} | ${r.status} | ${r.rendered}/${r.shots} | ${r.firstPassPct} | ${r.repairsPerShot} | ${r.criticBefore ?? "—"} → ${r.criticAfter ?? "—"}${r.textCritic ? " (text)" : ""} | ${r.lintLeft} | ${r.wallSec} | $${r.usd.toFixed(4)} |`),
+    "| Config | Prompt | Status | Shots | Judge | First-pass % | Repairs/shot | Critic | Lint | Wall s | USD |",
+    "|---|---|---|---|---|---|---|---|---|---|---|",
+    ...rows.map((r) => `| ${r.config} | ${r.prompt} | ${r.status} | ${r.rendered}/${r.shots} | ${r.judge ?? "—"} | ${r.firstPassPct} | ${r.repairsPerShot} | ${r.criticBefore ?? "—"} → ${r.criticAfter ?? "—"}${r.textCritic ? " (text)" : ""} | ${r.lintLeft} | ${r.wallSec} | $${r.usd.toFixed(4)} |`),
     "",
-    "Notes: critic scores come from the crew's own critic, so they measure self-assessed uplift and are not an independent quality rating. A revision replaces a shot only when it scores higher (DECISIONS D11). USD uses the price table in `src/lib/providers/pricing.ts`, which should be reconciled with the Token Factory billing page.",
+    "Notes: critic scores come from the crew's own critic, so they measure self-assessed uplift; the judge column is the independent rating (one VLM, so read it as a relative signal between configs, not an absolute quality grade). Judge calls are billed in the ledger but excluded from the per-run USD. A revision replaces a shot only when it scores higher (DECISIONS D11). USD uses the price table in `src/lib/providers/pricing.ts`, which should be reconciled with the Token Factory billing page.",
     "",
   ].join("\n");
   writeFileSync(`${out}/EVAL_RESULTS.md`, md);
@@ -179,11 +249,11 @@ async function main() {
 }
 
 /** Small multiples (one panel per metric, one bar per config): no dual axes. Validated palette slots 1–3. */
-async function writeChart(file: string, agg: Array<{ config: string; firstPass: number; after: number | null; before: number | null; usdPerMin: number; wall: number }>, mock: boolean) {
+async function writeChart(file: string, agg: Array<{ config: string; firstPass: number; judge: number | null; usdPerMin: number; wall: number }>, mock: boolean) {
   const colors = ["#2a78d6", "#eb6834", "#1baf7a"];
   const panels = [
     { title: "First-pass render %", v: agg.map((a) => a.firstPass), max: 100, fmt: (x: number) => `${x}%` },
-    { title: "Critic uplift (after − before)", v: agg.map((a) => (a.after !== null && a.before !== null ? r2(a.after - a.before) : NaN)), max: null, fmt: (x: number) => (x >= 0 ? `+${x}` : `${x}`) },
+    { title: "Independent judge (0–10)", v: agg.map((a) => a.judge ?? NaN), max: 10, fmt: (x: number) => `${x}` },
     { title: "USD per finished minute", v: agg.map((a) => a.usdPerMin), max: null, fmt: (x: number) => `$${x}` },
     { title: "Wall time per film (s)", v: agg.map((a) => a.wall), max: null, fmt: (x: number) => `${Math.round(x)}` },
   ];

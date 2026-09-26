@@ -4,7 +4,10 @@ import { renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
 import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
 import { castRepairUser, castSystem, castUser } from "@/lib/services/director/prompts";
-import { castSheetFrame, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
+import sharp from "sharp";
+import { castSheetFrame, extractJsonBlock, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
+import { buildDoll, dollSchema } from "@/lib/services/director/dollKit";
+import { zodIssues } from "@/lib/services/director/schemas";
 import type { CastMember, Plan } from "@/lib/services/director/schemas";
 
 export interface CastLibrary {
@@ -44,6 +47,16 @@ export async function symbolProblems(
   if (member.kind === "character" && (aspect < 0.5 || aspect > 0.85)) problems.push(`#${id} is a character: its viewBox must be "0 0 400 600" (got ${s.w}×${s.h})`);
   const min = member.kind === "set" ? 15 : member.kind === "character" ? 12 : 5;
   if (s.shapes < min) problems.push(`#${id} has only ${s.shapes} shapes; draw at least ${min} (${member.kind === "set" ? "sky, far, middle and near layers, light sources" : member.kind === "character" ? "hair, face with eyes/brows/mouth, clothes in 2-3 tones, arms, hands, legs, shoes" : "the object's parts and highlights"})`);
+  if (member.kind === "character" && !problems.length) {
+    const alone = await renderArtwork([...neededExtras(symbol, extras).values(), symbol].join("\n"), `<use href="#${id}" x="0" y="0" width="720" height="1080"/>`, aspectRatio, "1K").catch(() => null);
+    if (alone) {
+      const meta = await sharp(alone).metadata();
+      const crop = await sharp(alone).extract({ left: 0, top: 0, width: Math.round(((meta.width ?? 1024) * 720) / canvas.w), height: meta.height ?? 576 }).png().toBuffer();
+      const pieces = await opaquePieces(crop);
+      const big = pieces.filter((p) => p >= 0.04);
+      if (big.length >= 2) problems.push(`#${id} falls apart into ${big.length} separate pieces (${big.map((p) => `${Math.round(p * 100)}%`).join(", ")} of the figure): head, neck, body, arms and legs must overlap so the character is one connected shape`);
+    }
+  }
   if (member.kind === "set" && !problems.length) {
     const alone = await renderArtwork([...neededExtras(symbol, extras).values(), symbol].join("\n"), `<use href="#${id}" x="0" y="0" width="${canvas.w}" height="${canvas.h}"/>`, aspectRatio, "1K").catch(() => null);
     const clear = alone ? await transparentShare(alone) : 1;
@@ -140,10 +153,26 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     throwIfCancelled(ctx);
     const user = attempt === 0 ? castUser(plan) : castRepairUser(plan, pending, [...accepted.keys()], problems);
     const out = await callModel(ctx, { role: "cast", action: attempt === 0 ? "defs" : "defs:repair", system, user, attempt, maxTokens: 16000, temperature: 0.5 });
-    const defs = extractSvgFragment(out.text);
+    // Human characters come as doll specs (```json {"dolls": {...}}); the engine draws them
+    const dolls = new Map<string, string>();
+    const dollProblems: string[] = [];
+    try {
+      const raw = extractJsonBlock(out.text) as { dolls?: Record<string, unknown> } | null;
+      for (const [id, spec] of Object.entries(raw?.dolls ?? {})) {
+        const member = pending.find((c) => c.id === id && c.kind === "character");
+        if (!member) continue;
+        const r = dollSchema.safeParse(spec);
+        if (r.success) dolls.set(id, buildDoll(id, r.data));
+        else dollProblems.push(`#${id} doll spec invalid: ${zodIssues(r.error)}`);
+      }
+    } catch (e) {
+      dollProblems.push(`the \`\`\`json dolls block is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    const drawn = extractSvgFragment(out.text);
+    const defs = [drawn, ...dolls.values()].filter(Boolean).join("\n");
     let parsed: ReturnType<typeof splitLibrary>;
     try {
-      if (!defs) throw new Error("The reply contained no SVG markup.");
+      if (!defs) throw new Error(dollProblems[0] ?? "The reply contained no SVG markup.");
       sanitizeSvg(defs, "defs");
       parsed = splitLibrary(defs);
     } catch (e) {
@@ -151,7 +180,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
       await recordStep(ctx, { role: "cast", model: out.model, action: "defs:invalid", attempt, summary: "Library rejected", error: problems[0] });
       continue;
     }
-    problems = [];
+    problems = [...dollProblems];
     const known = new Set([...accepted.keys(), ...parsed.symbols.keys()]);
     for (const c of pending) {
       const symbol = parsed.symbols.get(c.id);

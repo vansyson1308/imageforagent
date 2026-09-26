@@ -19,6 +19,7 @@ import { normalizePlan, planToTsv } from "@/lib/services/director/plan";
 import { validateDrawing } from "@/lib/services/director/artist";
 import { symbolProblems, validateLibrary } from "@/lib/services/director/cast";
 import { CAST_REFERENCE, quoteData } from "@/lib/services/director/prompts";
+import { ACCESSORIES, BOTTOMS, buildDoll, dollSchema, HAIR_STYLES, TOPS } from "@/lib/services/director/dollKit";
 import type { DirectorEvent } from "@/lib/services/director/context";
 
 const canvas = LOGICAL_CANVAS["16:9"];
@@ -205,8 +206,8 @@ describe("director validators", () => {
     await expect(validateDrawing('```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><circle cx="50" cy="50" r="40" fill="#fff"/>\n```', gated)).rejects.toThrow(/#hero is in this shot but not placed: add <use href="#hero"/);
     await expect(validateDrawing('```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><use href="#hero" x="800" y="200" width="480" height="720"/>\n```', gated)).resolves.toBeTruthy();
     await expect(validateDrawing(tiny, { ...gated, strict: false })).resolves.toBeTruthy();
-    expect(minSubjectPct("Close-up")).toBe(90);
-    expect(minSubjectPct("Cận cảnh")).toBe(90);
+    expect(minSubjectPct("Close-up")).toBe(75);
+    expect(minSubjectPct("Cận cảnh")).toBe(75);
     expect(minSubjectPct("Wide shot")).toBe(25);
   });
 
@@ -257,6 +258,40 @@ describe("director validators", () => {
     expect(await symbolProblems(kid, '<symbol id="ref-kid" viewBox="0 0 400 600"><rect fill="url(#nope)"/></symbol>', extras, canvas, "16:9")).toEqual([
       "#ref-kid references undefined #nope: declare those gradients in the same reply",
     ]);
+  });
+
+  it("draws kit characters that pass the sanitizer and every library gate, deterministically", async () => {
+    const kid = { id: "k", name: "K", kind: "character" as const, look: "", colors: ["#c8432f"] };
+    const ages = ["child", "adult", "elder"] as const;
+    for (let i = 0; i < HAIR_STYLES.length * 2; i++) {
+      const spec = dollSchema.parse({
+        age: ages[i % 3],
+        build: (["slim", "average", "round"] as const)[i % 3 === 0 ? 1 : i % 3 === 1 ? 2 : 0],
+        skin: i % 2 ? "#f2c6a0" : "#8d5a3b",
+        hairStyle: HAIR_STYLES[i % HAIR_STYLES.length],
+        hairColor: "#3a2418",
+        top: TOPS[i % TOPS.length],
+        topColor: "#2f6b8f",
+        bottom: BOTTOMS[i % BOTTOMS.length],
+        accent: "#f4b23c",
+        accessories: [ACCESSORIES[i % ACCESSORIES.length], ACCESSORIES[(i + 5) % ACCESSORIES.length]],
+      });
+      const lib = buildDoll("k", spec);
+      expect(buildDoll("k", spec)).toBe(lib);
+      expect(() => sanitizeSvg(lib, "defs")).not.toThrow();
+      const { symbols, extras } = splitLibrary(lib);
+      expect(await symbolProblems(kid, symbols.get("k"), extras, canvas, "16:9"), JSON.stringify(spec)).toEqual([]);
+    }
+    expect(dollSchema.safeParse({ age: "teen", skin: "red" }).success).toBe(false);
+  }, 60_000);
+
+  it("rejects a drawn character whose head floats off its body", async () => {
+    const hero = { id: "h", name: "H", kind: "character" as const, look: "", colors: ["#c8432f"] };
+    const shapes = Array.from({ length: 10 }, (_, i) => `<circle cx="200" cy="${330 + i * 20}" r="60" fill="#c8432f"/>`).join("");
+    const floating = `<symbol id="h" viewBox="0 0 400 600"><circle cx="200" cy="90" r="70" fill="#f2c6a0"/><circle cx="180" cy="80" r="8" fill="#000"/>${shapes}</symbol>`;
+    expect((await symbolProblems(hero, floating, new Map(), canvas, "16:9"))[0]).toMatch(/#h falls apart into 2 separate pieces/);
+    const joined = floating.replace('cy="90" r="70"', 'cy="200" r="70"');
+    expect(await symbolProblems(hero, joined, new Map(), canvas, "16:9")).toEqual([]);
   });
 
   it("validates motion-shot ambient layers through motionSpecSchema", async () => {
@@ -383,6 +418,25 @@ describe("director loop (mock crew)", () => {
     const steps = await prisma.directorStep.findMany({ where: { runId, role: "cast" }, orderBy: { seq: "asc" } });
     expect(steps.map((s) => s.action)).toEqual(["defs", "defs:invalid", "defs:repair", "library"]);
     expect(steps[1].outputSummary).toBe("Kept 1/2 symbols; redrawing hero");
+  }, 120_000);
+
+  it("builds human characters from the Cast's doll specs (engine-drawn) next to drawn sets", async () => {
+    const base = demoHandler({ criticScores: [9, 9] });
+    const lib = splitLibrary(DEMO_LIBRARY);
+    const spec = { age: "child", skin: "#f2c6a0", hairStyle: "bob", hairColor: "#3a2418", top: "dress", topColor: "#e2571b", accent: "#f4b23c", accessories: ["scarf"] };
+    const handler: MockHandler = (m, o, i) => {
+      if (m[0].content.startsWith("ROLE: CAST")) {
+        expect(m[0].content).toContain('"hairStyle": "short|spiky|bob');
+        return `\`\`\`svg\n${[...lib.extras.values()].join("\n")}\n${lib.symbols.get("home")}\n\`\`\`\n\`\`\`json\n${JSON.stringify({ dolls: { hero: spec } })}\n\`\`\``;
+      }
+      return base(m, o, i);
+    };
+    const { projectId, runId, summary } = await run(handler, {}, { maxShots: 2 });
+    expect(summary.status).toBe("done");
+    const defs = (await prisma.project.findUniqueOrThrow({ where: { id: projectId } })).artworkDefs ?? "";
+    expect(defs).toContain(buildDoll("hero", dollSchema.parse(spec)).split("\n")[1]);
+    const steps = await prisma.directorStep.findMany({ where: { runId, role: "cast" }, orderBy: { seq: "asc" } });
+    expect(steps.map((s) => s.action)).toEqual(["defs", "library"]);
   }, 120_000);
 
   it("draws shots in parallel with a bounded pool and still renders every shot", async () => {

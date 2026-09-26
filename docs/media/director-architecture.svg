@@ -77,8 +77,8 @@
 
   <!-- Critic -->
   <rect x="862" y="266" width="286" height="80" rx="12" class="nv"/>
-  <text x="1005" y="294" text-anchor="middle" class="t">Visual Critic · Nano Omni</text>
-  <text x="1005" y="314" text-anchor="middle" class="s">LOOKS at the rendered PNG</text>
+  <text x="1005" y="294" text-anchor="middle" class="t">Critic · Nano + render gates</text>
+  <text x="1005" y="314" text-anchor="middle" class="s">engine MEASURES the render</text>
   <text x="1005" y="330" text-anchor="middle" class="s">score 0–10 + concrete fixes</text>
 
   <path d="M252 306 H298" class="l"/>

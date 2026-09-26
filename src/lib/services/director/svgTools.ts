@@ -130,7 +130,7 @@ export function placedHeights(svg: string, canvasH: number): Map<string, number>
 /** Minimum height (% of canvas) of the largest character, by storyboard shot type. */
 export function minSubjectPct(shotType: string): number {
   const s = shotType.toLowerCase();
-  if (/close|cận|insert|detail|chi tiết/.test(s)) return 90;
+  if (/close|cận|insert|detail|chi tiết/.test(s)) return 75;
   if (/medium|trung|waist|two[- ]shot|over[- ]the/.test(s)) return 45;
   if (/wide|establish|toàn|long|rộng|aerial|bird/.test(s)) return 25;
   return 30;
@@ -240,4 +240,38 @@ export function normalizeSet(symbol: string, backing: string): string {
   if (open.endsWith("/>")) open = open.slice(0, -2) + ">";
   const rect = vb ? `<rect x="${vb[1]}" y="${vb[2]}" width="${vb[3]}" height="${vb[4]}" fill="${backing}"/>` : "";
   return open + rect + symbol.slice(head.length);
+}
+
+/**
+ * Separate opaque pieces in a render (alpha > 40, 4-connected, on a ≤ 160 px
+ * grid): sizes as shares of the opaque area, largest first. A drawn
+ * character whose head floats off its body shows up as two big pieces.
+ */
+export async function opaquePieces(png: Buffer): Promise<number[]> {
+  const { data, info } = await sharp(png).ensureAlpha().extractChannel(3).resize({ width: 160, height: 160, fit: "inside" }).raw().toBuffer({ resolveWithObject: true });
+  const w = info.width;
+  const h = info.height;
+  const seen = new Uint8Array(w * h);
+  const sizes: number[] = [];
+  let total = 0;
+  for (let i = 0; i < w * h; i++) {
+    if (seen[i] || data[i] <= 40) continue;
+    let size = 0;
+    const stack = [i];
+    seen[i] = 1;
+    while (stack.length) {
+      const p = stack.pop()!;
+      size++;
+      const x = p % w;
+      for (const q of [p - w, p + w, x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1]) {
+        if (q >= 0 && q < w * h && !seen[q] && data[q] > 40) {
+          seen[q] = 1;
+          stack.push(q);
+        }
+      }
+    }
+    sizes.push(size);
+    total += size;
+  }
+  return sizes.sort((a, b) => b - a).map((s) => s / Math.max(1, total));
 }

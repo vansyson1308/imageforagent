@@ -42,8 +42,16 @@ export class StudioClient {
     return JSON.parse(text) as T;
   }
 
+  /** In demo mode a session holds ≤ N projects: on QUOTA_EXCEEDED, unlock a fresh session and retry once. */
   async createProject(name: string): Promise<string> {
-    return (await this.json<{ id: string }>("POST", "/api/projects", { name })).id;
+    try {
+      return (await this.json<{ id: string }>("POST", "/api/projects", { name })).id;
+    } catch (e) {
+      if (!this.opts.passcode || !/QUOTA_EXCEEDED/.test(String(e))) throw e;
+      this.cookie = "";
+      await this.unlock();
+      return (await this.json<{ id: string }>("POST", "/api/projects", { name })).id;
+    }
   }
 
   /** Runs the Director and resolves with the run id once the stream ends. */
