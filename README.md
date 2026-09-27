@@ -1,4 +1,44 @@
-# Storyboard Studio
+# Storyboard Studio: Director
+
+> **Type a story. Get a film. No image generator.** A crew of **NVIDIA Nemotron** models on **Nebius Token Factory** writes the whole film *as code* (SVG, construct and motion specs) into a deterministic engine, which **measures every render**. The crew then critiques those measurements and fixes the frames.
+>
+> 🎬 **Live demo:** <https://studio-production-049c.up.railway.app> (passcode-protected; the passcode is in the submission's testing instructions) · 🎞 **[Showcase films](https://studio-production-049c.up.railway.app/showcase)** · 📊 **[Eval results](docs/hackathon/EVAL_RESULTS.md)** · ⚖️ **[MIT licensed](LICENSE)**
+
+<p align="center"><img src="docs/media/director-architecture.svg" width="900" alt="Architecture: Story → Researcher (Nano + Tavily) → Director (Ultra) → Script → Cast (Super) → per shot: Artist (Super) → validate + render → animated clip → Critic (Nano + measured render gates, revise loop) → Editor (Nano) → film assembler → MP4 + package"></p>
+
+<p align="center"><img src="docs/media/director-tea-house.gif" width="640" alt="The first 14 seconds of a real showcase film made by the Nemotron crew: Grandma Hoa's tea house by the lake"><br><sub>First 14 s of <b>tea-house</b>, a real showcase film: 8 shots, 8/8 rendered, $0.11, made on the hosted demo. <a href="https://studio-production-049c.up.railway.app/showcase">Full films + traces</a></sub></p>
+
+### How we use Nebius Token Factory + NVIDIA Nemotron
+
+Every model call goes to Token Factory's OpenAI-compatible endpoint (`POST {NEBIUS_BASE_URL}/chat/completions`, plain `fetch`, no SDK), through one provider layer (`src/lib/providers/`). It handles strict `json_schema` output with a `json_object` fallback, image input as `image_url` data URIs, the `enable_thinking` reasoning toggle, retries with backoff and timeouts, and **per-call token and USD accounting**.
+
+| Role | Nemotron tier | Why this tier | What it does |
+|---|---|---|---|
+| 🎬 **Director** | **Nemotron 3 Ultra** (`NEMOTRON_STRONG_MODEL`) | Hardest reasoning, called **once per film** | Story → shot list + Cast & Set Bible as strict JSON (zod-validated), written through the same TSV/script path a human import uses |
+| 🖌️ **Artist** | **Nemotron 3 Super** (`NEMOTRON_MID_MODEL`) | Long, precise structured output, many calls | Builds the `<symbol>` cast library once (pixel-identical characters in every shot). Human characters are specified for the engine's parametric character kit; animals, sets and props are drawn as SVG, and symbols are accepted one by one, then every frame as an SVG fragment + ambient motion layer, 3 shots in parallel. Engine errors **and failed render measurements** come back with a hint → **≤ 3 repairs** |
+| 📏 **Critic** | **Nemotron 3 Nano** (`NEMOTRON_FAST_MODEL`) + the engine's render gates | Cheap, fast, and grounded in pixels it cannot see | The engine measures each render (visible character height per shot type, night brightness, set coverage). Nano reads those measurements plus the SVG, scores the frame 0–10 against the shot and lists concrete fixes. **≤ 2 revision rounds**, and a revision is kept only if it scores higher. When Token Factory serves an image-input model, `NEMOTRON_VISION_MODEL` switches the same loop to send the image |
+| ✂️ **Editor** | **Nemotron Nano** (`NEMOTRON_FAST_MODEL`) | Fast everyday calls | Fixes `lintStoryboard` findings (reading speed, jump cuts, voice timing) and runs a continuity check |
+| 🔎 **Researcher** | Nano + **Tavily** | Grounding | Optional capped search/extract → cited visual reference notes in the Bible and the UI |
+
+The **measure-and-revise loop** is the core idea. LLMs don't paint pixels here: they write code, the engine renders it deterministically and **measures the pixels**, and the numbers drive repairs and critique. Token Factory lists no image-input Nemotron today (Nano and Super answer `400 "does not support image input"`, see [evidence](docs/hackathon/evidence/vision-probe-2026-09-26.json)), so the critic is Nano in text mode by design. The trace says so, and the UI chip shows "📏 Nano critic". Costs and tokens are logged per step and shown live in the UI. **Measured (20 real runs, [EVAL_RESULTS.md](docs/hackathon/EVAL_RESULTS.md)):** an independent vision judge prefers the full crew over Super-alone on 6 of 10 stories (5.49 vs 5.08 / 10) at 1.8× the cost. A finished minute of film costs **$0.23** with the crew ($0.12 Super-only), and an 8-shot film takes 3–5 minutes.
+
+**Try it**
+1. Open the demo, enter the passcode, type a story (any language), pick a style, then **Make my film**.
+2. Watch the crew timeline stream in: role, model, tokens, cost, thumbnails, critic before → after.
+3. Play the film, then download the **MP4** or the full **production package** (PNG, clips, SRT, EDL/OTIO, glTF, `assemble.sh`).
+
+**Run it yourself**
+```bash
+npm install && cp .env.example .env && npx prisma migrate deploy
+echo 'NEBIUS_API_KEY=…' >> .env.local        # optional: without it the zero-key engine works as before
+npm run director:models                      # verify model ids against GET /v1/models
+npm run dev                                  # http://localhost:3000
+```
+`LLM_PROVIDER=mock` runs a scripted crew with no key and no network (tests, UI demos). Deploy with the `Dockerfile` (ffmpeg + espeak-ng, migrations on boot, volume at `/data`); set secrets as platform variables. Design notes: [ADR-017](docs/ADR.md). Build log and honest status: [docs/hackathon/](docs/hackathon/STATUS.md).
+
+---
+
+## The engine underneath (zero-key)
 
 <p align="center">
   <a href="docs/media/den-ong-sao-720p.mp4"><img src="docs/media/den-ong-sao-highlights.gif" width="720" alt="Highlights from Đèn Ông Sao, a 20-minute 3D animated film made with this engine"></a><br>
@@ -348,6 +388,17 @@ Everything is optional except the database path:
 | `DATABASE_URL` | `file:./prisma/dev.db` | SQLite database |
 | `STORAGE_ROOT` | `./storage` | Rendered image storage |
 | `GOOGLE_SERVICE_ACCOUNT_JSON` | — | Only for reading scripts from Google Sheets (one-line service-account JSON; share the sheet with the service-account email shown in the UI) |
+| `NEBIUS_API_KEY` | — | **Director only.** Nebius Token Factory key. Stays server-side. Without it the Director is disabled and the zero-key engine works as before |
+| `NEBIUS_BASE_URL` | `https://api.tokenfactory.nebius.com/v1` | OpenAI-compatible endpoint |
+| `NEMOTRON_STRONG_MODEL` / `_MID_` / `_FAST_` / `_VISION_` | see `src/lib/providers/index.ts` | Crew model per tier (Director = Ultra, Artist = Super, Editor + text Critic = Nano; VISION empty = auto-detect an image-input Nemotron, none listed today). Check them with `npm run director:models`. |
+| `NEBIUS_PRICES_JSON` | family estimates | `{"model-id":[inUSDper1M,outUSDper1M]}` for exact cost accounting |
+| `LLM_PROVIDER` | — | `mock` = scripted demo crew with no key and no network (tests, UI demos, video dry-runs). Labelled "mock" in every trace |
+| `DIRECTOR_MAX_SHOTS` / `_TOKENS_PER_RUN` / `_USD_PER_RUN` / `_WALL_SECONDS` | 12 / 600000 / 1.5 / 1200 | Hard per-run caps, enforced on the server before every model call. A request can lower them but never raise them |
+| `DIRECTOR_CONCURRENCY` | 3 | Shots drawn in parallel per run (1–6). Cuts wall time; cost is unchanged |
+| `SPEND_ALERT_USD` | 15 | Live scripts (`director:smoke`, showcase, bench) refuse to start once the spend ledger passes this |
+| `TAVILY_API_KEY` / `TAVILY_BASE_URL` | — / `https://api.tavily.com` | Optional Tavily researcher: capped search + extract, with cited reference notes added to the Bible |
+| `DEMO_MODE` / `DEMO_PASSCODE` | `false` / — | Public demo: every page and API sits behind a passcode (signed HttpOnly cookie). `/showcase` and `/unlock` stay public |
+| `DEMO_MAX_PROJECTS_PER_SESSION` / `DEMO_DAILY_TOKEN_BUDGET` / `DEMO_MAX_CONCURRENT_RUNS` / `DEMO_RETENTION_HOURS` | 3 / 3000000 / 2 / 24 | Demo caps. Demo projects are deleted after the retention window |
 
 ## Architecture
 
@@ -387,7 +438,8 @@ tests/                            Vitest — sanitizer bypass-vector suite + con
 
 ## Security notes
 
-- No authentication — a **local/internal tool by design**. Don't deploy to a public URL as-is.
+- No user accounts: a **local/internal tool by design**. For a public URL, run with `DEMO_MODE=true` + `DEMO_PASSCODE` (passcode gate on every page and API route, per-session caps, 24 h cleanup, daily token budget).
+- LLM keys (`NEBIUS_API_KEY`, `TAVILY_API_KEY`) live only on the server; story text and web snippets are passed to models as quoted DATA (injection guard), and every model output goes through zod + `sanitizeSvg` + the construct/motion validators before it reaches the engine.
 - User-supplied SVG is sanitized (strict reject-list) and only ever rasterized server-side; uploads are magic-byte verified and UUID-renamed; file serving is traversal-guarded; all inputs Zod-validated; mutating routes rate-limited.
 
 ## License

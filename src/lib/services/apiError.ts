@@ -11,6 +11,10 @@ export type ErrorCode =
   | "VALIDATION"
   | "NOT_FOUND"
   | "RATE_LIMITED"
+  | "UNAUTHORIZED"
+  | "QUOTA_EXCEEDED"
+  | "DIRECTOR_UNAVAILABLE"
+  | "CONFLICT"
   | "INTERNAL";
 
 const DEFAULT_STATUS: Record<ErrorCode, number> = {
@@ -26,6 +30,10 @@ const DEFAULT_STATUS: Record<ErrorCode, number> = {
   VALIDATION: 400,
   NOT_FOUND: 404,
   RATE_LIMITED: 429,
+  UNAUTHORIZED: 401,
+  QUOTA_EXCEEDED: 429,
+  DIRECTOR_UNAVAILABLE: 503,
+  CONFLICT: 409,
   INTERNAL: 500,
 };
 

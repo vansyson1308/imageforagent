@@ -1,0 +1,13 @@
+.git
+node_modules
+.next
+storage
+prisma/*.db*
+.env*
+!.env.example
+docs/media
+docs/hackathon/evidence
+demo/video/*.mp4
+demo/video/_work
+coverage
+*.log

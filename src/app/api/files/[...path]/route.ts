@@ -12,6 +12,8 @@ const CONTENT_TYPES: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".wav": "audio/wav",
+  ".mp4": "video/mp4",
+  ".json": "application/json",
 };
 
 interface RouteContext {

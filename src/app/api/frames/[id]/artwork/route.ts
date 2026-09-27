@@ -1,12 +1,8 @@
-import { prisma } from "@/lib/db";
-import { AppError } from "@/lib/services/apiError";
 import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { artworkSchema } from "@/lib/validation/schemas";
-import { sanitizeSvg } from "@/lib/services/svgRenderer";
-import { renderFrameArtwork } from "@/lib/services/artworkService";
 import { withImageUrl } from "@/lib/services/dto";
-import { clearFrameMotion } from "@/lib/services/clipService";
+import { writeFrameArtwork } from "@/lib/services/frameWrites";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -16,59 +12,13 @@ interface RouteContext {
  * PUT artwork SVG cho 1 frame → sanitize → render sync (~50ms) → done.
  * Frame đang là shot motion → gỡ motion (ảnh tĩnh thay thế clip).
  * Render lỗi: VẪN LƯU artworkSvg + status failed (agent không mất WIP),
- * trả 422 ARTWORK_INVALID kèm hint sửa.
+ * trả 422 ARTWORK_INVALID kèm hint sửa. Logic chung: frameWrites.ts.
  */
 export async function PUT(req: Request, ctx: RouteContext): Promise<Response> {
   return handleRoute(async () => {
     enforceRateLimit("frames:artwork", 30);
     const { id } = await ctx.params;
     const body = await parseBody(req, artworkSchema);
-
-    const frame = await prisma.frame.findUnique({ where: { id } });
-    if (!frame) throw new AppError("NOT_FOUND", "Không tìm thấy frame.");
-
-    const project = await prisma.project.findUnique({
-      where: { id: frame.projectId },
-      include: { assets: true },
-    });
-    if (!project) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
-
-    // Sanitize trước khi lưu — reject sớm với hint rõ ràng
-    sanitizeSvg(body.svg, "frame");
-
-    // Artwork tĩnh thay thế shot motion: frame trở lại ảnh tĩnh (clip gỡ bỏ)
-    if (frame.motionSpec) await clearFrameMotion(frame.projectId, id);
-
-    const saved = await prisma.frame.update({
-      where: { id },
-      data: { artworkSvg: body.svg },
-    });
-
-    try {
-      await renderFrameArtwork(project, saved);
-    } catch (err: unknown) {
-      // Lưu trạng thái failed để UI/agent thấy — artwork không mất.
-      // .catch: frame có thể bị xoá song song (P2025) — không được nuốt
-      // mất lỗi gốc bằng một lỗi update phụ.
-      const message =
-        err instanceof AppError
-          ? err.hint
-            ? `${err.message} — ${err.hint}`
-            : err.message
-          : err instanceof Error
-            ? err.message
-            : "Render lỗi.";
-      await prisma.frame
-        .update({
-          where: { id },
-          data: { status: "failed", errorMsg: message },
-        })
-        .catch(() => {});
-      throw err;
-    }
-
-    const fresh = await prisma.frame.findUnique({ where: { id } });
-    if (!fresh) throw new AppError("NOT_FOUND", "Frame đã bị xoá trong lúc render.");
-    return Response.json(withImageUrl(fresh));
+    return Response.json(withImageUrl(await writeFrameArtwork(id, body.svg)));
   });
 }

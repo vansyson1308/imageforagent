@@ -1,0 +1,34 @@
+[
+  {
+    "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+    "ok": false,
+    "ms": 1210,
+    "error": "Token Factory 400: {\"detail\":\"This model does not support image input\"}"
+  },
+  {
+    "model": "nvidia/nemotron-3-super-120b-a12b",
+    "ok": false,
+    "ms": 1209,
+    "error": "Token Factory 400: {\"detail\":\"This model does not support image input\"}"
+  },
+  {
+    "model": "openbmb/MiniCPM-V-4_5",
+    "ok": true,
+    "ms": 640,
+    "text": "{\"caption\":\"A cheerful orange robot with a star on its chest stands on a grassy hill, waving under a bright sun in a blue sky with two white clouds.\",\"score\":9}",
+    "usage": {
+      "promptTokens": 232,
+      "completionTokens": 39
+    }
+  },
+  {
+    "model": "google/gemma-3-27b-it",
+    "ok": true,
+    "ms": 770,
+    "text": "{\"caption\":\"A cheerful orange robot waves with one arm while standing in a grassy field under a bright, sunny sky.\",\"score\":8}",
+    "usage": {
+      "promptTokens": 291,
+      "completionTokens": 30
+    }
+  }
+]

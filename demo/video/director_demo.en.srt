@@ -1,0 +1,43 @@
+1
+00:00:00,300 --> 00:00:14,800
+Type a story. Get a film. There is no image generator here. A crew of NVIDIA Nemotron models on Nebius Token Factory writes the entire film as code.
+
+2
+00:00:15,300 --> 00:00:29,800
+I paste a short story and press Make my film. Nemotron 3 Ultra, the Director, plans the shots and writes a cast and set bible as strict JSON.
+
+3
+00:00:30,300 --> 00:00:51,800
+Nemotron 3 Super is the Artist. It draws each character once as a reusable symbol, then every frame as SVG, three shots in parallel. A sandboxed engine validates, renders and measures each frame. When a check fails, the error and its measured fix go straight back to the Artist.
+
+4
+00:00:52,300 --> 00:01:14,800
+Then the engine measures the render: how big the hero really is, whether night is dark, whether the set fills the frame. Nemotron Nano, the Critic, reads those numbers and the drawing, scores the shot, and asks for fixes. A revision replaces a frame only when it scores higher.
+
+5
+00:01:15,300 --> 00:01:29,800
+Nemotron Nano, the Editor, fixes timing and subtitle problems found by the storyboard linter. Every step streams live with its model, tokens and cost.
+
+6
+00:01:30,300 --> 00:01:41,800
+And the film plays, with voices, camera moves and transitions, assembled server side with ffmpeg. You can download the MP4 or the full production package.
+
+7
+00:01:42,300 --> 00:02:04,800
+Under the hood, every call goes to Token Factory's OpenAI compatible endpoint with strict JSON schemas. Ultra reasons once per film, Super does the heavy drawing, and Nano makes fast, cheap calls. Token Factory has no image-input Nemotron yet, so the engine's pixel measurements are the critic's eyes.
+
+8
+00:02:05,300 --> 00:02:14,800
+Every model output passes the same sanitizer and validators as human input, with hard budgets on tokens, dollars and time.
+
+9
+00:02:15,300 --> 00:02:29,800
+We benchmarked ten stories, Super alone against the full crew, with an independent vision judge scoring every final frame. The eval table shows judge scores, first pass render success and the cost per finished minute of film.
+
+10
+00:02:30,300 --> 00:02:39,800
+The showcase has films made end to end by the crew, in English, Vietnamese and Japanese.
+
+11
+00:02:40,300 --> 00:02:51,800
+Storyboard Studio Director. Open source under the MIT license. Try the demo, or run it yourself.

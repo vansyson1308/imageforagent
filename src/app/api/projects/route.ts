@@ -2,19 +2,28 @@ import { prisma } from "@/lib/db";
 import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { createProjectSchema } from "@/lib/validation/schemas";
+import { assertProjectQuota, cleanupDemoProjects, requireDemoSession } from "@/lib/services/demoGuard";
 
 export async function POST(req: Request): Promise<Response> {
   return handleRoute(async () => {
     enforceRateLimit("projects:create", 10);
     const body = await parseBody(req, createProjectSchema);
-    const project = await prisma.project.create({ data: { name: body.name } });
+    // Demo mode: project belongs to the visitor's session (cap + 24 h cleanup)
+    const sid = requireDemoSession(req);
+    if (sid) {
+      await cleanupDemoProjects();
+      await assertProjectQuota(sid);
+    }
+    const project = await prisma.project.create({ data: { name: body.name, demoSession: sid } });
     return Response.json(project, { status: 201 });
   });
 }
 
-export async function GET(): Promise<Response> {
+export async function GET(req: Request): Promise<Response> {
   return handleRoute(async () => {
+    const sid = requireDemoSession(req);
     const projects = await prisma.project.findMany({
+      where: sid ? { demoSession: sid } : undefined,
       orderBy: { updatedAt: "desc" },
       include: { _count: { select: { frames: true, assets: true } } },
     });

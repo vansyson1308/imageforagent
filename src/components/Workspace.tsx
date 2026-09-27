@@ -11,6 +11,8 @@ import { AssetPanel } from "@/components/AssetPanel";
 import { FrameGrid } from "@/components/FrameGrid";
 import { PreviewPlayer } from "@/components/PreviewPlayer";
 import { ExportBar } from "@/components/ExportBar";
+import { DirectorPanel } from "@/components/DirectorPanel";
+import { LangToggle, t, useLang } from "@/lib/i18n";
 
 export function Workspace() {
   const searchParams = useSearchParams();
@@ -22,6 +24,7 @@ export function Workspace() {
   const toast = useAppStore((s) => s.toast);
   const setToast = useAppStore((s) => s.setToast);
 
+  const [lang, setLang] = useLang();
   const [bootError, setBootError] = useState<string | null>(null);
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -104,6 +107,13 @@ export function Workspace() {
             Chuỗi ảnh storyboard với mascot nhất quán cho video animation
           </p>
         </div>
+        <LangToggle lang={lang} setLang={setLang} />
+        <Link
+          href="/showcase"
+          className="rounded-xl border border-line px-4 py-2 text-sm text-muted transition hover:border-accent hover:text-ink"
+        >
+          {t(lang, "showcase")}
+        </Link>
         <Link
           href="/projects"
           className="rounded-xl border border-line px-4 py-2 text-sm text-muted transition hover:border-accent hover:text-ink"
@@ -113,6 +123,9 @@ export function Workspace() {
       </header>
 
       <div className="flex flex-col gap-6">
+        <ErrorBoundary>
+          <DirectorPanel />
+        </ErrorBoundary>
         <ErrorBoundary>
           <ScriptImportPanel />
         </ErrorBoundary>

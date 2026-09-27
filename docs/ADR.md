@@ -258,3 +258,30 @@ L5 partsExpand / partFigure / partWheel   spec → spec rewrite TRƯỚC compile
 - Chưa có track phụ đề SMPTE 428-7 trong DCP.
 - Chưa có metadata CPL ST 429-16 và MCA label (ClairMeta không đòi; một số server mới hiển thị "channel config unknown").
 - Và giới hạn lớn nhất không nằm ở kỹ thuật: DCP hợp lệ chỉ là cái hộp đựng. **Chất lượng phim vẫn là nội dung, diễn xuất và tay nghề.** Engine lo phần tất định (layout, timing, chuyển động, đóng gói); phần nhìn đẹp như rạp đi qua glTF → Blender, hoặc qua control passes → AI video.
+
+## ADR-017: Director: đội Nemotron trên Nebius Token Factory viết phim thành code (25/09/2026)
+
+**Bối cảnh:** tới ADR-016, engine làm được phim chiếu rạp nhưng phải có **agent bên ngoài** (Claude Code…) viết từng frame. Hackathon Nebius × NVIDIA cần một app mà *người dùng thường* dùng được: gõ một câu chuyện, nhận một bộ phim. ADR-010 đã bỏ sinh ảnh bằng AI. Director **không** đưa nó trở lại: LLM không vẽ pixel, LLM **viết phim thành code** vào đúng engine tất định này.
+
+**Quyết định: một đội bốn vai, mỗi vai một tầng model (xem `src/lib/services/director/`)**
+- **Director = Nemotron 3 Ultra (STRONG):** truyện → shot list + Cast & Set Bible, JSON strict (zod `planSchema`, gửi kèm `json_schema`, fallback `json_object`). Plan được ghi qua **đúng đường của người dùng**: `parseTsv` → `replaceScript` (logic apply-edit). Chỉ gọi Ultra cho việc suy luận nặng nhất: 1 lần mỗi phim.
+- **Artist = Nemotron 3 Super (MID):** vẽ thư viện `<symbol>` một lần (nhất quán nhân vật, như agent bên ngoài vẫn làm), rồi mỗi shot một fragment SVG (+ lớp ambient 2D cho shot motion). Mọi output qua `sanitizeSvg` (không sửa `svgRenderer.ts`), kiểm tham chiếu treo, render thật, kiểm frame trắng. Lỗi → **tối đa 3 lần sửa**, dùng đúng `message + hint` engine trả về.
+- **Critic = Nemotron Nano (FAST) + cổng đo render; VISION khi có:** thiết kế ban đầu là Nano Omni *nhìn* PNG (JPEG ≤ 1024 px, part `image_url`). **Kiểm chứng live 26/09:** Token Factory không có Nemotron nhận ảnh nào (Nano/Super trả `400 does not support image input`, xem `evidence/vision-probe-2026-09-26.json`). Vì vậy critic mặc định chạy TEXT: engine **đo bản render bằng pixel** (chiều cao nhân vật thấy được theo loại shot, độ sáng cảnh đêm, set phủ khung), còn Nano đọc số đo + SVG rồi chấm 0–10 kèm danh sách sửa. Số đo là "sự thật" (DECISIONS D17): Nano không được chấm lại kích thước/độ sáng. Tối đa **2 vòng sửa**, chỉ nhận bản sửa nếu **điểm cao hơn**. Đặt `NEMOTRON_VISION_MODEL` = một id nhận ảnh có trong catalog thì cùng vòng này gửi ảnh; nếu model từ chối ảnh (400) thì chuyển TEXT và ghi rõ vào trace.
+- **Editor = Nemotron Nano (FAST):** `lintStoryboard` → sửa có mục tiêu (rút thoại quá tốc độ đọc, dissolve cho jump cut, voiceOffset) → lint lại, ≤ 2 vòng. Sau đó thêm một lượt continuity (chỉ báo cáo). Thoại được thu **trước khi vẽ** (TTS espeak-ng qua `resolveVoice`), nên mỗi shot dài vừa câu thoại.
+- **Researcher = Nano + Tavily (tuỳ chọn):** ≤ 2 search + 1 extract; snippet là DATA (bọc tag, cắt độ dài, xoá tag đóng giả), ghi chú kèm URL vào Bible và UI.
+
+**Mọi shot đều chuyển động mà engine không đổi một dòng.** Bức vẽ của Artist vào defs dưới dạng `<pattern id="art-fN">`. Motion spec là một rect phủ canvas tô bằng pattern đó, và track trên `place.at`/`place.scale` tạo dolly/pan/tilt thật (pattern nằm trong user space của group). `construct/`, `motion/`, `svgRenderer.ts` giữ nguyên, và render vẫn tất định cho cùng một bức vẽ. Id trong mỗi bức vẽ được namespace (`f3-sky`) vì mọi shot chung một defs.
+
+**Không job queue (luật repo):** run sống **trong chính request SSE** (`POST /api/projects/:id/director`). Hủy = `POST …/cancel` hoặc client ngắt kết nối (abort signal), không có run mồ côi chạy nền. Registry in-memory runId → AbortController (một instance). Mỗi bước là một `DirectorStep` (role, model, hash prompt, output, điểm, token, USD, latency, ảnh snapshot), và UI dựng timeline từ chính các bản ghi đó.
+
+**Ngân sách cứng phía server:** max shot, token, USD, wall time mỗi run (env là trần, request chỉ hạ được). Demo mode thêm trần token mỗi ngày toàn server, trần project mỗi phiên, xoá sau 24 h và cổng mật khẩu (Next 16 `proxy`, cookie HMAC). Script live ghi sổ chi tiêu và dừng ở mức $15.
+
+**Chế độ zero-key vẫn nguyên vẹn:** không có `NEBIUS_API_KEY` thì Director tắt (panel hiện hướng dẫn), mọi API/UI cũ chạy như trước và test không gọi mạng. `LLM_PROVIDER=mock` chạy đội kịch bản tất định (luôn gắn nhãn "mock") cho test, UI demo và dry-run video.
+
+**Không thêm dependency.** Token Factory (OpenAI-compatible) và Tavily gọi bằng `fetch`. JSON Schema sinh từ zod 4 (`z.toJSONSchema`). Chart eval render SVG → PNG bằng sharp.
+
+**Giới hạn trung thực:**
+- Nhân vật không cử động *trong* shot. Chuyển động đến từ camera, lớp ambient và cắt dựng. Muốn diễn xuất thật thì Artist phải viết `figure` + rig (engine đã có, Director chưa dùng).
+- Điểm critic là tự đánh giá của chính đội, không phải thước đo chất lượng độc lập.
+- Model id đã kiểm chứng live 26/09 (DECISIONS D14). Chưa có Nemotron nhận ảnh nên critic chạy TEXT (D15). Bảng giá trong `pricing.ts` là ước tính theo họ model, chưa đối chiếu trang billing.
+- Chất lượng nét vẽ của Super ở mức storyboard: bố cục đúng, nhân vật dễ đọc, nhưng hình khối đơn giản. Cổng đo render (D17) và thư viện nhận từng symbol (D18) sửa được lỗi *bố cục*, không biến Super thành hoạ sĩ.

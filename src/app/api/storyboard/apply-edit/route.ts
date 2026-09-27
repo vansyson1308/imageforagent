@@ -1,9 +1,8 @@
-import { prisma } from "@/lib/db";
-import { AppError } from "@/lib/services/apiError";
 import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { applyEditSchema } from "@/lib/validation/schemas";
 import { withImageUrl } from "@/lib/services/dto";
+import { replaceScript } from "@/lib/services/frameWrites";
 
 /**
  * Ghi bản kịch bản đã duyệt (từ diff-review AI edit) — thay toàn bộ frame
@@ -15,57 +14,7 @@ export async function POST(req: Request): Promise<Response> {
     enforceRateLimit("storyboard:apply-edit", 10);
     const body = await parseBody(req, applyEditSchema);
 
-    const project = await prisma.project.findUnique({
-      where: { id: body.projectId },
-      include: { frames: { orderBy: { index: "asc" } } },
-    });
-    if (!project) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
-
-    // Map nội dung cũ theo index để giữ ảnh cho frame không đổi
-    const oldByIndex = new Map(project.frames.map((f) => [f.index, f]));
-
-    const frames = await prisma.$transaction(async (tx) => {
-      await tx.frame.deleteMany({ where: { projectId: body.projectId } });
-      for (const f of body.frames) {
-        const old = oldByIndex.get(f.index);
-        const unchanged =
-          old !== undefined &&
-          old.shotType === f.shotType &&
-          old.description === f.description;
-        await tx.frame.create({
-          data: {
-            projectId: body.projectId,
-            index: f.index,
-            shotType: f.shotType,
-            description: f.description,
-            status: unchanged ? old.status : "draft",
-            imagePath: unchanged ? old.imagePath : null,
-            rawImagePath: unchanged ? old.rawImagePath : null,
-            generatedAt: unchanged ? old.generatedAt : null,
-            // Frame giữ nguyên nội dung giữ nguyên artwork + shot motion
-            // (thiếu dòng này /api/render sau đó bỏ sót frame đã có ảnh)
-            ...(unchanged && {
-              artworkSvg: old.artworkSvg,
-              errorMsg: old.errorMsg,
-              motionSpec: old.motionSpec,
-              clipDir: old.clipDir,
-              clipPath: old.clipPath,
-              clipFps: old.clipFps,
-              clipFrameCount: old.clipFrameCount,
-              clipDuration: old.clipDuration,
-              dialogue: old.dialogue,
-              voicePath: old.voicePath,
-              voiceDuration: old.voiceDuration,
-              voiceOffset: old.voiceOffset,
-            }),
-          },
-        });
-      }
-      return tx.frame.findMany({
-        where: { projectId: body.projectId },
-        orderBy: { index: "asc" },
-      });
-    });
+    const frames = await replaceScript(body.projectId, body.frames);
 
     return Response.json({ frames: frames.map(withImageUrl) });
   });

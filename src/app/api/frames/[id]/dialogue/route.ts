@@ -3,10 +3,8 @@ import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
-import { resolveVoice } from "@/lib/services/voiceService";
-import { audioDuration } from "@/lib/services/audio/wav";
-import { removeQuiet, saveBuffer, toPosix } from "@/lib/services/storage";
-import { renderFrameMotion } from "@/lib/services/clipService";
+import { removeQuiet } from "@/lib/services/storage";
+import { writeFrameDialogue } from "@/lib/services/frameWrites";
 import { withImageUrl } from "@/lib/services/dto";
 
 interface RouteContext {
@@ -36,32 +34,8 @@ export async function PUT(req: Request, ctx: RouteContext): Promise<Response> {
     enforceRateLimit("frames:dialogue", 10);
     const { id } = await ctx.params;
     const body = await parseBody(req, dialogueSchema);
-    const frame = await prisma.frame.findUnique({ where: { id } });
-    if (!frame) throw new AppError("NOT_FOUND", "Không tìm thấy frame.");
-    const voice = await resolveVoice({ wav: body.wav, text: body.text, tts: body.tts });
-    let voicePath: string | null = null;
-    let voiceDuration: number | null = null;
-    if (voice) {
-      voicePath = toPosix(`${frame.projectId}/audio/${frame.id}.wav`);
-      await saveBuffer(voicePath, voice.buffer);
-      voiceDuration = Math.round(audioDuration(voice.audio) * 1000) / 1000;
-    } else if (frame.voicePath) {
-      await removeQuiet(frame.voicePath);
-    }
-    const saved = await prisma.frame.update({
-      where: { id },
-      data: { dialogue: body.text, voicePath, voiceDuration, voiceOffset: body.offset },
-    });
-    const warnings: string[] = [];
-    if (saved.motionSpec && /"type"\s*:\s*"lipsync"/.test(saved.motionSpec)) {
-      const project = await prisma.project.findUnique({ where: { id: saved.projectId }, include: { assets: true } });
-      if (project) warnings.push(...(await renderFrameMotion(project, saved)).warnings);
-    }
-    if (voiceDuration !== null && saved.clipDuration && body.offset + voiceDuration > saved.clipDuration) {
-      warnings.push(`Voice (${voiceDuration}s from ${body.offset}s) runs past the shot (${saved.clipDuration}s) — it will be cut at the shot end.`);
-    }
-    const fresh = await prisma.frame.findUnique({ where: { id } });
-    return Response.json({ ...withImageUrl(fresh!), warnings });
+    const { frame, warnings } = await writeFrameDialogue(id, body);
+    return Response.json({ ...withImageUrl(frame), warnings });
   });
 }
 

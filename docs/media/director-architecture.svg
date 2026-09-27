@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" font-family="Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#52514e"/>
+    </marker>
+    <style>
+      .box { fill: #ffffff; stroke: #c9c8c1; stroke-width: 1.5; }
+      .nv { fill: #f1f8e9; stroke: #76b900; stroke-width: 2; }
+      .eng { fill: #eef4fc; stroke: #2a78d6; stroke-width: 1.5; }
+      .t { font-size: 15px; fill: #0b0b0b; font-weight: 700; }
+      .s { font-size: 12.5px; fill: #52514e; }
+      .l { stroke: #52514e; stroke-width: 1.6; fill: none; marker-end: url(#arrow); }
+      .loop { stroke: #eb6834; stroke-width: 1.6; fill: none; stroke-dasharray: 5 4; marker-end: url(#arrow); }
+      .lt { font-size: 12px; fill: #b8441b; font-weight: 700; }
+    </style>
+  </defs>
+  <rect width="1200" height="640" fill="#fcfcfb"/>
+  <text x="32" y="42" font-size="22" font-weight="700" fill="#0b0b0b">Storyboard Studio Director: a Nemotron film crew that writes the film as code</text>
+  <text x="32" y="66" class="s">Green = NVIDIA Nemotron on Nebius Token Factory (OpenAI-compatible, plain fetch) · Blue = the deterministic zero-key engine (unchanged)</text>
+
+  <!-- Story -->
+  <rect x="32" y="100" width="150" height="70" rx="12" class="box"/>
+  <text x="107" y="130" text-anchor="middle" class="t">Story</text>
+  <text x="107" y="150" text-anchor="middle" class="s">any language</text>
+
+  <!-- Researcher -->
+  <rect x="222" y="100" width="190" height="70" rx="12" class="nv"/>
+  <text x="317" y="126" text-anchor="middle" class="t">Researcher</text>
+  <text x="317" y="146" text-anchor="middle" class="s">Nano + Tavily (optional)</text>
+  <text x="317" y="162" text-anchor="middle" class="s">cited visual references</text>
+
+  <!-- Director -->
+  <rect x="452" y="100" width="210" height="70" rx="12" class="nv"/>
+  <text x="557" y="126" text-anchor="middle" class="t">Director · Ultra</text>
+  <text x="557" y="146" text-anchor="middle" class="s">shot list + Cast &amp; Set Bible</text>
+  <text x="557" y="162" text-anchor="middle" class="s">strict JSON (zod · json_schema)</text>
+
+  <!-- Script -->
+  <rect x="702" y="100" width="200" height="70" rx="12" class="eng"/>
+  <text x="802" y="126" text-anchor="middle" class="t">Script</text>
+  <text x="802" y="146" text-anchor="middle" class="s">parseTsv → replaceScript</text>
+  <text x="802" y="162" text-anchor="middle" class="s">+ TTS dialogue (espeak-ng)</text>
+
+  <!-- Cast -->
+  <rect x="942" y="100" width="226" height="70" rx="12" class="nv"/>
+  <text x="1055" y="126" text-anchor="middle" class="t">Cast · Super</text>
+  <text x="1055" y="146" text-anchor="middle" class="s">&lt;symbol&gt; library, drawn once</text>
+  <text x="1055" y="162" text-anchor="middle" class="s">sanitizeSvg("defs") + sheet render</text>
+
+  <path d="M182 135 H218" class="l"/>
+  <path d="M412 135 H448" class="l"/>
+  <path d="M662 135 H698" class="l"/>
+  <path d="M902 135 H938" class="l"/>
+
+  <!-- per-shot loop frame -->
+  <rect x="32" y="215" width="1136" height="210" rx="16" fill="none" stroke="#c9c8c1" stroke-dasharray="6 5"/>
+  <text x="52" y="240" class="s" font-weight="700">for each shot</text>
+  <path d="M1055 170 V200 H140 V262" class="l"/>
+
+  <!-- Artist -->
+  <rect x="52" y="266" width="200" height="80" rx="12" class="nv"/>
+  <text x="152" y="294" text-anchor="middle" class="t">Artist · Super</text>
+  <text x="152" y="314" text-anchor="middle" class="s">SVG frame fragment</text>
+  <text x="152" y="330" text-anchor="middle" class="s">+ ambient motion layer</text>
+
+  <!-- Validate -->
+  <rect x="302" y="266" width="230" height="80" rx="12" class="eng"/>
+  <text x="417" y="294" text-anchor="middle" class="t">Validate + render</text>
+  <text x="417" y="314" text-anchor="middle" class="s">sanitizeSvg · refs · blank check</text>
+  <text x="417" y="330" text-anchor="middle" class="s">sharp/librsvg (sync)</text>
+
+  <!-- Clip -->
+  <rect x="582" y="266" width="230" height="80" rx="12" class="eng"/>
+  <text x="697" y="294" text-anchor="middle" class="t">Animated clip</text>
+  <text x="697" y="314" text-anchor="middle" class="s">painting → defs pattern</text>
+  <text x="697" y="330" text-anchor="middle" class="s">camera move via place tracks</text>
+
+  <!-- Critic -->
+  <rect x="862" y="266" width="286" height="80" rx="12" class="nv"/>
+  <text x="1005" y="294" text-anchor="middle" class="t">Critic · Nano + render gates</text>
+  <text x="1005" y="314" text-anchor="middle" class="s">engine MEASURES the render</text>
+  <text x="1005" y="330" text-anchor="middle" class="s">score 0–10 + concrete fixes</text>
+
+  <path d="M252 306 H298" class="l"/>
+  <path d="M532 306 H578" class="l"/>
+  <path d="M812 306 H858" class="l"/>
+  <path d="M417 346 V380 H152 V350" class="loop"/>
+  <text x="200" y="374" class="lt">engine error + hint → repair (≤ 3)</text>
+  <path d="M1005 346 V405 H120 V350" class="loop"/>
+  <text x="560" y="400" class="lt">score &lt; 7 → revise with fixes (≤ 2 rounds, keep the better version)</text>
+
+  <!-- Editor -->
+  <rect x="52" y="462" width="300" height="76" rx="12" class="nv"/>
+  <text x="202" y="490" text-anchor="middle" class="t">Editor · Nano</text>
+  <text x="202" y="510" text-anchor="middle" class="s">lintStoryboard → targeted fixes → re-lint</text>
+  <text x="202" y="526" text-anchor="middle" class="s">reading speed · jump cuts · continuity</text>
+
+  <!-- Assembler -->
+  <rect x="402" y="462" width="300" height="76" rx="12" class="eng"/>
+  <text x="552" y="490" text-anchor="middle" class="t">Film assembler</text>
+  <text x="552" y="510" text-anchor="middle" class="s">timeline.ts → ffmpeg (argv, no shell)</text>
+  <text x="552" y="526" text-anchor="middle" class="s">−16 LUFS mix · 12 fps · film.mp4</text>
+
+  <!-- Output -->
+  <rect x="752" y="462" width="416" height="76" rx="12" class="box"/>
+  <text x="960" y="490" text-anchor="middle" class="t">Playable film + production package</text>
+  <text x="960" y="510" text-anchor="middle" class="s">MP4 · PNG/clips · storyboard.json · SRT · EDL/OTIO · glTF</text>
+  <text x="960" y="526" text-anchor="middle" class="s">every step traced (DirectorRun / DirectorStep)</text>
+
+  <path d="M600 425 V440 H202 V458" class="l"/>
+  <path d="M352 500 H398" class="l"/>
+  <path d="M702 500 H748" class="l"/>
+
+  <text x="32" y="585" class="s">Live to the browser over Server-Sent Events: role · model · tokens · USD · thumbnails · critic before → after. No job queue: the run lives inside the request; cancel aborts it.</text>
+  <text x="32" y="606" class="s">Hard server-side budgets: shots, tokens, USD, wall time per run; demo mode adds a passcode, per-session caps and a daily token budget.</text>
+</svg>
