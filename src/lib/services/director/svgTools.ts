@@ -161,10 +161,10 @@ export async function transparentShare(png: Buffer): Promise<number> {
   return clear / (w * h);
 }
 
-/** Remove every <use> of a symbol from a fragment (to measure what that symbol contributes). */
+/** Remove every <use> of a symbol (and of its posed variants "id--pose-expr") from a fragment. */
 export function withoutUses(svg: string, id: string): string {
   const esc = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return svg.replace(new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#${esc}["'][^>]*?(/>|>\\s*</use>|>)`, "g"), "");
+  return svg.replace(new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#${esc}(?:--[a-z0-9_-]+)?["'][^>]*?(/>|>\\s*</use>|>)`, "g"), "");
 }
 
 /**

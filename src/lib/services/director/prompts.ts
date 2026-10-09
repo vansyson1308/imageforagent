@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import type { CastMember, Plan, ShotPlan } from "@/lib/services/director/schemas";
 import type { CanvasSize } from "@/lib/services/svgRenderer";
-import { CRITTER_VOCABULARY, DOLL_VOCABULARY } from "@/lib/services/director/dollKit";
+import { CRITTER_VOCABULARY, DOLL_VOCABULARY, EXPRESSIONS, POSES } from "@/lib/services/director/dollKit";
 
 /**
  * Prompts for the crew. Every system prompt starts with a machine-readable
@@ -69,6 +69,8 @@ export function directorSystem(opts: { minShots: number; maxShots: number; langu
     "- shots[].dialogue: a short spoken line or narration (≤ 90 characters and ≤ 14 characters per second of durationSec), or null. speaker: cast name, \"Narrator\", or null.",
     '- shots[].transition INTO the shot: "cut" by default, "dissolve" for time passing, "fadeBlack" for the final shot.',
     "- Group shots into scenes with a short scene label; keep the 180° rule and vary shot sizes between consecutive shots of a scene.",
+    `- COVERAGE (a film, not a slideshow): open with an establishing wide shot; use medium shots, close-ups on faces at emotional beats, at least one over-the-shoulder or two-shot when two characters talk, and an insert/detail shot of a key prop. Never two consecutive shots with the same shot type AND the same framing. In films of 6+ shots use at least 2 distinct set areas or camera angles (another corner of the room, outside vs inside, a high or low angle). When the story spans time, give the light an arc (dawn → noon → dusk → night) and say it in each description. If a shot deliberately repeats an earlier composition (a callback), set "intentionalRepeat": true.`,
+    `- shots[].acting: for EVERY character visible in the shot, {"who": id, "pose": one of ${POSES.join("|")}, "expression": one of ${EXPRESSIONS.join("|")}}. Characters must ACT: wave to greet, point at what they notice, hold an object they use, sit when they rest, walk when they arrive or leave, hug at a reunion, bow to thank, kneel to look closely, look-left/look-right toward whom they listen to. Expressions follow the beat (smile, laugh, sad, surprised, sleepy, neutral). Vary them across shots; do not repeat stand+neutral.`,
   ].join("\n");
 }
 
@@ -232,6 +234,7 @@ export function artistUser(opts: {
   readonly feedback?: string | null;
   readonly previous?: string | null;
   readonly canvas: CanvasSize;
+  readonly actingBrief?: string;
 }): string {
   const { plan, shot } = opts;
   const castLines = plan.cast
@@ -244,6 +247,7 @@ export function artistUser(opts: {
     quoteData("notes", `Description: ${shot.description}${shot.dialogue ? `\nLine (${shot.speaker ?? "?"}): ${shot.dialogue}` : ""}`, 1500),
     `Library symbols available: ${opts.symbols.map((s) => `#${s}`).join(" ") || "(none)"}.`,
     castLines ? `Cast in this shot:\n${castLines}` : "",
+    opts.actingBrief ?? "",
     `Palette: ${plan.palette.join(" ")}.`,
     shot.mode === "motion" ? ambientContract(opts.canvas, shot.durationSec) : "",
     opts.previous ? `Your previous attempt:\n${quoteData("previous", opts.previous, 12000)}` : "",

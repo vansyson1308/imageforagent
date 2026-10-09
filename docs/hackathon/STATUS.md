@@ -32,6 +32,9 @@ _Started 2026-10-09 (ICT). Branch `claude/gifted-cannon-1nhl2s` → small PRs to
 
 ### v2 log
 - 2026-10-09: SPEC_V2 saved, plan written. Local baseline after `cp .env.example .env` + `prisma migrate deploy` + espeak-ng: **554 passed / 4 skipped** (same as v1).
+- 2026-10-09: **M1 code merged** ([PR #4](https://github.com/vansyson1308/imageforagent/pull/4), merge `28d07d0`; 572 passed / 4 skipped, CI green) and **deployed**: Railway `studio` now builds from `main` (it was the v1 branch), with D28 capacity variables set. **Hosted verification:** `/api/health` → 200, `ok: true`, version 2.0.0, commit `28d07d0`. database, storage, ffmpeg, tts and tokenFactory (25 models, crew listed) are ok; tavily is `off` (truthful); demoBudget and passcode are ok ([evidence](evidence/hosted-health-2026-10-09.json)). `/unlock`, `/showcase`, `/showcase/replay/tea-house`, `/og.jpg` and the replay stills all return 200; `/` redirects to unlock. **Not yet verified on the hosted URL:** a full film run and a tab-close/reopen there. Both need the passcode or an operator passcode (B10). The same flows pass in a headless browser against a local production build with the mock crew.
+- 2026-10-09: catalog re-probe through the hosted health check (no key here): still **no NVIDIA vision model**; one new entry, `Qwen/Qwen3.8-27B` ([evidence](evidence/models-2026-10-09.json)).
+- 2026-10-09: WP4 started on the branch: measured broken-frame + near-duplicate gates calibrated on exact replays of the v1 failures (D30); poses + expressions in the character kits.
 
 ---
 

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TRANSITIONS } from "@/lib/validation/schemas";
+import { EXPRESSIONS, POSES } from "@/lib/services/director/dollKit";
 
 /**
  * Zod schemas for EVERY JSON reply the crew produces. Nothing an LLM writes
@@ -39,6 +40,11 @@ export const shotPlanSchema = z.object({
   cites: z.array(z.number().int().min(0).max(99)).max(8).optional(),
   /** true = this shot deliberately repeats the previous composition (a callback); skips the near-duplicate gate. */
   intentionalRepeat: z.boolean().optional(),
+  /** What each visible character DOES in this shot (kit characters are posed by the engine). */
+  acting: z
+    .array(z.object({ who: castId, pose: z.enum(POSES), expression: z.enum(EXPRESSIONS) }))
+    .max(6)
+    .optional(),
 });
 
 export const planSchema = z.object({

@@ -10,6 +10,8 @@ import { recordStep, throwIfCancelled, type DirectorContext, type DirectorEvent,
 import { decideResearch, measureResearchUse, researchMode, runResearch, type ResearchUse } from "@/lib/services/director/research";
 import { runPlan, writeScript } from "@/lib/services/director/plan";
 import { runCast } from "@/lib/services/director/cast";
+import { actingBrief, neededVariants, variantDefs } from "@/lib/services/director/acting";
+import { symbolIds } from "@/lib/services/director/svgTools";
 import { commitShot, drawShot, type Drawing } from "@/lib/services/director/artist";
 import { critiqueShot, fixesText } from "@/lib/services/director/critic";
 import { lintProject, runContinuity, runDialogue, runEditor } from "@/lib/services/director/editor";
@@ -211,7 +213,18 @@ export async function executeRun(
 
     // 5 · Cast & set library (Super)
     emit({ type: "status", message: "Artist is designing the cast…" });
-    const library = await runCast(ctx, plan, aspectRatio);
+    let library = await runCast(ctx, plan, aspectRatio);
+    // Acting variants (WP4.1): the posed/expressive symbols the plan asks for, built from the same kit specs
+    if (library.kits.size) {
+      const extra = variantDefs(plan, library.kits, library.defs);
+      if (extra) {
+        const defs = `${library.defs}\n${extra}`;
+        library = { ...library, defs, symbols: symbolIds(defs) };
+        await prisma.project.update({ where: { id: req.projectId }, data: { artworkDefs: defs } });
+        const v = neededVariants(plan, library.kits);
+        await recordStep(ctx, { role: "cast", model: "engine", action: "acting-variants", summary: `Posed ${v.length} variant(s) from the kit: ${v.map((x) => `${x.who} ${x.pose}/${x.expression}`).join(", ")}` });
+      }
+    }
     const patterns = new Map<number, string>();
     // accepted paintings' thumbnails: the near-duplicate gate compares each shot with its neighbours
     const thumbs = new Map<number, Buffer>();
@@ -225,7 +238,7 @@ export async function executeRun(
       const st: ShotStats = { firstPassOk: false, repairs: 0, before: null, after: null, revisions: 0 };
       shotStats.set(frame.index, st);
       emit({ type: "status", message: `Artist is drawing shot ${frame.index}/${frames.length}…` });
-      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index) });
+      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits) });
       st.repairs += first.attempts - 1;
       st.firstPassOk = first.drawing !== null && first.attempts === 1;
       if (!first.drawing) {
@@ -235,7 +248,7 @@ export async function executeRun(
       }
       if (first.drawing.thumb) thumbs.set(frame.index, first.drawing.thumb);
       if (first.drawing.checks?.problems.length) st.gateFailures = first.drawing.checks.problems.length;
-      let committed: Frame = await commitAndAnnounce(ctx, { frame, shot, index: frame.index, drawing: first.drawing, castDefs: library.defs, patterns, background }, null);
+      let committed: Frame = await commitAndAnnounce(ctx, { frame, shot, index: frame.index, drawing: first.drawing, castDefs: library.defs, patterns, background, acting: { kits: library.kits, plan } }, null);
       let best: { drawing: Drawing; critique: Critique | null } = { drawing: first.drawing, critique: null };
       if (!options.critic) return;
       const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0 });
@@ -245,7 +258,7 @@ export async function executeRun(
       for (let round = 1; round <= budget.maxCriticRounds; round++) {
         const c = best.critique;
         if (!c || c.score >= options.acceptScore || c.verdict === "accept") break;
-        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index) });
+        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits) });
         st.repairs += Math.max(0, rev.attempts - 1);
         if (!rev.drawing) break;
         const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round });
@@ -255,7 +268,7 @@ export async function executeRun(
           st.after = cr.critique.score;
           if (rev.drawing.thumb) thumbs.set(frame.index, rev.drawing.thumb);
           st.gateFailures = rev.drawing.checks?.problems.length ?? 0;
-          committed = await commitAndAnnounce(ctx, { frame: committed, shot, index: frame.index, drawing: rev.drawing, castDefs: library.defs, patterns, background }, cr.critique.score);
+          committed = await commitAndAnnounce(ctx, { frame: committed, shot, index: frame.index, drawing: rev.drawing, castDefs: library.defs, patterns, background, acting: { kits: library.kits, plan } }, cr.critique.score);
           await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "uplift", shotIndex: frame.index, score: cr.critique.score, summary: `Revision accepted: ${c.score} → ${cr.critique.score}` });
         } else {
           await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "keep", shotIndex: frame.index, score: c.score, summary: `Revision scored ${cr.critique?.score ?? "n/a"} ≤ ${c.score}: kept the previous version` });
@@ -327,7 +340,7 @@ async function commitAndAnnounce(ctx: DirectorContext, opts: Parameters<typeof c
     action: r.kind === "clip" ? "render-clip" : "render-still",
     shotIndex: opts.index,
     latencyMs: Date.now() - t0,
-    summary: `${r.kind === "clip" ? `Clip ${r.frame.clipFrameCount} frames @ ${r.frame.clipFps} fps` : "Still"} rendered${r.note ? ` (${r.note})` : ""}`,
+    summary: `${r.kind === "clip" ? `Clip ${r.frame.clipFrameCount} frames @ ${r.frame.clipFps} fps` : "Still"} rendered${r.acting?.length ? `; acting: ${r.acting.join(", ")}` : ""}${r.note ? ` (${r.note})` : ""}`,
   });
   ctx.emit({ type: "frame", index: opts.index, imageUrl: frameImageUrl(r.frame), clipUrl: frameClipUrl(r.frame), score, status: r.frame.status });
   return r.frame;

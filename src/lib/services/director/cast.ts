@@ -6,13 +6,17 @@ import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@
 import { castRepairUser, castSystem, castUser } from "@/lib/services/director/prompts";
 import sharp from "sharp";
 import { castSheetFrame, extractJsonBlock, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
-import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema } from "@/lib/services/director/dollKit";
+import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
+
+export type KitSpec = { readonly kind: "doll"; readonly spec: DollSpec } | { readonly kind: "critter"; readonly spec: CritterSpec };
 import { zodIssues } from "@/lib/services/director/schemas";
 import type { CastMember, Plan } from "@/lib/services/director/schemas";
 
 export interface CastLibrary {
   readonly defs: string;
   readonly symbols: string[];
+  /** characters drawn by the engine's kits (posable: acting variants, blinks, lip-sync) */
+  readonly kits: Map<string, KitSpec>;
   /** true when the Artist's library failed every attempt and placeholders were used. */
   readonly placeholder: boolean;
 }
@@ -150,6 +154,8 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
   const best = new Map<string, Candidate>();
   let pending: CastMember[] = [...plan.cast];
   let problems: string[] = [];
+  // the kit spec behind each kit-built symbol (the exact markup it produced)
+  const kitBySymbol = new Map<string, { id: string; kit: KitSpec }>();
   for (let attempt = 0; attempt <= ctx.budget.budget.maxRepairs && pending.length; attempt++) {
     throwIfCancelled(ctx);
     const user = attempt === 0 ? castUser(plan) : castRepairUser(plan, pending, [...accepted.keys()], problems);
@@ -162,13 +168,21 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
       for (const [id, spec] of Object.entries(raw?.dolls ?? {})) {
         if (!pending.some((c) => c.id === id && c.kind === "character")) continue;
         const r = dollSchema.safeParse(spec);
-        if (r.success) dolls.set(id, buildDoll(id, r.data));
+        if (r.success) {
+          const markup = buildDoll(id, r.data);
+          dolls.set(id, markup);
+          kitBySymbol.set(splitLibrary(markup).symbols.get(id) ?? markup, { id, kit: { kind: "doll", spec: r.data } });
+        }
         else dollProblems.push(`#${id} doll spec invalid: ${zodIssues(r.error)}`);
       }
       for (const [id, spec] of Object.entries(raw?.critters ?? {})) {
         if (dolls.has(id) || !pending.some((c) => c.id === id && c.kind === "character")) continue;
         const r = critterSchema.safeParse(spec);
-        if (r.success) dolls.set(id, buildCritter(id, r.data));
+        if (r.success) {
+          const markup = buildCritter(id, r.data);
+          dolls.set(id, markup);
+          kitBySymbol.set(splitLibrary(markup).symbols.get(id) ?? markup, { id, kit: { kind: "critter", spec: r.data } });
+        }
         else dollProblems.push(`#${id} critter spec invalid: ${zodIssues(r.error)}`);
       }
     } catch (e) {
@@ -226,8 +240,11 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
   const symbols: string[] = [];
   const fallback: string[] = [];
   const placeholders: string[] = [];
+  const kits = new Map<string, KitSpec>();
   for (const c of plan.cast) {
     const cand = accepted.get(c.id) ?? best.get(c.id);
+    const fromKit = cand ? kitBySymbol.get(cand.symbol) : undefined;
+    if (fromKit && fromKit.id === c.id) kits.set(c.id, fromKit.kit);
     if (!cand) {
       placeholders.push(c.id);
       symbols.push(placeholderLibrary([c], ctx.canvas));
@@ -252,6 +269,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     placeholders.splice(0, placeholders.length, ...plan.cast.map((c) => c.id));
     fallback.length = 0;
     defs = placeholderLibrary(plan.cast, ctx.canvas);
+    kits.clear();
     sheet = await renderArtwork(defs, castSheetFrame(plan.cast.map((c) => c.id), ctx.canvas), aspectRatio, "1K");
   }
   const sheetPath = snapshotPath(ctx.projectId, ctx.runId, "cast-sheet.png");
@@ -268,5 +286,5 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     imagePath: sheetPath,
     error: placeholder ? "cast library invalid after all repairs" : placeholders.length ? `placeholders used for ${placeholders.join(", ")}` : null,
   });
-  return { defs, symbols: symbolIds(defs), placeholder };
+  return { defs, symbols: symbolIds(defs), placeholder, kits };
 }

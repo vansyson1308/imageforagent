@@ -1,0 +1,47 @@
+{
+ "at": "2026-10-09T17:49:11.234Z",
+ "source": "GET https://studio-production-049c.up.railway.app/api/health (server-side GET /v1/models, free; no key in this session)",
+ "listed": [
+  "MiniMaxAI/MiniMax-M3",
+  "NousResearch/Hermes-4-405B",
+  "Qwen/Qwen3-235B-A22B-Instruct-2507",
+  "Qwen/Qwen3-30B-A3B-Instruct-2507",
+  "Qwen/Qwen3-Embedding-8B",
+  "Qwen/Qwen3.5-397B-A17B",
+  "Qwen/Qwen3.8-27B",
+  "deepseek-ai/DeepSeek-V4-Flash-0731",
+  "deepseek-ai/DeepSeek-V4-Pro",
+  "deepseek-ai/DeepSeek-V4-Pro-0813",
+  "deepseek-ai/DeepSeek-V4.1-Flash",
+  "google/gemma-3-27b-it",
+  "moonshotai/Kimi-K2.6",
+  "moonshotai/Kimi-K2.7-Code",
+  "moonshotai/Kimi-K3",
+  "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+  "nvidia/Nemotron-3-Ultra-550b-a55b",
+  "nvidia/Nemotron-3_5-Lightning",
+  "nvidia/nemotron-3-super-120b-a12b",
+  "openai/gpt-oss-120b",
+  "openbmb/MiniCPM-V-4_5",
+  "zai-org/GLM-5.1",
+  "zai-org/GLM-5.2",
+  "zai-org/GLM-5.3",
+  "zai-org/GLM-5.3-Flash"
+ ],
+ "added_since_2026-09-26": [
+  "Qwen/Qwen3.8-27B"
+ ],
+ "removed_since_2026-09-26": [],
+ "nvidia": [
+  "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+  "nvidia/Nemotron-3-Ultra-550b-a55b",
+  "nvidia/Nemotron-3_5-Lightning",
+  "nvidia/nemotron-3-super-120b-a12b"
+ ],
+ "nvidia_vision": [],
+ "known_image_input_2026-09-26": [
+  "openbmb/MiniCPM-V-4_5",
+  "google/gemma-3-27b-it"
+ ],
+ "note": "No Nemotron VL/Omni is listed, so per SPEC v2 WP4.4 the vision critic falls to option 2 (another open VLM on Token Factory, labelled). Image input of new entries can't be probed without a key in this session."
+}

@@ -73,25 +73,83 @@ function proportions(spec: DollSpec): Frame {
   return { cx: 200, ...base, shw: base.shw * k, hhw: base.hhw * k, footY, kneeY: base.hipY + (footY - base.hipY) * 0.5 };
 }
 
+// ---------- Acting: poses and expressions (SPEC v2 WP4.1) ----------
+
+/** Poses the Director can ask for. `walk` is rendered as two stride frames (walk_a / walk_b) by the acting layer. */
+export const POSES = ["stand", "walk", "sit", "wave", "point", "hold", "hug", "bow", "look-left", "look-right", "kneel"] as const;
+export type Pose = (typeof POSES)[number];
+/** Internal stride frames of `walk` (mirror images of each other around the hip). */
+export type DrawPose = Exclude<Pose, "walk"> | "walk_a" | "walk_b";
+export const EXPRESSIONS = ["neutral", "smile", "laugh", "sad", "surprised", "sleepy"] as const;
+export type Expression = (typeof EXPRESSIONS)[number];
+
+export interface ActingOptions {
+  readonly pose?: DrawPose;
+  readonly expression?: Expression;
+  /** symbol id (default: the character id = stand + neutral) */
+  readonly symbolId?: string;
+  /** false = don't emit the shared skin gradient (a variant reuses the base one) */
+  readonly withGradient?: boolean;
+}
+
+/** Variant symbol id: "lan" (stand, neutral) or "lan--wave-smile". */
+export function variantId(id: string, pose: DrawPose = "stand", expression: Expression = "neutral"): string {
+  return pose === "stand" && expression === "neutral" ? id : `${id}--${pose}-${expression}`;
+}
+
+/** Walk leg swing (degrees) and the resulting step: the hip moves one step per stride frame. */
+export const WALK_SWING_DEG = 16;
+
+/** Where the face is in the symbol's viewBox (400×600) for a pose/expression: blink + lip-sync overlays. */
+export interface FaceAnchors {
+  readonly eyes: ReadonlyArray<{ x: number; y: number; rx: number; ry: number }>;
+  readonly mouth: { x: number; y: number; w: number };
+  readonly skin: string;
+  /** the expression already has closed eyes (laugh, sleepy): no blink */
+  readonly eyesClosed: boolean;
+  /** step length (viewBox units) between walk_a and walk_b, 0 for other poses */
+  readonly step: number;
+}
+
+function poseOffsets(f: Frame, pose: DrawPose): { dy: number; look: number } {
+  const leg = f.footY - f.hipY;
+  if (pose === "sit") return { dy: leg * 0.38, look: 0 };
+  if (pose === "kneel") return { dy: leg * 0.46, look: 0 };
+  if (pose === "bow") return { dy: 26, look: 0 };
+  if (pose === "look-left") return { dy: 0, look: -1 };
+  if (pose === "look-right") return { dy: 0, look: 1 };
+  return { dy: 0, look: 0 };
+}
+
 /** One human character as a <symbol> (+ its gradient and clip path), ids prefixed by `id`. */
-export function buildDoll(id: string, spec: DollSpec): string {
+export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}): string {
+  const pose: DrawPose = opts.pose ?? "stand";
+  const expr: Expression = opts.expression ?? "neutral";
+  const sid = opts.symbolId ?? variantId(id, pose, expr);
   const f = proportions(spec);
-  const { cx, headR: R, headY: hy, shoulderY: sy, hipY: hp, kneeY: ky, footY: fy, shw, hhw, armW, legW } = f;
+  const { cx, headR: R, footY: fy, shw, hhw, armW, legW } = f;
+  const { dy, look } = poseOffsets(f, pose);
+  // the upper body (torso, arms, head) moves down by dy when sitting/kneeling/bowing
+  const hy = f.headY + dy + (pose === "bow" ? 10 : 0);
+  const sy = f.shoulderY + dy;
+  const hp = f.hipY + dy;
+  const ky = f.kneeY;
   const skinLight = mix(spec.skin, "#ffffff", 0.28);
   const skinShade = mix(spec.skin, "#3a2418", 0.18);
   const bottomColor = spec.bottomColor ?? mix(spec.topColor, "#1d1a26", 0.45);
   const has = (a: (typeof ACCESSORIES)[number]) => spec.accessories.includes(a);
   const long = spec.top === "robe" || spec.top === "kimono" || spec.top === "aodai";
-  const hem = long ? fy - 46 : spec.top === "dress" ? ky + 10 : hp + 22;
+  const seated = pose === "sit" || pose === "kneel";
+  const hem = seated ? Math.min(fy - 30, hp + (long ? 120 : spec.top === "dress" ? 90 : 22)) : long ? fy - 46 : spec.top === "dress" ? ky + 10 : hp + 22;
   const hemHW = long ? hhw * 1.25 : spec.top === "dress" ? hhw * 1.55 : hhw + 6;
   const bulge = spec.build === "round" ? 18 : 0;
   const torso = `M${n(cx - shw)} ${n(sy + 10)} Q${n(cx - shw)} ${n(sy - 6)} ${n(cx - shw + 20)} ${n(sy - 8)} L${n(cx + shw - 20)} ${n(sy - 8)} Q${n(cx + shw)} ${n(sy - 6)} ${n(cx + shw)} ${n(sy + 10)} Q${n(cx + shw + bulge)} ${n((sy + hp) / 2)} ${n(cx + hemHW)} ${n(hem)} L${n(cx - hemHW)} ${n(hem)} Q${n(cx - shw - bulge)} ${n((sy + hp) / 2)} ${n(cx - shw)} ${n(sy + 10)} Z`;
   const legX = [cx - hhw * 0.45, cx + hhw * 0.45];
   const out: string[] = [];
-  out.push(`<radialGradient id="${id}-skin" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="${skinLight}"/><stop offset="1" stop-color="${spec.skin}"/></radialGradient>`);
-  out.push(`<symbol id="${id}" viewBox="0 0 400 600">`);
-  out.push(`<clipPath id="${id}-torso"><path d="${torso}"/></clipPath>`);
-  out.push(`<ellipse cx="${cx}" cy="${fy + 2}" rx="${n(hhw * 1.7)}" ry="8" fill="#1d2233" fill-opacity="0.22"/>`);
+  if (opts.withGradient !== false) out.push(`<radialGradient id="${id}-skin" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="${skinLight}"/><stop offset="1" stop-color="${spec.skin}"/></radialGradient>`);
+  out.push(`<symbol id="${sid}" viewBox="0 0 400 600">`);
+  out.push(`<clipPath id="${sid}-torso"><path d="${torso}"/></clipPath>`);
+  out.push(`<ellipse cx="${cx}" cy="${fy + 2}" rx="${n(hhw * (seated ? 2.1 : 1.7))}" ry="8" fill="#1d2233" fill-opacity="0.22"/>`);
 
   // Hair behind the head
   if (spec.hairStyle === "long") out.push(`<path d="M${n(cx - R - 6)} ${n(hy)} Q${n(cx - R - 14)} ${n(sy + 70)} ${n(cx - R + 14)} ${n(sy + 84)} L${n(cx + R - 14)} ${n(sy + 84)} Q${n(cx + R + 14)} ${n(sy + 70)} ${n(cx + R + 6)} ${n(hy)} Z" fill="${spec.hairColor}"/>`);
@@ -101,32 +159,92 @@ export function buildDoll(id: string, spec: DollSpec): string {
 
   // Legs, shoes (drawn before the clothes so hems overlap them)
   const legTop = hp - 10;
-  for (const x of legX) {
-    const legColor = spec.bottom === "pants" && !long && spec.top !== "dress" ? bottomColor : spec.skin;
-    out.push(`<rect x="${n(x - legW / 2)}" y="${n(legTop)}" width="${n(legW)}" height="${n(fy - 8 - legTop)}" rx="${n(legW / 2)}" fill="${legColor}"/>`);
-    out.push(`<ellipse cx="${n(x + 4)}" cy="${n(fy - 6)}" rx="${n(legW * 0.9)}" ry="11" fill="#2b2530"/>`);
+  const legColor = spec.bottom === "pants" && !long && spec.top !== "dress" ? bottomColor : spec.skin;
+  if (pose === "walk_a" || pose === "walk_b") {
+    // both legs pivot at the hip centre, mirror images: the front foot of walk_a lands where the back foot of walk_b is after one step
+    const L = fy - 8 - legTop;
+    for (const [k, s] of [[0, 1], [1, -1]] as const) {
+      const sign = pose === "walk_a" ? s : -s;
+      const deg = sign * WALK_SWING_DEG;
+      out.push(`<rect x="${n(cx - legW / 2)}" y="${n(legTop)}" width="${n(legW)}" height="${n(L)}" rx="${n(legW / 2)}" fill="${k === 0 ? legColor : mix(legColor, "#1d1a26", 0.18)}" transform="rotate(${-deg} ${n(cx)} ${n(legTop)})"/>`);
+      const footX = cx + Math.sin((deg * Math.PI) / 180) * L;
+      const footY = legTop + Math.cos((deg * Math.PI) / 180) * L;
+      out.push(`<ellipse cx="${n(footX + 4)}" cy="${n(footY + 2)}" rx="${n(legW * 0.9)}" ry="11" fill="#2b2530"/>`);
+    }
+  } else if (seated) {
+    // seen from the front: shins straight down from the seat (sit) or knees on the ground (kneel)
+    for (const x of legX) {
+      const top = pose === "kneel" ? fy - 44 : hp + 8;
+      out.push(`<rect x="${n(x - legW / 2 - 2)}" y="${n(top)}" width="${n(legW + 4)}" height="${n(fy - 8 - top)}" rx="${n(legW / 2)}" fill="${legColor}"/>`);
+      out.push(`<ellipse cx="${n(x)}" cy="${n(top + 2)}" rx="${n(legW * 0.75)}" ry="${n(legW * 0.5)}" fill="${legColor}"/>`);
+      out.push(`<ellipse cx="${n(x + 4)}" cy="${n(fy - 6)}" rx="${n(legW * 0.9)}" ry="11" fill="#2b2530"/>`);
+    }
+  } else {
+    for (const x of legX) {
+      out.push(`<rect x="${n(x - legW / 2)}" y="${n(legTop)}" width="${n(legW)}" height="${n(fy - 8 - legTop)}" rx="${n(legW / 2)}" fill="${legColor}"/>`);
+      out.push(`<ellipse cx="${n(x + 4)}" cy="${n(fy - 6)}" rx="${n(legW * 0.9)}" ry="11" fill="#2b2530"/>`);
+    }
   }
-  if (spec.bottom === "shorts" && !long && spec.top !== "dress") for (const x of legX) out.push(`<rect x="${n(x - legW / 2 - 3)}" y="${n(legTop)}" width="${n(legW + 6)}" height="${n((ky - legTop) * 0.7)}" rx="8" fill="${bottomColor}"/>`);
-  if (spec.bottom === "skirt" && !long && spec.top !== "dress") out.push(`<path d="M${n(cx - hhw - 4)} ${n(hp - 12)} L${n(cx + hhw + 4)} ${n(hp - 12)} L${n(cx + hhw * 1.5)} ${n(ky)} L${n(cx - hhw * 1.5)} ${n(ky)} Z" fill="${bottomColor}"/>`);
+  if (!seated && pose !== "walk_a" && pose !== "walk_b") {
+    if (spec.bottom === "shorts" && !long && spec.top !== "dress") for (const x of legX) out.push(`<rect x="${n(x - legW / 2 - 3)}" y="${n(legTop)}" width="${n(legW + 6)}" height="${n((ky - legTop) * 0.7)}" rx="8" fill="${bottomColor}"/>`);
+    if (spec.bottom === "skirt" && !long && spec.top !== "dress") out.push(`<path d="M${n(cx - hhw - 4)} ${n(hp - 12)} L${n(cx + hhw + 4)} ${n(hp - 12)} L${n(cx + hhw * 1.5)} ${n(ky)} L${n(cx - hhw * 1.5)} ${n(ky)} Z" fill="${bottomColor}"/>`);
+  } else if (spec.bottom === "skirt" && !long && spec.top !== "dress") {
+    out.push(`<path d="M${n(cx - hhw - 4)} ${n(hp - 12)} L${n(cx + hhw + 4)} ${n(hp - 12)} L${n(cx + hhw * 1.6)} ${n(hp + 60)} L${n(cx - hhw * 1.6)} ${n(hp + 60)} Z" fill="${bottomColor}"/>`);
+  }
 
-  // Arms (sleeve + forearm) and hands
+  // Arms (sleeve + forearm) and hands, per pose: [shoulder, control, hand]
   const shortSleeve = spec.top === "tshirt" || spec.top === "dress";
   const hands: Array<[number, number]> = [];
+  const swing = pose === "walk_a" ? 1 : pose === "walk_b" ? -1 : 0;
   for (const s of [-1, 1]) {
     const x0 = cx + s * (shw - 10);
     const y0 = sy + 12;
-    const x1 = cx + s * (shw + 14);
-    const y1 = hp - 8;
-    const mx = cx + s * (shw + 16);
-    const my = (y0 + y1) / 2;
-    out.push(`<path d="M${n(x0)} ${n(y0)} Q${n(mx)} ${n(my - 20)} ${n(x1)} ${n(y1)}" fill="none" stroke="${shortSleeve ? spec.skin : spec.topColor}" stroke-width="${n(armW)}" stroke-linecap="round"/>`);
-    if (shortSleeve) out.push(`<path d="M${n(x0)} ${n(y0)} Q${n(x0 + s * 10)} ${n(y0 + 30)} ${n(x0 + s * 16)} ${n(y0 + 62)}" fill="none" stroke="${spec.topColor}" stroke-width="${n(armW + 6)}" stroke-linecap="round"/>`);
+    let x1 = cx + s * (shw + 14);
+    let y1 = hp - 8;
+    let mx = cx + s * (shw + 16);
+    let my = (y0 + y1) / 2 - 20;
+    if (swing) {
+      x1 = cx + s * (shw + 10) + s * swing * 22;
+      mx = cx + s * (shw + 18);
+    } else if (pose === "wave" && s === 1) {
+      x1 = cx + shw + 52;
+      y1 = hy - R * 0.2;
+      mx = cx + shw + 70;
+      my = sy - 10;
+    } else if (pose === "point" && s === 1) {
+      x1 = cx + shw + 112;
+      y1 = sy + 26;
+      mx = cx + shw + 56;
+      my = sy + 6;
+    } else if (pose === "hold" || pose === "bow") {
+      x1 = cx + s * 22;
+      y1 = pose === "bow" ? hp - 30 : sy + 70;
+      mx = cx + s * (shw + 4);
+      my = sy + 50;
+    } else if (pose === "hug") {
+      x1 = cx + s * (shw + 58);
+      y1 = sy + 36;
+      mx = cx + s * (shw + 40);
+      my = sy + 46;
+    } else if (seated) {
+      x1 = cx + s * (hhw * 0.75);
+      y1 = hp + 6;
+      mx = cx + s * (shw + 12);
+      my = (y0 + y1) / 2;
+    }
+    out.push(`<path d="M${n(x0)} ${n(y0)} Q${n(mx)} ${n(my)} ${n(x1)} ${n(y1)}" fill="none" stroke="${shortSleeve ? spec.skin : spec.topColor}" stroke-width="${n(armW)}" stroke-linecap="round"/>`);
+    if (shortSleeve) {
+      const t = 0.42;
+      const ex = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * mx + t * t * x1;
+      const ey = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * my + t * t * y1;
+      out.push(`<path d="M${n(x0)} ${n(y0)} L${n(ex)} ${n(ey)}" fill="none" stroke="${spec.topColor}" stroke-width="${n(armW + 6)}" stroke-linecap="round"/>`);
+    }
     hands.push([x1, y1 + 4]);
   }
 
   // Torso + shading side + garment details
   out.push(`<path d="${torso}" fill="${spec.topColor}"/>`);
-  out.push(`<rect x="${cx + 6}" y="${n(sy - 12)}" width="${n(hemHW + bulge + 30)}" height="${n(hem - sy + 14)}" fill="#1d1a26" fill-opacity="0.13" clip-path="url(#${id}-torso)"/>`);
+  out.push(`<rect x="${cx + 6}" y="${n(sy - 12)}" width="${n(hemHW + bulge + 30)}" height="${n(hem - sy + 14)}" fill="#1d1a26" fill-opacity="0.13" clip-path="url(#${sid}-torso)"/>`);
   if (spec.top === "shirt" || spec.top === "jacket") out.push(`<path d="M${cx} ${n(sy - 6)} L${cx} ${n(hem - 4)}" stroke="${spec.accent}" stroke-width="5"/>`);
   if (spec.top === "jacket") out.push(`<path d="M${n(cx - 26)} ${n(sy - 8)} L${cx} ${n(sy + 46)} L${n(cx + 26)} ${n(sy - 8)}" fill="none" stroke="${mix(spec.topColor, "#000000", 0.3)}" stroke-width="6"/>`);
   if (spec.top === "kimono") {
@@ -135,7 +253,7 @@ export function buildDoll(id: string, spec: DollSpec): string {
   }
   if (spec.top === "aodai") out.push(`<path d="M${n(cx - 16)} ${n(sy + 40)} L${n(cx - 26)} ${n(hem)} M${n(cx + 16)} ${n(sy + 40)} L${n(cx + 26)} ${n(hem)}" stroke="${spec.accent}" stroke-width="4"/>`);
   if (spec.top === "robe") out.push(`<rect x="${n(cx - hhw)}" y="${n(hp - 30)}" width="${n(2 * hhw)}" height="14" fill="${spec.accent}"/>`);
-  if (has("apron")) out.push(`<path d="M${n(cx - hhw * 0.8)} ${n(sy + 60)} L${n(cx + hhw * 0.8)} ${n(sy + 60)} L${n(cx + hhw)} ${n(Math.min(hem, ky) - 6)} L${n(cx - hhw)} ${n(Math.min(hem, ky) - 6)} Z" fill="#f4efe4"/>`);
+  if (has("apron")) out.push(`<path d="M${n(cx - hhw * 0.8)} ${n(sy + 60)} L${n(cx + hhw * 0.8)} ${n(sy + 60)} L${n(cx + hhw)} ${n(Math.min(hem, seated ? hem : ky) - 6)} L${n(cx - hhw)} ${n(Math.min(hem, seated ? hem : ky) - 6)} Z" fill="#f4efe4"/>`);
   if (has("bag")) {
     out.push(`<path d="M${n(cx - shw + 14)} ${n(sy)} L${n(cx + hhw + 10)} ${n(hp - 20)}" stroke="${spec.accent}" stroke-width="7"/>`);
     out.push(`<rect x="${n(cx + hhw - 6)}" y="${n(hp - 30)}" width="46" height="40" rx="8" fill="${spec.accent}"/>`);
@@ -144,35 +262,53 @@ export function buildDoll(id: string, spec: DollSpec): string {
 
   for (const [x, y] of hands) out.push(`<circle cx="${n(x)}" cy="${n(y)}" r="${n(armW * 0.66)}" fill="url(#${id}-skin)"/>`);
   if (has("bangle")) out.push(`<circle cx="${n(hands[0][0])}" cy="${n(hands[0][1] - armW * 0.7)}" r="${n(armW * 0.55)}" fill="none" stroke="${spec.accent}" stroke-width="5"/>`);
-  if (has("cane")) out.push(`<path d="M${n(hands[1][0])} ${n(hands[1][1] - 6)} L${n(hands[1][0] + 12)} ${n(fy - 4)}" stroke="#6b4a2b" stroke-width="8" stroke-linecap="round"/>`);
+  if (has("cane") && !seated && pose !== "wave" && pose !== "point") out.push(`<path d="M${n(hands[1][0])} ${n(hands[1][1] - 6)} L${n(hands[1][0] + 12)} ${n(fy - 4)}" stroke="#6b4a2b" stroke-width="8" stroke-linecap="round"/>`);
 
   // Neck, scarf, head
-  out.push(`<rect x="${n(cx - R * 0.24)}" y="${n(hy + R * 0.8)}" width="${n(R * 0.48)}" height="${n(sy - hy - R * 0.8 + 2)}" fill="${skinShade}"/>`);
+  out.push(`<rect x="${n(cx - R * 0.24)}" y="${n(hy + R * 0.8)}" width="${n(R * 0.48)}" height="${n(Math.max(4, sy - hy - R * 0.8 + 2))}" fill="${skinShade}"/>`);
   if (has("scarf")) {
     out.push(`<rect x="${n(cx - shw * 0.62)}" y="${n(sy - 18)}" width="${n(shw * 1.24)}" height="26" rx="13" fill="${spec.accent}"/>`);
     out.push(`<rect x="${n(cx + shw * 0.2)}" y="${n(sy)}" width="24" height="78" rx="10" fill="${mix(spec.accent, "#000000", 0.15)}"/>`);
   }
-  for (const s of [-1, 1]) out.push(`<ellipse cx="${n(cx + s * R * 0.96)}" cy="${n(hy + R * 0.12)}" rx="${n(R * 0.16)}" ry="${n(R * 0.22)}" fill="${spec.skin}"/>`);
-  out.push(`<circle cx="${cx}" cy="${hy}" r="${R}" fill="url(#${id}-skin)"/>`);
+  for (const s of [-1, 1]) out.push(`<ellipse cx="${n(cx + s * R * 0.96 - look * R * 0.1)}" cy="${n(hy + R * 0.12)}" rx="${n(R * 0.16 * (s === -look ? 1.1 : look ? 0.75 : 1))}" ry="${n(R * 0.22)}" fill="${spec.skin}"/>`);
+  out.push(`<circle cx="${cx}" cy="${n(hy)}" r="${R}" fill="url(#${id}-skin)"/>`);
 
   // Face
-  const eyeY = hy + R * 0.12;
-  for (const s of [-1, 1]) {
-    const ex = cx + s * R * 0.36;
-    out.push(`<ellipse cx="${n(ex)}" cy="${n(eyeY)}" rx="${n(R * 0.1)}" ry="${n(R * (spec.age === "elder" ? 0.08 : 0.14))}" fill="#2a2233"/>`);
-    if (spec.age !== "elder") out.push(`<circle cx="${n(ex + R * 0.035)}" cy="${n(eyeY - R * 0.05)}" r="${n(R * 0.045)}" fill="#ffffff"/>`);
-    out.push(`<path d="M${n(ex - R * 0.15)} ${n(eyeY - R * 0.27)} Q${n(ex)} ${n(eyeY - R * 0.36)} ${n(ex + R * 0.15)} ${n(eyeY - R * 0.27)}" fill="none" stroke="${spec.hairStyle === "bald" ? "#8a8a8a" : spec.hairColor}" stroke-width="${n(R * 0.07)}" stroke-linecap="round"/>`);
-    out.push(`<circle cx="${n(cx + s * R * 0.56)}" cy="${n(eyeY + R * 0.3)}" r="${n(R * 0.16)}" fill="#ff8a80" fill-opacity="0.4"/>`);
-    if (spec.age === "elder") out.push(`<path d="M${n(ex + s * R * 0.16)} ${n(eyeY - R * 0.02)} l${n(s * R * 0.1)} ${n(-R * 0.05)} M${n(ex + s * R * 0.16)} ${n(eyeY + R * 0.06)} l${n(s * R * 0.1)} ${n(R * 0.03)}" stroke="${skinShade}" stroke-width="3" stroke-linecap="round"/>`);
+  const fx = cx + look * R * 0.16;
+  const face = faceGeometry(spec, R, fx, hy, expr);
+  const brow = spec.hairStyle === "bald" ? "#8a8a8a" : spec.hairColor;
+  for (const [k, s] of [[0, -1], [1, 1]] as const) {
+    const e = face.eyes[k];
+    if (face.eyesClosed) {
+      // happy (laugh) or sleepy closed eyes
+      const up = expr === "laugh" ? -1 : 1;
+      out.push(`<path d="M${n(e.x - e.rx * 1.3)} ${n(e.y)} Q${n(e.x)} ${n(e.y + up * e.ry * 1.2)} ${n(e.x + e.rx * 1.3)} ${n(e.y)}" fill="none" stroke="#2a2233" stroke-width="${n(R * 0.06)}" stroke-linecap="round"/>`);
+    } else {
+      out.push(`<ellipse cx="${n(e.x)}" cy="${n(e.y)}" rx="${n(e.rx)}" ry="${n(e.ry)}" fill="#2a2233"/>`);
+      if (spec.age !== "elder" || expr === "surprised") out.push(`<circle cx="${n(e.x + R * 0.035)}" cy="${n(e.y - R * 0.05)}" r="${n(R * 0.045)}" fill="#ffffff"/>`);
+    }
+    // brows: sad = inner ends up, surprised = raised
+    const by = e.y - R * (expr === "surprised" ? 0.36 : 0.27);
+    const inner = expr === "sad" ? -R * 0.08 : 0;
+    const ix = e.x - s * R * 0.15;
+    const ox = e.x + s * R * 0.15;
+    out.push(`<path d="M${n(Math.min(ix, ox))} ${n(by + (s === 1 ? inner : 0))} Q${n(e.x)} ${n(by - R * 0.09)} ${n(Math.max(ix, ox))} ${n(by + (s === -1 ? inner : 0))}" fill="none" stroke="${brow}" stroke-width="${n(R * 0.07)}" stroke-linecap="round"/>`);
+    out.push(`<circle cx="${n(fx + s * R * 0.56)}" cy="${n(e.y + R * 0.3)}" r="${n(R * (expr === "smile" || expr === "laugh" ? 0.19 : 0.16))}" fill="#ff8a80" fill-opacity="${expr === "smile" || expr === "laugh" ? 0.55 : 0.4}"/>`);
+    if (spec.age === "elder") out.push(`<path d="M${n(e.x + s * R * 0.16)} ${n(e.y - R * 0.02)} l${n(s * R * 0.1)} ${n(-R * 0.05)} M${n(e.x + s * R * 0.16)} ${n(e.y + R * 0.06)} l${n(s * R * 0.1)} ${n(R * 0.03)}" stroke="${skinShade}" stroke-width="3" stroke-linecap="round"/>`);
   }
-  out.push(`<ellipse cx="${cx}" cy="${n(hy + R * 0.3)}" rx="${n(R * 0.07)}" ry="${n(R * 0.05)}" fill="${skinShade}"/>`);
-  const my = hy + R * 0.48;
-  out.push(`<path d="M${n(cx - R * 0.17)} ${n(my)} Q${cx} ${n(my + R * 0.15)} ${n(cx + R * 0.17)} ${n(my)}" fill="none" stroke="#8a3a2a" stroke-width="${n(R * 0.06)}" stroke-linecap="round"/>`);
-  if (has("mustache")) out.push(`<path d="M${n(cx - R * 0.3)} ${n(my - R * 0.02)} Q${cx} ${n(my - R * 0.2)} ${n(cx + R * 0.3)} ${n(my - R * 0.02)} Q${cx} ${n(my - R * 0.08)} ${n(cx - R * 0.3)} ${n(my - R * 0.02)} Z" fill="${spec.hairColor}"/>`);
-  if (has("beard")) out.push(`<path d="M${n(cx - R * 0.7)} ${n(hy + R * 0.35)} Q${n(cx - R * 0.5)} ${n(hy + R * 1.35)} ${cx} ${n(hy + R * 1.4)} Q${n(cx + R * 0.5)} ${n(hy + R * 1.35)} ${n(cx + R * 0.7)} ${n(hy + R * 0.35)} Q${cx} ${n(hy + R * 0.9)} ${n(cx - R * 0.7)} ${n(hy + R * 0.35)} Z" fill="${spec.hairColor}"/>`);
+  out.push(`<ellipse cx="${n(fx)}" cy="${n(hy + R * 0.3)}" rx="${n(R * 0.07)}" ry="${n(R * 0.05)}" fill="${skinShade}"/>`);
+  const m = face.mouth;
+  if (expr === "laugh") out.push(`<path d="M${n(m.x - m.w / 2)} ${n(m.y - R * 0.04)} L${n(m.x + m.w / 2)} ${n(m.y - R * 0.04)} Q${n(m.x)} ${n(m.y + R * 0.3)} ${n(m.x - m.w / 2)} ${n(m.y - R * 0.04)} Z" fill="#7a2a22"/>`);
+  else if (expr === "surprised") out.push(`<ellipse cx="${n(m.x)}" cy="${n(m.y + R * 0.04)}" rx="${n(R * 0.09)}" ry="${n(R * 0.12)}" fill="#7a2a22"/>`);
+  else if (expr === "sad") out.push(`<path d="M${n(m.x - m.w / 2)} ${n(m.y + R * 0.08)} Q${n(m.x)} ${n(m.y - R * 0.08)} ${n(m.x + m.w / 2)} ${n(m.y + R * 0.08)}" fill="none" stroke="#8a3a2a" stroke-width="${n(R * 0.06)}" stroke-linecap="round"/>`);
+  else if (expr === "sleepy") out.push(`<path d="M${n(m.x - m.w / 3)} ${n(m.y + R * 0.03)} L${n(m.x + m.w / 3)} ${n(m.y + R * 0.03)}" fill="none" stroke="#8a3a2a" stroke-width="${n(R * 0.05)}" stroke-linecap="round"/>`);
+  else out.push(`<path d="M${n(m.x - m.w / 2)} ${n(m.y)} Q${n(m.x)} ${n(m.y + R * (expr === "smile" ? 0.24 : 0.15))} ${n(m.x + m.w / 2)} ${n(m.y)}" fill="none" stroke="#8a3a2a" stroke-width="${n(R * 0.06)}" stroke-linecap="round"/>`);
+  const my = m.y;
+  if (has("mustache")) out.push(`<path d="M${n(fx - R * 0.3)} ${n(my - R * 0.02)} Q${n(fx)} ${n(my - R * 0.2)} ${n(fx + R * 0.3)} ${n(my - R * 0.02)} Q${n(fx)} ${n(my - R * 0.08)} ${n(fx - R * 0.3)} ${n(my - R * 0.02)} Z" fill="${spec.hairColor}"/>`);
+  if (has("beard")) out.push(`<path d="M${n(fx - R * 0.7)} ${n(hy + R * 0.35)} Q${n(fx - R * 0.5)} ${n(hy + R * 1.35)} ${n(fx)} ${n(hy + R * 1.4)} Q${n(fx + R * 0.5)} ${n(hy + R * 1.35)} ${n(fx + R * 0.7)} ${n(hy + R * 0.35)} Q${n(fx)} ${n(hy + R * 0.9)} ${n(fx - R * 0.7)} ${n(hy + R * 0.35)} Z" fill="${spec.hairColor}"/>`);
   if (has("glasses")) {
-    for (const s of [-1, 1]) out.push(`<circle cx="${n(cx + s * R * 0.36)}" cy="${n(eyeY)}" r="${n(R * 0.22)}" fill="none" stroke="#2a2233" stroke-width="4"/>`);
-    out.push(`<path d="M${n(cx - R * 0.14)} ${n(eyeY)} L${n(cx + R * 0.14)} ${n(eyeY)}" stroke="#2a2233" stroke-width="4"/>`);
+    for (const e of face.eyes) out.push(`<circle cx="${n(e.x)}" cy="${n(e.y)}" r="${n(R * 0.22)}" fill="none" stroke="#2a2233" stroke-width="4"/>`);
+    out.push(`<path d="M${n(face.eyes[0].x + R * 0.22)} ${n(face.eyes[0].y)} L${n(face.eyes[1].x - R * 0.22)} ${n(face.eyes[1].y)}" stroke="#2a2233" stroke-width="4"/>`);
   }
 
   // Hair in front
@@ -199,6 +335,24 @@ export function buildDoll(id: string, spec: DollSpec): string {
   }
   out.push("</symbol>");
   return out.join("\n");
+}
+
+function faceGeometry(spec: { age: string }, R: number, fx: number, hy: number, expr: Expression) {
+  const eyeY = hy + R * 0.12;
+  const big = expr === "surprised" ? 1.3 : 1;
+  const ry = R * (spec.age === "elder" && expr !== "surprised" ? 0.08 : 0.14) * big;
+  const eyes = [-1, 1].map((s) => ({ x: fx + s * R * 0.36, y: eyeY, rx: R * 0.1 * big, ry: expr === "sleepy" ? ry * 0.5 : ry }));
+  return { eyes, mouth: { x: fx, y: hy + R * 0.48, w: R * (expr === "smile" || expr === "laugh" ? 0.44 : 0.34) }, eyesClosed: expr === "laugh" || expr === "sleepy" };
+}
+
+/** Face anchors of a doll variant in its 400×600 viewBox (for blink + lip-sync overlays). */
+export function dollFace(spec: DollSpec, pose: DrawPose = "stand", expr: Expression = "neutral"): FaceAnchors {
+  const f = proportions(spec);
+  const { dy, look } = poseOffsets(f, pose);
+  const hy = f.headY + dy + (pose === "bow" ? 10 : 0);
+  const g = faceGeometry(spec, f.headR, f.cx + look * f.headR * 0.16, hy, expr);
+  const L = f.footY - 8 - (f.hipY - 10);
+  return { eyes: g.eyes, mouth: g.mouth, skin: spec.skin, eyesClosed: g.eyesClosed, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180) };
 }
 
 // ---------- Critters: upright storybook animals from the same kind of spec ----------
@@ -231,12 +385,17 @@ export const CRITTER_VOCABULARY = [
 ].join("\n");
 
 /** An upright storybook animal as a <symbol> (viewBox 0 0 400 600, feet on y≈592), ids prefixed by `id`. */
-export function buildCritter(id: string, spec: CritterSpec): string {
+export function buildCritter(id: string, spec: CritterSpec, opts: ActingOptions = {}): string {
+  const pose: DrawPose = opts.pose ?? "stand";
+  const expr: Expression = opts.expression ?? "neutral";
+  const sid = opts.symbolId ?? variantId(id, pose, expr);
   const cx = 200;
   const k = spec.size === "small" ? 0.9 : spec.size === "large" ? 1.08 : 1;
   const R = 100 * k; // head radius
-  const hy = Math.max(600 - 560 * (spec.size === "small" ? 0.86 : 1) + R + 20, spec.ears === "long" ? 1.9 * R + 8 : 0); // head centre (long ears stay inside the viewBox)
-  const by = hy + R * 2.05; // body centre
+  const seatDrop = pose === "sit" || pose === "kneel" ? 46 : pose === "bow" ? 18 : 0;
+  const hy0 = Math.max(600 - 560 * (spec.size === "small" ? 0.86 : 1) + R + 20, spec.ears === "long" ? 1.9 * R + 8 : 0); // head centre (long ears stay inside the viewBox)
+  const hy = hy0 + seatDrop;
+  const by = hy0 + R * 2.05 + seatDrop * 0.6; // body centre
   const bry = Math.min(592 - 40 - by, R * 1.25); // body half-height
   const brx = R * 0.92;
   const fy = 592;
@@ -244,8 +403,8 @@ export function buildCritter(id: string, spec: CritterSpec): string {
   const light = mix(spec.fur, "#ffffff", 0.25);
   const has = (a: (typeof CRITTER_ACCESSORIES)[number]) => spec.accessories.includes(a);
   const out: string[] = [];
-  out.push(`<radialGradient id="${id}-fur" cx="0.38" cy="0.32" r="0.8"><stop offset="0" stop-color="${light}"/><stop offset="1" stop-color="${spec.fur}"/></radialGradient>`);
-  out.push(`<symbol id="${id}" viewBox="0 0 400 600">`);
+  if (opts.withGradient !== false) out.push(`<radialGradient id="${id}-fur" cx="0.38" cy="0.32" r="0.8"><stop offset="0" stop-color="${light}"/><stop offset="1" stop-color="${spec.fur}"/></radialGradient>`);
+  out.push(`<symbol id="${sid}" viewBox="0 0 400 600">`);
   out.push(`<ellipse cx="${cx}" cy="${fy + 2}" rx="${n(brx * 1.1)}" ry="8" fill="#1d2233" fill-opacity="0.22"/>`);
 
   // Tail (behind)
@@ -259,10 +418,15 @@ export function buildCritter(id: string, spec: CritterSpec): string {
   if (spec.tail === "round") out.push(`<circle cx="${n(tx + R * 0.1)}" cy="${n(ty)}" r="${n(R * 0.3)}" fill="${spec.belly}"/>`);
 
   // Legs + feet, body, belly
+  const legTop = by + bry * 0.4;
   for (const s of [-1, 1]) {
-    const lx = cx + s * brx * 0.45;
-    out.push(`<rect x="${n(lx - R * 0.2)}" y="${n(by + bry * 0.4)}" width="${n(R * 0.4)}" height="${n(fy - 10 - by - bry * 0.4)}" rx="${n(R * 0.2)}" fill="${spec.fur}"/>`);
-    out.push(`<ellipse cx="${n(lx + s * 6)}" cy="${n(fy - 10)}" rx="${n(R * 0.32)}" ry="${n(R * 0.16)}" fill="${dark}"/>`);
+    const walking = pose === "walk_a" || pose === "walk_b";
+    const lx = walking ? cx : cx + s * brx * 0.45;
+    const L = Math.max(10, fy - 10 - legTop);
+    const deg = walking ? (pose === "walk_a" ? s : -s) * WALK_SWING_DEG : 0;
+    out.push(`<rect x="${n(lx - R * 0.2)}" y="${n(legTop)}" width="${n(R * 0.4)}" height="${n(L)}" rx="${n(R * 0.2)}" fill="${spec.fur}"${deg ? ` transform="rotate(${-deg} ${n(lx)} ${n(legTop)})"` : ""}/>`);
+    const footX = lx + Math.sin((deg * Math.PI) / 180) * L;
+    out.push(`<ellipse cx="${n(footX + s * 6)}" cy="${n(fy - 10)}" rx="${n(R * 0.32)}" ry="${n(R * 0.16)}" fill="${dark}"/>`);
   }
   out.push(`<ellipse cx="${cx}" cy="${n(by)}" rx="${n(brx)}" ry="${n(bry)}" fill="url(#${id}-fur)"/>`);
   out.push(`<ellipse cx="${cx}" cy="${n(by + bry * 0.12)}" rx="${n(brx * 0.6)}" ry="${n(bry * 0.72)}" fill="${spec.belly}"/>`);
@@ -275,8 +439,23 @@ export function buildCritter(id: string, spec: CritterSpec): string {
   for (const s of [-1, 1]) {
     const x0 = cx + s * brx * 0.78;
     const y0 = by - bry * 0.55;
-    const x1 = cx + s * brx * 1.1;
-    const y1 = by + bry * 0.25;
+    let x1 = cx + s * brx * 1.1;
+    let y1 = by + bry * 0.25;
+    if (pose === "wave" && s === 1) {
+      x1 = cx + brx * 1.25;
+      y1 = hy - R * 0.1;
+    } else if (pose === "point" && s === 1) {
+      x1 = cx + brx * 1.75;
+      y1 = by - bry * 0.4;
+    } else if (pose === "hug") {
+      x1 = cx + s * brx * 1.5;
+      y1 = by - bry * 0.3;
+    } else if (pose === "hold" || pose === "bow") {
+      x1 = cx + s * R * 0.25;
+      y1 = by - bry * 0.1;
+    } else if (pose === "walk_a" || pose === "walk_b") {
+      x1 = cx + s * brx * 1.1 + s * (pose === "walk_a" ? 1 : -1) * 14;
+    }
     out.push(`<path d="M${n(x0)} ${n(y0)} Q${n(x1 + s * 10)} ${n((y0 + y1) / 2)} ${n(x1)} ${n(y1)}" fill="none" stroke="${spec.fur}" stroke-width="${n(R * 0.28)}" stroke-linecap="round"/>`);
     out.push(`<circle cx="${n(x1)}" cy="${n(y1 + 4)}" r="${n(R * 0.17)}" fill="${dark}"/>`);
   }
@@ -318,15 +497,24 @@ export function buildCritter(id: string, spec: CritterSpec): string {
     out.push(`<ellipse cx="${cx}" cy="${n(hy + R * 0.42)}" rx="${n(R * 0.55)}" ry="${n(R * 0.32)}" fill="${spec.belly}"/>`);
     for (const s of [-1, 1]) out.push(`<ellipse cx="${n(cx + s * R * 0.2)}" cy="${n(hy + R * 0.42)}" rx="${n(R * 0.06)}" ry="${n(R * 0.09)}" fill="${dark}"/>`);
   }
-  for (const s of [-1, 1]) {
-    const ex = cx + s * R * 0.36;
-    out.push(`<ellipse cx="${n(ex)}" cy="${n(eyeY)}" rx="${n(R * 0.1)}" ry="${n(R * 0.13)}" fill="#1d1a26"/>`);
-    out.push(`<circle cx="${n(ex + R * 0.035)}" cy="${n(eyeY - R * 0.045)}" r="${n(R * 0.042)}" fill="#ffffff"/>`);
-    out.push(`<circle cx="${n(cx + s * R * 0.6)}" cy="${n(eyeY + R * 0.3)}" r="${n(R * 0.13)}" fill="#ff8a80" fill-opacity="0.35"/>`);
+  const cf = critterFaceGeometry(spec, R, cx, hy, expr);
+  for (const [k, s] of [[0, -1], [1, 1]] as const) {
+    const e = cf.eyes[k];
+    if (cf.eyesClosed) out.push(`<path d="M${n(e.x - e.rx * 1.3)} ${n(e.y)} Q${n(e.x)} ${n(e.y + (expr === "laugh" ? -1 : 1) * e.ry * 1.2)} ${n(e.x + e.rx * 1.3)} ${n(e.y)}" fill="none" stroke="#1d1a26" stroke-width="${n(R * 0.05)}" stroke-linecap="round"/>`);
+    else {
+      out.push(`<ellipse cx="${n(e.x)}" cy="${n(e.y)}" rx="${n(e.rx)}" ry="${n(e.ry)}" fill="#1d1a26"/>`);
+      out.push(`<circle cx="${n(e.x + R * 0.035)}" cy="${n(e.y - R * 0.045)}" r="${n(R * 0.042)}" fill="#ffffff"/>`);
+    }
+    if (expr === "sad") out.push(`<path d="M${n(e.x - s * R * 0.14)} ${n(e.y - R * 0.26)} L${n(e.x + s * R * 0.12)} ${n(e.y - R * 0.18)}" stroke="#1d1a26" stroke-width="${n(R * 0.04)}" stroke-linecap="round"/>`);
+    out.push(`<circle cx="${n(cx + s * R * 0.6)}" cy="${n(e.y + R * 0.3)}" r="${n(R * 0.13)}" fill="#ff8a80" fill-opacity="${expr === "smile" || expr === "laugh" ? 0.5 : 0.35}"/>`);
   }
   const noseY = spec.muzzle === "pointed" ? hy + R * 0.55 : spec.muzzle === "round" ? hy + R * 0.22 : hy + R * 0.3;
   if (spec.muzzle !== "flat") out.push(`<ellipse cx="${cx}" cy="${n(noseY)}" rx="${n(R * 0.11)}" ry="${n(R * 0.08)}" fill="#1d1a26"/>`);
-  out.push(`<path d="M${n(cx - R * 0.12)} ${n(noseY + R * 0.12)} Q${cx} ${n(noseY + R * 0.22)} ${n(cx + R * 0.12)} ${n(noseY + R * 0.12)}" fill="none" stroke="#1d1a26" stroke-width="${n(R * 0.045)}" stroke-linecap="round"/>`);
+  const mw = R * (expr === "smile" || expr === "laugh" ? 0.18 : 0.12);
+  if (expr === "laugh") out.push(`<path d="M${n(cx - mw)} ${n(noseY + R * 0.1)} L${n(cx + mw)} ${n(noseY + R * 0.1)} Q${cx} ${n(noseY + R * 0.34)} ${n(cx - mw)} ${n(noseY + R * 0.1)} Z" fill="#7a2a22"/>`);
+  else if (expr === "surprised") out.push(`<ellipse cx="${cx}" cy="${n(noseY + R * 0.18)}" rx="${n(R * 0.06)}" ry="${n(R * 0.08)}" fill="#7a2a22"/>`);
+  else if (expr === "sad") out.push(`<path d="M${n(cx - mw)} ${n(noseY + R * 0.2)} Q${cx} ${n(noseY + R * 0.1)} ${n(cx + mw)} ${n(noseY + R * 0.2)}" fill="none" stroke="#1d1a26" stroke-width="${n(R * 0.045)}" stroke-linecap="round"/>`);
+  else out.push(`<path d="M${n(cx - mw)} ${n(noseY + R * 0.12)} Q${cx} ${n(noseY + R * (expr === "smile" ? 0.28 : 0.22))} ${n(cx + mw)} ${n(noseY + R * 0.12)}" fill="none" stroke="#1d1a26" stroke-width="${n(R * 0.045)}" stroke-linecap="round"/>`);
   if (has("glasses")) {
     for (const s of [-1, 1]) out.push(`<circle cx="${n(cx + s * R * 0.36)}" cy="${n(eyeY)}" r="${n(R * 0.2)}" fill="none" stroke="#2a2233" stroke-width="4"/>`);
     out.push(`<path d="M${n(cx - R * 0.16)} ${n(eyeY)} L${n(cx + R * 0.16)} ${n(eyeY)}" stroke="#2a2233" stroke-width="4"/>`);
@@ -338,4 +526,29 @@ export function buildCritter(id: string, spec: CritterSpec): string {
   }
   out.push("</symbol>");
   return out.join("\n");
+}
+
+function critterHead(spec: CritterSpec, pose: DrawPose) {
+  const k = spec.size === "small" ? 0.9 : spec.size === "large" ? 1.08 : 1;
+  const R = 100 * k;
+  const seatDrop = pose === "sit" || pose === "kneel" ? 46 : pose === "bow" ? 18 : 0;
+  const hy0 = Math.max(600 - 560 * (spec.size === "small" ? 0.86 : 1) + R + 20, spec.ears === "long" ? 1.9 * R + 8 : 0);
+  return { R, hy: hy0 + seatDrop, by: hy0 + R * 2.05 + seatDrop * 0.6 };
+}
+
+function critterFaceGeometry(spec: CritterSpec, R: number, cx: number, hy: number, expr: Expression) {
+  const eyeY = hy - R * 0.08;
+  const big = expr === "surprised" ? 1.3 : 1;
+  const eyes = [-1, 1].map((s) => ({ x: cx + s * R * 0.36, y: eyeY, rx: R * 0.1 * big, ry: R * 0.13 * big * (expr === "sleepy" ? 0.5 : 1) }));
+  const noseY = spec.muzzle === "pointed" ? hy + R * 0.55 : spec.muzzle === "round" ? hy + R * 0.22 : hy + R * 0.3;
+  return { eyes, mouth: { x: cx, y: noseY + R * 0.17, w: R * 0.24 }, eyesClosed: expr === "laugh" || expr === "sleepy" };
+}
+
+/** Face anchors of a critter variant in its 400×600 viewBox (for blink + lip-sync overlays). */
+export function critterFace(spec: CritterSpec, pose: DrawPose = "stand", expr: Expression = "neutral"): FaceAnchors {
+  const { R, hy, by } = critterHead(spec, pose);
+  const g = critterFaceGeometry(spec, R, 200, hy, expr);
+  const bry = Math.min(592 - 40 - by, R * 1.25);
+  const L = Math.max(10, 592 - 10 - (by + bry * 0.4));
+  return { eyes: g.eyes, mouth: g.mouth, skin: spec.fur, eyesClosed: g.eyesClosed, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180) };
 }
