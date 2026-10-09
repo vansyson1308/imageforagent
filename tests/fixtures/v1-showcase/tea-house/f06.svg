@@ -1,0 +1,14 @@
+<use href="#tea-house" x="0" y="0" width="1920" height="1080"/>
+<rect width="1920" height="1080" fill="#0b1330" fill-opacity="0.45"/>
+<circle cx="500" cy="750" r="80" fill="#f5e6c8" fill-opacity="0.3"/>
+<circle cx="950" cy="700" r="70" fill="#f5e6c8" fill-opacity="0.3"/>
+<circle cx="550" cy="710" r="70" fill="#f5e6c8" fill-opacity="0.3"/>
+<use href="#window-seat" x="400" y="700" width="200" height="200"/>
+<use href="#grandma-young" x="400" y="144" width="504" height="756"/>
+<g transform="translate(1200 0) scale(-1 1)">
+  <use href="#husband-young" x="0" y="144" width="504" height="756"/>
+</g>
+<use href="#tea-cups" x="900" y="650" width="100" height="100"/>
+<use href="#tea-cups" x="500" y="660" width="100" height="100"/>
+<use href="#poetry-book" x="845" y="595" width="150" height="150"/>
+<ellipse cx="845" cy="745" rx="30" ry="20" fill="#2a1a1a" fill-opacity="0.7"/>

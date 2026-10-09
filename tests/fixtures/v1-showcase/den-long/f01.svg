@@ -1,0 +1,12 @@
+<use href="#porch" x="0" y="0" width="1920" height="1080"/>
+<rect width="1920" height="1080" fill="#0b1330" fill-opacity="0.45"/>
+<defs>
+  <radialGradient id="glow">
+    <stop offset="0%" stop-color="#ffcc00" stop-opacity="0.6"/>
+    <stop offset="100%" stop-color="#ffcc00" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+<circle cx="1300" cy="800" r="150" fill="url(#glow)"/>
+<use href="#ti" x="478" y="464" width="324" height="486"/>
+<use href="#kids-group" x="1217" y="700" width="167" height="250"/>
+<use href="#bamboo-shade" x="200" y="700" width="133" height="200"/>

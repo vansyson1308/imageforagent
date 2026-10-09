@@ -1,0 +1,13 @@
+<use href="#village-gate" x="0" y="0" width="1920" height="1080"/>
+<g>
+  <use href="#fried-tofu" x="610" y="940" width="60" height="60"/>
+</g>
+<g>
+  <use href="#fox" x="948" y="244" width="504" height="756"/>
+</g>
+<g>
+  <use href="#child" x="148" y="244" width="504" height="756"/>
+</g>
+<circle cx="300" cy="200" r="2" fill="#ffffff" fill-opacity="0.6"/>
+<circle cx="1500" cy="400" r="2" fill="#ffffff" fill-opacity="0.6"/>
+<circle cx="800" cy="800" r="2" fill="#ffffff" fill-opacity="0.6"/>

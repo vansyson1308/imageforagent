@@ -1,0 +1,87 @@
+{
+ "characters": [
+  "grandma-hoa",
+  "lan",
+  "husband-young",
+  "grandma-young"
+ ],
+ "sets": [
+  "tea-house"
+ ],
+ "shots": [
+  {
+   "shotType": "Wide shot",
+   "cast": [
+    "tea-house",
+    "grandma-hoa"
+   ],
+   "description": "Early morning mist over the lake; the tea house sits on stilts, bamboo blinds rolling up. Grandma Hoa steps onto the tiny porch, kettle in hand, lantern light fading behind her. Cool blue-grey dawn, soft mist rising."
+  },
+  {
+   "shotType": "Medium shot",
+   "cast": [
+    "grandma-hoa",
+    "tea-house",
+    "tea-cups",
+    "window-seat"
+   ],
+   "description": "Inside the tea house, warm amber glow from the clay stove. Grandma Hoa pours tea from a clay pot into two ivory cups — one on the low table, one on the window-seat ledge. Steam curls rise. Golden dawn light through the window."
+  },
+  {
+   "shotType": "Close-up",
+   "cast": [
+    "tea-cups",
+    "window-seat"
+   ],
+   "description": "Extreme close-up of the two cups side by side on the wooden ledge, steam weaving together. The window-seat's checkered cushion and the faint tea stain on the left corner are visible. Gentle morning light."
+  },
+  {
+   "shotType": "Wide shot",
+   "cast": [
+    "tea-house",
+    "lan"
+   ],
+   "description": "Rain sheets the lake, drumming on the thatched roof. Lan runs up the wooden steps, hooded raincoat dripping, pushes through the bamboo blinds into the warm interior. Grey-green rain light, cosy amber inside."
+  },
+  {
+   "shotType": "Medium shot",
+   "cast": [
+    "grandma-hoa",
+    "lan",
+    "tea-cups",
+    "tea-house"
+   ],
+   "description": "Grandma Hoa and Lan sit at the low table, two cups steaming between them. Grandma's hands cradle her cup; Lan leans forward, curious. Rain streaks the window. Cosy interior light."
+  },
+  {
+   "shotType": "Slow zoom-in",
+   "cast": [
+    "grandma-young",
+    "husband-young",
+    "tea-cups",
+    "poetry-book",
+    "window-seat",
+    "tea-house"
+   ],
+   "description": "Forty years earlier, same window seat. Young Grandma Hoa reads her indigo poetry book. Young Husband enters, trips on the threshold, tea splashes across the open page — a dark bloom on the poem. Golden dust-mote noon light."
+  },
+  {
+   "shotType": "Medium shot",
+   "cast": [
+    "grandma-hoa",
+    "lan",
+    "tea-cups",
+    "window-seat",
+    "tea-house"
+   ],
+   "description": "Present day. Lan slides onto the window seat, picks up the second cup, blows steam, sips. Grandma Hoa watches from the table, hands folded, eyes bright. Rain softens to drizzle. Warm amber light."
+  },
+  {
+   "shotType": "Close-up",
+   "cast": [
+    "grandma-hoa"
+   ],
+   "description": "Grandma Hoa's face — fine lines deepening into a laugh, eyes crinkling, jade ring catching a shaft of sun breaking through clouds. The first laugh in years. Golden sunbreak through rain."
+  }
+ ]
+}

@@ -1,0 +1,17 @@
+<use href="#street" x="0" y="0" width="1920" height="1080"/>
+<rect width="1920" height="1080" fill="#0b1330" fill-opacity="0.45"/>
+<radialGradient id="moonGrad" cx="0.5" cy="0.5" r="0.5">
+  <stop offset="0%" stop-color="#ffcc00"/>
+  <stop offset="70%" stop-color="#ff6b00"/>
+  <stop offset="100%" stop-color="#ff6b00" stop-opacity="0"/>
+</radialGradient>
+<circle cx="960" cy="540" r="300" fill="url(#moonGrad)"/>
+
+<use href="#star-lantern" x="660" y="480" width="80" height="120" fill="#1a1a3e"/>
+<use href="#star-lantern" x="960" y="460" width="80" height="120" fill="#1a1a3e"/>
+<use href="#star-lantern" x="1260" y="500" width="80" height="120" fill="#1a1a3e"/>
+
+<ellipse cx="500" cy="200" rx="120" ry="40" fill="#f5e6a0" fill-opacity="0.15"/>
+<ellipse cx="1400" cy="250" rx="150" ry="45" fill="#f5e6a0" fill-opacity="0.12"/>
+
+<use href="#bamboo-shade" x="0" y="900" width="380" height="180" fill="#2d4a2d"/>

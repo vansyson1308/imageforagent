@@ -1,0 +1,11 @@
+<use href="#tea-house" x="0" y="0" width="1920" height="1080"/>
+  
+  <use href="#lan" x="300" y="240" width="440" height="660"/>
+  
+  <use href="#grandma-hoa" x="1200" y="240" width="440" height="660"/>
+  
+  <path d="M 540 420 C 560 380 600 380 620 420" stroke="#f5e6c8" stroke-width="6" fill="none"/>
+  <path d="M 560 460 C 580 410 630 410 650 460" stroke="#f5e6c8" stroke-width="6" fill="none"/>
+  
+  <path d="M 1340 520 C 1360 480 1400 480 1420 520" stroke="#f5e6c8" stroke-width="6" fill="none"/>
+  <path d="M 1360 560 C 1380 510 1430 510 1450 560" stroke="#f5e6c8" stroke-width="6" fill="none"/>

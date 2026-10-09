@@ -37,6 +37,8 @@ export const shotPlanSchema = z.object({
   cast: z.array(castId).max(6),
   /** Research note numbers (1-based) this shot uses (costume, prop, set detail…). */
   cites: z.array(z.number().int().min(0).max(99)).max(8).optional(),
+  /** true = this shot deliberately repeats the previous composition (a callback); skips the near-duplicate gate. */
+  intentionalRepeat: z.boolean().optional(),
 });
 
 export const planSchema = z.object({

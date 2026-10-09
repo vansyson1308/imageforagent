@@ -219,8 +219,13 @@ describe("director validators", () => {
     const night = { ...opts, shot: { ...shot, description: "The hero waits under the moonlight at night." } };
     const bright = '```svg\n<rect width="1920" height="1080" fill="#f4f0e0"/><circle cx="960" cy="540" r="200" fill="#e0c080"/>\n```';
     await expect(validateDrawing(bright, night)).rejects.toThrow(/night\/dark scene but the frame's mean brightness is \d+\/255/);
-    const dark = '```svg\n<rect width="1920" height="1080" fill="#101a40"/><circle cx="960" cy="540" r="200" fill="#f0c060"/>\n```';
+    const stars = Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 197) % 1920}" cy="${(i * 89) % 600}" r="6" fill="#fef6e4"/>`).join("");
+    const roofs = Array.from({ length: 8 }, (_, i) => `<polygon points="${i * 240},800 ${i * 240 + 120},640 ${i * 240 + 240},800" fill="#2b3566"/><rect x="${i * 240 + 60}" y="800" width="120" height="160" fill="#1f2750"/><rect x="${i * 240 + 100}" y="840" width="30" height="40" fill="#f0c060"/>`).join("");
+    const dark = `\`\`\`svg\n<rect width="1920" height="1080" fill="#101a40"/>${stars}${roofs}<circle cx="960" cy="300" r="120" fill="#f0c060"/>\n\`\`\``;
     await expect(validateDrawing(dark, night)).resolves.toBeTruthy();
+    // and a frame with almost nothing in it fails the empty-frame gate with a measured hint
+    const empty = '```svg\n<rect width="1920" height="1080" fill="#101a40"/><circle cx="960" cy="540" r="200" fill="#f0c060"/>\n```';
+    await expect(validateDrawing(empty, night)).rejects.toThrow(/nearly empty \(edge density [\d.]+%, \d+ colour regions/);
   });
 
   it("gates the library: sets must be 16:9, characters 2:3, and not stick figures", async () => {

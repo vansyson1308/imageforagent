@@ -1,0 +1,4 @@
+<use href="#porch" x="0" y="0" width="1920" height="1080"/>
+<rect width="1920" height="1080" fill="#0b1330" fill-opacity="0.45"/>
+<use href="#ti" x="640" y="0" width="936" height="1404"/>
+<use href="#star-lantern" x="1018" y="300" width="180" height="180"/>

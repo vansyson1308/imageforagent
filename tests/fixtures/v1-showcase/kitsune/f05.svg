@@ -1,0 +1,13 @@
+<use href="#village-gate" x="0" y="0" width="1920" height="1080"/>
+<rect width="1920" height="1080" fill="#0b1330" fill-opacity="0.45"/>
+<radialGradient id="lanternGlow">
+  <stop offset="0%" stop-color="#D4A843" stop-opacity="0.8"/>
+  <stop offset="100%" stop-color="#D4A843" stop-opacity="0"/>
+</radialGradient>
+<circle cx="960" cy="250" r="80" fill="url(#lanternGlow)" fill-opacity="0.4"/>
+<circle cx="670" cy="680" r="8" fill="#D4A843"/>
+<use href="#fox" x="400" y="468" width="288" height="432"/>
+<g transform="translate(1200 0) scale(-1 1)">
+  <use href="#child" x="0" y="468" width="288" height="432"/>
+</g>
+<circle cx="1150" cy="560" r="3" fill="#2B2B2B"/>

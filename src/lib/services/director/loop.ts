@@ -105,6 +105,8 @@ export async function createRun(req: DirectorRequest, deps: DirectorDeps): Promi
 }
 
 interface ShotStats {
+  /** gate problems the FINAL version still has (accepted on the lenient last attempt) */
+  gateFailures?: number;
   firstPassOk: boolean;
   repairs: number;
   before: number | null;
@@ -211,6 +213,9 @@ export async function executeRun(
     emit({ type: "status", message: "Artist is designing the cast…" });
     const library = await runCast(ctx, plan, aspectRatio);
     const patterns = new Map<number, string>();
+    // accepted paintings' thumbnails: the near-duplicate gate compares each shot with its neighbours
+    const thumbs = new Map<number, Buffer>();
+    const neighbours = (index: number) => () => [index - 1, index + 1].filter((i) => thumbs.has(i)).map((i) => ({ index: i, thumb: thumbs.get(i)! }));
     const background = plan.palette[0] ?? "#1a1a2e";
 
     // 6 · Per shot: draw → commit → critic → revise (a small pool of shots in parallel)
@@ -220,7 +225,7 @@ export async function executeRun(
       const st: ShotStats = { firstPassOk: false, repairs: 0, before: null, after: null, revisions: 0 };
       shotStats.set(frame.index, st);
       emit({ type: "status", message: `Artist is drawing shot ${frame.index}/${frames.length}…` });
-      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0 });
+      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index) });
       st.repairs += first.attempts - 1;
       st.firstPassOk = first.drawing !== null && first.attempts === 1;
       if (!first.drawing) {
@@ -228,6 +233,8 @@ export async function executeRun(
         emit({ type: "frame", index: frame.index, imageUrl: null, clipUrl: null, score: null, status: "failed" });
         return;
       }
+      if (first.drawing.thumb) thumbs.set(frame.index, first.drawing.thumb);
+      if (first.drawing.checks?.problems.length) st.gateFailures = first.drawing.checks.problems.length;
       let committed: Frame = await commitAndAnnounce(ctx, { frame, shot, index: frame.index, drawing: first.drawing, castDefs: library.defs, patterns, background }, null);
       let best: { drawing: Drawing; critique: Critique | null } = { drawing: first.drawing, critique: null };
       if (!options.critic) return;
@@ -238,7 +245,7 @@ export async function executeRun(
       for (let round = 1; round <= budget.maxCriticRounds; round++) {
         const c = best.critique;
         if (!c || c.score >= options.acceptScore || c.verdict === "accept") break;
-        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg });
+        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index) });
         st.repairs += Math.max(0, rev.attempts - 1);
         if (!rev.drawing) break;
         const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round });
@@ -246,6 +253,8 @@ export async function executeRun(
         if (cr.critique && cr.critique.score > c.score) {
           best = { drawing: rev.drawing, critique: cr.critique };
           st.after = cr.critique.score;
+          if (rev.drawing.thumb) thumbs.set(frame.index, rev.drawing.thumb);
+          st.gateFailures = rev.drawing.checks?.problems.length ?? 0;
           committed = await commitAndAnnounce(ctx, { frame: committed, shot, index: frame.index, drawing: rev.drawing, castDefs: library.defs, patterns, background }, cr.critique.score);
           await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "uplift", shotIndex: frame.index, score: cr.critique.score, summary: `Revision accepted: ${c.score} → ${cr.critique.score}` });
         } else {
@@ -340,6 +349,7 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     criticBefore: mean(scored.map((s) => s.before!)),
     criticAfter: mean(scored.map((s) => s.after!)),
     revisions: all.reduce((n, s) => n + s.revisions, 0),
+    gateFailures: all.filter((s) => (s.gateFailures ?? 0) > 0).length,
     lintErrors: lint.findings.filter((f) => f.severity === "error").length,
     lintWarnings: lint.findings.filter((f) => f.severity === "warning").length,
     durationSec: lint.durationSec,

@@ -196,6 +196,29 @@ export async function visibleExtent(withUse: Buffer, without: Buffer): Promise<{
   return top < 0 ? { pct: 0, touchesTop: false } : { pct: Math.round(((bottom - top + 1) / a.h) * 100), touchesTop: top <= 1 };
 }
 
+/** Bounding box (in [0,1] of the frame) of what `withUse` adds over `without`, or null when nothing differs. */
+export async function visibleBox(withUse: Buffer, without: Buffer): Promise<{ x0: number; y0: number; x1: number; y1: number } | null> {
+  const a = await rgba(withUse);
+  const b = await rgba(without);
+  let x0 = a.w;
+  let y0 = a.h;
+  let x1 = -1;
+  let y1 = -1;
+  for (let y = 0; y < a.h; y += 2) {
+    const row = y * a.w * 4;
+    for (let x = 0; x < a.w; x += 2) {
+      const i = row + x * 4;
+      if (Math.abs(a.data[i] - b.data[i]) + Math.abs(a.data[i + 1] - b.data[i + 1]) + Math.abs(a.data[i + 2] - b.data[i + 2]) > 30) {
+        if (x < x0) x0 = x;
+        if (x > x1) x1 = x;
+        if (y < y0) y0 = y;
+        if (y > y1) y1 = y;
+      }
+    }
+  }
+  return x1 < 0 ? null : { x0: x0 / a.w, y0: y0 / a.h, x1: (x1 + 1) / a.w, y1: (y1 + 1) / a.h };
+}
+
 /** Mean perceived brightness (0..255) of a render. */
 export async function meanBrightness(png: Buffer): Promise<number> {
   const s = await sharp(png).stats();

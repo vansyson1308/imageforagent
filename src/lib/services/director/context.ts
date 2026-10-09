@@ -56,6 +56,8 @@ export interface RunSummary {
   readonly criticBefore: number | null;
   readonly criticAfter: number | null;
   readonly revisions: number;
+  /** shots whose final version still fails a measured gate (kept on the lenient last attempt) */
+  readonly gateFailures?: number;
   readonly lintErrors: number;
   readonly lintWarnings: number;
   readonly durationSec: number;

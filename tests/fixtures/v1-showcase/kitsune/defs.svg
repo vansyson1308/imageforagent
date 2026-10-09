@@ -1,0 +1,127 @@
+<radialGradient id="fox-fur" cx="0.38" cy="0.32" r="0.8"><stop offset="0" stop-color="#dfbe72"/><stop offset="1" stop-color="#D4A843"/></radialGradient>
+<radialGradient id="child-skin" cx="0.38" cy="0.32" r="0.75"><stop offset="0" stop-color="#eeece4"/><stop offset="1" stop-color="#E8E4D9"/></radialGradient>
+<radialGradient id="village-gate-lantern-glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#D4A843" stop-opacity="0.6"/><stop offset="1" stop-color="#D4A843" stop-opacity="0"/></radialGradient>
+<linearGradient id="village-gate-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E8E4D9"/><stop offset="1" stop-color="#A8A8A8"/></linearGradient>
+<radialGradient id="lantern-glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#D4A843"/><stop offset="1" stop-color="#D4A843" stop-opacity="0"/></radialGradient>
+<symbol id="fox" viewBox="0 0 400 600">
+<ellipse cx="200" cy="594" rx="91.1" ry="8" fill="#1d2233" fill-opacity="0.22"/>
+<path d="M258 457.9 Q375 439.9 339 322.9 Q289.5 394.9 249 435.4 Z" fill="#D4A843"/>
+<path d="M339 322.9 Q352.5 363.4 343.5 381.4 Q321 367.9 339 322.9 Z" fill="#E8E4D9"/>
+<rect x="144.7" y="457.9" width="36" height="124.1" rx="18" fill="#D4A843"/>
+<ellipse cx="156.7" cy="582" rx="28.8" ry="14.4" fill="#947639"/>
+<rect x="219.3" y="457.9" width="36" height="124.1" rx="18" fill="#D4A843"/>
+<ellipse cx="243.3" cy="582" rx="28.8" ry="14.4" fill="#947639"/>
+<ellipse cx="200" cy="412.9" rx="82.8" ry="112.5" fill="url(#fox-fur)"/>
+<ellipse cx="200" cy="426.4" rx="49.7" ry="81" fill="#E8E4D9"/>
+<path d="M135.4 351 Q98.9 396 108.9 441" fill="none" stroke="#D4A843" stroke-width="25.2" stroke-linecap="round"/>
+<circle cx="108.9" cy="445" r="15.3" fill="#947639"/>
+<path d="M264.6 351 Q301.1 396 291.1 441" fill="none" stroke="#D4A843" stroke-width="25.2" stroke-linecap="round"/>
+<circle cx="291.1" cy="445" r="15.3" fill="#947639"/>
+<path d="M113.6 190.6 L135.2 107.8 L174.8 190.6 Z" fill="#D4A843"/>
+<path d="M128.9 179.8 L137 132.1 L159.5 179.8 Z" fill="#947639"/>
+<path d="M225.2 190.6 L264.8 107.8 L286.4 190.6 Z" fill="#D4A843"/>
+<path d="M240.5 179.8 L263 132.1 L271.1 179.8 Z" fill="#947639"/>
+<circle cx="200" cy="228.4" r="90" fill="url(#fox-fur)"/>
+<path d="M135.2 232.9 Q200 217.6 264.8 232.9 Q231.5 282.4 200 287.8 Q168.5 282.4 135.2 232.9 Z" fill="#E8E4D9"/>
+<ellipse cx="167.6" cy="221.2" rx="9" ry="11.7" fill="#1d1a26"/>
+<circle cx="170.8" cy="217.2" r="3.8" fill="#ffffff"/>
+<circle cx="146" cy="248.2" r="11.7" fill="#ff8a80" fill-opacity="0.35"/>
+<ellipse cx="232.4" cy="221.2" rx="9" ry="11.7" fill="#1d1a26"/>
+<circle cx="235.6" cy="217.2" r="3.8" fill="#ffffff"/>
+<circle cx="254" cy="248.2" r="11.7" fill="#ff8a80" fill-opacity="0.35"/>
+<ellipse cx="200" cy="277.9" rx="9.9" ry="7.2" fill="#1d1a26"/>
+<path d="M189.2 288.7 Q200 297.7 210.8 288.7" fill="none" stroke="#1d1a26" stroke-width="4.1" stroke-linecap="round"/>
+</symbol>
+<symbol id="child" viewBox="0 0 400 600">
+<clipPath id="child-torso"><path d="M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 262.5 546 L137.5 546 Q142 309 142 232 Z"/></clipPath>
+<ellipse cx="200" cy="594" rx="85" ry="8" fill="#1d2233" fill-opacity="0.22"/>
+<rect x="163.5" y="386" width="28" height="198" rx="14" fill="#E8E4D9"/>
+<ellipse cx="181.5" cy="586" rx="25.2" ry="11" fill="#2b2530"/>
+<rect x="208.5" y="386" width="28" height="198" rx="14" fill="#E8E4D9"/>
+<ellipse cx="226.5" cy="586" rx="25.2" ry="11" fill="#2b2530"/>
+<path d="M152 234 Q126 291 128 388" fill="none" stroke="#6B8E5C" stroke-width="22" stroke-linecap="round"/>
+<path d="M248 234 Q274 291 272 388" fill="none" stroke="#6B8E5C" stroke-width="22" stroke-linecap="round"/>
+<path d="M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 262.5 546 L137.5 546 Q142 309 142 232 Z" fill="#6B8E5C"/>
+<rect x="206" y="210" width="92.5" height="338" fill="#1d1a26" fill-opacity="0.13" clip-path="url(#child-torso)"/>
+<path d="M170 214 L218 292" stroke="#D4A843" stroke-width="9"/>
+<rect x="142" y="350" width="116" height="30" fill="#D4A843"/>
+<circle cx="128" cy="392" r="14.5" fill="url(#child-skin)"/>
+<circle cx="272" cy="392" r="14.5" fill="url(#child-skin)"/>
+<rect x="180.8" y="196" width="38.4" height="28" fill="#c9c1b6"/>
+<ellipse cx="123.2" cy="141.6" rx="12.8" ry="17.6" fill="#E8E4D9"/>
+<ellipse cx="276.8" cy="141.6" rx="12.8" ry="17.6" fill="#E8E4D9"/>
+<circle cx="200" cy="132" r="80" fill="url(#child-skin)"/>
+<ellipse cx="171.2" cy="141.6" rx="8" ry="11.2" fill="#2a2233"/>
+<circle cx="174" cy="137.6" r="3.6" fill="#ffffff"/>
+<path d="M159.2 120 Q171.2 112.8 183.2 120" fill="none" stroke="#2B2B2B" stroke-width="5.6" stroke-linecap="round"/>
+<circle cx="155.2" cy="165.6" r="12.8" fill="#ff8a80" fill-opacity="0.4"/>
+<ellipse cx="228.8" cy="141.6" rx="8" ry="11.2" fill="#2a2233"/>
+<circle cx="231.6" cy="137.6" r="3.6" fill="#ffffff"/>
+<path d="M216.8 120 Q228.8 112.8 240.8 120" fill="none" stroke="#2B2B2B" stroke-width="5.6" stroke-linecap="round"/>
+<circle cx="244.8" cy="165.6" r="12.8" fill="#ff8a80" fill-opacity="0.4"/>
+<ellipse cx="200" cy="156" rx="5.6" ry="4" fill="#c9c1b6"/>
+<path d="M186.4 170.4 Q200 182.4 213.6 170.4" fill="none" stroke="#8a3a2a" stroke-width="4.8" stroke-linecap="round"/>
+<path d="M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z" fill="#2B2B2B"/>
+<path d="M160 56 Q192 46 224 54" fill="none" stroke="#ffffff" stroke-opacity="0.25" stroke-width="6" stroke-linecap="round"/>
+</symbol>
+<symbol id="forest" viewBox="0 0 1920 1080">
+<rect width="1920" height="1080" fill="#E8E4D9"/>
+<rect x="0" y="200" width="200" height="800" fill="#A8A8A8" fill-opacity="0.15"/>
+<rect x="400" y="180" width="180" height="820" fill="#A8A8A8" fill-opacity="0.15"/>
+<rect x="800" y="220" width="150" height="780" fill="#A8A8A8" fill-opacity="0.15"/>
+<rect x="1200" y="190" width="170" height="810" fill="#A8A8A8" fill-opacity="0.15"/>
+<rect x="1500" y="210" width="140" height="790" fill="#A8A8A8" fill-opacity="0.15"/>
+<rect x="1760" y="200" width="160" height="800" fill="#A8A8A8" fill-opacity="0.15"/>
+<rect x="100" y="400" width="30" height="500" fill="#2B2B2B"/>
+<rect x="250" y="380" width="28" height="520" fill="#2B2B2B"/>
+<rect x="420" y="350" width="32" height="550" fill="#2B2B2B"/>
+<rect x="600" y="380" width="30" height="520" fill="#2B2B2B"/>
+<rect x="800" y="360" width="28" height="540" fill="#2B2B2B"/>
+<rect x="1000" y="340" width="30" height="560" fill="#2B2B2B"/>
+<rect x="1200" y="380" width="28" height="520" fill="#2B2B2B"/>
+<rect x="1400" y="350" width="32" height="550" fill="#2B2B2B"/>
+<rect x="1600" y="380" width="30" height="520" fill="#2B2B2B"/>
+<rect x="1750" y="360" width="28" height="540" fill="#2B2B2B"/>
+<ellipse cx="960" cy="540" rx="300" ry="200" fill="#E8E4D9" fill-opacity="0.6"/>
+<circle cx="300" cy="200" r="40" fill="#D4A843"/>
+</symbol>
+<symbol id="village-gate" viewBox="0 0 1920 1080">
+<rect width="1920" height="1080" fill="url(#village-gate-sky)"/>
+<path d="M0 300 Q400 100 800 300 T1600 300 L1920 1080 H0 Z" fill="#2B2B2B"/>
+<path d="M200 350 Q600 150 1000 350 T1400 350 L1920 1080 H0 Z" fill="#2B2B2B" fill-opacity="0.8"/>
+<rect x="400" y="660" width="30" height="200" fill="#8B5E3C"/>
+<rect x="800" y="660" width="30" height="200" fill="#8B5E3C"/>
+<rect x="1200" y="660" width="30" height="200" fill="#8B5E3C"/>
+<ellipse cx="415" cy="620" rx="40" ry="30" fill="#6B8E5C"/>
+<ellipse cx="815" cy="620" rx="40" ry="30" fill="#6B8E5C"/>
+<ellipse cx="1215" cy="620" rx="40" ry="30" fill="#6B8E5C"/>
+<rect x="0" y="864" width="1920" height="216" fill="#E8E4D9"/>
+<ellipse cx="480" cy="950" rx="120" ry="20" fill="#E8E4D9" fill-opacity="0.8"/>
+<ellipse cx="1440" cy="950" rx="120" ry="20" fill="#E8E4D9" fill-opacity="0.8"/>
+<rect x="800" y="464" width="60" height="400" fill="#8B5E3C"/>
+<rect x="1120" y="464" width="60" height="400" fill="#8B5E3C"/>
+<rect x="800" y="420" width="380" height="40" fill="#8B5E3C"/>
+<path d="M800 420 Q1000 260 1180 420 L1180 460 L800 460 Z" fill="#E8E4D9"/>
+<rect x="860" y="460" width="30" height="50" fill="#2B2B2B"/>
+<rect x="1000" y="460" width="30" height="50" fill="#2B2B2B"/>
+<rect x="1140" y="460" width="30" height="50" fill="#2B2B2B"/>
+<circle cx="875" cy="460" r="8" fill="url(#village-gate-lantern-glow)"/>
+<circle cx="1015" cy="460" r="8" fill="url(#village-gate-lantern-glow)"/>
+<circle cx="1155" cy="460" r="8" fill="url(#village-gate-lantern-glow)"/>
+</symbol>
+<symbol id="lantern" viewBox="0 0 400 400">
+<ellipse cx="200" cy="80" rx="120" ry="20" fill="#E8E4D9"/>
+<ellipse cx="200" cy="320" rx="120" ry="20" fill="#E8E4D9"/>
+<rect x="80" y="80" width="240" height="240" fill="#E8E4D9"/>
+<rect x="110" y="80" width="20" height="240" fill="#2B2B2B"/>
+<rect x="170" y="80" width="20" height="240" fill="#2B2B2B"/>
+<rect x="230" y="80" width="20" height="240" fill="#2B2B2B"/>
+<ellipse cx="200" cy="200" rx="100" ry="140" fill="url(#lantern-glow)"/>
+</symbol>
+<symbol id="fried-tofu" viewBox="0 0 400 400">
+<rect x="100" y="260" width="200" height="40" fill="#8B5E3C"/>
+<rect x="150" y="140" width="100" height="100" fill="#D4A843"/>
+<ellipse cx="170" cy="100" rx="15" ry="10" fill="#E8E4D9"/>
+<ellipse cx="200" cy="80" rx="12" ry="8" fill="#E8E4D9"/>
+<ellipse cx="230" cy="100" rx="15" ry="10" fill="#E8E4D9"/>
+</symbol>
