@@ -264,7 +264,7 @@ export function criticSystem(mode: "vision" | "text"): string {
     "ROLE: CRITIC",
     mode === "vision"
       ? "You are the Visual Critic. You LOOK at a rendered storyboard frame (or a contact sheet of an animated shot) and judge it against the shot description."
-      : "You are the Visual Critic working WITHOUT the image: judge the frame from its SVG source, the render statistics and the ENGINE CHECKS against the shot description. ENGINE CHECKS are measured on the render and authoritative: never lower the score for character size or brightness when they PASSED; when a check FAILED, score ≤ 6 and put its fix first. Judge what the checks cannot: does the frame show what the description says (named characters and props present, the action, the setting, the time of day), is the composition clear (rule of thirds, no awkward overlaps, no big empty areas), are foreground details and light sources there.",
+      : "You are the Visual Critic. Unless VISUAL OBSERVATIONS are given you work WITHOUT the image: judge the frame from its SVG source, the render statistics and the ENGINE CHECKS against the shot description. ENGINE CHECKS are measured on the render and authoritative: never lower the score for character size or brightness when they PASSED; when a check FAILED, score ≤ 6 and put its fix first. Judge what the checks cannot: does the frame show what the description says (named characters and props present, the action, the setting, the time of day), is the composition clear (rule of thirds, no awkward overlaps, no big empty areas), are foreground details and light sources there.",
     GUARD,
     'Output ONE JSON object: {"score": 0-10, "verdict": "accept"|"revise", "issues": [...], "fixes": [...]}.',
     "- score: 9–10 the frame clearly tells the shot, good composition; 7–8 good with minor issues; 4–6 subject unclear or important elements missing/overlapping; 0–3 blank, broken or wrong.",
@@ -273,15 +273,32 @@ export function criticSystem(mode: "vision" | "text"): string {
   ].join("\n");
 }
 
-export function criticUser(opts: { shot: ShotPlan; index: number; svgExcerpt?: string; stats?: string }): string {
+export function criticUser(opts: { shot: ShotPlan; index: number; svgExcerpt?: string; stats?: string; look?: string }): string {
   return [
     `Shot ${opts.index}: ${opts.shot.shotType}.`,
     quoteData("notes", opts.shot.description, 1500),
     opts.stats ? `Render stats: ${opts.stats}` : "",
+    opts.look ? `VISUAL OBSERVATIONS (a vision model LOOKED at the rendered frame; trust them about what is visible):\n${opts.look}` : "",
     opts.svgExcerpt ? `SVG source (excerpt):\n${quoteData("previous", opts.svgExcerpt, 6000)}` : "",
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+export function lookSystem(): string {
+  return [
+    "ROLE: LOOK",
+    "You are the eyes of an animation crew. You LOOK at one rendered storyboard frame and report plainly what is visible. You do not score.",
+    GUARD,
+    'Output ONE JSON object: {"sees": ["…"], "problems": ["…"], "matchesShot": true|false}.',
+    "- sees: up to 8 short facts about what the picture shows (who, where, pose, framing, light, time of day).",
+    "- problems: up to 6 visible problems (a character missing or cut off, flat empty areas, blocks that read as nothing, wrong time of day, unreadable composition, text or artefacts). Empty when there are none.",
+    "- matchesShot: does the picture show what the shot description asks for?",
+  ].join("\n");
+}
+
+export function lookUser(opts: { shot: ShotPlan; index: number; checks?: string }): string {
+  return [`Shot ${opts.index}: ${opts.shot.shotType}.`, quoteData("notes", opts.shot.description, 1500), opts.checks ? `Measured by the engine on this render:${opts.checks}` : ""].filter(Boolean).join("\n\n");
 }
 
 // ---------- Editor (Nano) ----------

@@ -36,8 +36,16 @@ const TIER_PATTERNS: Record<ModelTier, RegExp> = {
   strong: /nemotron.*ultra/i,
   mid: /nemotron.*super/i,
   fast: /nemotron.*(nano|lightning)(?!.*omni)/i,
-  vision: /nemotron.*omni/i,
+  vision: /nvidia\/.*(omni|[-_]vl\b|vlm|vision)/i,
 };
+
+/**
+ * Open VLMs on Token Factory that can LOOK at renders when no NVIDIA vision
+ * model is served (SPEC v2 WP4.4 option 2, DECISIONS D33). They only describe
+ * what they see; a Nemotron model still scores. `google/gemma-3-27b-it` is
+ * deliberately absent: it is the independent eval judge (the critic must differ).
+ */
+export const VISION_FALLBACKS = ["openbmb/MiniCPM-V-4_5"] as const;
 
 export interface ResolvedModels {
   readonly models: CrewModels;
@@ -51,7 +59,8 @@ export interface ResolvedModels {
  * Matches the configured ids against the live catalog. Pure given `listed`,
  * so it is unit-tested without network.
  */
-export function resolveAgainstCatalog(configured: CrewModels, listed: readonly string[]): ResolvedModels {
+export function resolveAgainstCatalog(configured: CrewModels, listed: readonly string[], opts: { visionFallbacks?: readonly string[] } = {}): ResolvedModels {
+  const fallbacks = opts.visionFallbacks ?? VISION_FALLBACKS;
   const notes: string[] = [];
   const models = { ...configured };
   for (const tier of Object.keys(TIER_PATTERNS) as ModelTier[]) {
@@ -64,8 +73,14 @@ export function resolveAgainstCatalog(configured: CrewModels, listed: readonly s
       else notes.push(`${tier}: auto-detected "${pick}".`);
       models[tier] = pick;
     } else if (tier === "vision") {
-      models.vision = "";
-      notes.push("vision: no Nemotron Omni model in the catalog, so the critic runs in TEXT mode (SVG + render stats).");
+      const open = fallbacks.find((f) => listed.some((id) => id.toLowerCase() === f.toLowerCase()));
+      if (open) {
+        models.vision = listed.find((id) => id.toLowerCase() === open.toLowerCase())!;
+        notes.push(`vision: no NVIDIA vision model in the catalog, so ${models.vision} LOOKS at each render and Nemotron Nano still scores it (vision critic: ${models.vision}; Nemotron crew: Ultra/Super/Nano).`);
+      } else {
+        models.vision = "";
+        notes.push("vision: no vision model in the catalog, so the critic runs in TEXT mode (SVG + render stats).");
+      }
     } else if (want) {
       notes.push(`${tier}: "${want}" is not in the catalog and no ${tier}-tier Nemotron was found. Calls may fail.`);
     }

@@ -540,7 +540,7 @@ describe("director loop (mock crew)", () => {
   it("falls back to the text critic when the vision model rejects images (and says so)", async () => {
     const base = demoHandler({ criticScores: [9] });
     const handler: MockHandler = (m, o, i) =>
-      m[0].content.startsWith("ROLE: CRITIC") && m[1].images?.length ? new LlmError("bad_request", "This model does not support image input", 400) : base(m, o, i);
+      m[0].content.startsWith("ROLE: LOOK") && m[1].images?.length ? new LlmError("bad_request", "This model does not support image input", 400) : base(m, o, i);
     const { runId, summary } = await run(handler, {}, { maxShots: 2 });
     expect(summary.textCritic).toBe(true);
     const fb = await prisma.directorStep.findMany({ where: { runId, action: "critic:fallback" } });
@@ -548,6 +548,25 @@ describe("director loop (mock crew)", () => {
     const scores = await prisma.directorStep.findMany({ where: { runId, action: "score" } });
     expect(scores.every((s) => s.outputSummary!.startsWith("text critic"))).toBe(true);
   }, 120_000);
+
+  it("floor: a shot still below 7 after revisions gets ONE fresh redraw, kept only if it scores higher; misses are reported", async () => {
+    const won = await run(demoHandler({ criticScores: [5, 5, 8, 9] }), {}, { maxShots: 2 });
+    const steps = await prisma.directorStep.findMany({ where: { runId: won.runId } });
+    expect(steps.some((s) => s.outputSummary === "Fresh redraw accepted: 5 → 8")).toBe(true);
+    expect(won.summary.belowFloor).toEqual([]);
+    expect(won.summary.criticModel).toBe("mock-vision looks · mock-fast scores");
+    const lost = await run(demoHandler({ criticScores: [4] }), {}, { maxShots: 2 });
+    expect(lost.summary.status).toBe("done");
+    expect(lost.summary.belowFloor).toEqual([1, 2]);
+    const kept = await prisma.directorStep.findMany({ where: { runId: lost.runId, action: "keep" } });
+    expect(kept.some((s) => /^Fresh redraw scored 4 ≤ 4/.test(s.outputSummary ?? ""))).toBe(true);
+    // vision mode: the VLM looked (its own step, with the image), Nano scored
+    const looks = await prisma.directorStep.findMany({ where: { runId: won.runId, action: "look" } });
+    expect(looks.length).toBeGreaterThan(0);
+    expect(looks.every((l) => l.model === "mock-vision" && l.imagePath)).toBe(true);
+    const scores = await prisma.directorStep.findMany({ where: { runId: won.runId, action: "score" } });
+    expect(scores.every((x) => x.model === "mock-fast" && /^vision critic .*mock-vision looked, mock-fast scored/.test(x.outputSummary ?? ""))).toBe(true);
+  }, 180_000);
 
   it("stops with budget_exceeded when the token budget runs out, keeping the trace", async () => {
     const { summary, runId } = await run(demoHandler(), { ceiling: { ...DEFAULT_BUDGET, maxTokens: 400 } });

@@ -58,6 +58,10 @@ export interface RunSummary {
   readonly revisions: number;
   /** shots whose final version still fails a measured gate (kept on the lenient last attempt) */
   readonly gateFailures?: number;
+  /** shots whose final version still scores below the floor (7) */
+  readonly belowFloor?: number[];
+  /** "openbmb/MiniCPM-V-4_5 looks · Nemotron Nano scores" when a vision model was used */
+  readonly criticModel?: string | null;
   readonly lintErrors: number;
   readonly lintWarnings: number;
   readonly durationSec: number;

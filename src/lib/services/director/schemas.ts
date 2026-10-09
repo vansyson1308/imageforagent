@@ -69,6 +69,14 @@ export const critiqueSchema = z.object({
 
 export type Critique = z.infer<typeof critiqueSchema>;
 
+/** What a vision model SEES in a render (it describes; a Nemotron model scores). */
+export const lookSchema = z.object({
+  sees: z.array(z.string().max(200)).max(8),
+  problems: z.array(z.string().max(200)).max(6),
+  matchesShot: z.boolean(),
+});
+export type Look = z.infer<typeof lookSchema>;
+
 export const editorEditSchema = z.object({
   index: z.number().int().min(1),
   /** New (shorter) line, or null to remove the line. Omit = unchanged. */

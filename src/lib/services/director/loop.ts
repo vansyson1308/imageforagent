@@ -106,7 +106,11 @@ export async function createRun(req: DirectorRequest, deps: DirectorDeps): Promi
   return { runId: run.id, budget };
 }
 
+/** A finished shot should score at least this; below it gets one fresh redraw (never blocks). */
+export const FLOOR_SCORE = 7;
+
 interface ShotStats {
+  belowFloor?: boolean;
   /** gate problems the FINAL version still has (accepted on the lenient last attempt) */
   gateFailures?: number;
   firstPassOk: boolean;
@@ -275,12 +279,44 @@ export async function executeRun(
           break;
         }
       }
+      // FLOOR (WP4.4): still below the bar → one fresh redraw with a different approach; kept only if it scores higher
+      const fb = best.critique;
+      if (fb && fb.score < FLOOR_SCORE) {
+        const fresh = await drawShot(ctx, {
+          plan,
+          shot,
+          index: frame.index,
+          castDefs: library.defs,
+          symbols: library.symbols,
+          aspectRatio,
+          round: budget.maxCriticRounds + 1,
+          feedback: `START OVER. The best version so far scored ${fb.score}/10 (${fb.issues.slice(0, 3).join("; ") || "weak"}). Draw a NEW composition with a different approach: another camera angle or distance, a different layout of the characters, clearer staging of the action. Do not copy the earlier layout.`,
+          neighbours: neighbours(frame.index),
+          actingBrief: actingBrief(shot, library.kits),
+        });
+        st.repairs += Math.max(0, fresh.attempts - 1);
+        if (fresh.drawing) {
+          const cf = await critiqueShot(ctx, { shot, index: frame.index, drawing: fresh.drawing, round: budget.maxCriticRounds + 1 });
+          st.revisions++;
+          if (cf.critique && cf.critique.score > fb.score) {
+            best = { drawing: fresh.drawing, critique: cf.critique };
+            st.after = cf.critique.score;
+            if (fresh.drawing.thumb) thumbs.set(frame.index, fresh.drawing.thumb);
+            st.gateFailures = fresh.drawing.checks?.problems.length ?? 0;
+            committed = await commitAndAnnounce(ctx, { frame: committed, shot, index: frame.index, drawing: fresh.drawing, castDefs: library.defs, patterns, background, acting: { kits: library.kits, plan } }, cf.critique.score);
+            await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "uplift", shotIndex: frame.index, score: cf.critique.score, summary: `Fresh redraw accepted: ${fb.score} → ${cf.critique.score}` });
+          } else {
+            await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "keep", shotIndex: frame.index, score: fb.score, summary: `Fresh redraw scored ${cf.critique?.score ?? "n/a"} ≤ ${fb.score}: kept the previous version` });
+          }
+        }
+        if ((best.critique?.score ?? 0) < FLOOR_SCORE) st.belowFloor = true;
+      }
     };
     await runPool(frames, Math.max(1, Math.min(6, deps.concurrency ?? 1)), doShot);
 
     // 7 · Editor (Nano): lint fixes + continuity
     emit({ type: "status", message: "Editor is checking timing and continuity…" });
-    await runEditor(ctx);
+    await runEditor(ctx, plan);
     continuity = await runContinuity(ctx, plan);
   } catch (e) {
     if (signal.aborted && signal.reason instanceof BudgetExceededError) {
@@ -299,7 +335,7 @@ export async function executeRun(
     }
   }
 
-  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic)), ...(researchUse && { research: researchUse }) };
+  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic, ctx.visionAvailable && options.critic && ctx.models.vision ? `${ctx.models.vision} looks · ${ctx.models.fast} scores` : null)), ...(researchUse && { research: researchUse }) };
   await prisma.directorRun.update({
     where: { id: runId },
     data: { status, error, summary: JSON.stringify(summary), finishedAt: new Date(), tokensIn: tracker.tokensIn, tokensOut: tracker.tokensOut, costUsd: tracker.costUsd },
@@ -348,7 +384,7 @@ async function commitAndAnnounce(ctx: DirectorContext, opts: Parameters<typeof c
 
 const mean = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100 : null);
 
-async function summarize(projectId: string, status: string, stats: Map<number, ShotStats>, tracker: BudgetTracker, continuity: string[], textCritic: boolean): Promise<RunSummary> {
+async function summarize(projectId: string, status: string, stats: Map<number, ShotStats>, tracker: BudgetTracker, continuity: string[], textCritic: boolean, criticEyes: string | null = null): Promise<RunSummary> {
   const frames = await prisma.frame.findMany({ where: { projectId } });
   const lint = frames.length ? await lintProject(projectId) : { findings: [], durationSec: 0 };
   const all = [...stats.values()];
@@ -363,6 +399,8 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     criticAfter: mean(scored.map((s) => s.after!)),
     revisions: all.reduce((n, s) => n + s.revisions, 0),
     gateFailures: all.filter((s) => (s.gateFailures ?? 0) > 0).length,
+    belowFloor: [...stats.entries()].filter(([, s]) => s.belowFloor).map(([i]) => i).sort((a, b) => a - b),
+    criticModel: criticEyes,
     lintErrors: lint.findings.filter((f) => f.severity === "error").length,
     lintWarnings: lint.findings.filter((f) => f.severity === "warning").length,
     durationSec: lint.durationSec,

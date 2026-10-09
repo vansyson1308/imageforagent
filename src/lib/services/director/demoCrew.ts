@@ -104,6 +104,8 @@ export function demoHandler(opts: { criticScores?: number[]; shots?: number } = 
         const s = scores.length > 1 ? scores.shift()! : (scores[0] ?? 8);
         return { score: s, verdict: s < 7 ? "revise" : "accept", issues: s < 7 ? ["the hero is small in frame"] : [], fixes: s < 7 ? ["make the hero larger and centred"] : [] };
       }
+      case "LOOK":
+        return { sees: ["the hero in front of the house"], problems: [], matchesShot: true };
       case "EDITOR":
         return { edits: [], notes: "No changes needed." };
       case "CONTINUITY":
