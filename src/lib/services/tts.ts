@@ -23,6 +23,11 @@ export function ttsAvailable(): boolean {
   return available;
 }
 
+/** Local TTS engines found on this server (for /api/health). */
+export function ttsEngines(): string[] {
+  return ttsAvailable() ? ["espeak-ng"] : [];
+}
+
 export async function synthesizeSpeech(text: string, voice = "vi", speed = 160): Promise<Buffer> {
   if (!VOICE_RE.test(voice)) throw new AppError("VALIDATION", `Invalid TTS voice "${voice}".`, 'Use an espeak-ng voice id like "vi", "en-us", "vi-vn-x-central".');
   if (!ttsAvailable()) {

@@ -87,6 +87,8 @@ export function isPublicPath(pathname: string): boolean {
     pathname.startsWith("/showcase/") ||
     pathname.startsWith("/api/demo/") ||
     pathname === "/api/meta" ||
+    pathname === "/api/health" ||
+    pathname === "/og.jpg" ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico"
   );
