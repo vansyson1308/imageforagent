@@ -2,7 +2,7 @@ import { z } from "zod";
 import { AppError } from "@/lib/services/apiError";
 import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
-import { DEMO_COOKIE, demoConfig, demoSessionOf, newSessionCookie, passcodeMatches } from "@/lib/services/demoMode";
+import { DEMO_COOKIE, demoConfig, demoSessionOf, newSessionCookie, unlockMatches } from "@/lib/services/demoMode";
 
 const unlockSchema = z.object({ passcode: z.string().min(1).max(200) });
 
@@ -14,7 +14,7 @@ export async function POST(req: Request): Promise<Response> {
     if (!cfg.enabled) return Response.json({ ok: true, demo: false });
     const body = await parseBody(req, unlockSchema);
     if (!cfg.passcode) throw new AppError("UNAUTHORIZED", "Demo passcode is not configured on this server.", "The operator must set DEMO_PASSCODE.");
-    if (!passcodeMatches(body.passcode.trim(), cfg.passcode)) throw new AppError("UNAUTHORIZED", "Wrong passcode.", "Use the passcode from the submission's testing instructions.");
+    if (!unlockMatches(body.passcode.trim(), cfg)) throw new AppError("UNAUTHORIZED", "Wrong passcode.", "Use the passcode from the Judge Access PDF attached to the Devpost submission.");
     const { value } = newSessionCookie(cfg.passcode);
     const secure = process.env.NODE_ENV === "production" ? "; Secure" : "";
     return Response.json(
@@ -24,10 +24,15 @@ export async function POST(req: Request): Promise<Response> {
   });
 }
 
-/** GET → {demo, unlocked} (public; drives the UI gate). */
+/** GET → {demo, unlocked, configured, contact} (public; drives the UI gate). `contact` = DEMO_CONTACT_EMAIL (unset = hidden). */
 export async function GET(req: Request): Promise<Response> {
   return handleRoute(async () => {
     const cfg = demoConfig();
-    return Response.json({ demo: cfg.enabled, unlocked: !cfg.enabled || demoSessionOf(req, cfg) !== null, configured: !cfg.enabled || cfg.passcode.length > 0 });
+    return Response.json({ demo: cfg.enabled, unlocked: !cfg.enabled || demoSessionOf(req, cfg) !== null, configured: !cfg.enabled || cfg.passcode.length > 0, contact: contactEmail() });
   });
+}
+
+function contactEmail(): string | null {
+  const v = process.env.DEMO_CONTACT_EMAIL?.trim();
+  return v && /^[^\s@<>"]+@[^\s@<>"]+\.[a-z]{2,}$/i.test(v) ? v : null;
 }

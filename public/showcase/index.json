@@ -42,7 +42,18 @@
         "textCritic": true
       },
       "createdAt": "2026-09-26T02:07:58.403Z",
-      "source": "studio-production-049c.up.railway.app"
+      "source": "studio-production-049c.up.railway.app",
+      "stills": {
+        "1": "/showcase/tea-house/shots/F01.jpg",
+        "2": "/showcase/tea-house/shots/F02.jpg",
+        "3": "/showcase/tea-house/shots/F03.jpg",
+        "4": "/showcase/tea-house/shots/F04.jpg",
+        "5": "/showcase/tea-house/shots/F05.jpg",
+        "6": "/showcase/tea-house/shots/F06.jpg",
+        "7": "/showcase/tea-house/shots/F07.jpg",
+        "8": "/showcase/tea-house/shots/F08.jpg"
+      },
+      "version": "v1"
     },
     {
       "slug": "den-long",
@@ -86,7 +97,17 @@
         "textCritic": true
       },
       "createdAt": "2026-09-26T02:38:33.744Z",
-      "source": "localhost:3100"
+      "source": "localhost:3100",
+      "stills": {
+        "1": "/showcase/den-long/shots/F01.jpg",
+        "2": "/showcase/den-long/shots/F02.jpg",
+        "3": "/showcase/den-long/shots/F03.jpg",
+        "4": "/showcase/den-long/shots/F04.jpg",
+        "5": "/showcase/den-long/shots/F05.jpg",
+        "6": "/showcase/den-long/shots/F06.jpg",
+        "7": "/showcase/den-long/shots/F07.jpg"
+      },
+      "version": "v1"
     },
     {
       "slug": "kitsune",
@@ -123,7 +144,18 @@
         "textCritic": true
       },
       "createdAt": "2026-09-26T02:56:47.624Z",
-      "source": "localhost:3100"
+      "source": "localhost:3100",
+      "stills": {
+        "1": "/showcase/kitsune/shots/F01.jpg",
+        "2": "/showcase/kitsune/shots/F02.jpg",
+        "3": "/showcase/kitsune/shots/F03.jpg",
+        "4": "/showcase/kitsune/shots/F04.jpg",
+        "5": "/showcase/kitsune/shots/F05.jpg",
+        "6": "/showcase/kitsune/shots/F06.jpg",
+        "7": "/showcase/kitsune/shots/F07.jpg"
+      },
+      "version": "v1"
     }
-  ]
+  ],
+  "hero": "tea-house"
 }

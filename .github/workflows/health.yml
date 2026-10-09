@@ -1,0 +1,43 @@
+name: Hosted demo health
+
+# Daily check of the public judge demo through the end of judging (SPEC v2 WP1.5).
+# A red run = something judges would hit (DB, storage, ffmpeg, TTS, Token Factory,
+# demo budget). GitHub emails the owner on failure (see docs/hackathon/HEALTH.md).
+
+on:
+  schedule:
+    - cron: "17 0 * * *" # 07:17 ICT daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DEMO_URL: ${{ vars.DEMO_URL || 'https://studio-production-049c.up.railway.app' }}
+    steps:
+      - name: Stop after the judging window (2026-12-31)
+        id: window
+        run: |
+          if [ "$(date -u +%Y%m%d)" -gt 20261231 ]; then echo "past=1" >> "$GITHUB_OUTPUT"; echo "Judging window over: nothing to check."; fi
+      - name: GET /api/health
+        if: steps.window.outputs.past != '1'
+        run: |
+          set -u
+          for attempt in 1 2 3; do
+            code=$(curl -sS -o health.json -w '%{http_code}' --max-time 60 "$DEMO_URL/api/health" || echo 000)
+            if [ "$code" = "200" ]; then break; fi
+            echo "attempt $attempt: HTTP $code"; sleep 30
+          done
+          cat health.json || true
+          echo
+          jq -r '.checks | to_entries[] | "\(.value.status)\t\(.key)\t\(.value.detail)"' health.json || true
+          [ "$code" = "200" ] && jq -e '.ok == true' health.json > /dev/null
+      - name: Showcase is public
+        if: steps.window.outputs.past != '1'
+        run: |
+          curl -sSf --max-time 60 -o /dev/null "$DEMO_URL/showcase"
+          curl -sSf --max-time 60 -o /dev/null "$DEMO_URL/showcase/index.json"

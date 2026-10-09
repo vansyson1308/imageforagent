@@ -7,7 +7,7 @@ import { directorSystem, directorUser } from "@/lib/services/director/prompts";
 import type { Frame } from "@/generated/prisma/client";
 
 /** Director (Ultra): story → validated Plan (shot list + Cast & Set Bible). */
-export async function runPlan(ctx: DirectorContext, story: string, references: string | null): Promise<Plan> {
+export async function runPlan(ctx: DirectorContext, story: string, references: string | null, referenceCount = 0): Promise<Plan> {
   const maxShots = ctx.budget.budget.maxShots;
   const minShots = Math.min(ctx.options.minShots, maxShots);
   const plan = await callJson(
@@ -23,20 +23,24 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
     planSchema,
     "film_plan",
   );
-  return normalizePlan(plan, maxShots);
+  return normalizePlan(plan, maxShots, references ? referenceCount : 0);
 }
 
 /**
  * Deterministic clean-up of a valid plan: cap the shot count (budget), drop
- * cast references to unknown ids, dedupe cast ids, final shot fades out.
+ * cast references to unknown ids, dedupe cast ids, drop citations of notes
+ * that don't exist, first shot cuts in.
  */
-export function normalizePlan(plan: Plan, maxShots: number): Plan {
+export function normalizePlan(plan: Plan, maxShots: number, referenceCount = 0): Plan {
   const seen = new Set<string>();
-  const cast = plan.cast.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true)));
+  // citations must point at a real note: drop invented numbers
+  const cites = (xs: readonly number[] | undefined) => [...new Set((xs ?? []).filter((n) => n >= 1 && n <= referenceCount))];
+  const cast = plan.cast.filter((c) => (seen.has(c.id) ? false : (seen.add(c.id), true))).map((c) => ({ ...c, cites: cites(c.cites) }));
   const shots = plan.shots.slice(0, Math.max(1, maxShots)).map((s, i) => ({
     ...s,
     cast: s.cast.filter((id) => seen.has(id)),
     transition: i === 0 ? ("cut" as const) : s.transition,
+    cites: cites(s.cites),
   }));
   return { ...plan, cast, shots };
 }

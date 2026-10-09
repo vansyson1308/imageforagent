@@ -73,10 +73,12 @@ export function Workspace() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">
       <header className="mb-8 flex flex-wrap items-center gap-3">
-        <div className="btn-gradient h-10 w-10 shrink-0 rounded-xl shadow-lg shadow-accent/30" />
+        <Link href="/" aria-label="Home" className="btn-gradient h-10 w-10 shrink-0 rounded-xl shadow-lg shadow-accent/30" />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold">Storyboard Studio</h1>
+            <Link href="/" className="text-xl font-bold hover:opacity-80">
+              Storyboard Studio Director
+            </Link>
             <span className="text-muted">/</span>
             {editingName ? (
               <input
@@ -103,9 +105,7 @@ export function Workspace() {
               </button>
             )}
           </div>
-          <p className="text-sm text-muted">
-            Chuỗi ảnh storyboard với mascot nhất quán cho video animation
-          </p>
+          <p className="text-sm text-muted">{t(lang, "tagline")}</p>
         </div>
         <LangToggle lang={lang} setLang={setLang} />
         <Link
@@ -126,24 +126,29 @@ export function Workspace() {
         <ErrorBoundary>
           <DirectorPanel />
         </ErrorBoundary>
-        <ErrorBoundary>
-          <ScriptImportPanel />
-        </ErrorBoundary>
-        <ErrorBoundary>
-          <StoryboardTable />
-        </ErrorBoundary>
-        <ErrorBoundary>
-          <AssetPanel />
-        </ErrorBoundary>
-        <ErrorBoundary>
-          <FrameGrid />
-        </ErrorBoundary>
-        <ErrorBoundary>
-          <PreviewPlayer />
-        </ErrorBoundary>
-        <ErrorBoundary>
-          <ExportBar />
-        </ErrorBoundary>
+        <details className="rounded-card border border-line bg-card/60 p-4">
+          <summary className="cursor-pointer text-base font-semibold text-muted">{t(lang, "advanced")}</summary>
+          <div className="mt-4 flex flex-col gap-6">
+          <ErrorBoundary>
+            <ScriptImportPanel />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <StoryboardTable />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <AssetPanel />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <FrameGrid />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <PreviewPlayer />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <ExportBar />
+          </ErrorBoundary>
+          </div>
+        </details>
       </div>
 
       {toast && (

@@ -8,13 +8,15 @@ import { prisma } from "@/lib/db";
 import { POST as startDirector, GET as listRuns } from "@/app/api/projects/[id]/director/route";
 import { GET as getRun } from "@/app/api/projects/[id]/director/runs/[runId]/route";
 import { POST as cancelRoute } from "@/app/api/projects/[id]/director/runs/[runId]/cancel/route";
+import { GET as runEvents } from "@/app/api/projects/[id]/director/runs/[runId]/events/route";
+import { isRunLive } from "@/lib/services/director/loop";
 import { GET as filmRoute } from "@/app/api/projects/[id]/film.mp4/route";
 import { POST as createProject, GET as listProjects } from "@/app/api/projects/route";
 import { POST as unlock, GET as unlockStatus } from "@/app/api/demo/unlock/route";
 import { GET as meta } from "@/app/api/meta/route";
 import { proxy } from "@/proxy";
 import { assembleSteps, ffmpegAvailable } from "@/lib/services/filmAssembler";
-import { signSession, verifySession, passcodeMatches, DEMO_COOKIE } from "@/lib/services/demoMode";
+import { signSession, verifySession, passcodeMatches, unlockMatches, demoConfig, DEMO_COOKIE } from "@/lib/services/demoMode";
 import { buildTimeline } from "@/lib/services/timeline";
 
 // Route-level tests: handlers are called directly with real Requests (no server,
@@ -139,18 +141,64 @@ describe("POST /api/projects/:id/director (SSE)", () => {
     expect((await prisma.directorRun.findUniqueOrThrow({ where: { id: rid } })).status).toBe("cancelled");
   }, 120_000);
 
-  it("cancels when the client disconnects (request signal aborted)", async () => {
+  it("keeps running when the client disconnects, and a reconnect replays then tails to done (D26)", async () => {
     const pid = await newProject();
     const ac = new AbortController();
     const req = new Request("http://t", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ story: STORY, maxShots: 3 }), signal: ac.signal });
     const res = await startDirector(req, ctx({ id: pid }));
     const rid = res.headers.get("x-director-run")!;
-    const events = await readSse(res, (e) => {
-      if (e.event === "plan") ac.abort();
-    });
-    expect(events.at(-1)!.data).toMatchObject({ status: "cancelled" });
-    expect((await prisma.directorRun.findUniqueOrThrow({ where: { id: rid } })).status).toBe("cancelled");
+    // the browser goes away right after the plan arrives
+    const reader = res.body!.getReader();
+    const dec = new TextDecoder();
+    let seen = "";
+    while (!seen.includes("event: plan")) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      seen += dec.decode(value, { stream: true });
+    }
+    ac.abort();
+    await reader.cancel();
+    expect(isRunLive(rid)).toBe(true);
+
+    // reopen the tab: replay of the persisted trace, then the live tail, until done
+    const again = await runEvents(new Request("http://t"), ctx({ id: pid, runId: rid }));
+    expect(again.status).toBe(200);
+    expect(again.headers.get("content-type")).toMatch(/text\/event-stream/);
+    const events = await readSse(again);
+    expect(events[0].event).toBe("run");
+    expect(events.map((e) => e.event)).toContain("plan");
+    const seqs = events.filter((e) => e.event === "step").map((e) => (e.data.step as { seq: number }).seq);
+    expect(new Set(seqs).size).toBe(seqs.length);
+    expect(seqs).toEqual([...seqs].sort((a, b) => a - b));
+    expect(events.at(-1)!.data).toMatchObject({ type: "done", status: "done" });
+    expect((await prisma.directorRun.findUniqueOrThrow({ where: { id: rid } })).status).toBe("done");
+
+    // a finished run replays in full and closes
+    const replay = await readSse(await runEvents(new Request("http://t"), ctx({ id: pid, runId: rid })));
+    expect(replay.filter((e) => e.event === "frame").length).toBe(3);
+    expect(replay.at(-1)!.data).toMatchObject({ type: "done", status: "done" });
+    const missing = await runEvents(new Request("http://t"), ctx({ id: pid, runId: "nope" }));
+    expect(missing.status).toBe(404);
   }, 120_000);
+
+  it("the wall-time watchdog stops a run stuck inside a model call", async () => {
+    const pid = await newProject();
+    const { createRun } = await import("@/lib/services/director/loop");
+    const { startDetachedRun } = await import("@/lib/services/director/runHub");
+    const { directorDeps } = await import("@/lib/services/director/deps");
+    const crew = await directorDeps();
+    const hang = { name: "hang", chat: (_m: unknown, o: { signal?: AbortSignal }) => new Promise<never>((_r, rej) => o.signal?.addEventListener("abort", () => rej(Object.assign(new Error("aborted"), { name: "AbortError" })))) };
+    const deps = { ...crew, provider: hang as never };
+    const request = { projectId: pid, story: STORY, language: "en", style: "storybook", critic: true, research: false };
+    const { runId: rid, budget } = await createRun(request, deps);
+    // the call never returns, so the between-calls budget check never runs again: only the watchdog can stop it
+    const { done } = startDetachedRun(rid, request, deps, budget, { watchdogMs: 200 });
+    const summary = await done;
+    expect(summary.status).toBe("budget_exceeded");
+    const row = await prisma.directorRun.findUniqueOrThrow({ where: { id: rid } });
+    expect(row.status).toBe("budget_exceeded");
+    expect(row.error).toMatch(/watchdog/i);
+  }, 60_000);
 
   it.skipIf(!hasFfmpeg)("GET film.mp4 assembles the film once (cached after), duration matches the timeline", async () => {
     const res = await filmRoute(new Request("http://t"), ctx({ id: projectId }));
@@ -221,6 +269,26 @@ describe("demo mode", () => {
     expect(passcodeMatches(PASS, PASS)).toBe(true);
     expect(passcodeMatches("x", PASS)).toBe(false);
     expect(passcodeMatches("", "")).toBe(false);
+  });
+
+  it("an operator passcode (≥ 24 chars) also unlocks, signs with the judges' key, and is ignored when short (D29)", async () => {
+    const OP = "operator-passcode-long-enough-0001";
+    const base = { DEMO_MODE: "true", DEMO_PASSCODE: PASS } as unknown as NodeJS.ProcessEnv;
+    const cfg = demoConfig({ ...base, DEMO_OPERATOR_PASSCODE: OP });
+    expect(unlockMatches(OP, cfg)).toBe(true);
+    expect(unlockMatches(PASS, cfg)).toBe(true);
+    expect(unlockMatches("nope", cfg)).toBe(false);
+    expect(unlockMatches("short", demoConfig({ ...base, DEMO_OPERATOR_PASSCODE: "short" }))).toBe(false);
+    expect(demoConfig({ ...base, DEMO_OPERATOR_PASSCODE: "short" }).operatorPasscode).toBe("");
+    process.env.DEMO_OPERATOR_PASSCODE = OP;
+    try {
+      const res = await unlock(json("http://t", { passcode: OP }));
+      expect(res.status).toBe(200);
+      const cookie = decodeURIComponent(res.headers.get("set-cookie")!.split(";")[0].split("=").slice(1).join("="));
+      expect(verifySession(cookie, PASS)).not.toBeNull();
+    } finally {
+      delete process.env.DEMO_OPERATOR_PASSCODE;
+    }
   });
 
   it("proxy: API → 401 JSON, pages → /unlock, showcase and unlock stay public", async () => {

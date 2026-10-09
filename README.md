@@ -1,67 +1,88 @@
-# Storyboard Studio: Director
+# Storyboard Studio Director
 
-> **Type a story. Get a film. No image generator.** A crew of **NVIDIA Nemotron** models on **Nebius Token Factory** writes the whole film *as code* (SVG, construct and motion specs) into a deterministic engine, which **measures every render**. The crew then critiques those measurements and fixes the frames.
->
-> 🎬 **Live demo:** <https://studio-production-049c.up.railway.app> (passcode-protected; the passcode is in the submission's testing instructions) · 🎞 **[Showcase films](https://studio-production-049c.up.railway.app/showcase)** · 📊 **[Eval results](docs/hackathon/EVAL_RESULTS.md)** · ⚖️ **[MIT licensed](LICENSE)**
+> **Type a story in any language. Get an animated film. No image generator.** A crew of **NVIDIA Nemotron** models on **Nebius Token Factory** writes the whole film *as code* (SVG, construct and motion specs). A deterministic engine renders it and **measures every frame**, and the crew fixes what the numbers say is wrong.
 
-<p align="center"><img src="docs/media/director-architecture.svg" width="900" alt="Architecture: Story → Researcher (Nano + Tavily) → Director (Ultra) → Script → Cast (Super) → per shot: Artist (Super) → validate + render → animated clip → Critic (Nano + measured render gates, revise loop) → Editor (Nano) → film assembler → MP4 + package"></p>
+<p align="center"><img src="docs/media/director-tea-house.gif" width="640" alt="The first 14 seconds of a real film made by the Nemotron crew: Grandma Hoa's tea house by the lake"><br><sub>First 14 s of <b>Two Cups at Dawn</b>, a real film made by the crew on the hosted demo: 8 shots, 8/8 rendered, $0.11 (<a href="public/showcase/tea-house/trace.json">full trace</a>). This is a v1 film; the v2 showcase replaces it once it is made.</sub></p>
 
-<p align="center"><img src="docs/media/director-tea-house.gif" width="640" alt="The first 14 seconds of a real showcase film made by the Nemotron crew: Grandma Hoa's tea house by the lake"><br><sub>First 14 s of <b>tea-house</b>, a real showcase film: 8 shots, 8/8 rendered, $0.11, made on the hosted demo. <a href="https://studio-production-049c.up.railway.app/showcase">Full films + traces</a></sub></p>
+**🎬 [Live demo](https://studio-production-049c.up.railway.app)** (passcode in the *Judge Access* PDF attached to the Devpost submission) · **🎞 [Showcase](https://studio-production-049c.up.railway.app/showcase)** (no passcode; replay a real run at 10×) · **▶ [Video (v1)](https://studio-production-049c.up.railway.app/showcase/demo-video.mp4)** · **📊 [Eval](docs/hackathon/EVAL_RESULTS.md)** · **🩺 [Health](https://studio-production-049c.up.railway.app/api/health)** · **⚖️ [MIT](LICENSE)**
 
-### How we use Nebius Token Factory + NVIDIA Nemotron
+## How we use Nebius Token Factory + NVIDIA Nemotron
 
-Every model call goes to Token Factory's OpenAI-compatible endpoint (`POST {NEBIUS_BASE_URL}/chat/completions`, plain `fetch`, no SDK), through one provider layer (`src/lib/providers/`). It handles strict `json_schema` output with a `json_object` fallback, image input as `image_url` data URIs, the `enable_thinking` reasoning toggle, retries with backoff and timeouts, and **per-call token and USD accounting**.
+Every model call goes to Token Factory's OpenAI-compatible endpoint (`POST {NEBIUS_BASE_URL}/chat/completions`, plain `fetch`, no SDK) through one provider layer (`src/lib/providers/`). It handles strict `json_schema` output with a `json_object` fallback, image input as `image_url` data URIs, the `enable_thinking` toggle, retries with backoff and timeouts, and **per-call token and USD accounting**. Crew ids are checked against `GET /v1/models` at run start, and the public [`/api/health`](https://studio-production-049c.up.railway.app/api/health) re-checks them daily ([evidence](docs/hackathon/evidence/models-2026-09-26.json)).
 
-| Role | Nemotron tier | Why this tier | What it does |
+| Role | Model | Why this tier | What it does |
 |---|---|---|---|
 | 🎬 **Director** | **Nemotron 3 Ultra** (`NEMOTRON_STRONG_MODEL`) | Hardest reasoning, called **once per film** | Story → shot list + Cast & Set Bible as strict JSON (zod-validated), written through the same TSV/script path a human import uses |
-| 🖌️ **Artist** | **Nemotron 3 Super** (`NEMOTRON_MID_MODEL`) | Long, precise structured output, many calls | Builds the `<symbol>` cast library once (pixel-identical characters in every shot). Human characters are specified for the engine's parametric character kit; animals, sets and props are drawn as SVG, and symbols are accepted one by one, then every frame as an SVG fragment + ambient motion layer, 3 shots in parallel. Engine errors **and failed render measurements** come back with a hint → **≤ 3 repairs** |
-| 📏 **Critic** | **Nemotron 3 Nano** (`NEMOTRON_FAST_MODEL`) + the engine's render gates | Cheap, fast, and grounded in pixels it cannot see | The engine measures each render (visible character height per shot type, night brightness, set coverage). Nano reads those measurements plus the SVG, scores the frame 0–10 against the shot and lists concrete fixes. **≤ 2 revision rounds**, and a revision is kept only if it scores higher. When Token Factory serves an image-input model, `NEMOTRON_VISION_MODEL` switches the same loop to send the image |
-| ✂️ **Editor** | **Nemotron Nano** (`NEMOTRON_FAST_MODEL`) | Fast everyday calls | Fixes `lintStoryboard` findings (reading speed, jump cuts, voice timing) and runs a continuity check |
-| 🔎 **Researcher** | Nano + **Tavily** | Grounding | Optional capped search/extract → cited visual reference notes in the Bible and the UI |
+| 🖌️ **Cast + Artist** | **Nemotron 3 Super** (`NEMOTRON_MID_MODEL`) | Long, precise structured output, many calls | Builds the `<symbol>` cast library once, so characters are pixel-identical in every shot. People and animals are *specified* for the engine's parametric kits; sets, props and anything else are drawn as SVG. Then every frame as an SVG fragment + an ambient motion layer, 3 shots in parallel. Engine errors **and failed render measurements** come back with a measured hint → **≤ 3 repairs** |
+| 📏 **Critic** | **Nemotron 3 Nano** (`NEMOTRON_FAST_MODEL`) + the engine's render gates | Cheap and fast, grounded in measured pixels | The engine measures each render (visible character height per shot type, night brightness, set coverage, head cut-off…). Nano reads those measurements plus the drawing, scores the frame 0–10 and lists fixes. **≤ 2 revision rounds**; a revision is kept only if it scores higher ([D11](docs/hackathon/DECISIONS.md)) |
+| ✂️ **Editor** | **Nemotron 3 Nano** | Fast everyday calls | Fixes `lintStoryboard` findings (reading speed, jump cuts, voice timing), then checks continuity |
+| 🔎 **Researcher** | Nemotron 3 Nano + **Tavily** | Grounding | **Optional, and not enabled on the hosted demo yet** (no Tavily key, [BLOCKERS](docs/hackathon/BLOCKERS.md)). When enabled, Nano decides per story whether real-world references are needed (with a stated reason); capped Tavily search/extract → cited notes tagged costume/props/palette/set, which the Director cites in the Bible and the UI shows per shot. Tested against a fake server only |
 
-The **measure-and-revise loop** is the core idea. LLMs don't paint pixels here: they write code, the engine renders it deterministically and **measures the pixels**, and the numbers drive repairs and critique. Token Factory lists no image-input Nemotron today (Nano and Super answer `400 "does not support image input"`, see [evidence](docs/hackathon/evidence/vision-probe-2026-09-26.json)), so the critic is Nano in text mode by design. The trace says so, and the UI chip shows "📏 Nano critic". Costs and tokens are logged per step and shown live in the UI. **Measured (20 real runs, [EVAL_RESULTS.md](docs/hackathon/EVAL_RESULTS.md)):** an independent vision judge prefers the full crew over Super-alone on 6 of 10 stories (5.49 vs 5.08 / 10) at 1.8× the cost. A finished minute of film costs **$0.23** with the crew ($0.12 Super-only), and an 8-shot film takes 3–5 minutes.
+## The measure-and-revise loop
 
-**Try it**
-1. Open the demo, enter the passcode, type a story (any language), pick a style, then **Make my film**.
-2. Watch the crew timeline stream in: role, model, tokens, cost, thumbnails, critic before → after.
-3. Play the film, then download the **MP4** or the full **production package** (PNG, clips, SRT, EDL/OTIO, glTF, `assemble.sh`).
+<p align="center"><img src="docs/media/director-architecture.svg" width="900" alt="Architecture: Story → Researcher (Nano + Tavily, optional) → Director (Ultra) → Script → Cast (Super) → per shot: Artist (Super) → validate + render + measure → animated clip → Critic (Nano + measured render gates, revise loop) → Editor (Nano) → film assembler → MP4 + package"></p>
 
-**Run it yourself**
+LLMs don't paint pixels here. They **write code**; the engine renders it deterministically and **measures the pixels**; the numbers drive repairs and critique. Prose rules didn't fix composition in real runs, but measured feedback did ("the hero is 23 % of the frame; a medium shot needs 45 %, use height=486", [FEEDBACK_LOG](docs/hackathon/FEEDBACK_LOG.md)). Token Factory serves no image-input Nemotron ([evidence](docs/hackathon/evidence/vision-probe-2026-09-26.json)), so the default critic is Nano in text mode over the engine's measurements; the trace and the UI say so. Nothing a model writes bypasses the engine's validators: zod → the security-critical SVG sanitizer → construct/motion schemas ([ADR-017](docs/ADR.md)).
+
+Runs execute server-side and **survive the browser**: close the tab, come back, and the run view replays the trace and continues live ([D26](docs/hackathon/DECISIONS.md)).
+
+## Results
+
+Real runs only; raw data in [`docs/hackathon/eval/`](docs/hackathon/eval/), method and per-run table in [EVAL_RESULTS.md](docs/hackathon/EVAL_RESULTS.md).
+
+| | Super-only (v1) | Crew (v1) | Crew (v2) |
+|---|---|---|---|
+| Independent judge, `gemma-3-27b-it`, 0–10, blind | 5.08 | **5.49** | _bench v2 pending (WP7)_ |
+| Crew better / worse / tie (10 prompts, paired) | — | 6 / 2 / 2 | _pending_ |
+| First-pass render % | 72.0 | 56.8 | _pending_ |
+| USD per finished minute | $0.118 | $0.234 | _pending_ |
+| Wall time per film | 156 s | 213 s | _pending_ |
+
+## Real-user pilot
+
+The pilot (a daily Japanese storytelling channel that needs the same host in every episode) is in progress. Its numbers will appear in [PILOT.md](docs/hackathon/PILOT.md) only once episodes exist; nothing is claimed before that.
+
+## Try it / run it yourself
+
+**On the hosted demo:** open the [demo](https://studio-production-049c.up.railway.app), enter the passcode, click **Make this film** on a sample story (EN/VI/JA). Watch the crew stream in: plain-language status, the latest frame, the filmstrip, the critic's before → after, and every model call with tokens and cost. Play the film, then download the **MP4** or the **production package** (PNG, clips, SRT, EDL/OTIO, glTF, `assemble.sh`). No passcode? [Replay a real run](https://studio-production-049c.up.railway.app/showcase/replay/tea-house) at 10×.
+
+**Locally:**
 ```bash
 npm install && cp .env.example .env && npx prisma migrate deploy
 echo 'NEBIUS_API_KEY=…' >> .env.local        # optional: without it the zero-key engine works as before
 npm run director:models                      # verify model ids against GET /v1/models
 npm run dev                                  # http://localhost:3000
 ```
-`LLM_PROVIDER=mock` runs a scripted crew with no key and no network (tests, UI demos). Deploy with the `Dockerfile` (ffmpeg + espeak-ng, migrations on boot, volume at `/data`); set secrets as platform variables. Design notes: [ADR-017](docs/ADR.md). Build log and honest status: [docs/hackathon/](docs/hackathon/STATUS.md).
+`LLM_PROVIDER=mock` runs a scripted crew with no key and no network (tests, UI demos; labelled "mock" everywhere). Deploy with the `Dockerfile` (ffmpeg + espeak-ng, migrations on boot, volume at `/data`); set secrets as platform variables. Build log and honest status: [docs/hackathon/](docs/hackathon/STATUS.md).
 
 ---
 
-## The engine underneath (zero-key)
+## Prior work: the zero-key engine (before 2026-08-26) and what changed during the hackathon
 
-<p align="center">
-  <a href="docs/media/den-ong-sao-720p.mp4"><img src="docs/media/den-ong-sao-highlights.gif" width="720" alt="Highlights from Đèn Ông Sao, a 20-minute 3D animated film made with this engine"></a><br>
-  <b>This is a real 20-minute 3D animated film, made entirely by an agent with this repo.</b><br>
-  <b>Đây là một bộ phim hoạt hình 3D dài 20 phút, do agent làm hoàn toàn bằng repo này.</b><br>
-  <a href="docs/media/den-ong-sao-720p.mp4">▶ Watch the full film · Xem phim đầy đủ (20:14, 720p, 40 MB)</a> ·
-  <a href="docs/media/den-ong-sao-trailer.mp4">1-minute trailer</a> ·
-  <a href="examples/film/">how it was made</a>
-</p>
+This repository existed before the hackathon. Its first commit is from 2026-07-02, and the last commit before the submission period is [`c9093a3`](https://github.com/vansyson1308/imageforagent/commit/c9093a3) (2026-07-15, tag `pre-hackathon-baseline`).
 
-**A zero-API-key storyboard engine for AI agents** — the [Remotion](https://www.remotion.dev/) model applied to storyboard images. Your coding agent (Claude Code, Codex, …) **writes each frame's artwork as SVG code**; this engine sanitizes, renders (via [sharp](https://sharp.pixelplumbing.com/)/librsvg), watermarks, previews, and packages everything for video assembly. No image-generation API. No keys. No credits. Deterministic output.
+| | Before 2026-08-26 | During the submission period |
+|---|---|---|
+| Engine | SVG sanitizer + renderer, script import, export; `construct` v1–v3 (2D/3D primitives, CSG, depth sort, figures, softness layer) | **Motion** (construct v4: tracks, rigs, no-slip walk), **glTF** export, the **film pipeline** N1–N5 (IK rig, faces + lip-sync, control passes, audio mix, editorial, DCP mastering) |
+| AI | None (the engine is driven by external coding agents over REST) | **The Nemotron crew** (all of `src/lib/services/director/`, `src/lib/providers/`), measured render gates, character kits, the Director UI, the demo deployment, the eval bench, and the v2 work in [SPEC_V2](docs/hackathon/SPEC_V2.md) |
 
-**Character consistency is guaranteed by construction**: the agent defines the mascot ONCE as an SVG `<symbol>` in the project's artwork library — every frame reuses it with `<use href="#id">`, so the character is pixel-identical across the entire storyboard.
+Diffstat from `c9093a3` to the v2 head is regenerated for the Devpost "how we updated it" field ([DEVPOST_SUBMISSION_V2.md](docs/hackathon/DEVPOST_SUBMISSION_V2.md)).
 
-**Now with a time dimension**: any frame can be an animated shot (keyframe tracks + procedural rigs such as a no-slip walk cycle and storyboard camera moves). The export builds `film.mp4` with one command and ships every shot as **glTF 2.0** for path-traced rendering in Blender: script → storyboard → animatic → 3D film pipeline, still with zero API keys.
+**A zero-API-key storyboard engine for AI agents**: the [Remotion](https://www.remotion.dev/) model applied to storyboard images. An agent **writes each frame's artwork as SVG code**; this engine sanitizes, renders (via [sharp](https://sharp.pixelplumbing.com/)/librsvg), watermarks, previews and packages everything for video assembly. No image-generation API, no keys, deterministic output. **Character consistency is guaranteed by construction**: a character is defined ONCE as an SVG `<symbol>` and every frame reuses it with `<use href="#id">`. The Nemotron crew is built on exactly this property.
 
 > 🇻🇳 Có phần **Tóm tắt tiếng Việt** ở cuối file.
 
-## 🎬 Proof: a 20-minute animated film made with this engine
+### Đèn Ông Sao: a 20-minute film made with the engine (not by the Nemotron crew)
+
+> **Read this first.** *Đèn Ông Sao* was produced by an **external coding agent driving the engine's public REST API** (`examples/film/produce.ts`). It was **not** made by the Nemotron crew, and no Nemotron model wrote it. It shows what the engine underneath can render. The engine's film-pipeline features it uses (motion, rigs, lip-sync, the audio mix, editorial, DCP mastering) were **built during the submission period** (2026-09-24), not before it.
+
+<p align="center">
+  <a href="docs/media/den-ong-sao-720p.mp4"><img src="docs/media/den-ong-sao-highlights.gif" width="720" alt="Highlights from Đèn Ông Sao, a 20-minute 3D animated film rendered by the engine"></a>
+</p>
 
 <p align="center"><img src="docs/media/den-ong-sao-poster.jpg" width="720" alt="Đèn Ông Sao — Tí raises the star lantern against the full moon"></p>
 
-**[Đèn Ông Sao · The Star Lantern](examples/film/)** — 20:14, 105 shots, 7 chapters, DCI Flat 1998×1080 at 24 fps, narration + dialogue with lip-sync, an original score, mastered as a theatrical SMPTE DCP (13.2 GB, ClairMeta: 78 checks passed; asdcplib + SMPTE XSDs verified). Written, staged, animated, voiced, scored and edited by an agent **through this app's own API** (`examples/film/produce.ts` only calls public endpoints), with no hand-drawn frame and no API key. The screenplay → motion specs step is deterministic and test-enforced (`tests/film.test.ts`).
+**[Đèn Ông Sao · The Star Lantern](examples/film/)** — 20:14, 105 shots, 7 chapters, DCI Flat 1998×1080 at 24 fps, narration + dialogue with lip-sync, an original score, mastered as a theatrical SMPTE DCP (13.2 GB, ClairMeta: 78 checks passed; asdcplib + SMPTE XSDs verified). Written, staged, animated, voiced, scored and edited by an external coding agent (not the Nemotron crew) **through this app's own API** (`examples/film/produce.ts` only calls public endpoints), with no hand-drawn frame and no API key. The screenplay → motion specs step is deterministic and test-enforced (`tests/film.test.ts`).
 
 [▶ full film (20:14, 720p)](docs/media/den-ong-sao-720p.mp4) · [1-minute trailer](docs/media/den-ong-sao-trailer.mp4) · [one frame every 40 s](docs/media/den-ong-sao-contact-sheet.jpg) · [source + how to reproduce](examples/film/README.md)
 
@@ -462,7 +483,7 @@ tests/                            Vitest — sanitizer bypass-vector suite + con
 
 **Motion, trục thời gian (construct v4):** mỗi frame storyboard có thể là **một shot chuyển động**. Motion spec = scene construct gốc + **tracks** keyframe (target là đường dẫn theo id: `parts.pip.pose.kneeL`, `camera.orbit.azimuth`, `solids.ball.at.1`, màu `#hex` pha trong không gian tuyến tính; easing `inOut` mặc định theo nguyên lý slow-in/slow-out, có `outBack`/`outBounce`/`smooth` Catmull-Rom/cubic-bezier) + **rig thủ tục**: `walk` (đi bộ theo đường, **bàn chân trụ không trượt**: góc hông được *giải* để mắt cá lùi đúng tốc độ thân; test chặn < 3%), `shot` (dolly/orbit/crane/pan/tilt/shake, hoặc `auto` suy từ cột Shot Type tiếng Anh/Việt), `roll` (lăn không trượt), `follow` (follow-through trễ nhịp), `wiggle` (nhiễu mượt tất định theo seed). `holdFrames: 2` = animate on twos. `POST /api/motion` trả **contact sheet**, tức lưới frame kèm thanh thời gian, để agent *nhìn* chuyển động trong một ảnh. `PUT /api/frames/:id/motion` biến frame thành shot (chuỗi PNG + WebP + poster làm ảnh tĩnh).
 
-**Bằng chứng: phim hoạt hình 20 phút [Đèn Ông Sao](examples/film/)** — 105 shot, 7 chương, 1998×1080 DCI Flat 24 fps, lời kể + thoại có khẩu hình, nhạc gốc, đóng gói DCP SMPTE chiếu rạp (13,2 GB, ClairMeta 78/78 đạt). Toàn bộ do agent viết, dựng cảnh, diễn hoạt, lồng tiếng, phối nhạc và dựng phim **qua chính API của app** (`examples/film/produce.ts` chỉ gọi endpoint công khai) — không vẽ tay khung nào, không API key; bước kịch bản → motion spec tất định, có test chặn (`tests/film.test.ts`). Xem [phim đầy đủ 20 phút](docs/media/den-ong-sao-720p.mp4) hoặc [trailer 1 phút](docs/media/den-ong-sao-trailer.mp4).
+**Bằng chứng: phim hoạt hình 20 phút [Đèn Ông Sao](examples/film/)** — 105 shot, 7 chương, 1998×1080 DCI Flat 24 fps, lời kể + thoại có khẩu hình, nhạc gốc, đóng gói DCP SMPTE chiếu rạp (13,2 GB, ClairMeta 78/78 đạt). Toàn bộ do một agent lập trình bên ngoài (không phải đội Nemotron) viết, dựng cảnh, diễn hoạt, lồng tiếng, phối nhạc và dựng phim **qua chính API của app** (`examples/film/produce.ts` chỉ gọi endpoint công khai) — không vẽ tay khung nào, không API key; bước kịch bản → motion spec tất định, có test chặn (`tests/film.test.ts`). Xem [phim đầy đủ 20 phút](docs/media/den-ong-sao-720p.mp4) hoặc [trailer 1 phút](docs/media/den-ong-sao-trailer.mp4).
 
 **Từ storyboard tới phim:** export ZIP có chuỗi PNG từng shot, `storyboard.json` kèm timeline, `captions.srt` khớp timeline, và **`assemble.sh`**: chạy `sh assemble.sh` là ra **`film.mp4`** (đã kiểm chứng end-to-end). **glTF 2.0** (`POST /api/export/gltf`, và `gltf/FNN.gltf` trong ZIP) là cầu nối sang Blender/Unreal: đúng mesh engine vẽ, camera khớp từng pixel với khung SVG, animation TRS; đã qua Khronos validator (0 lỗi) và render path-traced thật bằng Blender Cycles (`scripts/blender_render.py`). Lộ trình trung thực tới phim chiếu rạp nằm ở [docs/FILM-ROADMAP.md](docs/FILM-ROADMAP.md).
 

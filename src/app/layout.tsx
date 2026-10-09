@@ -7,10 +7,24 @@ const quicksand = Quicksand({
   subsets: ["latin", "vietnamese"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://studio-production-049c.up.railway.app";
+const TITLE = "Storyboard Studio Director: type a story, get a film";
+const DESCRIPTION =
+  "Type a story in any language and get an animated film. A crew of NVIDIA Nemotron models on Nebius Token Factory writes every frame as code; a deterministic engine renders and measures each frame, and the crew fixes it.";
+
 export const metadata: Metadata = {
-  title: "Storyboard Studio",
-  description:
-    "Tạo chuỗi ảnh storyboard với mascot nhất quán cho video animation",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  applicationName: "Storyboard Studio Director",
+  openGraph: {
+    type: "website",
+    title: TITLE,
+    description: DESCRIPTION,
+    siteName: "Storyboard Studio Director",
+    images: [{ url: "/og.jpg", width: 1024, height: 576, alt: "A still from a film made by the Nemotron crew" }],
+  },
+  twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: ["/og.jpg"] },
 };
 
 export default function RootLayout({
@@ -19,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" className={`${quicksand.variable} h-full antialiased`}>
+    <html lang="en" className={`${quicksand.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

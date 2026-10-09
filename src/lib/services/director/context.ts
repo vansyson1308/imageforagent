@@ -38,13 +38,13 @@ export interface StepEvent {
 
 /** Server-Sent Event payloads (the `event:` name is `type`). */
 export type DirectorEvent =
-  | { type: "run"; runId: string; projectId: string; provider: string; models: CrewModels; notes: string[]; budget: DirectorBudget }
+  | { type: "run"; runId: string; projectId: string; provider: string; models: CrewModels; notes: string[]; budget: DirectorBudget; startedAt: string }
   | { type: "step"; step: StepEvent; totals: { tokens: number; costUsd: number } }
-  | { type: "plan"; title: string; logline: string; shots: Array<{ index: number; shotType: string; description: string; mode: string; dialogue: string | null }> }
-  | { type: "research"; references: Array<{ note: string; url: string; title: string }> }
+  | { type: "plan"; title: string; logline: string; shots: Array<{ index: number; shotType: string; description: string; mode: string; dialogue: string | null; cites?: number[] }> }
+  | { type: "research"; references: Array<{ note: string; url: string; title: string; use?: string }> }
   | { type: "frame"; index: number; imageUrl: string | null; clipUrl: string | null; score: number | null; status: string }
   | { type: "status"; message: string }
-  | { type: "done"; status: string; summary: RunSummary }
+  | { type: "done"; status: string; summary: RunSummary | null }
   | { type: "error"; message: string };
 
 export interface RunSummary {
@@ -64,6 +64,8 @@ export interface RunSummary {
   readonly costUsd: number;
   readonly continuity: string[];
   readonly textCritic: boolean;
+  /** how much research the Bible used (only when research ran) */
+  readonly research?: { notes: number; cited: number; castCiting: number; shotsCiting: number; byUse: Record<string, number> };
 }
 
 export interface DirectorOptions {

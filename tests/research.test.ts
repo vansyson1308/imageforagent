@@ -5,7 +5,10 @@ import fs from "node:fs/promises";
 import { prisma } from "@/lib/db";
 import { tavilyExtract, tavilySearch } from "@/lib/providers/tavily";
 import { MockLlmProvider, type MockHandler } from "@/lib/providers/mockLlmProvider";
-import { demoHandler, MOCK_MODELS } from "@/lib/services/director/demoCrew";
+import { demoHandler, demoPlan, MOCK_MODELS } from "@/lib/services/director/demoCrew";
+import { measureResearchUse } from "@/lib/services/director/research";
+import { normalizePlan } from "@/lib/services/director/plan";
+import { planSchema } from "@/lib/services/director/schemas";
 import { createRun, executeRun } from "@/lib/services/director/loop";
 import { DEFAULT_BUDGET } from "@/lib/services/director/budget";
 import type { DirectorEvent } from "@/lib/services/director/context";
@@ -72,9 +75,14 @@ describe("director researcher", () => {
       if (role === "ROLE: RESEARCHER") return { queries: ["hoi an lantern", "mid-autumn festival lantern", "a third query over the cap"] };
       if (role === "ROLE: RESEARCH_NOTES") {
         notesPrompt = m[1].content;
-        return { notes: [{ note: "Hexagonal silk lantern, red and yellow panels, bamboo ribs", source: 1 }, { note: "bogus", source: 99 }] };
+        return { notes: [{ note: "Hexagonal silk lantern, red and yellow panels, bamboo ribs", source: 1, use: "props" }, { note: "bogus", source: 99, use: "set" }] };
       }
-      if (role === "ROLE: DIRECTOR") directorPrompt = m[1].content;
+      if (role === "ROLE: DIRECTOR") {
+        directorPrompt = m[1].content;
+        const plan = base(m, o, i) as ReturnType<typeof demoPlan>;
+        // the Director cites note 1 on the hero and shot 1, and invents a note 5 (must be dropped)
+        return { ...plan, cast: plan.cast.map((c, k) => (k === 0 ? { ...c, cites: [1] } : c)), shots: plan.shots.map((sh, k) => (k === 0 ? { ...sh, cites: [1, 5] } : sh)) };
+      }
       return base(m, o, i);
     };
     const p = await prisma.project.create({ data: { name: "research" } });
@@ -90,9 +98,53 @@ describe("director researcher", () => {
     // the injected closing tag was stripped: exactly one </reference> (ours)
     expect(notesPrompt.match(/<\/reference>/g)).toHaveLength(1);
     const research = events.find((e) => e.type === "research");
-    expect(research).toMatchObject({ type: "research", references: [{ note: expect.stringMatching(/Hexagonal/), url: "https://example.org/lanterns", title: "Hội An lanterns" }] });
+    expect(research).toMatchObject({ type: "research", references: [{ note: expect.stringMatching(/Hexagonal/), url: "https://example.org/lanterns", title: "Hội An lanterns", use: "props" }] });
+    const plan = events.find((e) => e.type === "plan");
+    expect(plan && plan.type === "plan" && plan.shots[0].cites).toEqual([1]);
+    expect(summary.research).toMatchObject({ notes: 1, cited: 1, castCiting: 1, shotsCiting: 1, byUse: { props: 1 } });
     expect(directorPrompt).toMatch(/<reference>[\s\S]*Hexagonal[\s\S]*example\.org\/lanterns[\s\S]*<\/reference>/);
     const bible = JSON.parse((await prisma.directorRun.findUniqueOrThrow({ where: { id: runId } })).bible!);
     expect(bible.references).toHaveLength(1);
+    expect(bible.shots[0].cites).toEqual([1]);
+    expect(directorPrompt).toMatch(/cites/);
   }, 120_000);
+
+  it("auto mode: Nano decides with a reason; no research → no Tavily call, and the decision is in the trace", async () => {
+    for (const needed of [false, true]) {
+      const { impl, calls } = fakeTavily();
+      const base = demoHandler({ criticScores: [9] });
+      const handler: MockHandler = (m, o, i) => {
+        const role = m[0].content.split("\n")[0];
+        if (role === "ROLE: RESEARCH_DETECT") return { needed, reason: needed ? "Names Hội An and the Mid-Autumn festival." : "Pure fantasy.", topics: needed ? ["Hội An lanterns"] : [] };
+        if (role === "ROLE: RESEARCHER") return { queries: ["hoi an lantern"] };
+        if (role === "ROLE: RESEARCH_NOTES") return { notes: [{ note: "Hexagonal silk lantern", source: 1, use: "props" }] };
+        return base(m, o, i);
+      };
+      const p = await prisma.project.create({ data: { name: "research-auto" } });
+      created.push(p.id);
+      const deps = { provider: new MockLlmProvider(handler), models: MOCK_MODELS, visionAvailable: true, modelNotes: [], tavily: { apiKey: "tv-test", fetchImpl: impl, baseUrl: "https://tavily.test" }, ceiling: DEFAULT_BUDGET };
+      const req = { projectId: p.id, story: "A girl carries a lantern in Hội An at the Mid-Autumn festival.", language: "en", style: "storybook", critic: false, research: "auto" as const, maxShots: 2 };
+      const { runId, budget } = await createRun(req, deps);
+      const summary = await executeRun(runId, req, deps, budget, () => {}, new AbortController().signal);
+      expect(summary.status).toBe("done");
+      expect(calls.length > 0).toBe(needed);
+      const steps = await prisma.directorStep.findMany({ where: { runId } });
+      const decision = steps.find((s) => s.action === "decision");
+      expect(decision?.outputSummary).toMatch(needed ? /Research needed: Names Hội An/ : /No research needed: Pure fantasy/);
+      expect(JSON.parse((await prisma.directorRun.findUniqueOrThrow({ where: { id: runId } })).config).research).toBe("auto");
+    }
+  }, 120_000);
+
+  it("measures how much research the Bible used (pure)", () => {
+    const notes = [
+      { note: "a", url: "https://a", title: "A", use: "costume" },
+      { note: "b", url: "https://b", title: "B", use: "set" },
+      { note: "c", url: "https://c", title: "C", use: "set" },
+    ];
+    const plan = demoPlan("One. Two. Three.", 3);
+    const cited = { ...plan, cast: plan.cast.map((c, k) => ({ ...c, cites: k === 0 ? [1] : [] })), shots: plan.shots.map((sh, k) => ({ ...sh, cites: k === 1 ? [2, 9] : [] })) };
+    expect(measureResearchUse(planSchema.parse(cited), notes)).toEqual({ notes: 3, cited: 2, castCiting: 1, shotsCiting: 1, byUse: { costume: 1, set: 1 } });
+    expect(normalizePlan(planSchema.parse(cited), 3, 3).shots[1].cites).toEqual([2]);
+    expect(normalizePlan(planSchema.parse(cited), 3, 0).shots[1].cites).toEqual([]);
+  });
 });
