@@ -12,6 +12,10 @@ Each entry: date · component · observation · how to reproduce · severity/sug
 - 2026-09-26 · errors · Sending an image to a text-only model returns a clear `400 {"detail":"This model does not support image input"}` in ~1.2 s. It is easy to detect and fall back on. 👍 (`evidence/vision-probe-2026-09-26.json`)
 - 2026-09-26 · structured output · `response_format: json_schema` worked on the first attempt on all three Nemotron tiers (smoke: 0.40–0.69 s for a tiny call). The json_object fallback was never needed.
 
+- 2026-10-09 · models endpoint · Re-probed through the hosted health check ([evidence](evidence/models-2026-10-09.json)): 25 models listed, still **no NVIDIA vision model** and no TTS model; one new entry (`Qwen/Qwen3.8-27B`). Because the listing still has no capability field, the v2 eval has to *test* whether a candidate judge can see: it sends a red disc and expects "red" before trusting the model (D36). Suggestion unchanged: `capabilities` on `/v1/models`.
+- 2026-10-09 · role design · Ground rules kept Nemotron Nano as the critic. To add pixels without removing it, the v2 critic is split: an open VLM (`openbmb/MiniCPM-V-4_5`) reports only what it *sees*, and Nano scores from those observations plus the engine's measurements (D33). A served Nemotron VLM would make this one call, and the code picks one up automatically if it ever appears in `/v1/models`.
+- 2026-10-09 · cost reporting · Our client reads token `usage` and prices it from a hand-maintained table (`src/lib/providers/pricing.ts`), not yet reconciled with an invoice. So every USD figure in our ledger and eval is an *estimate*. Suggestion: a per-request cost field (or a machine-readable price endpoint), so agent budgets and spend caps can be exact.
+
 ## Nemotron models (per role)
 
 Measured over 6 real 4-shot films (2026-09-26, ~$0.03–0.07 each, $0.28 total by our price table):
