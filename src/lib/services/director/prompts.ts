@@ -65,6 +65,7 @@ export function directorSystem(opts: { minShots: number; maxShots: number; langu
     '- shots[].shotType: storyboard language ("Wide shot", "Medium shot", "Close-up", "Slow zoom-in", "Pan", "Low angle").',
     "- shots[].mode: \"motion\" when something visibly moves in the shot (steam, lanterns, rain, leaves, a wave); otherwise \"still\". Every shot gets a gentle camera move anyway.",
     "- shots[].durationSec: 2–6. shots[].cast: ids of cast members visible in the shot (include the set).",
+    "- cites (on cast members and shots): numbers of the research notes the design uses; [] when none or when no notes are given.",
     "- shots[].dialogue: a short spoken line or narration (≤ 90 characters and ≤ 14 characters per second of durationSec), or null. speaker: cast name, \"Narrator\", or null.",
     '- shots[].transition INTO the shot: "cut" by default, "dissolve" for time passing, "fadeBlack" for the final shot.',
     "- Group shots into scenes with a short scene label; keep the 180° rule and vary shot sizes between consecutive shots of a scene.",
@@ -75,7 +76,13 @@ export function directorUser(story: string, references: string | null): string {
   return [
     "Plan the film for this story.",
     quoteData("story", story, 6000),
-    references ? `Visual reference notes (cite them in cast.look where relevant):\n${quoteData("reference", references, 3000)}` : "",
+    references
+      ? [
+          "Numbered visual reference notes from real sources. Use them: put costume and prop facts into cast[].look, colour facts into palette and cast colors, place/architecture facts into the set looks and shot descriptions.",
+          "For every cast member and shot that uses a note, list the note numbers in its `cites` (e.g. [1,3]). Use only facts from the notes; never invent sources.",
+          quoteData("reference", references, 3000),
+        ].join("\n")
+      : "No research notes: leave every `cites` empty.",
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -314,8 +321,17 @@ export function researchQuerySystem(): string {
 export function researchNotesSystem(): string {
   return [
     "ROLE: RESEARCH_NOTES",
-    "You turn numbered web snippets into short visual notes an illustrator can draw. Use only facts present in the snippets.",
+    "You turn numbered web snippets into short visual notes an illustrator can draw (shapes, materials, colours, garments, objects, buildings). Use only facts present in the snippets.",
     GUARD,
-    'Output ONE JSON object: {"notes":[{"note":"…","source":n}]} — max 6 notes, each citing the snippet number it came from.',
+    'Output ONE JSON object: {"notes":[{"note":"…","source":n,"use":"costume|props|palette|set|architecture|customs"}]}: max 6 notes, each citing the snippet number it came from, with what the fact is for.',
+  ].join("\n");
+}
+
+export function researchDetectSystem(): string {
+  return [
+    "ROLE: RESEARCH_DETECT",
+    "Decide whether an illustrator should look up real-world visual references before drawing this story: a real place or city, a historical era, a festival, traditional costume, food, objects or architecture. Pure fantasy or everyday scenes with nothing culture- or place-specific need none.",
+    GUARD,
+    'Output ONE JSON object: {"needed": true|false, "reason": "one short sentence", "topics": ["up to 4 things to look up"]}.',
   ].join("\n");
 }

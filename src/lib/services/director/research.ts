@@ -1,12 +1,12 @@
 import { tavilyExtract, tavilySearch, type TavilyOptions, type TavilyResult } from "@/lib/providers/tavily";
 import { callJson, recordStep, ReplyInvalidError, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
-import { quoteData, researchNotesSystem, researchQuerySystem } from "@/lib/services/director/prompts";
-import { researchNotesSchema, researchQueriesSchema } from "@/lib/services/director/schemas";
+import { quoteData, researchDetectSystem, researchNotesSystem, researchQuerySystem } from "@/lib/services/director/prompts";
+import { researchDecisionSchema, researchNotesSchema, researchQueriesSchema, type Plan } from "@/lib/services/director/schemas";
 import { LlmError } from "@/lib/providers/types";
 
 /**
  * Researcher (Nano + Tavily), budget-capped: ≤ 2 searches × 3 results and
- * ≤ 1 extract per run. Snippets are quoted as DATA (never instructions) and
+ * ≤ 1 extract per run (the per-run Tavily budget: at most 3 Tavily calls). Snippets are quoted as DATA (never instructions) and
  * length-capped. Every note keeps its source URL and flows into the Bible
  * (Director prompt) and the UI.
  */
@@ -17,6 +17,72 @@ export interface ReferenceNote {
   readonly note: string;
   readonly url: string;
   readonly title: string;
+  /** costume | props | palette | set | architecture | customs */
+  readonly use?: string;
+}
+
+/** "on" = always research, "auto" = Nano decides from the story, "off" = never. */
+export type ResearchMode = "on" | "auto" | "off";
+
+export function researchMode(v: boolean | "auto" | undefined): ResearchMode {
+  return v === "auto" ? "auto" : v ? "on" : "off";
+}
+
+/**
+ * Nano's cheap yes/no (≈ 200 tokens): does the story name real places, eras,
+ * festivals, costumes or architecture worth looking up? Recorded as a step
+ * with its reason, so the trace shows WHY research ran or not. A failed
+ * decision means "no research" (never blocks the film).
+ */
+export async function decideResearch(ctx: DirectorContext, story: string): Promise<{ needed: boolean; reason: string; topics: string[] }> {
+  try {
+    const d = await callJson(
+      ctx,
+      { role: "researcher", action: "detect", system: researchDetectSystem(), user: quoteData("story", story, 4000), maxTokens: 300, temperature: 0, thinking: false },
+      researchDecisionSchema,
+      "research_decision",
+      1,
+    );
+    await recordStep(ctx, {
+      role: "researcher",
+      model: ctx.models.fast,
+      action: "decision",
+      summary: `${d.needed ? "Research needed" : "No research needed"}: ${d.reason}${d.topics.length ? ` (${d.topics.join(", ")})` : ""}`,
+      output: JSON.stringify(d),
+    });
+    return d;
+  } catch (e) {
+    if (e instanceof ReplyInvalidError || e instanceof LlmError) return { needed: false, reason: "decision failed", topics: [] };
+    throw e;
+  }
+}
+
+export interface ResearchUse {
+  readonly notes: number;
+  /** distinct notes cited anywhere in the Bible */
+  readonly cited: number;
+  readonly castCiting: number;
+  readonly shotsCiting: number;
+  readonly byUse: Record<string, number>;
+}
+
+/** How much of the research the Director actually put into the Bible (pure; measured, not claimed). */
+export function measureResearchUse(plan: Plan, notes: readonly ReferenceNote[]): ResearchUse {
+  const cited = new Set<number>();
+  for (const c of plan.cast) for (const n of c.cites ?? []) if (n >= 1 && n <= notes.length) cited.add(n);
+  for (const sh of plan.shots) for (const n of sh.cites ?? []) if (n >= 1 && n <= notes.length) cited.add(n);
+  const byUse: Record<string, number> = {};
+  for (const n of cited) {
+    const u = notes[n - 1]?.use ?? "other";
+    byUse[u] = (byUse[u] ?? 0) + 1;
+  }
+  return {
+    notes: notes.length,
+    cited: cited.size,
+    castCiting: plan.cast.filter((c) => (c.cites ?? []).some((n) => n >= 1 && n <= notes.length)).length,
+    shotsCiting: plan.shots.filter((sh) => (sh.cites ?? []).some((n) => n >= 1 && n <= notes.length)).length,
+    byUse,
+  };
 }
 
 export interface ResearchOutcome {
@@ -94,7 +160,7 @@ export async function runResearch(ctx: DirectorContext, story: string, tavily: T
     );
     notes = r.notes
       .filter((n) => n.source >= 1 && n.source <= sources.length)
-      .map((n) => ({ note: n.note, url: sources[n.source - 1].url, title: sources[n.source - 1].title }));
+      .map((n) => ({ note: n.note, url: sources[n.source - 1].url, title: sources[n.source - 1].title, use: n.use }));
   } catch (e) {
     if (!(e instanceof ReplyInvalidError || e instanceof LlmError)) throw e;
   }
@@ -106,5 +172,5 @@ export async function runResearch(ctx: DirectorContext, story: string, tavily: T
     output: JSON.stringify(notes),
   });
   ctx.emit({ type: "research", references: notes });
-  return { notes, text: notes.length ? notes.map((n, i) => `${i + 1}. ${n.note} [source: ${n.url}]`).join("\n") : null };
+  return { notes, text: notes.length ? notes.map((n, i) => `${i + 1}. (${n.use ?? "detail"}) ${n.note} [source: ${n.url}]`).join("\n") : null };
 }

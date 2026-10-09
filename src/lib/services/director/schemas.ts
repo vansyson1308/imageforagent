@@ -20,6 +20,8 @@ export const castMemberSchema = z.object({
   /** Visual design: shapes, proportions, clothes, signature details. */
   look: z.string().min(3).max(500),
   colors: z.array(hex).min(1).max(6),
+  /** Research note numbers (1-based) this design uses. Empty when there was no research. */
+  cites: z.array(z.number().int().min(0).max(99)).max(8).optional(),
 });
 
 export const shotPlanSchema = z.object({
@@ -33,6 +35,8 @@ export const shotPlanSchema = z.object({
   speaker: z.string().max(60).nullable(),
   transition: z.enum(TRANSITIONS),
   cast: z.array(castId).max(6),
+  /** Research note numbers (1-based) this shot uses (costume, prop, set detail…). */
+  cites: z.array(z.number().int().min(0).max(99)).max(8).optional(),
 });
 
 export const planSchema = z.object({
@@ -83,6 +87,8 @@ export const researchQueriesSchema = z.object({
   queries: z.array(z.string().min(3).max(120)).max(3),
 });
 
+export const RESEARCH_USES = ["costume", "props", "palette", "set", "architecture", "customs"] as const;
+
 export const researchNotesSchema = z.object({
   notes: z
     .array(
@@ -91,9 +97,18 @@ export const researchNotesSchema = z.object({
         note: z.string().min(3).max(300),
         /** Index into the numbered source list given to the model. */
         source: z.number().int().min(1),
+        /** What the fact is for in the Bible. */
+        use: z.enum(RESEARCH_USES),
       }),
     )
     .max(8),
+});
+
+/** Nano's cheap yes/no: does this story need real-world visual references? */
+export const researchDecisionSchema = z.object({
+  needed: z.boolean(),
+  reason: z.string().min(3).max(240),
+  topics: z.array(z.string().min(2).max(60)).max(4),
 });
 
 /** JSON Schema for the Token Factory `json_schema` response format. */
