@@ -1,0 +1,79 @@
+{
+ "characters": [
+  "ti",
+  "grandfather",
+  "kids-group"
+ ],
+ "sets": [
+  "porch",
+  "street",
+  "gate"
+ ],
+ "shots": [
+  {
+   "shotType": "Wide shot",
+   "cast": [
+    "ti",
+    "star-lantern",
+    "kids-group",
+    "porch"
+   ],
+   "description": "Night, moonlight spilling on porch. Tí stands alone at railing holding unlit red star lantern. Down the lane, kids-group passes with glowing lanterns, laughter implied. Porch lanterns sway gently."
+  },
+  {
+   "shotType": "Close-up",
+   "cast": [
+    "ti",
+    "star-lantern",
+    "porch"
+   ],
+   "description": "Night, faint porch light. Tí's cupped hands shield candle; a gust blows flame out. Red cellophane ripples. Star-lantern dark again. Tí's shoulders drop."
+  },
+  {
+   "shotType": "Medium shot",
+   "cast": [
+    "grandfather",
+    "ti",
+    "bamboo-shade",
+    "porch"
+   ],
+   "description": "Night, warm interior glow spills from doorway. Grandfather steps out onto porch, bamboo-shade under arm. He pauses beside Tí, silent, eyes on dark lantern."
+  },
+  {
+   "shotType": "Close-up",
+   "cast": [
+    "grandfather",
+    "ti",
+    "star-lantern",
+    "bamboo-shade",
+    "porch"
+   ],
+   "description": "Night, hands in focus. Grandfather's weathered fingers lower bamboo-shade over star-lantern top. Candle catches, flame steadies, red panels glow warm. Subtle drop shadows layer."
+  },
+  {
+   "shotType": "Wide shot",
+   "cast": [
+    "ti",
+    "star-lantern",
+    "kids-group",
+    "street"
+   ],
+   "description": "Night, golden moonlight. Tí runs down lane, star-lantern glowing bright, joining kids-group. Lanterns sway, shadows stretch. Street depth layers: fences, poles, moon."
+  },
+  {
+   "shotType": "Low angle",
+   "cast": [
+    "grandfather",
+    "gate"
+   ],
+   "description": "Night, moonlight pools on threshold. Grandfather leans on gate post, silhouette against moon. Gentle smile, eyes follow Tí. Bamboo-shade absent now. Gate frames him."
+  },
+  {
+   "shotType": "Slow zoom-in",
+   "cast": [
+    "street"
+   ],
+   "description": "Night, full moon centered. Silhouettes of star, carp, rabbit lanterns drift across face. Clouds barely move. Zoom deepens into moon glow, then fade to black."
+  }
+ ]
+}

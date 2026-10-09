@@ -1,0 +1,74 @@
+{
+ "characters": [
+  "fox",
+  "child"
+ ],
+ "sets": [
+  "forest",
+  "village-gate"
+ ],
+ "shots": [
+  {
+   "shotType": "Wide shot",
+   "cast": [
+    "fox",
+    "forest",
+    "lantern"
+   ],
+   "description": "夜、月明かりの雪森で狐が岩の上に座り、遠くの村の灯りを静かに見つめている。"
+  },
+  {
+   "shotType": "Medium shot",
+   "cast": [
+    "child",
+    "forest",
+    "lantern"
+   ],
+   "description": "夜、森の開けた場所で子どもが泣きながら雪に埋もれ、提灯の微かな光が降り注ぐ。"
+  },
+  {
+   "shotType": "Close-up",
+   "cast": [
+    "fox",
+    "lantern"
+   ],
+   "description": "夜、狐の尻尾先に小さな炎が灯り、揺らめく光が周囲を照らす。"
+  },
+  {
+   "shotType": "Low angle",
+   "cast": [
+    "fox",
+    "child",
+    "forest",
+    "lantern"
+   ],
+   "description": "夜、狐が子どもを先導し、提灯が揺れる道を進む。足音と灯りの揺れが見える。"
+  },
+  {
+   "shotType": "Wide shot",
+   "cast": [
+    "fox",
+    "child",
+    "village-gate",
+    "lantern"
+   ],
+   "description": "夜明け、村の木造鳥居門前に狐と子どもが立ち、提灯が暖かく灯る。"
+  },
+  {
+   "shotType": "Medium shot",
+   "cast": [
+    "fried-tofu",
+    "village-gate"
+   ],
+   "description": "朝、柔らかな日差しの中、門の前に油揚げが一枚置かれ、湯気が立ち上る。"
+  },
+  {
+   "shotType": "Close-up",
+   "cast": [
+    "fox",
+    "fried-tofu"
+   ],
+   "description": "朝、狐の瞳に油揚げが映り、静かな微笑みが浮かぶ。"
+  }
+ ]
+}

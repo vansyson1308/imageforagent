@@ -17,7 +17,7 @@ const dialogueSchema = z.object({
   wav: z.string().max(40_000_000).optional(),
   tts: z
     .object({
-      voice: z.string().regex(/^[a-z]{2,3}([-+][\w-]{1,32})?$/).default("vi"),
+      voice: z.string().regex(/^[a-z]{2,3}([-+][\w-]{1,32})?$|^piper:[A-Za-z]{2}_[A-Za-z]{2}-[a-z0-9_]+-(?:x_low|low|medium|high)(?:#\d{1,2})?(?:@-?\d{1,2})?$/).default("vi"),
       speed: z.number().int().min(80).max(400).default(160),
     })
     .optional(),

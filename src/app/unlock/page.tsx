@@ -83,7 +83,7 @@ function UnlockForm() {
       {contact && (
         <p className="mt-6 text-sm text-muted">
           {t(lang, "contact")}:{" "}
-          <a href={`mailto:${contact}`} className="text-accent underline">
+          <a href={`mailto:${contact}`} className="text-violet-300 underline">
             {contact}
           </a>
         </p>

@@ -9,7 +9,14 @@ import { BudgetExceededError, BudgetTracker, CancelledError, clampBudget, type D
 import { recordStep, throwIfCancelled, type DirectorContext, type DirectorEvent, type DirectorOptions, type RunSummary } from "@/lib/services/director/context";
 import { decideResearch, measureResearchUse, researchMode, runResearch, type ResearchUse } from "@/lib/services/director/research";
 import { runPlan, writeScript } from "@/lib/services/director/plan";
-import { runCast } from "@/lib/services/director/cast";
+import { runCast, type CastLibrary } from "@/lib/services/director/cast";
+import { mergeLibraries, persistRunCast, type SeriesData } from "@/lib/services/director/series";
+import { actingBrief, neededVariants, variantDefs } from "@/lib/services/director/acting";
+import { variantId } from "@/lib/services/director/dollKit";
+import { symbolIds } from "@/lib/services/director/svgTools";
+import { renderScoreBed } from "@/lib/services/director/scoreBed";
+import { buildTimeline, timelineDuration, timelineInputOf } from "@/lib/services/timeline";
+import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { commitShot, drawShot, type Drawing } from "@/lib/services/director/artist";
 import { critiqueShot, fixesText } from "@/lib/services/director/critic";
 import { lintProject, runContinuity, runDialogue, runEditor } from "@/lib/services/director/editor";
@@ -40,6 +47,8 @@ export interface DirectorRequest {
   readonly maxUsd?: number;
   /** "super-only": every role on the Super tier, no critic (eval baseline). */
   readonly profile?: "crew" | "super-only";
+  /** WP5: make this film an episode of a saved series (recurring cast reused verbatim). */
+  readonly series?: SeriesData | null;
 }
 
 export interface DirectorDeps {
@@ -98,13 +107,20 @@ export async function createRun(req: DirectorRequest, deps: DirectorDeps): Promi
       style: req.style,
       provider: deps.provider.name,
       models: JSON.stringify(deps.models),
-      config: JSON.stringify({ budget, profile: req.profile ?? "crew", critic: req.critic, research: deps.tavily ? researchMode(req.research) : "off", fps: deps.fps ?? 12, visionAvailable: deps.visionAvailable, modelNotes: deps.modelNotes }),
+      seriesId: req.series?.id ?? null,
+      config: JSON.stringify({ budget, profile: req.profile ?? "crew", series: req.series ? { id: req.series.id, name: req.series.name } : null, critic: req.critic, research: deps.tavily ? researchMode(req.research) : "off", fps: deps.fps ?? 12, visionAvailable: deps.visionAvailable, modelNotes: deps.modelNotes }),
     },
   });
   return { runId: run.id, budget };
 }
 
+/** A finished shot should score at least this; below it gets one fresh redraw (never blocks). */
+export const FLOOR_SCORE = 7;
+
 interface ShotStats {
+  belowFloor?: boolean;
+  /** gate problems the FINAL version still has (accepted on the lenient last attempt) */
+  gateFailures?: number;
   firstPassOk: boolean;
   repairs: number;
   before: number | null;
@@ -181,7 +197,7 @@ export async function executeRun(
 
     // 2 · Plan (Ultra)
     emit({ type: "status", message: "Director is planning the shots…" });
-    const plan = await runPlan(ctx, req.story, references, referenceNotes.length);
+    const plan = await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null);
     if (referenceNotes.length) {
       researchUse = measureResearchUse(plan, referenceNotes);
       await recordStep(ctx, {
@@ -205,12 +221,29 @@ export async function executeRun(
 
     // 4 · Dialogue first, so each shot is timed to hold its line
     emit({ type: "status", message: "Recording dialogue (local TTS)…" });
-    frames = await runDialogue(ctx, plan, frames);
+    const voices = await runDialogue(ctx, plan, frames, req.series?.voices ?? {});
+    frames = voices.frames;
+    await persistRunCast(runId, { voices: voices.map });
 
     // 5 · Cast & set library (Super)
     emit({ type: "status", message: "Artist is designing the cast…" });
-    const library = await runCast(ctx, plan, aspectRatio);
+    let library = await castForEpisode(ctx, plan, aspectRatio, req.series ?? null);
+    // Acting variants (WP4.1): the posed/expressive symbols the plan asks for, built from the same kit specs
+    if (library.kits.size) {
+      const extra = variantDefs(plan, library.kits, library.defs);
+      if (extra) {
+        const defs = `${library.defs}\n${extra}`;
+        library = { ...library, defs, symbols: symbolIds(defs) };
+        await prisma.project.update({ where: { id: req.projectId }, data: { artworkDefs: defs } });
+        const v = neededVariants(plan, library.kits).filter((x) => extra.includes(`id="${variantId(x.who, x.pose, x.expression)}"`));
+        await recordStep(ctx, { role: "cast", model: "engine", action: "acting-variants", summary: `Posed ${v.length} variant(s) from the kit: ${v.map((x) => `${x.who} ${x.pose}/${x.expression}`).join(", ")}` });
+      }
+    }
+    await persistRunCast(runId, { library: library.defs, kits: library.kits });
     const patterns = new Map<number, string>();
+    // accepted paintings' thumbnails: the near-duplicate gate compares each shot with its neighbours
+    const thumbs = new Map<number, Buffer>();
+    const neighbours = (index: number) => () => [index - 1, index + 1].filter((i) => thumbs.has(i)).map((i) => ({ index: i, thumb: thumbs.get(i)! }));
     const background = plan.palette[0] ?? "#1a1a2e";
 
     // 6 · Per shot: draw → commit → critic → revise (a small pool of shots in parallel)
@@ -220,7 +253,7 @@ export async function executeRun(
       const st: ShotStats = { firstPassOk: false, repairs: 0, before: null, after: null, revisions: 0 };
       shotStats.set(frame.index, st);
       emit({ type: "status", message: `Artist is drawing shot ${frame.index}/${frames.length}…` });
-      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0 });
+      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits) });
       st.repairs += first.attempts - 1;
       st.firstPassOk = first.drawing !== null && first.attempts === 1;
       if (!first.drawing) {
@@ -228,7 +261,9 @@ export async function executeRun(
         emit({ type: "frame", index: frame.index, imageUrl: null, clipUrl: null, score: null, status: "failed" });
         return;
       }
-      let committed: Frame = await commitAndAnnounce(ctx, { frame, shot, index: frame.index, drawing: first.drawing, castDefs: library.defs, patterns, background }, null);
+      if (first.drawing.thumb) thumbs.set(frame.index, first.drawing.thumb);
+      if (first.drawing.checks?.problems.length) st.gateFailures = first.drawing.checks.problems.length;
+      let committed: Frame = await commitAndAnnounce(ctx, { frame, shot, index: frame.index, drawing: first.drawing, castDefs: library.defs, patterns, background, acting: { kits: library.kits, plan } }, null);
       let best: { drawing: Drawing; critique: Critique | null } = { drawing: first.drawing, critique: null };
       if (!options.critic) return;
       const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0 });
@@ -238,7 +273,7 @@ export async function executeRun(
       for (let round = 1; round <= budget.maxCriticRounds; round++) {
         const c = best.critique;
         if (!c || c.score >= options.acceptScore || c.verdict === "accept") break;
-        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg });
+        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits) });
         st.repairs += Math.max(0, rev.attempts - 1);
         if (!rev.drawing) break;
         const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round });
@@ -246,20 +281,57 @@ export async function executeRun(
         if (cr.critique && cr.critique.score > c.score) {
           best = { drawing: rev.drawing, critique: cr.critique };
           st.after = cr.critique.score;
-          committed = await commitAndAnnounce(ctx, { frame: committed, shot, index: frame.index, drawing: rev.drawing, castDefs: library.defs, patterns, background }, cr.critique.score);
+          if (rev.drawing.thumb) thumbs.set(frame.index, rev.drawing.thumb);
+          st.gateFailures = rev.drawing.checks?.problems.length ?? 0;
+          committed = await commitAndAnnounce(ctx, { frame: committed, shot, index: frame.index, drawing: rev.drawing, castDefs: library.defs, patterns, background, acting: { kits: library.kits, plan } }, cr.critique.score);
           await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "uplift", shotIndex: frame.index, score: cr.critique.score, summary: `Revision accepted: ${c.score} → ${cr.critique.score}` });
         } else {
           await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "keep", shotIndex: frame.index, score: c.score, summary: `Revision scored ${cr.critique?.score ?? "n/a"} ≤ ${c.score}: kept the previous version` });
           break;
         }
       }
+      // FLOOR (WP4.4): still below the bar → one fresh redraw with a different approach; kept only if it scores higher
+      const fb = best.critique;
+      if (fb && fb.score < FLOOR_SCORE) {
+        const fresh = await drawShot(ctx, {
+          plan,
+          shot,
+          index: frame.index,
+          castDefs: library.defs,
+          symbols: library.symbols,
+          aspectRatio,
+          round: budget.maxCriticRounds + 1,
+          feedback: `START OVER. The best version so far scored ${fb.score}/10 (${fb.issues.slice(0, 3).join("; ") || "weak"}). Draw a NEW composition with a different approach: another camera angle or distance, a different layout of the characters, clearer staging of the action. Do not copy the earlier layout.`,
+          neighbours: neighbours(frame.index),
+          actingBrief: actingBrief(shot, library.kits),
+        });
+        st.repairs += Math.max(0, fresh.attempts - 1);
+        if (fresh.drawing) {
+          const cf = await critiqueShot(ctx, { shot, index: frame.index, drawing: fresh.drawing, round: budget.maxCriticRounds + 1 });
+          st.revisions++;
+          if (cf.critique && cf.critique.score > fb.score) {
+            best = { drawing: fresh.drawing, critique: cf.critique };
+            st.after = cf.critique.score;
+            if (fresh.drawing.thumb) thumbs.set(frame.index, fresh.drawing.thumb);
+            st.gateFailures = fresh.drawing.checks?.problems.length ?? 0;
+            committed = await commitAndAnnounce(ctx, { frame: committed, shot, index: frame.index, drawing: fresh.drawing, castDefs: library.defs, patterns, background, acting: { kits: library.kits, plan } }, cf.critique.score);
+            await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "uplift", shotIndex: frame.index, score: cf.critique.score, summary: `Fresh redraw accepted: ${fb.score} → ${cf.critique.score}` });
+          } else {
+            await recordStep(ctx, { role: "critic", model: ctx.models.vision || ctx.models.fast, action: "keep", shotIndex: frame.index, score: fb.score, summary: `Fresh redraw scored ${cf.critique?.score ?? "n/a"} ≤ ${fb.score}: kept the previous version` });
+          }
+        }
+        if ((best.critique?.score ?? 0) < FLOOR_SCORE) st.belowFloor = true;
+      }
     };
     await runPool(frames, Math.max(1, Math.min(6, deps.concurrency ?? 1)), doShot);
 
     // 7 · Editor (Nano): lint fixes + continuity
     emit({ type: "status", message: "Editor is checking timing and continuity…" });
-    await runEditor(ctx);
+    await runEditor(ctx, plan, req.series?.voices ?? {});
     continuity = await runContinuity(ctx, plan);
+
+    // 8 · Original score bed from the engine's own synth (WP4.6), ducked under dialogue by the film mix
+    await scoreFilm(ctx, plan);
   } catch (e) {
     if (signal.aborted && signal.reason instanceof BudgetExceededError) {
       // the wall-time watchdog (runHub) aborted a call that was stuck
@@ -277,7 +349,7 @@ export async function executeRun(
     }
   }
 
-  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic)), ...(researchUse && { research: researchUse }) };
+  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic, ctx.visionAvailable && options.critic && ctx.models.vision ? `${ctx.models.vision} looks · ${ctx.models.fast} scores` : null)), ...(researchUse && { research: researchUse }) };
   await prisma.directorRun.update({
     where: { id: runId },
     data: { status, error, summary: JSON.stringify(summary), finishedAt: new Date(), tokensIn: tracker.tokensIn, tokensOut: tracker.tokensOut, costUsd: tracker.costUsd },
@@ -318,7 +390,7 @@ async function commitAndAnnounce(ctx: DirectorContext, opts: Parameters<typeof c
     action: r.kind === "clip" ? "render-clip" : "render-still",
     shotIndex: opts.index,
     latencyMs: Date.now() - t0,
-    summary: `${r.kind === "clip" ? `Clip ${r.frame.clipFrameCount} frames @ ${r.frame.clipFps} fps` : "Still"} rendered${r.note ? ` (${r.note})` : ""}`,
+    summary: `${r.kind === "clip" ? `Clip ${r.frame.clipFrameCount} frames @ ${r.frame.clipFps} fps` : "Still"} rendered${r.acting?.length ? `; acting: ${r.acting.join(", ")}` : ""}${r.note ? ` (${r.note})` : ""}`,
   });
   ctx.emit({ type: "frame", index: opts.index, imageUrl: frameImageUrl(r.frame), clipUrl: frameClipUrl(r.frame), score, status: r.frame.status });
   return r.frame;
@@ -326,7 +398,7 @@ async function commitAndAnnounce(ctx: DirectorContext, opts: Parameters<typeof c
 
 const mean = (xs: number[]) => (xs.length ? Math.round((xs.reduce((a, b) => a + b, 0) / xs.length) * 100) / 100 : null);
 
-async function summarize(projectId: string, status: string, stats: Map<number, ShotStats>, tracker: BudgetTracker, continuity: string[], textCritic: boolean): Promise<RunSummary> {
+async function summarize(projectId: string, status: string, stats: Map<number, ShotStats>, tracker: BudgetTracker, continuity: string[], textCritic: boolean, criticEyes: string | null = null): Promise<RunSummary> {
   const frames = await prisma.frame.findMany({ where: { projectId } });
   const lint = frames.length ? await lintProject(projectId) : { findings: [], durationSec: 0 };
   const all = [...stats.values()];
@@ -340,6 +412,9 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     criticBefore: mean(scored.map((s) => s.before!)),
     criticAfter: mean(scored.map((s) => s.after!)),
     revisions: all.reduce((n, s) => n + s.revisions, 0),
+    gateFailures: all.filter((s) => (s.gateFailures ?? 0) > 0).length,
+    belowFloor: [...stats.entries()].filter(([, s]) => s.belowFloor).map(([i]) => i).sort((a, b) => a - b),
+    criticModel: criticEyes,
     lintErrors: lint.findings.filter((f) => f.severity === "error").length,
     lintWarnings: lint.findings.filter((f) => f.severity === "warning").length,
     durationSec: lint.durationSec,
@@ -349,4 +424,55 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     continuity,
     textCritic,
   };
+}
+
+/** Compose and attach the film's score (a failure only costs the music, never the film). */
+async function scoreFilm(ctx: DirectorContext, plan: Parameters<typeof renderScoreBed>[0]): Promise<void> {
+  throwIfCancelled(ctx);
+  const t0 = Date.now();
+  try {
+    const project = await prisma.project.findUniqueOrThrow({ where: { id: ctx.projectId }, include: { frames: { orderBy: { index: "asc" } } } });
+    const timeline = buildTimeline(project.frames.map((f) => timelineInputOf(f)), project.playbackSpeed);
+    const total = timelineDuration(timeline);
+    if (total <= 0) return;
+    const { wav, cues } = renderScoreBed(plan, timeline, total);
+    const musicPath = toPosix(`${ctx.projectId}/audio/music.wav`);
+    await saveBuffer(musicPath, wav);
+    await prisma.project.update({ where: { id: ctx.projectId }, data: { musicPath } });
+    await recordStep(ctx, {
+      role: "system",
+      model: "engine:score",
+      action: "music",
+      latencyMs: Date.now() - t0,
+      summary: `Original score ${Math.round(total)} s: ${cues.map((c) => `${c.mood} ${Math.round(c.start)}–${Math.round(c.end)} s`).join(", ")} (ducked under dialogue in the mix)`,
+    });
+  } catch (e) {
+    await recordStep(ctx, { role: "system", model: "engine:score", action: "music", summary: "Score skipped", error: e instanceof Error ? e.message : String(e) });
+  }
+}
+
+/**
+ * The cast library of a film. In a series episode the recurring members come
+ * verbatim from the series library (pixel-identical) and the Cast draws ONLY
+ * the new guests and sets; otherwise the Cast draws everyone.
+ */
+async function castForEpisode(ctx: DirectorContext, plan: Parameters<typeof runCast>[1], aspectRatio: string, series: SeriesData | null): Promise<CastLibrary> {
+  if (!series) return runCast(ctx, plan, aspectRatio);
+  const recurring = new Set(series.cast.map((c) => c.id));
+  const fresh = plan.cast.filter((c) => !recurring.has(c.id));
+  const kits = new Map(series.kits);
+  let defs = series.library;
+  if (fresh.length) {
+    const guests = await runCast(ctx, { ...plan, cast: fresh, shots: plan.shots.map((s) => ({ ...s, cast: s.cast.filter((id) => !recurring.has(id)) })) }, aspectRatio);
+    defs = mergeLibraries(series.library, guests.defs);
+    for (const [k, v] of guests.kits) kits.set(k, v);
+  }
+  await prisma.project.update({ where: { id: ctx.projectId }, data: { artworkDefs: defs } });
+  await recordStep(ctx, {
+    role: "cast",
+    model: "series",
+    action: "series-cast",
+    summary: `Series "${series.name}": reused ${plan.cast.filter((c) => recurring.has(c.id)).map((c) => c.id).join(", ") || "no"} verbatim (pixel-identical)${fresh.length ? `; drew new: ${fresh.map((c) => c.id).join(", ")}` : ""}`,
+  });
+  return { defs, symbols: symbolIds(defs), placeholder: false, kits };
 }

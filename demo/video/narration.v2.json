@@ -1,0 +1,20 @@
+{
+  "title": "Storyboard Studio Director v2: typed, not drawn",
+  "voice": "piper:en_US-john-medium",
+  "speed": 160,
+  "srt": "out/director_demo_v2.en.srt",
+  "note": "DRAFT (2026-10-09). Scenes follow SPEC v2 WP8. {{PENDING}} slots are filled from EVAL_RESULTS.md / PILOT.md only; prepare.ts refuses a final build while one is open. The voice is public domain (LibriVox, D32); en_US-lessac is not used.",
+  "segments": [
+    { "id": "01-hook", "scene": "hook", "start": 0, "end": 12, "text": "This film was typed, not drawn. NVIDIA Nemotron models on Nebius Token Factory wrote every frame as code. Our engine rendered it, and measured it." },
+    { "id": "02-user", "scene": "user", "start": 12, "end": 25, "text": "It's built for channels like Hidamari, a daily Japanese storytelling channel for seniors. A daily show needs the same host, in the same tea room, every single day." },
+    { "id": "03-plan", "scene": "live", "start": 25, "end": 40, "text": "I paste a story and press Make my film. Nemotron 3 Ultra, the Director, plans real coverage: wide shots, close-ups, a mood for every shot, and a cast and set bible in strict JSON." },
+    { "id": "04-draw", "scene": "live", "start": 40, "end": 58, "text": "Nemotron 3 Super designs the cast as engine kits, so poses, blinks and lip sync are exact. Then it writes every frame as SVG. The engine renders each frame and measures it. When a check fails, the measured fix goes straight back to the artist." },
+    { "id": "05-critic", "scene": "live", "start": 58, "end": 72, "text": "Then the critic looks. A vision model describes what it actually sees, and Nemotron Nano scores the shot. A revision replaces a frame only when it scores higher." },
+    { "id": "06-editor", "scene": "live", "start": 72, "end": 80, "text": "Nano, the Editor, fixes the timing. Neural voices and an original score finish the film." },
+    { "id": "07-film", "scene": "film", "start": 80, "end": 95, "text": "Here is a second film, in Vietnamese, with acting, voices and dissolves, assembled on the server. One click saves its cast as a series." },
+    { "id": "08-series", "scene": "series", "start": 95, "end": 105, "text": "Episode two reuses the same host, pixel for pixel. The engine copies her drawing. It never redraws her." },
+    { "id": "09-arch", "scene": "arch", "start": 105, "end": 135, "text": "Under the hood: one OpenAI compatible endpoint on Token Factory, strict JSON schemas, and each Nemotron tier sized to its job. Ultra reasons once per film, Super does the heavy drawing, and Nano makes fast, cheap calls. Every model output passes the same validators as a person's would, and every frame is measured before anyone sees it." },
+    { "id": "10-eval", "scene": "eval", "start": 135, "end": 155, "text": "{{PENDING: real results from EVAL_RESULTS.md, e.g. both judges' mean for the crew, wins against Super alone, the independently judged critic uplift, and the cost per finished minute; plus PILOT.md episode numbers if they exist}}" },
+    { "id": "11-end", "scene": "end", "start": 155, "end": 172, "text": "Try it at the link below. The showcase replays real runs, step by step. Storyboard Studio Director: built with NVIDIA Nemotron on Nebius Token Factory. MIT licensed." }
+  ]
+}

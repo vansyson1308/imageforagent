@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
-import { ttsAvailable } from "@/lib/services/tts";
+import { piperVoices, ttsAvailable } from "@/lib/services/tts";
+import { castVoice } from "@/lib/services/director/voices";
 import { writeFrameDialogue } from "@/lib/services/frameWrites";
 import { buildTimeline, timelineDuration, timelineInputOf } from "@/lib/services/timeline";
 import { cameraOfMotionSpec, lintStoryboard, type LintFinding } from "@/lib/services/storyboardLint";
@@ -10,23 +11,6 @@ import { LlmError } from "@/lib/providers/types";
 import type { Frame } from "@/generated/prisma/client";
 
 /** Film language → espeak-ng voice id (validated again by tts.ts). */
-export const TTS_VOICES: Record<string, string> = {
-  en: "en-us",
-  vi: "vi",
-  ja: "ja",
-  zh: "cmn",
-  ko: "ko",
-  fr: "fr-fr",
-  es: "es",
-  de: "de",
-  id: "id",
-  th: "th",
-};
-
-export function voiceFor(language: string): string {
-  return TTS_VOICES[language] ?? (/^[a-z]{2,3}$/.test(language) ? language : "en-us");
-}
-
 /** The editor only acts on findings it can fix with its edit vocabulary. */
 export const FIXABLE = new Set(["READING_SPEED", "VOICE_OVERRUN", "JUMP_CUT"]);
 
@@ -35,37 +19,49 @@ export const FIXABLE = new Set(["READING_SPEED", "VOICE_OVERRUN", "JUMP_CUT"]);
  * TTS voice (espeak-ng, offline, via resolveVoice). Runs BEFORE drawing, so
  * each shot can be timed to hold its line. No TTS → subtitle only (recorded).
  */
-export async function runDialogue(ctx: DirectorContext, plan: Plan, frames: readonly Frame[]): Promise<Frame[]> {
-  const tts = ttsAvailable();
-  const voice = voiceFor(ctx.options.language);
+export async function runDialogue(ctx: DirectorContext, plan: Plan, frames: readonly Frame[], fixedVoices: Record<string, string> = {}): Promise<{ frames: Frame[]; map: Record<string, string> }> {
+  const tts = ttsAvailable() || piperVoices().length > 0;
   const out: Frame[] = [];
+  const map: Record<string, string> = {};
   for (const f of frames) {
     throwIfCancelled(ctx);
-    const line = plan.shots[f.index - 1]?.dialogue?.trim();
+    const shot = plan.shots[f.index - 1];
+    const line = shot?.dialogue?.trim();
     if (!line) {
       out.push(f);
       continue;
     }
+    const v = speakerVoice(ctx, plan, shot.speaker, fixedVoices);
+    map[v.who ?? "narrator"] = v.voice;
     const t0 = Date.now();
     try {
-      const r = await writeFrameDialogue(f.id, { text: line, tts: tts ? { voice, speed: 150 } : undefined, offset: 0.3 });
+      const r = await writeFrameDialogue(f.id, { text: line, tts: tts ? { voice: v.voice, speed: 150 } : undefined, offset: 0.3 });
       out.push(r.frame);
       await recordStep(ctx, {
         role: "dialogue",
-        model: tts ? `espeak-ng:${voice}` : "subtitle-only",
+        model: tts ? v.voice : "subtitle-only",
         action: "voice",
         shotIndex: f.index,
         latencyMs: Date.now() - t0,
-        summary: r.frame.voiceDuration ? `Voiced ${r.frame.voiceDuration}s: “${line.slice(0, 80)}”` : `Subtitle only: “${line.slice(0, 80)}”`,
+        summary: r.frame.voiceDuration ? `Voiced ${r.frame.voiceDuration}s (${v.label}): “${line.slice(0, 80)}”` : `Subtitle only: “${line.slice(0, 80)}”`,
       });
     } catch (e) {
       // A voice failure keeps the subtitle; the film goes on
       await prisma.frame.update({ where: { id: f.id }, data: { dialogue: line, voicePath: null, voiceDuration: null } });
       out.push((await prisma.frame.findUnique({ where: { id: f.id } }))!);
-      await recordStep(ctx, { role: "dialogue", model: `espeak-ng:${voice}`, action: "voice", shotIndex: f.index, summary: "TTS failed — subtitle only", error: e instanceof Error ? e.message : String(e) });
+      await recordStep(ctx, { role: "dialogue", model: v.voice, action: "voice", shotIndex: f.index, summary: "TTS failed — subtitle only", error: e instanceof Error ? e.message : String(e) });
     }
   }
-  return out;
+  return { frames: out, map };
+}
+
+/** The voice of a shot's speaker: the series' voice for a recurring character, else its cast voice, else the narrator. */
+export function speakerVoice(ctx: Pick<DirectorContext, "options">, plan: Plan, speaker: string | null | undefined, fixed: Record<string, string> = {}) {
+  const s = speaker?.trim().toLowerCase() ?? "";
+  const member = s ? plan.cast.find((c) => c.kind === "character" && (c.name.toLowerCase() === s || c.id === s || s.includes(c.name.toLowerCase()))) ?? null : null;
+  const key = member?.id ?? "narrator";
+  if (fixed[key]) return { voice: fixed[key], label: `series voice ${fixed[key]}`, who: member?.id ?? null };
+  return { ...castVoice(ctx.options.language, member), who: member?.id ?? null };
 }
 
 export async function lintProject(projectId: string): Promise<{ findings: LintFinding[]; durationSec: number }> {
@@ -80,7 +76,7 @@ export async function lintProject(projectId: string): Promise<{ findings: LintFi
  * limited to dialogue text, voice offset and transitions. Picture is never
  * touched here, so an edit can't break a render.
  */
-export async function runEditor(ctx: DirectorContext): Promise<LintFinding[]> {
+export async function runEditor(ctx: DirectorContext, plan?: Plan, fixedVoices: Record<string, string> = {}): Promise<LintFinding[]> {
   let { findings } = await lintProject(ctx.projectId);
   await recordStep(ctx, {
     role: "editor",
@@ -130,10 +126,11 @@ export async function runEditor(ctx: DirectorContext): Promise<LintFinding[]> {
         if (edit.dialogue === null || edit.dialogue.trim() === "") {
           await prisma.frame.update({ where: { id: frame.id }, data: { dialogue: null, voicePath: null, voiceDuration: null } });
         } else {
-          const tts = ttsAvailable();
+          const tts = ttsAvailable() || piperVoices().length > 0;
           await writeFrameDialogue(frame.id, {
             text: edit.dialogue.trim(),
-            tts: tts ? { voice: voiceFor(ctx.options.language), speed: 150 } : undefined,
+            // keep the speaker's own voice when the Editor shortens a line
+            tts: tts ? { voice: (plan ? speakerVoice(ctx, plan, plan.shots[frame.index - 1]?.speaker, fixedVoices) : castVoice(ctx.options.language, null)).voice, speed: 150 } : undefined,
             offset: edit.voiceOffset ?? frame.voiceOffset,
           }).catch(() => prisma.frame.update({ where: { id: frame.id }, data: { dialogue: edit.dialogue } }));
         }

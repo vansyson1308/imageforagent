@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { TRANSITIONS } from "@/lib/validation/schemas";
+import { EXPRESSIONS, POSES } from "@/lib/services/director/dollKit";
+
+/** Score moods the engine's synth can play (src/lib/services/audio/score.ts). */
+export const SCORE_MOODS = ["dawn", "day", "playful", "tender", "wind", "sad", "night", "mystery", "wonder", "tension", "triumph", "festival", "lullaby"] as const;
 
 /**
  * Zod schemas for EVERY JSON reply the crew produces. Nothing an LLM writes
@@ -37,6 +41,15 @@ export const shotPlanSchema = z.object({
   cast: z.array(castId).max(6),
   /** Research note numbers (1-based) this shot uses (costume, prop, set detail…). */
   cites: z.array(z.number().int().min(0).max(99)).max(8).optional(),
+  /** true = this shot deliberately repeats the previous composition (a callback); skips the near-duplicate gate. */
+  intentionalRepeat: z.boolean().optional(),
+  /** Music mood under this shot (the engine's own score synth, WP4.6). */
+  mood: z.enum(SCORE_MOODS).optional(),
+  /** What each visible character DOES in this shot (kit characters are posed by the engine). */
+  acting: z
+    .array(z.object({ who: castId, pose: z.enum(POSES), expression: z.enum(EXPRESSIONS) }))
+    .max(6)
+    .optional(),
 });
 
 export const planSchema = z.object({
@@ -60,6 +73,14 @@ export const critiqueSchema = z.object({
 });
 
 export type Critique = z.infer<typeof critiqueSchema>;
+
+/** What a vision model SEES in a render (it describes; a Nemotron model scores). */
+export const lookSchema = z.object({
+  sees: z.array(z.string().max(200)).max(8),
+  problems: z.array(z.string().max(200)).max(6),
+  matchesShot: z.boolean(),
+});
+export type Look = z.infer<typeof lookSchema>;
 
 export const editorEditSchema = z.object({
   index: z.number().int().min(1),

@@ -48,7 +48,7 @@ export function StoryboardTable() {
       {sorted.length === 0 ? (
         <p className="mt-6 rounded-xl border border-dashed border-line px-4 py-8 text-center text-sm text-muted">
           Chưa có frame nào — nhập kịch bản ở mục 1, hoặc{" "}
-          <button className="text-accent underline-offset-2 hover:underline" onClick={() => void addFrame()}>
+          <button className="text-violet-300 underline-offset-2 hover:underline" onClick={() => void addFrame()}>
             thêm frame thủ công
           </button>
           .

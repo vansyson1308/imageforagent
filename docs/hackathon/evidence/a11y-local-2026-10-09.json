@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-09",
+  "tool": "lighthouse 13.5.0 (accessibility category only)",
+  "target": "local production build (next start), LLM_PROVIDER=mock, demo mode off; /unlock rendered directly",
+  "note": "Local measurement. Hosted scores to be re-measured after the M2 deploy.",
+  "base": "claude/gifted-cannon-1nhl2s @ 4ee4ef2 + the a11y fixes in the same commit as this file",
+  "results": [
+    {
+      "page": "/",
+      "accessibility": 100,
+      "failed": []
+    },
+    {
+      "page": "/studio?p=<project>",
+      "accessibility": 100,
+      "failed": []
+    },
+    {
+      "page": "/showcase",
+      "accessibility": 100,
+      "failed": []
+    },
+    {
+      "page": "/showcase/replay/tea-house",
+      "accessibility": 100,
+      "failed": []
+    },
+    {
+      "page": "/unlock",
+      "accessibility": 100,
+      "failed": []
+    },
+    {
+      "page": "/projects",
+      "accessibility": 100,
+      "failed": []
+    }
+  ],
+  "before_fixes": [
+    {
+      "page": "/",
+      "accessibility": 96,
+      "failed": [
+        "color-contrast"
+      ]
+    },
+    {
+      "page": "/showcase/replay/tea-house",
+      "accessibility": 98,
+      "failed": [
+        "heading-order"
+      ]
+    }
+  ]
+}

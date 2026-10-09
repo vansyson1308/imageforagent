@@ -219,8 +219,13 @@ describe("director validators", () => {
     const night = { ...opts, shot: { ...shot, description: "The hero waits under the moonlight at night." } };
     const bright = '```svg\n<rect width="1920" height="1080" fill="#f4f0e0"/><circle cx="960" cy="540" r="200" fill="#e0c080"/>\n```';
     await expect(validateDrawing(bright, night)).rejects.toThrow(/night\/dark scene but the frame's mean brightness is \d+\/255/);
-    const dark = '```svg\n<rect width="1920" height="1080" fill="#101a40"/><circle cx="960" cy="540" r="200" fill="#f0c060"/>\n```';
+    const stars = Array.from({ length: 40 }, (_, i) => `<circle cx="${(i * 197) % 1920}" cy="${(i * 89) % 600}" r="6" fill="#fef6e4"/>`).join("");
+    const roofs = Array.from({ length: 8 }, (_, i) => `<polygon points="${i * 240},800 ${i * 240 + 120},640 ${i * 240 + 240},800" fill="#2b3566"/><rect x="${i * 240 + 60}" y="800" width="120" height="160" fill="#1f2750"/><rect x="${i * 240 + 100}" y="840" width="30" height="40" fill="#f0c060"/>`).join("");
+    const dark = `\`\`\`svg\n<rect width="1920" height="1080" fill="#101a40"/>${stars}${roofs}<circle cx="960" cy="300" r="120" fill="#f0c060"/>\n\`\`\``;
     await expect(validateDrawing(dark, night)).resolves.toBeTruthy();
+    // and a frame with almost nothing in it fails the empty-frame gate with a measured hint
+    const empty = '```svg\n<rect width="1920" height="1080" fill="#101a40"/><circle cx="960" cy="540" r="200" fill="#f0c060"/>\n```';
+    await expect(validateDrawing(empty, night)).rejects.toThrow(/nearly empty \(edge density [\d.]+%, \d+ colour regions/);
   });
 
   it("gates the library: sets must be 16:9, characters 2:3, and not stick figures", async () => {
@@ -535,7 +540,7 @@ describe("director loop (mock crew)", () => {
   it("falls back to the text critic when the vision model rejects images (and says so)", async () => {
     const base = demoHandler({ criticScores: [9] });
     const handler: MockHandler = (m, o, i) =>
-      m[0].content.startsWith("ROLE: CRITIC") && m[1].images?.length ? new LlmError("bad_request", "This model does not support image input", 400) : base(m, o, i);
+      m[0].content.startsWith("ROLE: LOOK") && m[1].images?.length ? new LlmError("bad_request", "This model does not support image input", 400) : base(m, o, i);
     const { runId, summary } = await run(handler, {}, { maxShots: 2 });
     expect(summary.textCritic).toBe(true);
     const fb = await prisma.directorStep.findMany({ where: { runId, action: "critic:fallback" } });
@@ -543,6 +548,25 @@ describe("director loop (mock crew)", () => {
     const scores = await prisma.directorStep.findMany({ where: { runId, action: "score" } });
     expect(scores.every((s) => s.outputSummary!.startsWith("text critic"))).toBe(true);
   }, 120_000);
+
+  it("floor: a shot still below 7 after revisions gets ONE fresh redraw, kept only if it scores higher; misses are reported", async () => {
+    const won = await run(demoHandler({ criticScores: [5, 5, 8, 9] }), {}, { maxShots: 2 });
+    const steps = await prisma.directorStep.findMany({ where: { runId: won.runId } });
+    expect(steps.some((s) => s.outputSummary === "Fresh redraw accepted: 5 → 8")).toBe(true);
+    expect(won.summary.belowFloor).toEqual([]);
+    expect(won.summary.criticModel).toBe("mock-vision looks · mock-fast scores");
+    const lost = await run(demoHandler({ criticScores: [4] }), {}, { maxShots: 2 });
+    expect(lost.summary.status).toBe("done");
+    expect(lost.summary.belowFloor).toEqual([1, 2]);
+    const kept = await prisma.directorStep.findMany({ where: { runId: lost.runId, action: "keep" } });
+    expect(kept.some((s) => /^Fresh redraw scored 4 ≤ 4/.test(s.outputSummary ?? ""))).toBe(true);
+    // vision mode: the VLM looked (its own step, with the image), Nano scored
+    const looks = await prisma.directorStep.findMany({ where: { runId: won.runId, action: "look" } });
+    expect(looks.length).toBeGreaterThan(0);
+    expect(looks.every((l) => l.model === "mock-vision" && l.imagePath)).toBe(true);
+    const scores = await prisma.directorStep.findMany({ where: { runId: won.runId, action: "score" } });
+    expect(scores.every((x) => x.model === "mock-fast" && /^vision critic .*mock-vision looked, mock-fast scored/.test(x.outputSummary ?? ""))).toBe(true);
+  }, 180_000);
 
   it("stops with budget_exceeded when the token budget runs out, keeping the trace", async () => {
     const { summary, runId } = await run(demoHandler(), { ceiling: { ...DEFAULT_BUDGET, maxTokens: 400 } });

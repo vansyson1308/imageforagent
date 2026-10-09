@@ -346,7 +346,7 @@ function FinishedFilm({ state, lang, filmSrc, downloads, onSaveSeries }: { state
       {models.length > 0 && (
         <p className="mt-3 text-xs text-muted">
           {t(lang, "models")}: {models.join(" · ")}
-          {s.criticModel ? ` · critic: ${modelLabel(s.criticModel)}` : s.textCritic ? " · critic: text mode (measured render)" : ""}
+          {s.criticModel ? ` · critic: ${s.criticModel.split(" · ").map((part) => part.replace(/^(\S+)/, (m) => modelLabel(m))).join(" · ")}` : s.textCritic ? " · critic: text mode (measured render)" : ""}
         </p>
       )}
       {s.continuity?.length > 0 && <p className="mt-2 text-xs text-muted">🧵 {s.continuity.slice(0, 4).join(" · ")}</p>}

@@ -63,7 +63,8 @@ export function demoFrame(index: number, motion: boolean, heightPct = 55): strin
   const w = Math.round((h * 2) / 3);
   const svg = [
     "```svg",
-    `<use href="#home" x="0" y="0" width="1920" height="1080"/>`,
+    // vary the composition shot to shot (mirror the set on even shots) so neighbours are never near-duplicates
+    index % 2 === 0 ? `<g transform="translate(1920 0) scale(-1 1)"><use href="#home" x="0" y="0" width="1920" height="1080"/></g>` : `<use href="#home" x="0" y="0" width="1920" height="1080"/>`,
     `<circle cx="${300 + index * 90}" cy="200" r="40" fill="#f4b23c" opacity="0.8"/>`,
     `<use href="#hero" x="${x}" y="${h > 1080 ? -Math.round(h * 0.05) : Math.min(860 - h, 380)}" width="${w}" height="${h}"/>`,
     "```",
@@ -103,6 +104,8 @@ export function demoHandler(opts: { criticScores?: number[]; shots?: number } = 
         const s = scores.length > 1 ? scores.shift()! : (scores[0] ?? 8);
         return { score: s, verdict: s < 7 ? "revise" : "accept", issues: s < 7 ? ["the hero is small in frame"] : [], fixes: s < 7 ? ["make the hero larger and centred"] : [] };
       }
+      case "LOOK":
+        return { sees: ["the hero in front of the house"], problems: [], matchesShot: true };
       case "EDITOR":
         return { edits: [], notes: "No changes needed." };
       case "CONTINUITY":

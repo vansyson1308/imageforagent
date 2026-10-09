@@ -1,0 +1,13 @@
+<use href="#forest" x="0" y="0" width="1920" height="1080"/>
+<radialGradient id="tofuGlow">
+  <stop offset="0%" stop-color="#D4A843" stop-opacity="0.25"/>
+  <stop offset="70%" stop-color="#D4A843" stop-opacity="0"/>
+</radialGradient>
+<use href="#fox" x="300" y="0" width="900" height="1350"/>
+<use href="#fried-tofu" x="1300" y="200" width="150" height="150"/>
+<circle cx="1375" cy="275" r="120" fill="url(#tofuGlow)"/>
+<line x1="1350" y1="180" x2="1350" y2="150" stroke="#2B2B2B" stroke-width="2"/>
+<line x1="1360" y1="190" x2="1360" y2="150" stroke="#2B2B2B" stroke-width="2"/>
+<line x1="1370" y1="200" x2="1370" y2="150" stroke="#2B2B2B" stroke-width="2"/>
+<circle cx="200" cy="950" r="30" fill="#6B8E5C"/>
+<circle cx="500" cy="1000" r="20" fill="#6B8E5C"/>

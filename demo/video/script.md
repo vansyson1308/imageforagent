@@ -1,5 +1,7 @@
 # Demo video: script (≤ 3:00, target 2:52)
 
+> **v2 (SPEC WP8, draft):** [`narration.v2.json`](narration.v2.json) follows the v2 timeline (hook film → Hidamari → live run → second film + series → architecture → eval → end, 2:52). Piper `en_US-john-medium` timing is checked with `npx tsx demo/video/prepare.ts --dry-run --narration narration.v2.json`. Upload text: [YOUTUBE.md](YOUTUBE.md). The cut needs v2 footage (BLOCKERS B10). The v1 script below is kept for reference.
+
 The narration must explain how **Nebius Token Factory** and **NVIDIA Nemotron** are used (Devpost rule).
 Source of truth for timing and words: [`narration.json`](narration.json). `build.sh` generates the voice-over, the English `.srt` and the cut from it.
 

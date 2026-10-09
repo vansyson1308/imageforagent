@@ -1,0 +1,12 @@
+<use href="#tea-house" x="0" y="0" width="1920" height="1080"/>
+<defs>
+  <radialGradient id="glowGrad">
+    <stop offset="0%" stop-color="#fff8e1"/>
+    <stop offset="100%" stop-color="#fff8e1" stop-opacity="0"/>
+  </radialGradient>
+</defs>
+<circle cx="300" cy="850" r="120" fill="url(#glowGrad)" fill-opacity="0.3"/>
+<use href="#grandma-hoa" x="400" y="144" width="504" height="756"/>
+<use href="#tea-cups" x="600" y="720" width="80" height="80"/>
+<use href="#tea-cups" x="1300" y="520" width="80" height="80"/>
+<rect x="1500" y="200" width="20" height="800" fill="#6b5b4f" fill-opacity="0.4"/>

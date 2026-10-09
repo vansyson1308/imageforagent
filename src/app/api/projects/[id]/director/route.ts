@@ -9,6 +9,7 @@ import { directorDeps } from "@/lib/services/director/deps";
 import { createRun, isRunLive } from "@/lib/services/director/loop";
 import { reapOrphanRuns, runEventStream, SSE_HEADERS, startDetachedRun } from "@/lib/services/director/runHub";
 import { STYLE_PRESETS } from "@/lib/services/director/prompts";
+import { loadSeries } from "@/lib/services/director/series";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -28,6 +29,8 @@ const directorRequestSchema = z.object({
   maxUsd: z.number().positive().max(10).optional(),
   /** Eval baseline: "super-only" runs every role on the Super tier with no critic. */
   profile: z.enum(["crew", "super-only"]).default("crew"),
+  /** WP5: make this film an episode of a saved series. */
+  seriesId: z.string().regex(/^[a-z0-9]{10,40}$/).nullish(),
 });
 
 /**
@@ -65,7 +68,10 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
       gate = await dailyGate(cfg);
     }
     const runDeps = { ...deps, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }) };
-    const request = { projectId: id, ...body, critic: body.profile === "super-only" ? false : body.critic };
+    const series = body.seriesId ? await loadSeries(body.seriesId, sid, cfg.enabled) : null;
+    const { seriesId: _ignored, ...rest } = body;
+    void _ignored;
+    const request = { projectId: id, ...rest, series, critic: body.profile === "super-only" ? false : body.critic };
     const { runId, budget } = await createRun(request, runDeps);
     startDetachedRun(runId, request, runDeps, budget);
     return new Response(runEventStream(runId, { replay: true }), { headers: { ...SSE_HEADERS, "X-Director-Run": runId } });

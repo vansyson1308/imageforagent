@@ -181,4 +181,16 @@ describe("crew models", () => {
     expect(withOmni.models.vision).toBe("nvidia/Nemotron-3-Nano-Omni-30B-A3B");
     expect(withOmni.models.fast).toBe("nvidia/Nemotron-3-Nano-30B");
   });
+
+  it("no NVIDIA VLM: an open VLM looks (labelled), never the eval judge; an NVIDIA VLM always wins (D33)", () => {
+    const crew = ["nvidia/Nemotron-3-Ultra-550b-a55b", "nvidia/nemotron-3-super-120b-a12b", "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"];
+    const open = resolveAgainstCatalog(DEFAULT_MODELS, [...crew, "google/gemma-3-27b-it", "openbmb/MiniCPM-V-4_5"]);
+    expect(open.models.vision).toBe("openbmb/MiniCPM-V-4_5");
+    expect(open.visionAvailable).toBe(true);
+    expect(open.notes.join(" ")).toMatch(/vision critic: openbmb\/MiniCPM-V-4_5; Nemotron crew: Ultra\/Super\/Nano/);
+    const judgeOnly = resolveAgainstCatalog(DEFAULT_MODELS, [...crew, "google/gemma-3-27b-it"]);
+    expect(judgeOnly.models.vision).toBe("");
+    const nv = resolveAgainstCatalog(DEFAULT_MODELS, [...crew, "openbmb/MiniCPM-V-4_5", "nvidia/Nemotron-Nano-12B-v2-VL"]);
+    expect(nv.models.vision).toBe("nvidia/Nemotron-Nano-12B-v2-VL");
+  });
 });

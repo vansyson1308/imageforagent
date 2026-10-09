@@ -91,6 +91,7 @@ export function ReplayPlayer({ trace, film, title, assets }: { trace: Trace; fil
           <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
         </div>
       </div>
+      <h2 className="sr-only">The run</h2>
       <RunView state={state} lang={lang} mode="replay" clockMs={clock} filmSrc={film} downloads={false} />
     </main>
   );

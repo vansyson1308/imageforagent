@@ -7,7 +7,11 @@ import { MAX_SVG_BYTES } from "@/lib/config/limits";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
 import { artistSystem, artistUser } from "@/lib/services/director/prompts";
 import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/director/camera";
-import { extractJsonBlock, extractSvgFragment, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { actingLayer, speakerId } from "@/lib/services/director/acting";
+import type { KitSpec } from "@/lib/services/director/cast";
+import { lipCurvesOf } from "@/lib/services/clipService";
+import { extractJsonBlock, extractSvgFragment, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { closeUpProblem, emptyFrameProblem, measureFrame, nearDuplicateProblem, readableSetProblem, similarity, thumb, type Box } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
 
@@ -18,6 +22,14 @@ export interface Drawing {
   readonly png: Buffer;
   /** Measured framing/lighting facts (the text critic's ground truth); `problems` is empty when every gate passed. */
   readonly checks?: { readonly problems: readonly string[]; readonly facts: readonly string[] };
+  /** 32×18 grey thumbnail of the painting (near-duplicate gate between neighbouring shots). */
+  readonly thumb?: Buffer;
+}
+
+/** An already accepted neighbouring shot (near-duplicate gate). */
+export interface Neighbour {
+  readonly index: number;
+  readonly thumb: Buffer;
 }
 
 export interface DrawOutcome {
@@ -70,6 +82,8 @@ export async function validateDrawing(
     sets?: readonly string[];
     /** Quality checks on (off for the last repair attempt, so a shot is never lost to framing alone). */
     strict?: boolean;
+    /** Accepted neighbouring shots (index ± 1) for the near-duplicate gate. */
+    neighbours?: readonly Neighbour[];
   },
 ): Promise<Drawing> {
   const svg = extractSvgFragment(text);
@@ -111,8 +125,18 @@ export async function validateDrawing(
   }
   if (await isNearlyBlank(png)) throw new Error("The frame renders as one flat colour. Draw the background, the characters and the details.");
   const checks = await qualityGates(svg, png, opts);
+  const small = await thumb(png);
+  if (!opts.shot.intentionalRepeat) {
+    for (const n of opts.neighbours ?? []) {
+      if (Math.abs(n.index - opts.index) !== 1) continue;
+      const sim = similarity(small, n.thumb);
+      const p = nearDuplicateProblem(sim, n.index, opts.shot.shotType);
+      if (p) checks.problems.push(p);
+      else checks.facts.push(`composition differs from shot ${n.index} (similarity ${Math.round(sim * 100)}%)`);
+    }
+  }
   if (opts.strict !== false && checks.problems.length) throw new Error(`Framing/lighting check failed: ${checks.problems.join("; ")}.`);
-  return { svg, ambient, png, checks };
+  return { svg, ambient, png, checks, thumb: small };
 }
 
 /**
@@ -135,17 +159,36 @@ async function qualityGates(
   const kitIds = new Set(inShot.filter(isKit));
   const filmHasKit = (opts.characters ?? []).some(isKit);
   let biggest = 0;
+  let subject: Box | null = null;
   for (const id of inShot) {
     const stripped = withoutUses(svg, id);
     if (stripped === svg) {
-      problems.push(`#${id} is in this shot but not placed: add <use href="#${id}" …/>`);
+      problems.push(`#${id} is in this shot but not placed: add <use href="#${id}" …/> (or its posed variant)`);
       continue;
     }
-    const { pct, touchesTop } = await visibleExtent(png, await renderArtwork(opts.castDefs, stripped, opts.aspectRatio, "1K"));
+    const without = await renderArtwork(opts.castDefs, stripped, opts.aspectRatio, "1K");
+    const { pct, touchesTop } = await visibleExtent(png, without);
     if (pct === 0) problems.push(`#${id} is placed but not visible (off-canvas or covered)`);
     else if (touchesTop) problems.push(`#${id}'s head is cut off by the top edge of the frame: move it down so the whole head is inside (y ≥ 0); in a close-up let the canvas crop the legs at the bottom, never the head`);
     else facts.push(`#${id} visible, ${pct}% of the frame height, head fully in frame`);
-    if (kitIds.has(id) || kitIds.size === 0) biggest = Math.max(biggest, pct);
+    if ((kitIds.has(id) || kitIds.size === 0) && pct > biggest) {
+      biggest = pct;
+      subject = await visibleBox(png, without);
+    }
+  }
+  // Measured on the BACKGROUND (every character removed): flat blocks the set is made of
+  let background = svg;
+  for (const id of opts.characters ?? []) background = withoutUses(background, id);
+  const bg = await measureFrame(background === svg ? png : await renderArtwork(opts.castDefs, background, opts.aspectRatio, "1K"));
+  const unreadable = readableSetProblem(bg, opts.canvas);
+  if (unreadable) problems.push(unreadable);
+  else facts.push("set readable (no stray flat blocks)");
+  const empty = emptyFrameProblem(await measureFrame(png));
+  if (empty) problems.push(empty);
+  if (subject && minSubjectPct(opts.shot.shotType) >= 75) {
+    const cu = closeUpProblem(bg, subject, opts.canvas);
+    if (cu) problems.push(cu);
+    else facts.push("close-up framing OK (head in the upper band, real background behind it)");
   }
   // A shot whose only characters are drawn "others" (a swarm, a spirit) in a film with kit figures: half the size rule
   const need = Math.round(minSubjectPct(opts.shot.shotType) * (kitIds.size === 0 && filmHasKit ? 0.5 : 1));
@@ -184,6 +227,10 @@ export async function drawShot(
     feedback?: string | null;
     previous?: string | null;
     round: number;
+    /** Accepted neighbouring shots, read fresh on every attempt (shots are drawn in parallel). */
+    neighbours?: () => Neighbour[];
+    /** which posed symbol each kit character uses in this shot */
+    actingBrief?: string;
   },
 ): Promise<DrawOutcome> {
   const system = artistSystem(ctx.canvas, ctx.options.style);
@@ -198,7 +245,7 @@ export async function drawShot(
       role: "artist",
       action,
       system,
-      user: artistUser({ plan: opts.plan, shot: opts.shot, index: opts.index, symbols: opts.symbols, feedback, previous, canvas: ctx.canvas }),
+      user: artistUser({ plan: opts.plan, shot: opts.shot, index: opts.index, symbols: opts.symbols, feedback, previous, canvas: ctx.canvas, actingBrief: opts.actingBrief }),
       shotIndex: opts.index,
       attempt,
       maxTokens: 12000,
@@ -216,6 +263,7 @@ export async function drawShot(
         characters: opts.plan.cast.filter((c) => c.kind === "character").map((c) => c.id),
         sets: opts.plan.cast.filter((c) => c.kind === "set").map((c) => c.id),
         strict: attempt < maxAttempts - 1,
+        neighbours: opts.neighbours?.(),
       });
       return { drawing, attempts: attempt + 1, lastError: null };
     } catch (e) {
@@ -241,10 +289,15 @@ export function shotDuration(shot: ShotPlan, frame: Pick<Frame, "voiceDuration" 
  * engine → camera move only; defs over the size limit or clip failure →
  * plain still.
  */
+export interface CommitActing {
+  readonly kits: ReadonlyMap<string, KitSpec>;
+  readonly plan: Plan;
+}
+
 export async function commitShot(
   ctx: DirectorContext,
-  opts: { frame: Frame; shot: ShotPlan; index: number; drawing: Drawing; castDefs: string; patterns: Map<number, string>; background: string },
-): Promise<{ frame: Frame; kind: "clip" | "still"; note: string | null }> {
+  opts: { frame: Frame; shot: ShotPlan; index: number; drawing: Drawing; castDefs: string; patterns: Map<number, string>; background: string; acting?: CommitActing },
+): Promise<{ frame: Frame; kind: "clip" | "still"; note: string | null; acting?: string[] }> {
   // Shots are drawn in parallel, but a commit rewrites the project's shared defs
   // and renders against them: one commit per project at a time.
   const prev = commitLocks.get(ctx.projectId) ?? Promise.resolve();
@@ -262,25 +315,62 @@ const commitLocks = new Map<string, Promise<unknown>>();
 
 async function commitShotLocked(
   ctx: DirectorContext,
-  opts: { frame: Frame; shot: ShotPlan; index: number; drawing: Drawing; castDefs: string; patterns: Map<number, string>; background: string },
-): Promise<{ frame: Frame; kind: "clip" | "still"; note: string | null }> {
+  opts: { frame: Frame; shot: ShotPlan; index: number; drawing: Drawing; castDefs: string; patterns: Map<number, string>; background: string; acting?: CommitActing },
+): Promise<{ frame: Frame; kind: "clip" | "still"; note: string | null; acting?: string[] }> {
   throwIfCancelled(ctx);
   ctx.budget.check();
   const { index, drawing } = opts;
-  opts.patterns.set(index, artPattern(index, drawing.svg, ctx.canvas));
-  const defs = [opts.castDefs, ...[...opts.patterns.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p)].join("\n");
   const duration = shotDuration(opts.shot, opts.frame);
+  // Acting (WP4.1): blinks, lip-sync for the speaker, walkers as step layers
+  let painting = drawing.svg;
+  let acting: AmbientLayer | null = null;
+  let actingNotes: string[] = [];
+  let walkPatterns: string[] = [];
+  if (opts.acting && opts.acting.kits.size) {
+    const speaker = speakerId(opts.acting.plan, opts.shot);
+    const lip = speaker ? await lipCurvesOf(opts.frame, ctx.options.fps, duration) : undefined;
+    const a = actingLayer({
+      index,
+      svg: drawing.svg,
+      kits: opts.acting.kits,
+      duration,
+      fps: ctx.options.fps,
+      canvas: ctx.canvas,
+      lip: speaker && lip ? { who: speaker, open: lip.open, fps: lip.fps, offset: lip.offset } : null,
+      maxShapes: 30 - (drawing.ambient?.shapes.length ?? 0),
+      maxTracks: 40 - (drawing.ambient?.tracks.length ?? 0),
+    });
+    if (a.layer.shapes.length) {
+      painting = a.svg;
+      acting = a.layer;
+      actingNotes = a.summary;
+      walkPatterns = a.walks.flatMap((w) => w.patterns);
+    }
+  }
+  const merge = (x: AmbientLayer | null, y: AmbientLayer | null): AmbientLayer | null => (!x ? y : !y ? x : { shapes: [...x.shapes, ...y.shapes], tracks: [...x.tracks, ...y.tracks] });
+  opts.patterns.set(index, [artPattern(index, painting, ctx.canvas), ...walkPatterns].join("\n"));
+  const defs = [opts.castDefs, ...[...opts.patterns.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p)].join("\n");
   if (Buffer.byteLength(defs, "utf8") <= MAX_SVG_BYTES * 0.92) {
     await prisma.project.update({ where: { id: ctx.projectId }, data: { artworkDefs: defs } });
-    const attempts: Array<AmbientLayer | null> = drawing.ambient ? [drawing.ambient, null] : [null];
+    // try everything; then without the Artist's ambient layer; then camera only (the painting still has walkers removed only while acting rides along)
+    const attempts: Array<{ layer: AmbientLayer | null; acting: boolean }> = [
+      ...(drawing.ambient || acting ? [{ layer: merge(drawing.ambient, acting), acting: !!acting }] : []),
+      ...(drawing.ambient && acting ? [{ layer: acting, acting: true }] : []),
+      { layer: null, acting: false },
+    ];
     let note: string | null = null;
-    for (const ambient of attempts) {
-      const motion = buildShotMotion({ index, shotType: opts.shot.shotType, duration, fps: ctx.options.fps, canvas: ctx.canvas, background: opts.background, ambient });
+    for (const attempt of attempts) {
+      if (!attempt.acting && walkPatterns.length) {
+        // without the acting layer the walker must be back in the painting
+        opts.patterns.set(index, artPattern(index, drawing.svg, ctx.canvas));
+        await prisma.project.update({ where: { id: ctx.projectId }, data: { artworkDefs: [opts.castDefs, ...[...opts.patterns.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p)].join("\n") } });
+      }
+      const motion = buildShotMotion({ index, shotType: opts.shot.shotType, duration, fps: ctx.options.fps, canvas: ctx.canvas, background: opts.background, ambient: attempt.layer });
       try {
         const r = await writeFrameMotion(opts.frame.id, motion);
-        return { frame: r.frame, kind: "clip", note };
+        return { frame: r.frame, kind: "clip", note, acting: attempt.acting ? actingNotes : [] };
       } catch (e) {
-        note = `clip ${ambient ? "with ambient layer" : ""} failed: ${errText(e)}`;
+        note = `clip ${attempt.layer ? (attempt.acting ? "with acting" : "with ambient layer") : ""} failed: ${errText(e)}`;
       }
     }
     opts.patterns.delete(index);

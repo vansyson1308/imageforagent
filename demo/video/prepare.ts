@@ -26,7 +26,10 @@ interface Segment {
   end: number;
   text: string;
 }
-const narration = JSON.parse(readFileSync(`${DIR}/narration.json`, "utf8")) as { voice: string; speed: number; segments: Segment[] };
+const narrationFile = process.argv.includes("--narration") ? process.argv[process.argv.indexOf("--narration") + 1] : "narration.json";
+const narration = JSON.parse(readFileSync(`${DIR}/${narrationFile}`, "utf8")) as { voice: string; speed: number; srt?: string; segments: Segment[] };
+const pending = narration.segments.filter((s) => s.text.includes("{{PENDING"));
+if (pending.length && !dry) throw new Error(`${narrationFile}: ${pending.map((s) => s.id).join(", ")} still have {{PENDING}} text. Fill them from EVAL_RESULTS.md / PILOT.md first.`);
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const W = 1920;
@@ -94,7 +97,7 @@ async function main() {
   const report: string[] = [];
   for (const s of narration.segments) {
     const override = `${DIR}/voice/${s.id}.wav`;
-    const wav = existsSync(override) ? readFileSync(override) : await synthesizeSpeech(s.text, narration.voice, narration.speed);
+    const wav = existsSync(override) ? readFileSync(override) : await synthesizeSpeech(s.text.includes("{{PENDING") ? "Pending." : s.text, narration.voice, narration.speed);
     const audio = decodeWav(wav);
     const d = audioDuration(audio);
     const room = s.end - s.start;
@@ -104,7 +107,8 @@ async function main() {
   const total = narration.segments[narration.segments.length - 1].end;
   const mix = mixTimeline(clips, { duration: total, targetLufs: -16, peakDb: -1 });
   writeFileSync(`${WORK}/narration.wav`, encodeWav(mix.audio, 16));
-  writeFileSync(`${DIR}/director_demo.en.srt`, buildTimedSrt(narration.segments.map((s) => ({ description: s.text, startSec: s.start + 0.3, durationSec: s.end - s.start - 0.5 }))));
+  mkdirSync(path.dirname(`${DIR}/${narration.srt ?? "director_demo.en.srt"}`), { recursive: true });
+  writeFileSync(`${DIR}/${narration.srt ?? "director_demo.en.srt"}`, buildTimedSrt(narration.segments.map((s) => ({ description: s.text, startSec: s.start + 0.3, durationSec: s.end - s.start - 0.5 }))));
 
   const scenes: Array<{ scene: string; duration: number }> = [];
   for (const s of narration.segments) {

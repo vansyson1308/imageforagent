@@ -122,7 +122,7 @@ export function Landing() {
               {hero ? `: ${hero.title}` : ""}
             </span>
             {hero ? (
-              <Link href={`/showcase/replay/${hero.slug}`} className="shrink-0 text-accent underline">
+              <Link href={`/showcase/replay/${hero.slug}`} className="shrink-0 text-violet-300 underline hover:text-ink">
                 {t(lang, "replayRun")} →
               </Link>
             ) : null}

@@ -109,7 +109,7 @@ export default async function ShowcasePage() {
                       </li>
                     ))}
                   </ul>
-                  <a href={f.trace} className="mt-2 inline-block text-accent underline">
+                  <a href={f.trace} className="mt-2 inline-block text-violet-300 underline">
                     trace.json
                   </a>{" "}
                   · {Math.round(f.summary.durationSec)} s film · {Math.round(f.summary.wallMs / 1000)} s to make
