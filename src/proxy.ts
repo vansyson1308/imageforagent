@@ -13,7 +13,7 @@ export function proxy(request: NextRequest) {
   if (verifySession(request.cookies.get(DEMO_COOKIE)?.value, cfg.passcode)) return NextResponse.next();
   if (pathname.startsWith("/api/")) {
     return NextResponse.json(
-      { error: { code: "UNAUTHORIZED", message: "Demo passcode required.", hint: "Open /unlock and enter the passcode from the submission's testing instructions." } },
+      { error: { code: "UNAUTHORIZED", message: "Demo passcode required.", hint: "Open /unlock and enter the passcode from the Judge Access PDF attached to the Devpost submission. Finished films need no passcode: /showcase." } },
       { status: 401 },
     );
   }

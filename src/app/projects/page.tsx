@@ -29,7 +29,7 @@ export default function ProjectsPage() {
     setBusy("create");
     try {
       const project = await api.createProject("Storyboard mới");
-      router.push(`/?p=${project.id}`);
+      router.push(`/studio?p=${project.id}`);
     } finally {
       setBusy(null);
     }
@@ -39,7 +39,7 @@ export default function ProjectsPage() {
     setBusy(id);
     try {
       const copy = await api.duplicateProject(id);
-      router.push(`/?p=${copy.id}`);
+      router.push(`/studio?p=${copy.id}`);
     } finally {
       setBusy(null);
     }
@@ -94,7 +94,7 @@ export default function ProjectsPage() {
               key={p.id}
               className="fade-up group flex items-center gap-4 rounded-card border border-line bg-card p-5 transition hover:border-accent/50"
             >
-              <Link href={`/?p=${p.id}`} className="min-w-0 flex-1">
+              <Link href={`/studio?p=${p.id}`} className="min-w-0 flex-1">
                 <h2 className="truncate font-semibold transition group-hover:text-accent">
                   {p.name}
                 </h2>

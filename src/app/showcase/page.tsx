@@ -39,6 +39,7 @@ interface ShowcaseFilm {
     textCritic: boolean;
   };
   createdAt: string;
+  version?: string;
 }
 
 async function loadFilms(): Promise<ShowcaseFilm[]> {
@@ -59,14 +60,14 @@ export default async function ShowcasePage() {
       <header className="mb-8 flex flex-wrap items-center gap-3">
         <div className="btn-gradient h-10 w-10 rounded-xl" />
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">Showcase · Phim mẫu</h1>
-          <p className="text-sm text-muted">
-            Films made end to end by the NVIDIA Nemotron crew on Nebius Token Factory: Ultra plans, Super draws every frame as code, the engine measures each render and Nano critiques it, Nano edits. Every
-            film links its full trace. / Phim do đội Nemotron làm từ đầu đến cuối, kèm toàn bộ nhật ký.
+          <h1 className="text-3xl font-bold">Showcase</h1>
+          <p className="mt-1 text-base text-muted">
+            Films made end to end by the NVIDIA Nemotron crew on Nebius Token Factory: Ultra plans, Super draws every frame as code, the engine renders and measures each frame, the critic scores it, and
+            Nano edits. No passcode needed. Every film links its full trace, and you can replay the real run at 10× without spending a token.
           </p>
         </div>
         <Link href="/" className="rounded-xl border border-line px-4 py-2 text-sm text-muted hover:border-accent hover:text-ink">
-          ← Studio
+          Make your own film →
         </Link>
       </header>
       {films.length === 0 ? (
@@ -83,9 +84,13 @@ export default async function ShowcasePage() {
                   <span className="rounded-full border border-line px-2 py-0.5">{LANG[f.language] ?? f.language}</span>
                   <span>{new Date(f.createdAt).toISOString().slice(0, 10)}</span>
                   <span>· {f.provider}</span>
+                  {f.version ? <span className="rounded-full border border-line px-2 py-0.5">{f.version}</span> : null}
                 </div>
                 <h2 className="mt-2 text-lg font-bold">{f.title}</h2>
                 <p className="mt-1 text-sm text-muted">{f.logline}</p>
+                <Link href={`/showcase/replay/${f.slug}`} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-accent/60 bg-accent/10 px-3 py-1.5 text-sm font-semibold text-ink hover:bg-accent/20">
+                  ▶ Replay the real run (10×)
+                </Link>
                 <dl className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
                   <Stat k="shots" v={`${f.summary.rendered}/${f.summary.shots}`} />
                   <Stat k="first-pass" v={`${f.summary.firstPassOk}/${f.summary.shots}`} />

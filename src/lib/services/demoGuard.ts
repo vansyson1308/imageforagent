@@ -13,7 +13,7 @@ import { demoConfig, demoSessionOf, type DemoConfig } from "@/lib/services/demoM
 export function requireDemoSession(req: Request, cfg: DemoConfig = demoConfig()): string | null {
   if (!cfg.enabled) return null;
   const sid = demoSessionOf(req, cfg);
-  if (!sid) throw new AppError("UNAUTHORIZED", "Demo passcode required.", "Open /unlock and enter the passcode from the submission's testing instructions.");
+  if (!sid) throw new AppError("UNAUTHORIZED", "Demo passcode required.", "Open /unlock and enter the passcode from the Judge Access PDF attached to the Devpost submission. Finished films need no passcode: /showcase.");
   return sid;
 }
 
