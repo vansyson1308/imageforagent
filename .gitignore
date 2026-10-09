@@ -53,3 +53,4 @@ prisma/dev.db*
 /demo/video/_work/
 /demo/video/director_demo*.mp4
 /demo/video/voice/
+/demo/video/out/*.mp4
