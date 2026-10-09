@@ -2,7 +2,7 @@
  * Spend ledger for LIVE scripts (smoke, showcase, bench): every paid call's
  * cost is appended to docs/hackathon/evidence/spend-ledger.jsonl (no secrets).
  * `assertSpendUnder` stops a script before it starts when cumulative spend
- * (ledger) has passed the owner's alert line (SPEND_ALERT_USD, default $15).
+ * (ledger) has passed the owner's alert line (SPEND_ALERT_USD, default $13.23 = v1 total $3.23 + the $10 v2 cap).
  */
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 
@@ -31,7 +31,7 @@ export function cumulativeSpend(): number {
     .reduce((s, line) => s + (Number((JSON.parse(line) as LedgerEntry).costUsd) || 0), 0);
 }
 
-export function assertSpendUnder(limit = Number(process.env.SPEND_ALERT_USD ?? 15)): number {
+export function assertSpendUnder(limit = Number(process.env.SPEND_ALERT_USD ?? 13.23)): number {
   const spent = cumulativeSpend();
   if (spent >= limit) {
     console.error(`STOP: cumulative estimated spend $${spent.toFixed(2)} ≥ alert line $${limit}. Report to the owner before spending more.`);

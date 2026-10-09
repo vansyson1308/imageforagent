@@ -1,5 +1,42 @@
 # STATUS: Storyboard Studio Director
 
+## v2 (SPEC_V2.md): execution plan
+
+_Started 2026-10-09 (ICT). Branch `claude/gifted-cannon-1nhl2s` → small PRs to `main`. v1 status is kept below, unchanged._
+
+**Order** (P0 first, then P1 in the spec's slip order):
+
+| # | WP | What | Target |
+|---|---|---|---|
+| 1 | WP2 | Identity: `package.json`, app metadata + OG image, README restructure (prior work clearly separated), honest Tavily wording, `OWNER_GITHUB_ABOUT.md` | M1 |
+| 2 | WP1 | Runs survive the browser (detached run + `GET …/runs/:runId/events` replay-then-tail SSE + client reconnect, wall-time watchdog, D26) · unlock copy + showcase link + contact · 3 one-click sample stories (EN/VI/JA) · showcase "Replay the real run" (10×) · `GET /api/health` + daily GitHub Actions health cron · capacity review | M1 |
+| 3 | WP3 | Researcher: Nano yes/no detection with a reason, cited visual notes that flow into the Bible, Research card + per-shot citation chips. **Without a key by M1: every user-facing claim says "optional, not enabled in the demo"** | M1 |
+| 4 | WP9 (tooling only) | `JUDGE_ACCESS.md` + `scripts/judge-access-pdf.ts` (passcode from env at export, git-ignored output) | M1 (the judge path depends on it) |
+| 5 | WP4 | Gates (readable set, close-up framing, empty frame, near-duplicate) → acting (poses, expressions, blinks, lip-sync) → Piper voices → vision critic (+ floor) → shot variety → score bed | M2 |
+| 6 | WP5 | `Series` model, save/pick, host identity hash tests; Hidamari pilot (needs O4) | M2 |
+| 7 | WP6 | Landing (hero film, 2 buttons, samples), run view, finished view, JA strings, a11y | M2 |
+| 8 | WP7 | Bench v2 (super-only v2, crew v2, crew v2 + Tavily if live), two judges ≠ critic | M2 |
+| 9 | WP8/WP9 | Video v2 + YOUTUBE.md + thumbnail; DEVPOST_SUBMISSION_V2.md (9 long feedback answers); HANDOFF_V2.md | M3 |
+| 10 | WP10 | Nebius Serverless bench, only with O5 | P2 |
+
+**Risks**
+- **Live access from this session.** This cloud session has no `NEBIUS_API_KEY`/`TAVILY_API_KEY`/passcode, and environment secrets added now only reach a *new* session. The hosted service has the Nebius key. Plan: run live work (hosted verification, bench, showcase) **against the hosted demo**; WP1's detached runs make the sandbox's stream cuts (v1 D9/D23) harmless. The judge/probe calls need a server-side path or a key here (see B5).
+- **Tavily key** (B2/O1): if it doesn't arrive by M1, the fallback ships (claims removed, code kept).
+- **Vision critic**: no Nemotron VLM on Token Factory (D15). SPEC v2 §WP4.4 allows a labelled non-NVIDIA open VLM as critic; the Nemotron crew keeps every role it holds today. The eval judges must then differ from the critic.
+- **Scope vs. 2 weeks**: WP4 is large. If M2 slips: gates → acting → voices → critic → variety, then series, then UI. Video + Devpost (M3) never slip.
+- **Railway deploy source** is still the v1 branch `claude/gracious-ritchie-a739ft`. Deploys switch it to `main` after each merged milestone PR (reversible).
+
+**What I need from the owner** (details and click-by-click steps in BLOCKERS.md): O1 Tavily key (B2) · O2 remaining Token Factory credit + expiry · O3 Railway plan through 2026-12-15 · B5 live access for this session · O4 Hidamari look + 3 stories · O6/O7 later.
+
+**Spend (v2)**: v1 total **$3.23** (ledger). v2 stop line `SPEND_ALERT_USD` = 3.23 + 10 = **13.23**. Token Factory balance reported by the owner: _pending (O2)_.
+
+### v2 log
+- 2026-10-09: SPEC_V2 saved, plan written. Local baseline after `cp .env.example .env` + `prisma migrate deploy` + espeak-ng: **554 passed / 4 skipped** (same as v1).
+
+---
+
+# v1 status (2026-09-26)
+
 _Last updated: 2026-09-26 (live session: keys + full network)_
 
 ## Checklist
