@@ -1,5 +1,5 @@
 import { MockLlmProvider, type MockHandler } from "@/lib/providers/mockLlmProvider";
-import type { ChatMessage } from "@/lib/providers/types";
+import { LlmError, type ChatMessage } from "@/lib/providers/types";
 import type { CrewModels } from "@/lib/providers";
 
 /**
@@ -107,6 +107,8 @@ export function demoHandler(opts: { criticScores?: number[]; shots?: number } = 
         return { edits: [], notes: "No changes needed." };
       case "CONTINUITY":
         return { ok: true, notes: [] };
+      case "RESEARCH_DETECT":
+        return { needed: false, reason: "The scripted crew never researches.", topics: [] };
       case "RESEARCHER":
         return { queries: [] };
       case "RESEARCH_NOTES":
@@ -117,6 +119,22 @@ export function demoHandler(opts: { criticScores?: number[]; shots?: number } = 
   };
 }
 
-export function createDemoProvider(): MockLlmProvider {
-  return new MockLlmProvider(demoHandler(), "mock");
+/**
+ * The scripted crew for `LLM_PROVIDER=mock`. `MOCK_LATENCY_MS` (UI demos,
+ * e2e of reconnects) makes every scripted call take that long, abortably.
+ */
+export function createDemoProvider(env: NodeJS.ProcessEnv = process.env): MockLlmProvider {
+  const delay = Math.min(30_000, Math.max(0, Number(env.MOCK_LATENCY_MS) || 0));
+  const handler = demoHandler();
+  if (!delay) return new MockLlmProvider(handler, "mock");
+  return new MockLlmProvider(async (m, o, i) => {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(resolve, delay);
+      o.signal?.addEventListener("abort", () => {
+        clearTimeout(timer);
+        reject(new LlmError("aborted", "Request cancelled."));
+      }, { once: true });
+    });
+    return handler(m, o, i);
+  }, "mock");
 }

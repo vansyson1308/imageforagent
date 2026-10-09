@@ -7,7 +7,7 @@ import { frameClipUrl, frameImageUrl } from "@/lib/services/dto";
 import { logger } from "@/lib/services/logger";
 import { BudgetExceededError, BudgetTracker, CancelledError, clampBudget, type DirectorBudget } from "@/lib/services/director/budget";
 import { recordStep, throwIfCancelled, type DirectorContext, type DirectorEvent, type DirectorOptions, type RunSummary } from "@/lib/services/director/context";
-import { runResearch } from "@/lib/services/director/research";
+import { decideResearch, measureResearchUse, researchMode, runResearch, type ResearchUse } from "@/lib/services/director/research";
 import { runPlan, writeScript } from "@/lib/services/director/plan";
 import { runCast } from "@/lib/services/director/cast";
 import { commitShot, drawShot, type Drawing } from "@/lib/services/director/artist";
@@ -17,10 +17,10 @@ import type { Critique } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
 
 /**
- * The Director loop — one run per project, streamed as events (the SSE route
- * forwards them). No job queue, no polling: the loop runs inside the request
- * that started it; cancel = abort its signal (POST …/cancel or the client
- * disconnecting).
+ * The Director loop — one run per project, streamed as events. No job queue,
+ * no polling: `runHub.startDetachedRun` runs it in-process, detached from any
+ * request, and SSE routes attach listeners (D26). Cancel = abort its signal
+ * (POST …/cancel only; a closed tab never cancels).
  *
  *   research? → plan (Ultra) → script (parseTsv → replaceScript) → dialogue
  *   (TTS) → cast library (Super) → per shot: draw (Super) → validate/repair
@@ -34,7 +34,8 @@ export interface DirectorRequest {
   readonly language: string;
   readonly style: string;
   readonly critic: boolean;
-  readonly research: boolean;
+  /** true = always research, "auto" = Nano decides (needs a Tavily key either way) */
+  readonly research: boolean | "auto";
   readonly maxShots?: number;
   readonly maxUsd?: number;
   /** "super-only": every role on the Super tier, no critic (eval baseline). */
@@ -97,7 +98,7 @@ export async function createRun(req: DirectorRequest, deps: DirectorDeps): Promi
       style: req.style,
       provider: deps.provider.name,
       models: JSON.stringify(deps.models),
-      config: JSON.stringify({ budget, profile: req.profile ?? "crew", critic: req.critic, research: req.research && !!deps.tavily, fps: deps.fps ?? 12, visionAvailable: deps.visionAvailable, modelNotes: deps.modelNotes }),
+      config: JSON.stringify({ budget, profile: req.profile ?? "crew", critic: req.critic, research: deps.tavily ? researchMode(req.research) : "off", fps: deps.fps ?? 12, visionAvailable: deps.visionAvailable, modelNotes: deps.modelNotes }),
     },
   });
   return { runId: run.id, budget };
@@ -125,7 +126,7 @@ export async function executeRun(
     language: req.language,
     style: req.style,
     critic: req.critic,
-    research: req.research && !!deps.tavily,
+    research: researchMode(req.research) !== "off" && !!deps.tavily,
     fps: deps.fps ?? 12,
     minShots: Math.min(6, budget.maxShots),
     acceptScore: 7,
@@ -153,35 +154,50 @@ export async function executeRun(
     emit,
     seq: 0,
   };
-  emit({ type: "run", runId, projectId: req.projectId, provider: deps.provider.name, models: deps.models, notes: [...deps.modelNotes], budget });
+  emit({ type: "run", runId, projectId: req.projectId, provider: deps.provider.name, models: deps.models, notes: [...deps.modelNotes], budget, startedAt: new Date(tracker.startedAt).toISOString() });
 
   const shotStats = new Map<number, ShotStats>();
   let status = "done";
   let error: string | null = null;
   let continuity: string[] = [];
+  let researchUse: ResearchUse | null = null;
   try {
     await prisma.project.update({ where: { id: req.projectId }, data: { aspectRatio, resolution: "1K", playbackSpeed: 3 } });
     for (const n of deps.modelNotes) await recordStep(ctx, { role: "system", model: "catalog", action: "models", summary: n });
 
     // 1 · Research (optional, Tavily)
     let references: string | null = null;
-    let referenceNotes: unknown[] = [];
+    let referenceNotes: Awaited<ReturnType<typeof runResearch>>["notes"] = [];
     if (options.research && deps.tavily) {
-      emit({ type: "status", message: "Researcher is looking for visual references…" });
-      const r = await runResearch(ctx, req.story, deps.tavily);
-      references = r.text;
-      referenceNotes = r.notes;
+      const mode = researchMode(req.research);
+      const go = mode === "on" || (await decideResearch(ctx, req.story)).needed;
+      if (go) {
+        emit({ type: "status", message: "Researcher is looking for visual references…" });
+        const r = await runResearch(ctx, req.story, deps.tavily);
+        references = r.text;
+        referenceNotes = r.notes;
+      }
     }
 
     // 2 · Plan (Ultra)
     emit({ type: "status", message: "Director is planning the shots…" });
-    const plan = await runPlan(ctx, req.story, references);
+    const plan = await runPlan(ctx, req.story, references, referenceNotes.length);
+    if (referenceNotes.length) {
+      researchUse = measureResearchUse(plan, referenceNotes);
+      await recordStep(ctx, {
+        role: "researcher",
+        model: "engine",
+        action: "bible-use",
+        summary: `The Bible cites ${researchUse.cited} of ${researchUse.notes} research notes (${researchUse.castCiting} cast designs, ${researchUse.shotsCiting} shots)`,
+        output: JSON.stringify(researchUse),
+      });
+    }
     await prisma.directorRun.update({ where: { id: runId }, data: { bible: JSON.stringify({ ...plan, references: referenceNotes }) } });
     emit({
       type: "plan",
       title: plan.title,
       logline: plan.logline,
-      shots: plan.shots.map((s, i) => ({ index: i + 1, shotType: s.shotType, description: s.description, mode: s.mode, dialogue: s.dialogue })),
+      shots: plan.shots.map((s, i) => ({ index: i + 1, shotType: s.shotType, description: s.description, mode: s.mode, dialogue: s.dialogue, cites: s.cites })),
     });
 
     // 3 · Script (same path as a human TSV import)
@@ -245,7 +261,11 @@ export async function executeRun(
     await runEditor(ctx);
     continuity = await runContinuity(ctx, plan);
   } catch (e) {
-    if (e instanceof CancelledError || signal.aborted) {
+    if (signal.aborted && signal.reason instanceof BudgetExceededError) {
+      // the wall-time watchdog (runHub) aborted a call that was stuck
+      status = "budget_exceeded";
+      error = signal.reason.message;
+    } else if (e instanceof CancelledError || signal.aborted) {
       status = "cancelled";
     } else if (e instanceof BudgetExceededError) {
       status = "budget_exceeded";
@@ -257,7 +277,7 @@ export async function executeRun(
     }
   }
 
-  const summary = await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic);
+  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic)), ...(researchUse && { research: researchUse }) };
   await prisma.directorRun.update({
     where: { id: runId },
     data: { status, error, summary: JSON.stringify(summary), finishedAt: new Date(), tokensIn: tracker.tokensIn, tokensOut: tracker.tokensOut, costUsd: tracker.costUsd },
