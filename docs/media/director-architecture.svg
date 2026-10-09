@@ -27,7 +27,7 @@
   <rect x="222" y="100" width="190" height="70" rx="12" class="nv"/>
   <text x="317" y="126" text-anchor="middle" class="t">Researcher</text>
   <text x="317" y="146" text-anchor="middle" class="s">Nano + Tavily (optional)</text>
-  <text x="317" y="162" text-anchor="middle" class="s">cited visual references</text>
+  <text x="317" y="162" text-anchor="middle" class="s">off in the hosted demo</text>
 
   <!-- Director -->
   <rect x="452" y="100" width="210" height="70" rx="12" class="nv"/>
@@ -111,6 +111,6 @@
   <path d="M352 500 H398" class="l"/>
   <path d="M702 500 H748" class="l"/>
 
-  <text x="32" y="585" class="s">Live to the browser over Server-Sent Events: role · model · tokens · USD · thumbnails · critic before → after. No job queue: the run lives inside the request; cancel aborts it.</text>
+  <text x="32" y="585" class="s">Live to the browser over Server-Sent Events: role · model · tokens · USD · thumbnails · critic before → after. No job queue: the run lives on the server, a closed tab never cancels it, a reconnect replays + tails.</text>
   <text x="32" y="606" class="s">Hard server-side budgets: shots, tokens, USD, wall time per run; demo mode adds a passcode, per-session caps and a daily token budget.</text>
 </svg>

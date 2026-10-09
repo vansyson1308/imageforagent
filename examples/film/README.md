@@ -4,6 +4,11 @@
 animated, voiced, scored, edited and mastered through the app's own API. No
 hand-drawn frames, no API keys; the screenplay → spec step is deterministic.*
 
+> It was produced by an **external coding agent** driving the public REST API,
+> **not** by the Nemotron crew (Storyboard Studio Director). The film-pipeline
+> features it uses were built during the hackathon's submission period
+> (2026-09-24).
+
 > Ngày xửa ngày xưa, ở một ngôi làng nhỏ bên dòng sông, mỗi mùa trăng rằm
 > tháng Tám, trẻ con lại rước đèn…
 
