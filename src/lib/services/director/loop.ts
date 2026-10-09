@@ -12,6 +12,9 @@ import { runPlan, writeScript } from "@/lib/services/director/plan";
 import { runCast } from "@/lib/services/director/cast";
 import { actingBrief, neededVariants, variantDefs } from "@/lib/services/director/acting";
 import { symbolIds } from "@/lib/services/director/svgTools";
+import { renderScoreBed } from "@/lib/services/director/scoreBed";
+import { buildTimeline, timelineDuration, timelineInputOf } from "@/lib/services/timeline";
+import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { commitShot, drawShot, type Drawing } from "@/lib/services/director/artist";
 import { critiqueShot, fixesText } from "@/lib/services/director/critic";
 import { lintProject, runContinuity, runDialogue, runEditor } from "@/lib/services/director/editor";
@@ -318,6 +321,9 @@ export async function executeRun(
     emit({ type: "status", message: "Editor is checking timing and continuity…" });
     await runEditor(ctx, plan);
     continuity = await runContinuity(ctx, plan);
+
+    // 8 · Original score bed from the engine's own synth (WP4.6), ducked under dialogue by the film mix
+    await scoreFilm(ctx, plan);
   } catch (e) {
     if (signal.aborted && signal.reason instanceof BudgetExceededError) {
       // the wall-time watchdog (runHub) aborted a call that was stuck
@@ -410,4 +416,29 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     continuity,
     textCritic,
   };
+}
+
+/** Compose and attach the film's score (a failure only costs the music, never the film). */
+async function scoreFilm(ctx: DirectorContext, plan: Parameters<typeof renderScoreBed>[0]): Promise<void> {
+  throwIfCancelled(ctx);
+  const t0 = Date.now();
+  try {
+    const project = await prisma.project.findUniqueOrThrow({ where: { id: ctx.projectId }, include: { frames: { orderBy: { index: "asc" } } } });
+    const timeline = buildTimeline(project.frames.map((f) => timelineInputOf(f)), project.playbackSpeed);
+    const total = timelineDuration(timeline);
+    if (total <= 0) return;
+    const { wav, cues } = renderScoreBed(plan, timeline, total);
+    const musicPath = toPosix(`${ctx.projectId}/audio/music.wav`);
+    await saveBuffer(musicPath, wav);
+    await prisma.project.update({ where: { id: ctx.projectId }, data: { musicPath } });
+    await recordStep(ctx, {
+      role: "system",
+      model: "engine:score",
+      action: "music",
+      latencyMs: Date.now() - t0,
+      summary: `Original score ${Math.round(total)} s: ${cues.map((c) => `${c.mood} ${Math.round(c.start)}–${Math.round(c.end)} s`).join(", ")} (ducked under dialogue in the mix)`,
+    });
+  } catch (e) {
+    await recordStep(ctx, { role: "system", model: "engine:score", action: "music", summary: "Score skipped", error: e instanceof Error ? e.message : String(e) });
+  }
 }

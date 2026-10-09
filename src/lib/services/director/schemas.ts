@@ -2,6 +2,9 @@ import { z } from "zod";
 import { TRANSITIONS } from "@/lib/validation/schemas";
 import { EXPRESSIONS, POSES } from "@/lib/services/director/dollKit";
 
+/** Score moods the engine's synth can play (src/lib/services/audio/score.ts). */
+export const SCORE_MOODS = ["dawn", "day", "playful", "tender", "wind", "sad", "night", "mystery", "wonder", "tension", "triumph", "festival", "lullaby"] as const;
+
 /**
  * Zod schemas for EVERY JSON reply the crew produces. Nothing an LLM writes
  * reaches the engine without passing one of these (plus sanitizeSvg /
@@ -40,6 +43,8 @@ export const shotPlanSchema = z.object({
   cites: z.array(z.number().int().min(0).max(99)).max(8).optional(),
   /** true = this shot deliberately repeats the previous composition (a callback); skips the near-duplicate gate. */
   intentionalRepeat: z.boolean().optional(),
+  /** Music mood under this shot (the engine's own score synth, WP4.6). */
+  mood: z.enum(SCORE_MOODS).optional(),
   /** What each visible character DOES in this shot (kit characters are posed by the engine). */
   acting: z
     .array(z.object({ who: castId, pose: z.enum(POSES), expression: z.enum(EXPRESSIONS) }))
