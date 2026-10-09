@@ -171,6 +171,8 @@ const DICT = {
   seriesNone: { en: "None (new cast)", vi: "Không (dàn nhân vật mới)", ja: "なし (新しいキャスト)" },
   seriesSaved: { en: "Saved as a series. New films can reuse this cast and set.", vi: "Đã lưu series. Phim mới có thể dùng lại nhân vật và bối cảnh này.", ja: "シリーズとして保存しました。新しい映画でこのキャストとセットを使えます。" },
   seriesName: { en: "Series name", vi: "Tên series", ja: "シリーズ名" },
+  seriesCast: { en: "Recurring cast", vi: "Nhân vật cố định", ja: "レギュラー" },
+  seriesSaveFailed: { en: "Could not save the series.", vi: "Không lưu được series.", ja: "シリーズを保存できませんでした。" },
   models: { en: "models", vi: "model", ja: "モデル" },
 
   // ── unlock ──

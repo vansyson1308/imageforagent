@@ -25,6 +25,14 @@ const FILM_LANGS: Array<[string, string]> = [
   ["id", "Bahasa Indonesia"],
 ];
 
+interface SeriesItem {
+  id: string;
+  name: string;
+  language: string;
+  style: string;
+  cast: Array<{ id: string; name: string; kind: string }>;
+}
+
 export function DirectorPanel() {
   const project = useAppStore((s) => s.project);
   const frames = useAppStore((s) => s.frames);
@@ -38,6 +46,11 @@ export function DirectorPanel() {
   const [maxShots, setMaxShots] = useState(8);
   const [critic, setCritic] = useState(true);
   const [research, setResearch] = useState(true);
+  // Series mode (WP5): reuse a saved cast + set; save a finished film as a series
+  const [seriesList, setSeriesList] = useState<SeriesItem[]>([]);
+  const [seriesId, setSeriesId] = useState("");
+  const [seriesNote, setSeriesNote] = useState<{ ok: boolean; text: string } | null>(null);
+  const [savedRun, setSavedRun] = useState<string | null>(null);
 
   const projectId = project?.id;
   const { state, conn, startError, start, cancel, running } = useDirectorRun(projectId);
@@ -53,7 +66,47 @@ export function DirectorPanel() {
     }
   }, [state.finished, state.runId, hydrate]);
 
+  const directorOn = Boolean(director?.enabled);
+  useEffect(() => {
+    if (!directorOn) return;
+    let live = true;
+    fetch("/api/series", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { series: [] }))
+      .then((b: { series?: SeriesItem[] }) => {
+        if (live) setSeriesList(b.series ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [directorOn, savedRun]);
+
   if (!project) return null;
+
+  function pickSeries(id: string) {
+    setSeriesId(id);
+    const s = seriesList.find((x) => x.id === id);
+    if (s) {
+      // the recurring cast was drawn in this language and style: episodes match it
+      setFilmLang(s.language);
+      setStyle(s.style);
+    }
+  }
+
+  async function saveSeries() {
+    if (!state.runId) return;
+    const name = window.prompt(t(lang, "seriesName"), state.title ?? "");
+    if (name === null || !name.trim()) return;
+    setSeriesNote(null);
+    const res = await fetch("/api/series", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ runId: state.runId, name: name.trim() }) }).catch(() => null);
+    if (res?.ok) {
+      setSavedRun(state.runId);
+      setSeriesNote({ ok: true, text: t(lang, "seriesSaved") });
+    } else {
+      const body = await res?.json().catch(() => null);
+      setSeriesNote({ ok: false, text: body?.error?.message ?? t(lang, "seriesSaveFailed") });
+    }
+  }
 
   function pickSample(s: SampleStory) {
     setStory(s.story);
@@ -65,7 +118,7 @@ export function DirectorPanel() {
   async function make() {
     if (running) return;
     if (frames.some((f) => f.status === "done") && !window.confirm(t(lang, "confirmReplace"))) return;
-    await start({ story, language: filmLang, style, maxShots, critic, research: director?.research ? (research ? "auto" : false) : false });
+    await start({ story, language: filmLang, style, maxShots, critic, research: director?.research ? (research ? "auto" : false) : false, seriesId: seriesId || null });
   }
 
   return (
@@ -129,6 +182,20 @@ export function DirectorPanel() {
                       ))}
                     </div>
                   </div>
+                  {seriesList.length > 0 && (
+                    <label className="block">
+                      <span className="font-semibold text-muted">{t(lang, "seriesPick")}</span>
+                      <select value={seriesId} onChange={(e) => pickSeries(e.target.value)} className="mt-1 w-full rounded-lg border border-line bg-bg px-2 py-2">
+                        <option value="">{t(lang, "seriesNone")}</option>
+                        {seriesList.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                      {seriesId && <span className="mt-1 block text-xs text-muted">{t(lang, "seriesCast")}: {seriesList.find((s) => s.id === seriesId)?.cast.map((c) => c.name).join(", ")}</span>}
+                    </label>
+                  )}
                   <label className="flex items-center justify-between gap-2">
                     <span className="text-muted">
                       {t(lang, "shots")}: <b className="text-ink">{maxShots}</b>
@@ -164,7 +231,19 @@ export function DirectorPanel() {
         </>
       )}
 
-      <RunView state={state} lang={lang} mode="live" reconnecting={conn === "reconnecting"} onCancel={cancel} />
+      <RunView
+        state={state}
+        lang={lang}
+        mode="live"
+        reconnecting={conn === "reconnecting"}
+        onCancel={cancel}
+        onSaveSeries={state.summary?.status === "done" && state.runId && savedRun !== state.runId ? saveSeries : undefined}
+      />
+      {seriesNote && (
+        <p role="status" className={`mt-3 rounded-lg border p-2 text-sm ${seriesNote.ok ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-200" : "border-rose-500/40 bg-rose-500/10 text-rose-200"}`}>
+          {seriesNote.text}
+        </p>
+      )}
     </section>
   );
 }
