@@ -16,7 +16,7 @@ import { POST as unlock, GET as unlockStatus } from "@/app/api/demo/unlock/route
 import { GET as meta } from "@/app/api/meta/route";
 import { proxy } from "@/proxy";
 import { assembleSteps, ffmpegAvailable } from "@/lib/services/filmAssembler";
-import { signSession, verifySession, passcodeMatches, DEMO_COOKIE } from "@/lib/services/demoMode";
+import { signSession, verifySession, passcodeMatches, unlockMatches, demoConfig, DEMO_COOKIE } from "@/lib/services/demoMode";
 import { buildTimeline } from "@/lib/services/timeline";
 
 // Route-level tests: handlers are called directly with real Requests (no server,
@@ -269,6 +269,26 @@ describe("demo mode", () => {
     expect(passcodeMatches(PASS, PASS)).toBe(true);
     expect(passcodeMatches("x", PASS)).toBe(false);
     expect(passcodeMatches("", "")).toBe(false);
+  });
+
+  it("an operator passcode (≥ 24 chars) also unlocks, signs with the judges' key, and is ignored when short (D29)", async () => {
+    const OP = "operator-passcode-long-enough-0001";
+    const base = { DEMO_MODE: "true", DEMO_PASSCODE: PASS } as unknown as NodeJS.ProcessEnv;
+    const cfg = demoConfig({ ...base, DEMO_OPERATOR_PASSCODE: OP });
+    expect(unlockMatches(OP, cfg)).toBe(true);
+    expect(unlockMatches(PASS, cfg)).toBe(true);
+    expect(unlockMatches("nope", cfg)).toBe(false);
+    expect(unlockMatches("short", demoConfig({ ...base, DEMO_OPERATOR_PASSCODE: "short" }))).toBe(false);
+    expect(demoConfig({ ...base, DEMO_OPERATOR_PASSCODE: "short" }).operatorPasscode).toBe("");
+    process.env.DEMO_OPERATOR_PASSCODE = OP;
+    try {
+      const res = await unlock(json("http://t", { passcode: OP }));
+      expect(res.status).toBe(200);
+      const cookie = decodeURIComponent(res.headers.get("set-cookie")!.split(";")[0].split("=").slice(1).join("="));
+      expect(verifySession(cookie, PASS)).not.toBeNull();
+    } finally {
+      delete process.env.DEMO_OPERATOR_PASSCODE;
+    }
   });
 
   it("proxy: API → 401 JSON, pages → /unlock, showcase and unlock stay public", async () => {

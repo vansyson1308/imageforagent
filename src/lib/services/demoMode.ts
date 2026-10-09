@@ -16,6 +16,13 @@ export const DEMO_COOKIE = "sbs_demo";
 export interface DemoConfig {
   readonly enabled: boolean;
   readonly passcode: string;
+  /**
+   * Optional second passcode for automation (hosted verification, bench,
+   * showcase runs) so scripts never need the judges' passcode. ≥ 24 chars or
+   * ignored; revoke by deleting the variable. Sessions are still signed with
+   * the judges' passcode key (D29).
+   */
+  readonly operatorPasscode: string;
   readonly maxProjectsPerSession: number;
   readonly dailyTokenBudget: number;
   readonly maxConcurrentRuns: number;
@@ -31,6 +38,7 @@ export function demoConfig(env: NodeJS.ProcessEnv = process.env): DemoConfig {
   return {
     enabled: env.DEMO_MODE === "true",
     passcode: env.DEMO_PASSCODE ?? "",
+    operatorPasscode: (env.DEMO_OPERATOR_PASSCODE ?? "").length >= 24 ? env.DEMO_OPERATOR_PASSCODE! : "",
     maxProjectsPerSession: int(env.DEMO_MAX_PROJECTS_PER_SESSION, 3),
     dailyTokenBudget: int(env.DEMO_DAILY_TOKEN_BUDGET, 3_000_000),
     maxConcurrentRuns: int(env.DEMO_MAX_CONCURRENT_RUNS, 2),
@@ -68,6 +76,13 @@ export function passcodeMatches(given: string, passcode: string): boolean {
   const a = createHmac("sha256", "cmp").update(given).digest();
   const b = createHmac("sha256", "cmp").update(passcode).digest();
   return timingSafeEqual(a, b);
+}
+
+/** The judges' passcode, or the operator passcode when one is configured. */
+export function unlockMatches(given: string, cfg: DemoConfig): boolean {
+  const judge = passcodeMatches(given, cfg.passcode);
+  const operator = cfg.operatorPasscode ? passcodeMatches(given, cfg.operatorPasscode) : false;
+  return judge || operator;
 }
 
 export function readCookie(header: string | null, name: string): string | null {

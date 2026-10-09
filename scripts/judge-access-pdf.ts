@@ -63,7 +63,10 @@ export function markdownToHtml(md: string): string {
       const tag = ol ? "ol" : "ul";
       const re = ol ? /^\d+\. (.*)$/ : /^- (.*)$/;
       const items: string[] = [];
-      while (i < lines.length && re.test(lines[i])) items.push(`<li>${inline(lines[i].match(re)![1])}</li>`), i++;
+      while (i < lines.length && re.test(lines[i])) {
+        items.push(`<li>${inline(lines[i].match(re)![1])}</li>`);
+        i++;
+      }
       out.push(`<${tag}>${items.join("")}</${tag}>`);
       continue;
     }
