@@ -75,10 +75,11 @@ export function directorSystem(opts: { minShots: number; maxShots: number; langu
   ].join("\n");
 }
 
-export function directorUser(story: string, references: string | null): string {
+export function directorUser(story: string, references: string | null, seriesNote: string | null = null): string {
   return [
     "Plan the film for this story.",
     quoteData("story", story, 6000),
+    seriesNote ? quoteData("notes", seriesNote, 4000) : "",
     references
       ? [
           "Numbered visual reference notes from real sources. Use them: put costume and prop facts into cast[].look, colour facts into palette and cast colors, place/architecture facts into the set looks and shot descriptions.",

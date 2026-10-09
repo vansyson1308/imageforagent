@@ -9,8 +9,10 @@ import { BudgetExceededError, BudgetTracker, CancelledError, clampBudget, type D
 import { recordStep, throwIfCancelled, type DirectorContext, type DirectorEvent, type DirectorOptions, type RunSummary } from "@/lib/services/director/context";
 import { decideResearch, measureResearchUse, researchMode, runResearch, type ResearchUse } from "@/lib/services/director/research";
 import { runPlan, writeScript } from "@/lib/services/director/plan";
-import { runCast } from "@/lib/services/director/cast";
+import { runCast, type CastLibrary } from "@/lib/services/director/cast";
+import { mergeLibraries, persistRunCast, type SeriesData } from "@/lib/services/director/series";
 import { actingBrief, neededVariants, variantDefs } from "@/lib/services/director/acting";
+import { variantId } from "@/lib/services/director/dollKit";
 import { symbolIds } from "@/lib/services/director/svgTools";
 import { renderScoreBed } from "@/lib/services/director/scoreBed";
 import { buildTimeline, timelineDuration, timelineInputOf } from "@/lib/services/timeline";
@@ -45,6 +47,8 @@ export interface DirectorRequest {
   readonly maxUsd?: number;
   /** "super-only": every role on the Super tier, no critic (eval baseline). */
   readonly profile?: "crew" | "super-only";
+  /** WP5: make this film an episode of a saved series (recurring cast reused verbatim). */
+  readonly series?: SeriesData | null;
 }
 
 export interface DirectorDeps {
@@ -103,7 +107,8 @@ export async function createRun(req: DirectorRequest, deps: DirectorDeps): Promi
       style: req.style,
       provider: deps.provider.name,
       models: JSON.stringify(deps.models),
-      config: JSON.stringify({ budget, profile: req.profile ?? "crew", critic: req.critic, research: deps.tavily ? researchMode(req.research) : "off", fps: deps.fps ?? 12, visionAvailable: deps.visionAvailable, modelNotes: deps.modelNotes }),
+      seriesId: req.series?.id ?? null,
+      config: JSON.stringify({ budget, profile: req.profile ?? "crew", series: req.series ? { id: req.series.id, name: req.series.name } : null, critic: req.critic, research: deps.tavily ? researchMode(req.research) : "off", fps: deps.fps ?? 12, visionAvailable: deps.visionAvailable, modelNotes: deps.modelNotes }),
     },
   });
   return { runId: run.id, budget };
@@ -192,7 +197,7 @@ export async function executeRun(
 
     // 2 · Plan (Ultra)
     emit({ type: "status", message: "Director is planning the shots…" });
-    const plan = await runPlan(ctx, req.story, references, referenceNotes.length);
+    const plan = await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null);
     if (referenceNotes.length) {
       researchUse = measureResearchUse(plan, referenceNotes);
       await recordStep(ctx, {
@@ -216,11 +221,13 @@ export async function executeRun(
 
     // 4 · Dialogue first, so each shot is timed to hold its line
     emit({ type: "status", message: "Recording dialogue (local TTS)…" });
-    frames = await runDialogue(ctx, plan, frames);
+    const voices = await runDialogue(ctx, plan, frames, req.series?.voices ?? {});
+    frames = voices.frames;
+    await persistRunCast(runId, { voices: voices.map });
 
     // 5 · Cast & set library (Super)
     emit({ type: "status", message: "Artist is designing the cast…" });
-    let library = await runCast(ctx, plan, aspectRatio);
+    let library = await castForEpisode(ctx, plan, aspectRatio, req.series ?? null);
     // Acting variants (WP4.1): the posed/expressive symbols the plan asks for, built from the same kit specs
     if (library.kits.size) {
       const extra = variantDefs(plan, library.kits, library.defs);
@@ -228,10 +235,11 @@ export async function executeRun(
         const defs = `${library.defs}\n${extra}`;
         library = { ...library, defs, symbols: symbolIds(defs) };
         await prisma.project.update({ where: { id: req.projectId }, data: { artworkDefs: defs } });
-        const v = neededVariants(plan, library.kits);
+        const v = neededVariants(plan, library.kits).filter((x) => extra.includes(`id="${variantId(x.who, x.pose, x.expression)}"`));
         await recordStep(ctx, { role: "cast", model: "engine", action: "acting-variants", summary: `Posed ${v.length} variant(s) from the kit: ${v.map((x) => `${x.who} ${x.pose}/${x.expression}`).join(", ")}` });
       }
     }
+    await persistRunCast(runId, { library: library.defs, kits: library.kits });
     const patterns = new Map<number, string>();
     // accepted paintings' thumbnails: the near-duplicate gate compares each shot with its neighbours
     const thumbs = new Map<number, Buffer>();
@@ -319,7 +327,7 @@ export async function executeRun(
 
     // 7 · Editor (Nano): lint fixes + continuity
     emit({ type: "status", message: "Editor is checking timing and continuity…" });
-    await runEditor(ctx, plan);
+    await runEditor(ctx, plan, req.series?.voices ?? {});
     continuity = await runContinuity(ctx, plan);
 
     // 8 · Original score bed from the engine's own synth (WP4.6), ducked under dialogue by the film mix
@@ -441,4 +449,30 @@ async function scoreFilm(ctx: DirectorContext, plan: Parameters<typeof renderSco
   } catch (e) {
     await recordStep(ctx, { role: "system", model: "engine:score", action: "music", summary: "Score skipped", error: e instanceof Error ? e.message : String(e) });
   }
+}
+
+/**
+ * The cast library of a film. In a series episode the recurring members come
+ * verbatim from the series library (pixel-identical) and the Cast draws ONLY
+ * the new guests and sets; otherwise the Cast draws everyone.
+ */
+async function castForEpisode(ctx: DirectorContext, plan: Parameters<typeof runCast>[1], aspectRatio: string, series: SeriesData | null): Promise<CastLibrary> {
+  if (!series) return runCast(ctx, plan, aspectRatio);
+  const recurring = new Set(series.cast.map((c) => c.id));
+  const fresh = plan.cast.filter((c) => !recurring.has(c.id));
+  const kits = new Map(series.kits);
+  let defs = series.library;
+  if (fresh.length) {
+    const guests = await runCast(ctx, { ...plan, cast: fresh, shots: plan.shots.map((s) => ({ ...s, cast: s.cast.filter((id) => !recurring.has(id)) })) }, aspectRatio);
+    defs = mergeLibraries(series.library, guests.defs);
+    for (const [k, v] of guests.kits) kits.set(k, v);
+  }
+  await prisma.project.update({ where: { id: ctx.projectId }, data: { artworkDefs: defs } });
+  await recordStep(ctx, {
+    role: "cast",
+    model: "series",
+    action: "series-cast",
+    summary: `Series "${series.name}": reused ${plan.cast.filter((c) => recurring.has(c.id)).map((c) => c.id).join(", ") || "no"} verbatim (pixel-identical)${fresh.length ? `; drew new: ${fresh.map((c) => c.id).join(", ")}` : ""}`,
+  });
+  return { defs, symbols: symbolIds(defs), placeholder: false, kits };
 }

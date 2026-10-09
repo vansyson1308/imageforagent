@@ -93,8 +93,31 @@ model DirectorRun {
   startedAt    DateTime       @default(now())
   finishedAt   DateTime?
   steps        DirectorStep[]
+  // v2 (WP5): the accepted cast library + kit specs + voice map, so a run can become a Series
+  library      String? // defs: cast <symbol>s + their gradients (no shot paintings)
+  kits         String? // JSON {castId: {kind, spec}} — engine-built (posable) characters
+  voices       String? // JSON {castId: voice id} — the voice each character spoke with
+  seriesId     String?
+  series       Series?        @relation(fields: [seriesId], references: [id], onDelete: SetNull)
 
   @@index([projectId])
+}
+
+// A recurring cast + set for a channel (SPEC v2 WP5): episodes reuse the
+// SAME symbols, so the host is pixel-identical in every episode.
+model Series {
+  id          String        @id @default(cuid())
+  name        String
+  language    String        @default("en")
+  style       String        @default("storybook")
+  bible       String // JSON {palette, cast: CastMember[]}
+  library     String // defs of the series cast (symbols + gradients)
+  kits        String        @default("{}") // JSON {castId: {kind, spec}}
+  voices      String        @default("{}") // JSON {castId: voice id}
+  sourceRunId String?
+  demoSession String? // DEMO_MODE: visible to the session that saved it
+  createdAt   DateTime      @default(now())
+  runs        DirectorRun[]
 }
 
 model DirectorStep {

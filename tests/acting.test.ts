@@ -72,6 +72,10 @@ describe("acting kit", () => {
     const defs = variantDefs(plan, kits, buildDoll("lan", lan) + buildCritter("fox", fox));
     expect(defs).not.toMatch(/id="lan-skin"/); // variants reuse the base gradient
     expect(defs.match(/<symbol /g)).toHaveLength(4);
+    // a series episode copies a library that already holds some variants: they aren't emitted twice
+    const again = variantDefs(plan, kits, buildDoll("lan", lan) + buildCritter("fox", fox) + defs.match(/<symbol [\s\S]*?<\/symbol>/)![0]);
+    expect(again.match(/<symbol /g)).toHaveLength(3);
+    expect(variantDefs(plan, kits, defs)).toBe("");
     expect(speakerId(plan, plan.shots[1])).toBe("lan");
     expect(speakerId(plan, plan.shots[0])).toBeNull();
   });

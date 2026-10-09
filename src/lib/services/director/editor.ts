@@ -19,9 +19,10 @@ export const FIXABLE = new Set(["READING_SPEED", "VOICE_OVERRUN", "JUMP_CUT"]);
  * TTS voice (espeak-ng, offline, via resolveVoice). Runs BEFORE drawing, so
  * each shot can be timed to hold its line. No TTS → subtitle only (recorded).
  */
-export async function runDialogue(ctx: DirectorContext, plan: Plan, frames: readonly Frame[]): Promise<Frame[]> {
+export async function runDialogue(ctx: DirectorContext, plan: Plan, frames: readonly Frame[], fixedVoices: Record<string, string> = {}): Promise<{ frames: Frame[]; map: Record<string, string> }> {
   const tts = ttsAvailable() || piperVoices().length > 0;
   const out: Frame[] = [];
+  const map: Record<string, string> = {};
   for (const f of frames) {
     throwIfCancelled(ctx);
     const shot = plan.shots[f.index - 1];
@@ -30,7 +31,8 @@ export async function runDialogue(ctx: DirectorContext, plan: Plan, frames: read
       out.push(f);
       continue;
     }
-    const v = speakerVoice(ctx, plan, shot.speaker);
+    const v = speakerVoice(ctx, plan, shot.speaker, fixedVoices);
+    map[v.who ?? "narrator"] = v.voice;
     const t0 = Date.now();
     try {
       const r = await writeFrameDialogue(f.id, { text: line, tts: tts ? { voice: v.voice, speed: 150 } : undefined, offset: 0.3 });
@@ -50,14 +52,16 @@ export async function runDialogue(ctx: DirectorContext, plan: Plan, frames: read
       await recordStep(ctx, { role: "dialogue", model: v.voice, action: "voice", shotIndex: f.index, summary: "TTS failed — subtitle only", error: e instanceof Error ? e.message : String(e) });
     }
   }
-  return out;
+  return { frames: out, map };
 }
 
-/** The voice of a shot's speaker: a cast member's own voice, else the narrator. */
-export function speakerVoice(ctx: Pick<DirectorContext, "options">, plan: Plan, speaker: string | null | undefined) {
+/** The voice of a shot's speaker: the series' voice for a recurring character, else its cast voice, else the narrator. */
+export function speakerVoice(ctx: Pick<DirectorContext, "options">, plan: Plan, speaker: string | null | undefined, fixed: Record<string, string> = {}) {
   const s = speaker?.trim().toLowerCase() ?? "";
   const member = s ? plan.cast.find((c) => c.kind === "character" && (c.name.toLowerCase() === s || c.id === s || s.includes(c.name.toLowerCase()))) ?? null : null;
-  return castVoice(ctx.options.language, member);
+  const key = member?.id ?? "narrator";
+  if (fixed[key]) return { voice: fixed[key], label: `series voice ${fixed[key]}`, who: member?.id ?? null };
+  return { ...castVoice(ctx.options.language, member), who: member?.id ?? null };
 }
 
 export async function lintProject(projectId: string): Promise<{ findings: LintFinding[]; durationSec: number }> {
@@ -72,7 +76,7 @@ export async function lintProject(projectId: string): Promise<{ findings: LintFi
  * limited to dialogue text, voice offset and transitions. Picture is never
  * touched here, so an edit can't break a render.
  */
-export async function runEditor(ctx: DirectorContext, plan?: Plan): Promise<LintFinding[]> {
+export async function runEditor(ctx: DirectorContext, plan?: Plan, fixedVoices: Record<string, string> = {}): Promise<LintFinding[]> {
   let { findings } = await lintProject(ctx.projectId);
   await recordStep(ctx, {
     role: "editor",
@@ -126,7 +130,7 @@ export async function runEditor(ctx: DirectorContext, plan?: Plan): Promise<Lint
           await writeFrameDialogue(frame.id, {
             text: edit.dialogue.trim(),
             // keep the speaker's own voice when the Editor shortens a line
-            tts: tts ? { voice: (plan ? speakerVoice(ctx, plan, plan.shots[frame.index - 1]?.speaker) : castVoice(ctx.options.language, null)).voice, speed: 150 } : undefined,
+            tts: tts ? { voice: (plan ? speakerVoice(ctx, plan, plan.shots[frame.index - 1]?.speaker, fixedVoices) : castVoice(ctx.options.language, null)).voice, speed: 150 } : undefined,
             offset: edit.voiceOffset ?? frame.voiceOffset,
           }).catch(() => prisma.frame.update({ where: { id: frame.id }, data: { dialogue: edit.dialogue } }));
         }

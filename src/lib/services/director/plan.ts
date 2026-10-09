@@ -4,10 +4,14 @@ import { replaceScript } from "@/lib/services/frameWrites";
 import { callJson, recordStep, type DirectorContext } from "@/lib/services/director/context";
 import { planSchema, type Plan } from "@/lib/services/director/schemas";
 import { directorSystem, directorUser } from "@/lib/services/director/prompts";
+import { lockSeriesCast, seriesBrief, type SeriesData } from "@/lib/services/director/series";
 import type { Frame } from "@/generated/prisma/client";
 
 /** Director (Ultra): story → validated Plan (shot list + Cast & Set Bible). */
-export async function runPlan(ctx: DirectorContext, story: string, references: string | null, referenceCount = 0): Promise<Plan> {
+export async function runPlan(ctx: DirectorContext, story: string, references: string | null, referenceCount = 0, series: SeriesData | null = null): Promise<Plan> {
+  const seriesNote = series ? seriesBrief(series) : null;
+  // series episodes: lock the recurring cast BEFORE normalising, so a recurring id the plan forgot to list isn't dropped from its shots
+  const lock = (p: Plan) => (series ? lockSeriesCast(p, series) : p);
   const maxShots = ctx.budget.budget.maxShots;
   const minShots = Math.min(ctx.options.minShots, maxShots);
   const plan = await callJson(
@@ -16,14 +20,14 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
       role: "director",
       action: "plan",
       system: directorSystem({ minShots, maxShots, language: ctx.options.language, style: ctx.options.style }),
-      user: directorUser(story, references),
+      user: directorUser(story, references, seriesNote),
       maxTokens: 8000,
       temperature: 0.6,
     },
     planSchema,
     "film_plan",
   );
-  let best = normalizePlan(plan, maxShots, references ? referenceCount : 0);
+  let best = normalizePlan(lock(plan), maxShots, references ? referenceCount : 0);
   // Coverage (WP4.2): a film, not a slideshow. One measured retry; the plan with fewer problems wins.
   const problems = coverageProblems(best);
   if (problems.length) {
@@ -35,7 +39,7 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
           role: "director",
           action: "plan:retry",
           system: directorSystem({ minShots, maxShots, language: ctx.options.language, style: ctx.options.style }),
-          user: `${directorUser(story, references)}\n\nYour previous plan was rejected by the coverage check: ${problems.join("; ")}. Fix exactly these points and keep the story.`,
+          user: `${directorUser(story, references, seriesNote)}\n\nYour previous plan was rejected by the coverage check: ${problems.join("; ")}. Fix exactly these points and keep the story.`,
           maxTokens: 8000,
           temperature: 0.5,
         },
@@ -43,7 +47,7 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
         "film_plan",
         1,
       );
-      const second = normalizePlan(retry, maxShots, references ? referenceCount : 0);
+      const second = normalizePlan(lock(retry), maxShots, references ? referenceCount : 0);
       const left = coverageProblems(second);
       if (left.length < problems.length) best = second;
       await recordStep(ctx, { role: "director", model: ctx.models.strong, action: "plan:coverage", summary: left.length < problems.length ? `Coverage fixed: ${problems.length} → ${left.length} problem(s)` : `Retry not better (${left.length} problem(s)); kept the first plan` });

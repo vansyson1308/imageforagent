@@ -53,9 +53,14 @@ export function neededVariants(plan: Plan, kits: ReadonlyMap<string, KitSpec>): 
   return out;
 }
 
-/** Variant symbols to append to the library (they reuse the base symbol's gradient). */
+/**
+ * Variant symbols to append to the library (they reuse the base symbol's
+ * gradient). Variants the library already holds (a series episode copies
+ * the series library) are not emitted twice.
+ */
 export function variantDefs(plan: Plan, kits: ReadonlyMap<string, KitSpec>, defs: string): string {
   return neededVariants(plan, kits)
+    .filter((v) => !defs.includes(`id="${variantId(v.who, v.pose, v.expression)}"`))
     .map((v) => {
       const kit = kits.get(v.who)!;
       const grad = kit.kind === "doll" ? `${v.who}-skin` : `${v.who}-fur`;
