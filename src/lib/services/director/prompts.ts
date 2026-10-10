@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { SCORE_MOODS, type CastMember, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { CanvasSize } from "@/lib/services/svgRenderer";
 import { CRITTER_VOCABULARY, DOLL_VOCABULARY, EXPRESSIONS, POSES } from "@/lib/services/director/dollKit";
+import { SET_VOCABULARY } from "@/lib/services/director/setKit";
 
 /**
  * Prompts for the crew. Every system prompt starts with a machine-readable
@@ -162,7 +163,9 @@ export function castSystem(canvas: CanvasSize, style: string): string {
     CRITTER_VOCABULARY,
     "- OTHER characters (robots, creatures, spirits, objects that act): draw them as a <symbol>, viewBox 0 0 400 600, full body, feet/base touching y=600, centred, filling the viewBox height, ONE connected shape (head, body and limbs overlap), 15–40 shapes, soft gradients, eyes with highlights.",
     "- prop: viewBox 0 0 400 400, object centred, resting on y=400.",
-    `- set: viewBox 0 0 ${canvas.w} ${canvas.h}, a full background with DEPTH: sky/wall gradient, far layer (silhouettes, lighter/cooler), middle layer, near ground at about y=${Math.round(canvas.h * 0.8)}; 25–60 shapes; lit for the story's time of day (night = deep blue gradient sky, moon, warm window lights). No characters.`,
+    "- SETS: do NOT draw a set when the engine's set kit covers its place: describe it under \"sets\" in the same ```json block; the engine draws a layered, lit, textured background for the time of day. Pick the place, time and weather from the Bible's description of that set, its colours, and up to 6 props that make the place recognisable:",
+    SET_VOCABULARY,
+    `- Only a set whose place the kit does NOT cover (a spaceship, a cave, an underwater palace…): draw it as a <symbol>, viewBox 0 0 ${canvas.w} ${canvas.h}, a full background with DEPTH: sky/wall gradient, far layer (silhouettes, lighter/cooler), middle layer, near ground at about y=${Math.round(canvas.h * 0.8)}; 25–60 shapes; lit for the story's time of day. No characters.`,
     "- Gradients may be declared at top level (outside symbols) with ids prefixed by the cast id (grandma-skin).",
     `- Style: ${styleText(style)}. Use each member's colors.`,
     "STYLE REFERENCE for what you draw (level of detail and layering expected: connected limbs, face features, shading side, contact shadow; sets with sky, far, middle, near and foreground layers). Do NOT copy it or its ids; draw the Bible's cast in its own colours:",
@@ -172,7 +175,7 @@ export function castSystem(canvas: CanvasSize, style: string): string {
     "<!-- <symbol>s for sets, props and OTHER characters, plus their gradients -->",
     "```",
     "```json",
-    '{"dolls": {"<human-id>": {…human kit values…}}, "critters": {"<animal-id>": {…animal kit values…}}}',
+    '{"dolls": {"<human-id>": {…human kit values…}}, "critters": {"<animal-id>": {…animal kit values…}}, "sets": {"<set-id>": {…set kit values…}}}',
     "```",
   ].join("\n");
 }
@@ -189,7 +192,7 @@ export function castRepairUser(plan: Plan, redo: readonly CastMember[], kept: re
     castUser(plan, redo),
     kept.length ? `Already accepted and kept (do NOT redraw): ${kept.join(", ")}.` : "",
     `Your previous version of ${redo.map((c) => c.id).join(", ")} was rejected: ${problems.join("; ")}.`,
-    "Return ONLY the corrections for those ids, in the same format: <symbol>s (plus their gradients) in the ```svg block, humans and animals as kit values in the ```json block (dolls / critters).",
+    "Return ONLY the corrections for those ids, in the same format: <symbol>s (plus their gradients) in the ```svg block; humans, animals and kit sets as kit values in the ```json block (dolls / critters / sets).",
   ]
     .filter(Boolean)
     .join("\n");

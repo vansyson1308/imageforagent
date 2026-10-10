@@ -78,3 +78,4 @@
 {"at":"2026-09-26T04:25:00.000Z","script":"video-recording","label":"smooth demo video live run (record-smooth.ts, local)","model":"crew","tokensIn":30451,"tokensOut":59127,"costUsd":0.0675}
 {"at":"2026-10-10T01:21:47.617Z","script":"hosted-run","label":"en-kite:cmv1pbijh00012an394wb17qe","model":"crew","tokensIn":300012,"tokensOut":0,"costUsd":0.2133129}
 {"at":"2026-10-10T01:53:24.727Z","script":"hosted-run","label":"en-kite:cmv1qg8in00012avrirwspqvj","model":"crew","tokensIn":212119,"tokensOut":0,"costUsd":0.14830104}
+{"at":"2026-10-10T02:15:17.926Z","script":"hosted-run","label":"en-kite:cmv1rb05700012am8pa66t6xz","model":"crew","tokensIn":191791,"tokensOut":0,"costUsd":0.13585122}
