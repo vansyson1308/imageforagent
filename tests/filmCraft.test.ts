@@ -95,3 +95,12 @@ describe("every shot stands in a place", () => {
     expect(normalizePlan(noSets, 8).shots[1].cast).toEqual(["an", "ba", "ingredients"]);
   });
 });
+
+describe("a plan is a film, not one shot", () => {
+  it("fewer shots than the minimum is a coverage problem, so the Director re-plans (bench v2: Super planned 1 of 5)", () => {
+    const one = planSchema.parse({ ...teaHouse, shots: teaHouse.shots.slice(0, 1) });
+    expect(coverageProblems(one, 5)).toEqual(["the plan has only 1 shot(s): plan at least 5 shots that tell the whole story, beginning to end"]);
+    expect(coverageProblems(one)).toEqual([]);
+    expect(coverageProblems(teaHouse, Math.min(6, teaHouse.shots.length))).toEqual([]);
+  });
+});
