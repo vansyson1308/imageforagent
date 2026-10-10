@@ -131,6 +131,15 @@ async function main() {
     }
     const film = await client.download(`/api/projects/${pid}/film.mp4`);
     writeFileSync(`${dir}/film.mp4`, film);
+    // the label states what the published file IS (measured), not what was asked for
+    const probe = spawnSync("ffprobe", ["-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height,r_frame_rate", "-of", "csv=p=0", `${dir}/film.mp4`], { encoding: "utf8" }).stdout.trim();
+    const [fw, fh, rate] = probe.split(",");
+    if (rm && probe) {
+      const [n, d] = (rate ?? "0/1").split("/").map(Number);
+      const fps = Math.round(n / (d || 1));
+      remastered = `${fw}×${fh} @ ${fps} fps film (shots re-rendered at ${rm[1]} @ ${rm[2]} fps from the same SVG, no model call)`;
+      if (fps !== Number(rm[2])) console.log(`  ⚠ the film is ${fps} fps, the remaster asked for ${rm[2]}`);
+    }
     spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", "2", "-i", `${dir}/film.mp4`, "-frames:v", "1", "-q:v", "3", `${dir}/poster.jpg`]);
     writeFileSync(`${dir}/trace.json`, JSON.stringify(trace, null, 2));
     const entry = {

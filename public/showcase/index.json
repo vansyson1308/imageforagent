@@ -155,6 +155,122 @@
         "7": "/showcase/kitsune/shots/F07.jpg"
       },
       "version": "v1"
+    },
+    {
+      "slug": "v2-kite",
+      "title": "The Mended Kite",
+      "language": "en",
+      "logline": "A torn kite brings a granddaughter and her sail‑mending grandfather together on a windy Brighton day.",
+      "story": "On a windy autumn morning in Brighton, eight-year-old Maya's red kite tears on the pier railings. She runs home crying. Her grandfather, who mended sails when he was young, sits with her at the kitchen table and stitches the kite with sailcloth thread. In the afternoon they walk back to the beach together. The kite climbs higher than ever, and Maya hands the string to her grandfather, who laughs like a boy.",
+      "film": "/showcase/v2-kite/film.mp4",
+      "poster": "/showcase/v2-kite/poster.jpg",
+      "trace": "/showcase/v2-kite/trace.json",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/nemotron-3-super-120b-a12b",
+        "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        "vision": "openbmb/MiniCPM-V-4_5"
+      },
+      "provider": "nemotron",
+      "summary": {
+        "status": "done",
+        "shots": 7,
+        "rendered": 7,
+        "firstPassOk": 7,
+        "repairs": 4,
+        "criticBefore": 5.57,
+        "criticAfter": 6.57,
+        "revisions": 4,
+        "gateFailures": 0,
+        "belowFloor": [
+          1,
+          2,
+          4
+        ],
+        "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+        "lintErrors": 0,
+        "lintWarnings": 0,
+        "durationSec": 23.5,
+        "wallMs": 202314,
+        "tokens": 132643,
+        "costUsd": 0.09532752,
+        "continuity": [
+          "Maya's kite is described as red in the Bible but appears torn and possibly not red in Shots 1‑2; verify color consistency.",
+          "Shot 1 shows the kite snagged and tearing; Shot 2 shows Maya running with a tear‑streaked face but does not explicitly show the kite again—ensure the kite remains the same prop.",
+          "Grandfather's silver sail‑needle is mentioned in the Bible; it appears in Shot 3 but not referenced again—confirm it is still present in later shots.",
+          "The kite‑string is a thin white cotton string on a wooden spool; Shot 6 shows Maya handing the string to Grandfather—ensure the spool is still visible or mentioned.",
+          "The seashell pendant is Maya's signature detail; it is not mentioned in any shot—consider adding a visual cue or note.",
+          "The silver sail‑needle is described as tucked in Grandfather's pocket; Shot 3 shows him threading a needle but does not show the pocket—verify continuity of the needle's location."
+        ],
+        "textCritic": false
+      },
+      "createdAt": "2026-10-10T03:01:45.470Z",
+      "source": "studio-production-049c.up.railway.app",
+      "version": "v2",
+      "remastered": "2048×1152 @ 12 fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call; the film was assembled at 12 fps, see D43)",
+      "stills": {
+        "1": "/showcase/v2-kite/shots/F01.jpg",
+        "2": "/showcase/v2-kite/shots/F02.jpg",
+        "3": "/showcase/v2-kite/shots/F03.jpg",
+        "4": "/showcase/v2-kite/shots/F04.jpg",
+        "5": "/showcase/v2-kite/shots/F05.jpg",
+        "6": "/showcase/v2-kite/shots/F06.jpg",
+        "7": "/showcase/v2-kite/shots/F07.jpg"
+      }
+    },
+    {
+      "slug": "v2-furin",
+      "title": "夏休みの風鈴",
+      "language": "ja",
+      "logline": "古い風鈴が再び鳴る夜、願いが結ぶ家族の物語。",
+      "story": "夏休み、ゆいは京都のおばあちゃんの家に遊びに来ました。縁側には古い江戸風鈴がひとつ下がっていますが、もう音が鳴りません。夜、二人は浴衣を着て祇園祭の宵山へ出かけ、屋台で新しい風鈴の短冊を選びました。家に帰ってゆいが短冊に願いごとを書いて結ぶと、夜風が吹いて、風鈴がひさしぶりにちりんと鳴りました。おばあちゃんはそっと涙をふきました。",
+      "film": "/showcase/v2-furin/film.mp4",
+      "poster": "/showcase/v2-furin/poster.jpg",
+      "trace": "/showcase/v2-furin/trace.json",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/nemotron-3-super-120b-a12b",
+        "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        "vision": "openbmb/MiniCPM-V-4_5"
+      },
+      "provider": "nemotron",
+      "summary": {
+        "status": "done",
+        "shots": 7,
+        "rendered": 7,
+        "firstPassOk": 3,
+        "repairs": 16,
+        "criticBefore": 6.43,
+        "criticAfter": 7,
+        "revisions": 3,
+        "gateFailures": 0,
+        "belowFloor": [
+          6,
+          7
+        ],
+        "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+        "lintErrors": 0,
+        "lintWarnings": 0,
+        "durationSec": 23.083333,
+        "wallMs": 340894,
+        "tokens": 206796,
+        "costUsd": 0.14828406,
+        "continuity": [],
+        "textCritic": false
+      },
+      "createdAt": "2026-10-10T03:16:08.579Z",
+      "source": "studio-production-049c.up.railway.app",
+      "version": "v2",
+      "remastered": "2048×1152 @ 12 fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call; the film was assembled at 12 fps, see D43)",
+      "stills": {
+        "1": "/showcase/v2-furin/shots/F01.jpg",
+        "2": "/showcase/v2-furin/shots/F02.jpg",
+        "3": "/showcase/v2-furin/shots/F03.jpg",
+        "4": "/showcase/v2-furin/shots/F04.jpg",
+        "5": "/showcase/v2-furin/shots/F05.jpg",
+        "6": "/showcase/v2-furin/shots/F06.jpg",
+        "7": "/showcase/v2-furin/shots/F07.jpg"
+      }
     }
   ],
   "hero": "tea-house"

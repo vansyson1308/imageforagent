@@ -15,7 +15,7 @@ import { POST as createProject, GET as listProjects } from "@/app/api/projects/r
 import { POST as unlock, GET as unlockStatus } from "@/app/api/demo/unlock/route";
 import { GET as meta } from "@/app/api/meta/route";
 import { proxy } from "@/proxy";
-import { assembleSteps, ffmpegAvailable } from "@/lib/services/filmAssembler";
+import { assembleSteps, ffmpegAvailable, filmFps, FILM_OUTPUT_FPS } from "@/lib/services/filmAssembler";
 import { signSession, verifySession, passcodeMatches, unlockMatches, demoConfig, DEMO_COOKIE } from "@/lib/services/demoMode";
 import { buildTimeline } from "@/lib/services/timeline";
 
@@ -206,6 +206,7 @@ describe("POST /api/projects/:id/director (SSE)", () => {
     const loc = res.headers.get("location")!;
     expect(loc).toMatch(/^\/api\/files\/.+\/film\/film-[0-9a-f]{12}\.mp4$/);
     expect(res.headers.get("x-film-cached")).toBe("false");
+    expect(res.headers.get("x-film-fps")).toBe(String(FILM_OUTPUT_FPS));
     const abs = path.join(storage, loc.replace("/api/files/", ""));
     const probe = spawnSync("ffprobe", ["-v", "error", "-show_entries", "format=duration:stream=codec_type", "-of", "json", abs], { encoding: "utf8" });
     const info = JSON.parse(probe.stdout);
@@ -224,6 +225,15 @@ describe("POST /api/projects/:id/director (SSE)", () => {
 });
 
 describe("film assembler steps (pure)", () => {
+  it("the film keeps its clips' frame rate (a 24 fps remaster is not halved back to 12), 12 by default, ≤ 30", () => {
+    // showcase v2: three films remastered to 24 fps were published at 12 fps
+    expect(filmFps([24, 24, null])).toBe(24);
+    expect(filmFps([12, 24])).toBe(24);
+    expect(filmFps([])).toBe(FILM_OUTPUT_FPS);
+    expect(filmFps([null, 8])).toBe(FILM_OUTPUT_FPS);
+    expect(filmFps([60])).toBe(30);
+  });
+
   it("mirrors assemble.sh: segments, xfade graph at timeline offsets, audio mux, argv only", () => {
     const tl = buildTimeline(
       [
