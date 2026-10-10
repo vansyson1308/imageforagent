@@ -29,7 +29,7 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
   );
   let best = normalizePlan(lock(plan), maxShots, references ? referenceCount : 0);
   // Coverage (WP4.2): a film, not a slideshow. One measured retry; the plan with fewer problems wins.
-  const problems = coverageProblems(best);
+  const problems = coverageProblems(best, minShots);
   if (problems.length) {
     await recordStep(ctx, { role: "director", model: ctx.models.strong, action: "plan:coverage", summary: `Coverage check failed (${problems.length})`, error: problems.join("; ") });
     try {
@@ -48,7 +48,7 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
         1,
       );
       const second = normalizePlan(lock(retry), maxShots, references ? referenceCount : 0);
-      const left = coverageProblems(second);
+      const left = coverageProblems(second, minShots);
       if (left.length < problems.length) best = second;
       await recordStep(ctx, { role: "director", model: ctx.models.strong, action: "plan:coverage", summary: left.length < problems.length ? `Coverage fixed: ${problems.length} → ${left.length} problem(s)` : `Retry not better (${left.length} problem(s)); kept the first plan` });
     } catch {
@@ -69,13 +69,15 @@ export function shotSize(shotType: string): "wide" | "medium" | "close" | "inser
 }
 
 /**
- * Measured coverage problems of a plan (empty = OK): varied shot sizes,
+ * Measured coverage problems of a plan (empty = OK): at least `minShots` shots, varied shot sizes,
  * no consecutive duplicates (same size + same cast), and for 6+ shots at
  * least 2 distinct set areas/angles and an establishing wide shot.
  */
-export function coverageProblems(plan: Plan): string[] {
+export function coverageProblems(plan: Plan, minShots = 0): string[] {
   const shots = plan.shots;
   const out: string[] = [];
+  // a story cut to one or two shots is not a film (bench v2: Super planned 1 shot of the 5 asked, and nothing caught it)
+  if (shots.length < minShots) out.push(`the plan has only ${shots.length} shot(s): plan at least ${minShots} shots that tell the whole story, beginning to end`);
   if (shots.length < 4) return out;
   const sizes = shots.map((s) => shotSize(s.shotType));
   const distinct = new Set(sizes.filter((x) => x !== "other"));
