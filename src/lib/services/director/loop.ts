@@ -58,6 +58,10 @@ export interface DirectorRequest {
    * (when recorded) their WAVs. Supersedes `narration`; never rewritten.
    */
   readonly narrationShots?: readonly NarrationShot[];
+  /** "9:16" makes vertical Shorts (the Hidamari pilot); default 16:9 */
+  readonly aspectRatio?: "16:9" | "9:16";
+  /** "adult": every human doll gets adult proportions (a channel that forbids chibi); default storybook */
+  readonly figure?: "storybook" | "adult";
 }
 
 export interface DirectorDeps {
@@ -152,7 +156,7 @@ export async function executeRun(
   signal: AbortSignal,
 ): Promise<RunSummary> {
   const tracker = new BudgetTracker(budget, deps.now, deps.externalGate);
-  const aspectRatio = "16:9";
+  const aspectRatio = req.aspectRatio ?? "16:9";
   const options: DirectorOptions = {
     language: req.language,
     style: req.style,
@@ -161,6 +165,7 @@ export async function executeRun(
     fps: deps.fps ?? 12,
     minShots: Math.min(6, budget.maxShots),
     acceptScore: 7,
+    figure: req.figure ?? "storybook",
   };
   const provider: LlmProvider = deps.onSpend
     ? {

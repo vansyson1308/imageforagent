@@ -187,6 +187,11 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
       for (const [id, spec] of Object.entries(raw?.dolls ?? {})) {
         if (!pending.some((c) => c.id === id && c.kind === "character")) continue;
         const dn = normalizeDollSpec(spec);
+        // a series that forbids chibi: every human doll is drawn with adult proportions
+        if (ctx.options.figure === "adult" && dn.spec && typeof dn.spec === "object" && (dn.spec as { figure?: string }).figure !== "adult") {
+          (dn.spec as { figure?: string }).figure = "adult";
+          dn.notes.push('figure → "adult" (this film uses adult proportions)');
+        }
         const r = dollSchema.safeParse(dn.spec);
         if (r.success && dn.notes.length) kitFixes.push(`${id}: ${dn.notes.join("; ")}`);
         if (r.success) {

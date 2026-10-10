@@ -10,13 +10,13 @@ import { z } from "zod";
  * Deterministic (no randomness: positions come from a hash of the id).
  */
 
-export const INTERIOR_PLACES = ["kitchen", "living-room", "bedroom", "tea-room", "classroom", "shop", "workshop", "hall"] as const;
-export const EXTERIOR_PLACES = ["beach", "street", "park", "forest", "countryside", "mountains", "riverside", "garden", "harbor", "village", "market", "snowfield"] as const;
+export const INTERIOR_PLACES = ["kitchen", "living-room", "bedroom", "tea-room", "kissaten", "classroom", "shop", "workshop", "hall"] as const;
+export const EXTERIOR_PLACES = ["veranda", "beach", "street", "park", "forest", "countryside", "mountains", "riverside", "garden", "harbor", "village", "market", "snowfield"] as const;
 export const SET_TIMES = ["dawn", "day", "golden", "dusk", "night"] as const;
 export const SET_WEATHER = ["clear", "cloudy", "rain", "snow", "fog"] as const;
 export const SET_PROPS = [
   // interior
-  "table", "low-table", "chair", "window", "shelf", "lamp", "stove", "plant", "rug", "door", "clock", "painting", "bed", "counter", "teapot", "lantern", "shoji", "bookcase", "sofa", "desk", "blackboard",
+  "table", "low-table", "chair", "window", "shelf", "lamp", "stove", "plant", "rug", "door", "clock", "painting", "bed", "counter", "teapot", "siphon", "radio", "lantern", "shoji", "bookcase", "sofa", "desk", "blackboard",
   // exterior
   "tree", "cherry-tree", "pine", "house", "boat", "pier", "fence", "streetlamp", "stall", "bench", "rocks", "bridge", "lighthouse", "temple-gate", "flowers",
 ] as const;
@@ -48,8 +48,8 @@ export type SetSpec = z.infer<typeof setSchema>;
 const PLACE_ALIASES: Record<string, (typeof INTERIOR_PLACES)[number] | (typeof EXTERIOR_PLACES)[number]> = {
   "living room": "living-room", room: "living-room", home: "living-room", house: "living-room", "family room": "living-room",
   "tea room": "tea-room", tearoom: "tea-room", "tea house": "tea-room", teahouse: "tea-room", washitsu: "tea-room",
-  school: "classroom", store: "shop", bakery: "shop", cafe: "shop", café: "shop", restaurant: "shop", studio: "workshop", office: "workshop", temple: "hall",
-  courtyard: "garden", yard: "garden", backyard: "garden", porch: "garden", veranda: "garden",
+  school: "classroom", store: "shop", bakery: "shop", cafe: "kissaten", café: "kissaten", "coffee shop": "kissaten", coffeehouse: "kissaten", "coffee house": "kissaten", "喫茶店": "kissaten", "喫茶": "kissaten", "quán cà phê": "kissaten", restaurant: "shop", studio: "workshop", office: "workshop", temple: "hall",
+  courtyard: "garden", yard: "garden", backyard: "garden", porch: "veranda", engawa: "veranda", "縁側": "veranda", "back veranda": "veranda", deck: "veranda", terrace: "veranda",
   sea: "beach", ocean: "beach", shore: "beach", coast: "beach", seaside: "beach", river: "riverside", lake: "riverside", pond: "riverside",
   port: "harbor", harbour: "harbor", dock: "harbor", pier: "harbor", city: "street", town: "street", alley: "street", road: "street",
   field: "countryside", fields: "countryside", farm: "countryside", "rice field": "countryside", "rice paddy": "countryside", meadow: "countryside",
@@ -62,6 +62,7 @@ const PROP_ALIASES: Record<string, (typeof SET_PROPS)[number]> = {
   couch: "sofa", curtain: "window", curtains: "window", picture: "painting", photo: "painting", frame: "painting", candle: "lantern", lanterns: "lantern", "paper lantern": "lantern",
   books: "bookcase", bookshelf: "bookcase", chalkboard: "blackboard", stool: "chair", mat: "rug", carpet: "rug", tatami: "rug", flower: "flowers", vase: "flowers",
   "lamp post": "streetlamp", lamppost: "streetlamp", "street lamp": "streetlamp", gate: "temple-gate", torii: "temple-gate", shrine: "temple-gate", ship: "boat", dock: "pier",
+  "siphon coffee maker": "siphon", "coffee siphon": "siphon", "coffee maker": "siphon", "tube radio": "radio", "old radio": "radio", "vintage radio": "radio", "wall clock": "clock", "potted plant": "plant", "potted plants": "plant",
   rock: "rocks", stones: "rocks", sakura: "cherry-tree", "cherry blossom": "cherry-tree", stand: "stall", booth: "stall", trees: "tree", houses: "house", plants: "plant",
 };
 
@@ -218,6 +219,26 @@ function drawProp(c: Ctx, p: SetProp, x: number, base: number, s: number): void 
       o.push(`<ellipse cx="${n(x)}" cy="${n(base - 40 * s)}" rx="${n(48 * s)}" ry="${n(40 * s)}" fill="${mix(c.spec.accent, "#3a2a20", 0.3)}"/><path d="M${n(x + 44 * s)} ${n(base - 50 * s)} q${n(36 * s)} ${n(-6 * s)} ${n(44 * s)} ${n(-34 * s)}" fill="none" stroke="${mix(c.spec.accent, "#3a2a20", 0.3)}" stroke-width="${n(10 * s)}" stroke-linecap="round"/><rect x="${n(x - 16 * s)}" y="${n(base - 86 * s)}" width="${n(32 * s)}" height="${n(12 * s)}" rx="${n(5 * s)}" fill="${dark}"/>`);
       o.push(`<path d="M${n(x - 6 * s)} ${n(base - 96 * s)} q${n(10 * s)} ${n(-16 * s)} 0 ${n(-32 * s)}" fill="none" stroke="#ffffff" stroke-opacity="0.45" stroke-width="${n(4 * s)}" stroke-linecap="round"/>`);
       break;
+    case "siphon": {
+      // siphon coffee maker: stand, lower glass bulb with coffee, upper funnel, a small burner glow
+      o.push(`<rect x="${n(x - 46 * s)}" y="${n(base - 12 * s)}" width="${n(92 * s)}" height="${n(12 * s)}" rx="${n(4 * s)}" fill="${dark}"/><rect x="${n(x + 34 * s)}" y="${n(base - 230 * s)}" width="${n(9 * s)}" height="${n(224 * s)}" fill="#8b8f96"/><rect x="${n(x - 4 * s)}" y="${n(base - 160 * s)}" width="${n(46 * s)}" height="${n(7 * s)}" fill="#8b8f96"/>`);
+      o.push(`<ellipse cx="${n(x)}" cy="${n(base - 30 * s)}" rx="${n(16 * s)}" ry="${n(10 * s)}" fill="#ffb347" fill-opacity="0.85"/>`);
+      o.push(`<circle cx="${n(x)}" cy="${n(base - 82 * s)}" r="${n(44 * s)}" fill="#dfeef5" fill-opacity="0.55" stroke="#ffffff" stroke-opacity="0.8" stroke-width="${n(3 * s)}"/><path d="M${n(x - 42 * s)} ${n(base - 74 * s)} A${n(44 * s)} ${n(44 * s)} 0 0 0 ${n(x + 42 * s)} ${n(base - 74 * s)} Z" fill="#5b3420"/>`);
+      o.push(`<rect x="${n(x - 7 * s)}" y="${n(base - 160 * s)}" width="${n(14 * s)}" height="${n(46 * s)}" fill="#dfeef5" fill-opacity="0.7"/><path d="M${n(x - 34 * s)} ${n(base - 250 * s)} L${n(x + 34 * s)} ${n(base - 250 * s)} L${n(x + 20 * s)} ${n(base - 160 * s)} L${n(x - 20 * s)} ${n(base - 160 * s)} Z" fill="#dfeef5" fill-opacity="0.6" stroke="#ffffff" stroke-opacity="0.8" stroke-width="${n(3 * s)}"/>`);
+      o.push(`<path d="M${n(x - 18 * s)} ${n(base - 236 * s)} v${n(60 * s)}" stroke="#ffffff" stroke-opacity="0.7" stroke-width="${n(4 * s)}" stroke-linecap="round"/>`);
+      break;
+    }
+    case "radio": {
+      // old tube radio: arched wooden cabinet, cloth speaker grille, amber dial, two knobs
+      const cab = mix(wood, "#8a5a2e", 0.4);
+      o.push(`<path d="M${n(x - 90 * s)} ${n(base)} V${n(base - 120 * s)} Q${n(x - 90 * s)} ${n(base - 190 * s)} ${n(x)} ${n(base - 190 * s)} Q${n(x + 90 * s)} ${n(base - 190 * s)} ${n(x + 90 * s)} ${n(base - 120 * s)} V${n(base)} Z" fill="${cab}"/>`);
+      o.push(`<path d="M${n(x - 66 * s)} ${n(base - 70 * s)} V${n(base - 120 * s)} Q${n(x - 66 * s)} ${n(base - 166 * s)} ${n(x)} ${n(base - 166 * s)} Q${n(x + 66 * s)} ${n(base - 166 * s)} ${n(x + 66 * s)} ${n(base - 120 * s)} V${n(base - 70 * s)} Z" fill="#c9b48a"/>`);
+      for (let k = -4; k <= 4; k++) o.push(`<path d="M${n(x + k * 13 * s)} ${n(base - 150 * s + Math.abs(k) * 3 * s)} V${n(base - 74 * s)}" stroke="${mix(cab, "#1d1a26", 0.2)}" stroke-opacity="0.45" stroke-width="${n(3 * s)}"/>`);
+      o.push(`<rect x="${n(x - 56 * s)}" y="${n(base - 58 * s)}" width="${n(112 * s)}" height="${n(20 * s)}" rx="${n(5 * s)}" fill="#f2c46b"/><path d="M${n(x - 10 * s)} ${n(base - 58 * s)} v${n(20 * s)}" stroke="#7a3a1a" stroke-width="${n(3 * s)}"/>`);
+      for (const dx of [-60, 60]) o.push(`<circle cx="${n(x + dx * s)}" cy="${n(base - 22 * s)}" r="${n(11 * s)}" fill="${mix(cab, "#1d1a26", 0.35)}"/>`);
+      if (c.night) glow(x, base - 48 * s, 90 * s);
+      break;
+    }
     case "plant":
     case "flowers":
       o.push(`<path d="M${n(x - 40 * s)} ${n(base - 80 * s)} L${n(x + 40 * s)} ${n(base - 80 * s)} L${n(x + 30 * s)} ${n(base)} L${n(x - 30 * s)} ${n(base)} Z" fill="${p === "plant" ? mix(c.spec.accent, "#a0522d", 0.5) : "#6b8e4e"}"/>`);
@@ -374,6 +395,7 @@ function drawWindow(c: Ctx, x: number, y: number, w: number, h: number): void {
 // ---------- rooms ----------
 
 function room(c: Ctx): void {
+  if (c.spec.place === "kissaten") return kissaten(c);
   const { W, H, spec, out: o } = c;
   const floorY = H * 0.7;
   const wall = spec.main;
@@ -412,6 +434,90 @@ function room(c: Ctx): void {
     else if (wallProps.includes(p)) drawProp(c, p, W * wallSlots[w++ % wallSlots.length], floorY * (p === "blackboard" ? 0.36 : 0.3), 1);
     else drawProp(c, p, W * floorSlots[f++ % floorSlots.length], floorY + 90, p === "teapot" ? 1.3 : 1.55);
   }
+}
+
+/**
+ * A small Showa-era kissaten (owner decision C, 2026-10-10): warm cream walls
+ * over dark wood, a large window with the light of the hour, a wooden counter
+ * with a siphon coffee maker and teapots, a shelf with cups and an old tube
+ * radio, a round wall clock and potted plants. The furniture is built in; the
+ * spec's props add to it. Scaled to the canvas, so 9:16 Shorts work too.
+ */
+function kissaten(c: Ctx): void {
+  const { W, H, spec, out: o } = c;
+  const floorY = H * 0.72;
+  const k = Math.min(W / 1920, H / 1080);
+  const wall = spec.main;
+  const wood = mix(spec.accent, "#5a3a22", 0.6);
+  const floor = spec.ground ?? mix(wood, "#a07850", 0.45);
+  o.push(`<rect width="${W}" height="${n(floorY + 2)}" fill="${grad(c, "wall", [[0, mix(wall, "#3a2a20", 0.14)], [0.6, wall], [1, mix(wall, "#ffffff", 0.06)]])}"/>`);
+  // plaster texture, a dark wood wainscot and picture rail, ceiling beams
+  for (let i = 0; i < 26; i++) o.push(`<path d="M${n(W * rand(c.id, i + 3000))} ${n(floorY * 0.1 + floorY * 0.4 * rand(c.id, i + 3100))} q${n(30 * k)} ${n(-6 * k)} ${n(60 * k)} 0" fill="none" stroke="${mix(wall, "#3a2a20", 0.2)}" stroke-opacity="0.18" stroke-width="3"/>`);
+  o.push(`<rect y="${n(floorY * 0.64)}" width="${W}" height="${n(floorY * 0.36)}" fill="${grad(c, "wainscot", [[0, mix(wood, "#ffffff", 0.08)], [1, mix(wood, "#1d1a26", 0.2)]])}"/>`);
+  for (let i = 1; i < 20; i++) o.push(`<path d="M${n((W / 20) * i)} ${n(floorY * 0.64 + 8)} V${n(floorY)}" stroke="${mix(wood, "#1d1a26", 0.35)}" stroke-opacity="0.5" stroke-width="3"/>`);
+  o.push(`<rect y="${n(floorY * 0.64 - 10)}" width="${W}" height="16" fill="${mix(wood, "#1d1a26", 0.2)}"/>`);
+  o.push(`<rect width="${W}" height="${n(46 * Math.max(k, 0.7))}" fill="${mix(wood, "#1d1a26", 0.3)}"/>`);
+  for (const bx of [0.18, 0.5, 0.82]) o.push(`<rect x="${n(W * bx - 22 * k)}" y="0" width="${n(44 * k)}" height="${n(floorY * 0.06)}" fill="${mix(wood, "#1d1a26", 0.38)}"/>`);
+  // wooden floor boards
+  o.push(`<rect y="${n(floorY)}" width="${W}" height="${n(H - floorY)}" fill="${grad(c, "floor", [[0, mix(floor, "#1d1a26", 0.18)], [1, mix(floor, "#ffffff", 0.1)]])}"/>`);
+  for (let i = -8; i <= 8; i++) o.push(`<path d="M${n(W / 2 + i * 70 * k)} ${n(floorY)} L${n(W / 2 + i * 240 * k)} ${H}" stroke="${mix(floor, "#1d1a26", 0.35)}" stroke-opacity="0.4" stroke-width="3"/>`);
+  // the large window and its light (warm in the afternoon)
+  const wx = W * (W > H ? 0.62 : 0.6);
+  const ww = W * (W > H ? 0.4 : 0.66);
+  const wh = floorY * (W > H ? 0.5 : 0.36);
+  const wy = floorY * (W > H ? 0.36 : 0.3);
+  drawWindow(c, wx, wy, ww, wh);
+  if (!c.night) {
+    o.push(`<path d="M${n(wx - ww / 2)} ${n(wy + wh / 2)} L${n(wx + ww / 2)} ${n(wy + wh / 2)} L${n(wx + ww * 0.95)} ${n(H)} L${n(wx - ww * 0.15)} ${n(H)} Z" fill="${c.sky.light}" fill-opacity="${spec.time === "golden" ? 0.26 : 0.16}"/>`);
+    o.push(`<rect x="${n(wx - ww / 2)}" y="${n(wy - wh / 2)}" width="${n(ww)}" height="${n(wh)}" fill="${radial(c, "winglow", c.sky.light, 0.35)}"/>`);
+  }
+  drawProp(c, "plant", wx + ww * 0.38, wy + wh / 2 + 4, 0.55 * k);
+  // the round wall clock, a shelf with cups and the tube radio
+  const clockX = W > H ? W * 0.9 : W * 0.16;
+  drawProp(c, "clock", clockX, floorY * (W > H ? 0.24 : 0.14), 1.1 * Math.max(k, 0.75));
+  const shelfX = W > H ? W * 0.2 : W * 0.3;
+  const shelfY = floorY * (W > H ? 0.3 : 0.56);
+  o.push(`<rect x="${n(shelfX - 230 * k)}" y="${n(shelfY)}" width="${n(460 * k)}" height="${n(16 * k)}" fill="${mix(wood, "#1d1a26", 0.15)}"/>`);
+  for (let i = 0; i < 4; i++) {
+    const cx = shelfX + (60 + i * 46) * k;
+    o.push(`<path d="M${n(cx - 16 * k)} ${n(shelfY - 30 * k)} h${n(32 * k)} l${n(-4 * k)} ${n(30 * k)} h${n(-24 * k)} Z" fill="${["#f6f0e2", "#c96f4a", "#f6f0e2", "#7f9a7a"][i]}"/>`);
+  }
+  drawProp(c, "radio", shelfX - 110 * k, shelfY, 1.0 * k);
+  // the counter along the back wall: siphon and teapots on top
+  const cX = W > H ? W * 0.26 : W * 0.3;
+  const cs = 1.45 * k * (W > H ? 1 : 1.6);
+  const cBase = floorY + 30 * k;
+  drawProp(c, "counter", cX, cBase, cs);
+  const top = cBase - 200 * cs;
+  drawProp(c, "siphon", cX - 70 * cs, top, 0.75 * cs);
+  drawProp(c, "teapot", cX + 50 * cs, top, 0.75 * cs);
+  drawProp(c, "teapot", cX + 125 * cs, top, 0.6 * cs);
+  // a tall potted plant in the corner
+  drawProp(c, "plant", W * 0.92, floorY + 70 * k, 1.3 * Math.max(k, 0.7));
+  // the spec's own props on the free floor slots
+  const built = new Set<SetProp>(["counter", "siphon", "teapot", "radio", "clock", "plant", "window"]);
+  const slots = [0.66, 0.5, 0.08];
+  let f = 0;
+  for (const p of spec.props) if (!built.has(p)) drawProp(c, p, W * slots[f++ % slots.length], floorY + 90 * k, (p === "rug" ? 1 : 1.4) * k);
+}
+
+/** A back veranda (縁側) at the hour: the garden beyond, wooden deck boards in front, the eaves above, a shoji edge. */
+function veranda(c: Ctx): void {
+  const { W, H, spec, out: o } = c;
+  landscape({ ...c, spec: { ...spec, place: "garden", props: [] } });
+  const k = Math.min(W / 1920, H / 1080);
+  const deckY = H * 0.8;
+  const wood = mix(spec.accent, "#7a5233", 0.55);
+  const lit = c.night ? mix(wood, "#0b1330", 0.35) : wood;
+  o.push(`<rect y="${n(deckY)}" width="${W}" height="${n(H - deckY)}" fill="${grad(c, "deck", [[0, mix(lit, "#ffffff", 0.08)], [1, mix(lit, "#1d1a26", 0.22)]])}"/>`);
+  for (let i = 1; i < 6; i++) o.push(`<path d="M0 ${n(deckY + ((H - deckY) * i) / 6)} H${W}" stroke="${mix(lit, "#1d1a26", 0.4)}" stroke-opacity="0.55" stroke-width="3"/>`);
+  o.push(`<rect y="${n(deckY - 10)}" width="${W}" height="14" fill="${mix(lit, "#1d1a26", 0.3)}"/>`);
+  // eaves and a post, a shoji panel at the house side (warm at night)
+  o.push(`<path d="M0 0 H${W} V${n(H * 0.07)} Q${n(W / 2)} ${n(H * 0.1)} 0 ${n(H * 0.07)} Z" fill="${mix(lit, "#1d1a26", 0.45)}"/>`);
+  o.push(`<rect x="${n(W * 0.08)}" y="${n(H * 0.06)}" width="${n(34 * Math.max(k, 0.6))}" height="${n(deckY - H * 0.06)}" fill="${mix(lit, "#1d1a26", 0.35)}"/>`);
+  drawProp(c, "shoji", -40 * k, deckY, 0.9 * Math.max(k, 0.6));
+  const slots = [0.55, 0.78, 0.35];
+  spec.props.forEach((p, i) => drawProp(c, p, W * slots[i % slots.length], deckY + 40 * k, 1.1 * k));
 }
 
 // ---------- exteriors ----------
@@ -541,6 +647,7 @@ export function buildSet(id: string, spec: SetSpec, canvas: { w: number; h: numb
   const sky = SKY[spec.time];
   const c: Ctx = { id, W: canvas.w, H: canvas.h, spec, defs: [], out: [], sky, night: spec.time === "night" };
   if (isInterior(spec.place)) room(c);
+  else if (spec.place === "veranda") veranda(c);
   else landscape(c);
   // culturally specific elements drawn by the Cast, under the light of the hour like the rest of the set
   dressingLayer(c, dressing);

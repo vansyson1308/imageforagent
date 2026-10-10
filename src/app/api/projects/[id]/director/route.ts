@@ -40,6 +40,10 @@ const directorRequestSchema = z.object({
    * Fixed narration from the owner's package (D59): one entry per shot, its lines in order, each with the owner's
    * recording (WAV base64) when it exists. Never rewritten; each shot holds its real audio + pause_after.
    */
+  /** "9:16" = vertical Shorts (the Hidamari pilot) */
+  aspectRatio: z.enum(["16:9", "9:16"]).optional(),
+  /** "adult" = adult proportions for every human doll (a channel that forbids chibi) */
+  figure: z.enum(["storybook", "adult"]).optional(),
   narrationShots: z
     .array(
       z.object({

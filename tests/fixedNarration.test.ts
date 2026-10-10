@@ -128,7 +128,8 @@ describe("pilot packages → fixed narration", () => {
     const draft = loadPackage("docs/hackathon/pilot/PILOT01_tegami", true);
     expect(draft.shots).toHaveLength(7);
     expect(draft.missing).toHaveLength(8);
-    expect(draft.story.split("\n")[0]).toMatch(/^【喫茶ひだまりの店内、春の午後。.*】春の午後、喫茶ひだまりの窓から/);
+    expect(draft.story).toMatch(/^SERIES ひだまり人生劇場\.\nHost: Haru-san/);
+    expect(draft.story).toMatch(/\n【喫茶ひだまりの店内、春の午後。.*】春の午後、喫茶ひだまりの窓から/);
     // a package with recordings: every line carries its WAV, a timings.json disagreement is reported
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "pkg-"));
     await fs.cp("docs/hackathon/pilot/PILOT03_tsukimi", dir, { recursive: true });
