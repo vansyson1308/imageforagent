@@ -86,6 +86,21 @@ export function withNarration(plan: Plan, lines: readonly string[]): Plan {
   };
 }
 
+/** The story's key object: the prop in the most shots (at least 2; ties go to the Bible's order). Null if none. */
+export function heroProp(plan: Plan): string | null {
+  let best: string | null = null;
+  let n = 1;
+  for (const c of plan.cast) {
+    if (c.kind !== "prop") continue;
+    const k = plan.shots.filter((s) => s.cast.includes(c.id)).length;
+    if (k > n) {
+      best = c.id;
+      n = k;
+    }
+  }
+  return best;
+}
+
 /** Shot-size class of a storyboard shot type (EN/VI/JA keywords). */
 export function shotSize(shotType: string): "wide" | "medium" | "close" | "insert" | "other" {
   const s = shotType.toLowerCase();
@@ -116,6 +131,11 @@ export function coverageProblems(plan: Plan, minShots = 0): string[] {
     if (same) pairs.push(`${i} and ${i + 1}`);
   }
   if (pairs.length) out.push(`shots ${pairs.slice(0, 4).join(", ")}${pairs.length > 4 ? ` (+${pairs.length - 4} more)` : ""} have the same size (${sizes[Number(pairs[0].split(" ")[0])]}) and the same cast: change the size or the angle`);
+  // the story's key object gets its own insert (owner QC 2026-10-10): the prop seen in the most shots
+  const hero = heroProp(plan);
+  if (hero && shots.length >= 5 && !shots.some((s, i) => (sizes[i] === "insert" || sizes[i] === "close") && s.cast.includes(hero))) {
+    out.push(`no insert of the key prop #${hero}: make one shot an "Insert" (a close detail of #${hero} filling most of the frame, with the hands that use it)`);
+  }
   if (shots.length >= 6) {
     const sets = new Set(shots.map((s) => s.scene.trim().toLowerCase()));
     const setIds = new Set(shots.flatMap((s) => s.cast.filter((id) => plan.cast.some((c) => c.id === id && c.kind === "set"))));

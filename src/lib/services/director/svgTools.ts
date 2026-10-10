@@ -297,6 +297,36 @@ export async function coveredShare(full: Buffer, alone: Buffer, beneath: Buffer)
   return { head: n.head ? hid.head / n.head : 0, rest: n.rest ? hid.rest / n.rest : 0 };
 }
 
+/** Share of the frame's pixels that `withUse` changes over `without` (what an element visibly adds, 0..1). */
+export async function visibleArea(withUse: Buffer, without: Buffer): Promise<number> {
+  const a = await rgba(withUse);
+  const b = await rgba(without);
+  let n = 0;
+  let total = 0;
+  for (let y = 0; y < a.h; y += 2) {
+    for (let x = 0; x < a.w; x += 2) {
+      const i = (y * a.w + x) * 4;
+      total++;
+      if (Math.abs(a.data[i] - b.data[i]) + Math.abs(a.data[i + 1] - b.data[i + 1]) + Math.abs(a.data[i + 2] - b.data[i + 2]) > 30) n++;
+    }
+  }
+  return total ? n / total : 0;
+}
+
+/**
+ * Minimum visible area of a planned prop, as a share of the frame, by shot
+ * type (owner QC 2026-10-10: hero props story-sized). An insert of the prop
+ * must be big; in a wide shot it still has to be findable.
+ */
+export function minPropArea(shotType: string): number {
+  const s = shotType.toLowerCase();
+  if (/insert|detail|chi tiết|extreme close|macro|インサート/.test(s)) return 0.04;
+  if (/close|cận|アップ|クローズ/.test(s)) return 0.012;
+  if (/medium|trung|waist|two[- ]shot|over[- ]the|ミディアム|バスト/.test(s)) return 0.004;
+  if (/wide|establish|toàn|long|rộng|aerial|bird|ロング|全景/.test(s)) return 0.0015;
+  return 0.003;
+}
+
 /**
  * Visible height (% of frame) of what `withUse` adds over `without`: the
  * vertical extent of pixels that differ. Measures the character as the viewer

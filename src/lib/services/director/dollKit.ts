@@ -203,6 +203,8 @@ export interface FaceAnchors {
   readonly eyesClosed: boolean;
   /** step length (viewBox units) between walk_a and walk_b, 0 for other poses */
   readonly step: number;
+  /** where the hands meet in the `hold` pose (viewBox units): a held prop goes here */
+  readonly hands: { readonly x: number; readonly y: number };
 }
 
 /**
@@ -489,7 +491,8 @@ export function dollFace(spec: DollSpec, pose: DrawPose = "stand", expr: Express
   const p = poseGeometry(f, pose);
   const g = faceGeometry(spec, f.headR, f.cx + p.headDx + p.faceDx, p.hy + p.faceDy, expr);
   const L = f.footY - 8 - (f.hipY - 10);
-  return { eyes: g.eyes, mouth: g.mouth, skin: spec.skin, eyesClosed: g.eyesClosed || p.downcast, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180) };
+  // the hold pose brings both hands to (cx ± 22, sy + 70); hand circles are drawn 4 lower
+  return { eyes: g.eyes, mouth: g.mouth, skin: spec.skin, eyesClosed: g.eyesClosed || p.downcast, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180), hands: { x: f.cx, y: p.sy + 74 } };
 }
 
 // ---------- Critters: upright storybook animals from the same kind of spec ----------
@@ -702,5 +705,5 @@ export function critterFace(spec: CritterSpec, pose: DrawPose = "stand", expr: E
   const g = { ...g0, eyesClosed: g0.eyesClosed || downcast };
   const bry = Math.min(592 - 40 - by, R * 1.25);
   const L = Math.max(10, 592 - 10 - (by + bry * 0.4));
-  return { eyes: g.eyes, mouth: g.mouth, skin: spec.fur, eyesClosed: g.eyesClosed, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180) };
+  return { eyes: g.eyes, mouth: g.mouth, skin: spec.fur, eyesClosed: g.eyesClosed, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180), hands: { x: 200, y: by - bry * 0.1 + 4 } };
 }

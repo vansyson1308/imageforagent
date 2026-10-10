@@ -7,10 +7,10 @@ import { MAX_SVG_BYTES } from "@/lib/config/limits";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
 import { artistSystem, artistUser } from "@/lib/services/director/prompts";
 import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/director/camera";
-import { actingLayer, speakerId } from "@/lib/services/director/acting";
+import { actingLayer, attachHeldProps, speakerId } from "@/lib/services/director/acting";
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
-import { applyPlacement, badPaints, coveredShare, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { applyPlacement, badPaints, coveredShare, minPropArea, visibleArea, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, emptyFrameProblem, GATE, measureFrame, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
@@ -80,6 +80,10 @@ export async function validateDrawing(
     /** Cast ids of kind "character" (framing checks). */
     characters?: readonly string[];
     sets?: readonly string[];
+    /** Cast ids of kind "prop" (the prop gate, held props). */
+    props?: readonly string[];
+    /** Kit specs of the kit-built characters (held props go to their hands). */
+    kits?: ReadonlyMap<string, KitSpec>;
     /** Quality checks on (off for the last repair attempt, so a shot is never lost to framing alone). */
     strict?: boolean;
     /** Accepted neighbouring shots (index ± 1) for the near-duplicate gate. */
@@ -92,6 +96,9 @@ export async function validateDrawing(
   const bad = badPaints(svg);
   if (bad.length && opts.strict !== false) throw new Error(`Unresolvable paint value(s) ${bad.map((b) => `"${b}"`).join(", ")} render BLACK: write url(#gradient-id) exactly (and declare the gradient in <defs>), or use a plain #rrggbb colour.`);
   if (bad.length) svg = fixPaints(svg, "#9aa3ad");
+  // a kit character in the hold pose holds the shot's prop (owner QC 2026-10-10): the engine puts it in the hands
+  const held = opts.kits && opts.props?.length ? attachHeldProps(svg, opts.shot, opts.kits, opts.props) : { svg, notes: [] };
+  svg = held.svg;
   try {
     sanitizeSvg(svg, "frame");
   } catch (e) {
@@ -129,6 +136,7 @@ export async function validateDrawing(
   }
   if (await isNearlyBlank(png)) throw new Error("The frame renders as one flat colour. Draw the background, the characters and the details.");
   let checks = await qualityGates(svg, png, opts);
+  checks.facts.push(...held.notes);
   // D45: when the only problems are the main figure's size/headroom and it is placed plainly, the engine frames it (re-measured, every gate again)
   const placed = checks.subject && checks.problems.length && checks.problems.every((p) => REFRAMABLE.some((r) => r.test(p))) ? plainPlacement(svg, checks.subject.id) : null;
   if (placed && checks.subject) {
@@ -167,7 +175,7 @@ export async function validateDrawing(
 async function qualityGates(
   svg: string,
   png: Buffer,
-  opts: { castDefs: string; aspectRatio: string; shot: ShotPlan; characters?: readonly string[]; sets?: readonly string[]; canvas: { w: number; h: number } },
+  opts: { castDefs: string; aspectRatio: string; shot: ShotPlan; characters?: readonly string[]; sets?: readonly string[]; props?: readonly string[]; canvas: { w: number; h: number } },
 ): Promise<{ problems: string[]; facts: string[]; subject: { id: string; box: Box } | null }> {
   const problems: string[] = [];
   const facts: string[] = [];
@@ -204,6 +212,20 @@ async function qualityGates(
       subject = await visibleBox(png, without);
       subjectId = id;
     }
+  }
+  // The shot's props are in it and story-sized (owner QC 2026-10-10): measured as the pixels each one adds
+  const propsInShot = opts.shot.cast.filter((id) => opts.props?.includes(id));
+  const minArea = minPropArea(opts.shot.shotType);
+  for (const id of propsInShot) {
+    const stripped = withoutUses(svg, id);
+    if (stripped === svg) {
+      problems.push(`#${id} (a key prop of this shot) is not placed: add <use href="#${id}" …/> where the action needs it`);
+      continue;
+    }
+    const area = await visibleArea(png, await renderArtwork(opts.castDefs, stripped, opts.aspectRatio, "1K"));
+    const side = Math.round(Math.sqrt((minArea / 0.6) * opts.canvas.w * opts.canvas.h));
+    if (area < minArea) problems.push(`#${id} (a key prop) shows only ${(area * 100).toFixed(2)}% of the frame; a "${opts.shot.shotType}" needs at least ${(minArea * 100).toFixed(2)}% so the story object reads (use width/height ≈ ${side} or more, in front of the set, not hidden behind a character)`);
+    else facts.push(`#${id} visible, ${(area * 100).toFixed(2)}% of the frame`);
   }
   // Measured on the BACKGROUND (every character removed): flat blocks the set is made of
   let background = svg;
@@ -272,6 +294,8 @@ export async function drawShot(
     neighbours?: () => Neighbour[];
     /** which posed symbol each kit character uses in this shot */
     actingBrief?: string;
+    /** kit specs (held props go to the hands of a character in the hold pose) */
+    kits?: ReadonlyMap<string, KitSpec>;
   },
 ): Promise<DrawOutcome> {
   const system = artistSystem(ctx.canvas, ctx.options.style);
@@ -303,6 +327,8 @@ export async function drawShot(
         fps: ctx.options.fps,
         characters: opts.plan.cast.filter((c) => c.kind === "character").map((c) => c.id),
         sets: opts.plan.cast.filter((c) => c.kind === "set").map((c) => c.id),
+        props: opts.plan.cast.filter((c) => c.kind === "prop").map((c) => c.id),
+        kits: opts.kits,
         strict: attempt < maxAttempts - 1,
         neighbours: opts.neighbours?.(),
       });

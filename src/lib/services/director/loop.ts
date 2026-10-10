@@ -258,7 +258,7 @@ export async function executeRun(
       const st: ShotStats = { firstPassOk: false, repairs: 0, before: null, after: null, revisions: 0 };
       shotStats.set(frame.index, st);
       emit({ type: "status", message: `Artist is drawing shot ${frame.index}/${frames.length}…` });
-      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits) });
+      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits });
       st.repairs += first.attempts - 1;
       st.firstPassOk = first.drawing !== null && first.attempts === 1;
       if (!first.drawing) {
@@ -278,7 +278,7 @@ export async function executeRun(
       for (let round = 1; round <= budget.maxCriticRounds; round++) {
         const c = best.critique;
         if (!c || c.score >= options.acceptScore || c.verdict === "accept") break;
-        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits) });
+        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits });
         st.repairs += Math.max(0, rev.attempts - 1);
         if (!rev.drawing) break;
         const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round });
@@ -310,6 +310,7 @@ export async function executeRun(
           feedback: `START OVER. The best version so far scored ${fb.score}/10 (${fb.issues.slice(0, 3).join("; ") || "weak"}). Draw a NEW composition with a different approach: another camera angle or distance, a different layout of the characters, clearer staging of the action. Do not copy the earlier layout.`,
           neighbours: neighbours(frame.index),
           actingBrief: actingBrief(shot, library.kits),
+          kits: library.kits,
         });
         st.repairs += Math.max(0, fresh.attempts - 1);
         if (fresh.drawing) {

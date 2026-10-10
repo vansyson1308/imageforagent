@@ -145,6 +145,48 @@ export function faceOf(kit: KitSpec, pose: DrawPose, expr: Expression): FaceAnch
   return kit.kind === "doll" ? dollFace(kit.spec, pose, expr) : critterFace(kit.spec, pose, expr);
 }
 
+/** Size of a held prop: a quarter of the figure's height (the 400×600 figure box). */
+export const HELD_PROP_SHARE = 0.26;
+
+/**
+ * "hold" holds something (owner QC 2026-10-10: no bare hands). When a kit
+ * character in this painting has the `hold` pose and the shot lists a prop,
+ * the engine puts that prop in its hands: the prop's own `<use>` (wherever
+ * the Artist placed it) is moved to the hands anchor of the pose, sized to a
+ * quarter of the figure, and drawn right after the holder so the hands grip
+ * its lower edge. One prop per holder, in shot-cast order. Pure: returns the
+ * new painting and what it did.
+ */
+export function attachHeldProps(svg: string, shot: ShotPlan, kits: ReadonlyMap<string, KitSpec>, props: readonly string[]): { svg: string; notes: string[] } {
+  const holders = kitPlacements(svg, kits).filter((p) => p.pose === "hold");
+  const free = shot.cast.filter((id) => props.includes(id));
+  const notes: string[] = [];
+  let out = svg;
+  for (const h of holders) {
+    const prop = free.shift();
+    if (!prop) break;
+    const kit = kits.get(h.who)!;
+    const { s, ox, oy } = placementMap(h);
+    const hand = faceOf(kit, "hold", h.expression).hands;
+    const size = Math.round(600 * s * HELD_PROP_SHARE);
+    const x = Math.round(ox + hand.x * s - size / 2);
+    const y = Math.round(oy + hand.y * s - size * 0.8);
+    const esc = prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#${esc}["'][^>]*?(/>|>\\s*</use>)`, "g"), "");
+    const at = out.indexOf(h.markup);
+    if (at < 0) continue;
+    let end = at + h.markup.length;
+    // a `<use …></use>` pair: insert after the closing tag, never inside the use
+    if (!h.markup.endsWith("/>")) {
+      const close = out.indexOf("</use>", end);
+      if (close >= 0) end = close + "</use>".length;
+    }
+    out = `${out.slice(0, end)}<use href="#${prop}" x="${x}" y="${y}" width="${size}" height="${size}"/>${out.slice(end)}`;
+    notes.push(`#${prop} put in #${h.who}'s hands (hold): ${size}×${size} at (${x}, ${y})`);
+  }
+  return { svg: out, notes };
+}
+
 // ---------- deterministic seeded noise ----------
 
 function seeded(seed: string): () => number {
