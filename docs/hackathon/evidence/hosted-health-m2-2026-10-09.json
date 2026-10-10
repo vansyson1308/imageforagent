@@ -1,0 +1,70 @@
+{
+  "at": "2026-10-09T19:14:37.467Z",
+  "source": "GET https://studio-production-049c.up.railway.app/api/health (public, no key)",
+  "railway": {
+    "deployment": "89402f24-b829-400b-babe-ea5e04b125dc",
+    "status": "SUCCESS",
+    "commit": "4c9951f0c32945d008ad6e57a563a44320d819dd",
+    "created": "2026-10-09T19:10:43Z",
+    "live": "2026-10-09T19:14:27Z",
+    "imagePushBytes": 1102498532,
+    "note": "image size = Railway build log image push total_size (compressed); voices sha256-verified in the build (fetch-voices.sh: OK)"
+  },
+  "pages": {
+    "/unlock": 200,
+    "/showcase": 200,
+    "/showcase/replay/tea-house": 200,
+    "/og.jpg": 200,
+    "/": "307 → /unlock",
+    "/api/series (no session)": "401 UNAUTHORIZED with the Judge Access hint"
+  },
+  "health": {
+    "ok": true,
+    "version": "2.0.0",
+    "commit": "4c9951f0c32945d008ad6e57a563a44320d819dd",
+    "checks": {
+      "database": {
+        "status": "ok",
+        "detail": "SQLite reachable (13 projects)",
+        "ms": 38
+      },
+      "storage": {
+        "status": "ok",
+        "detail": "writable",
+        "ms": 4
+      },
+      "ffmpeg": {
+        "status": "ok",
+        "detail": "ffmpeg version 6.1.1-3ubuntu5 Copyright (c) 2000-2023 the FFmpeg developers"
+      },
+      "tts": {
+        "status": "ok",
+        "detail": "piper (en, vi, ja), espeak-ng"
+      },
+      "tokenFactory": {
+        "status": "ok",
+        "detail": "GET /v1/models OK (25 models, crew listed)",
+        "ms": 273
+      },
+      "tavily": {
+        "status": "off",
+        "detail": "no TAVILY_API_KEY: research is not enabled on this server"
+      },
+      "demoBudget": {
+        "status": "ok",
+        "detail": "0% of today's token budget used"
+      },
+      "passcode": {
+        "status": "ok",
+        "detail": "set"
+      }
+    },
+    "demo": {
+      "enabled": true,
+      "dailyTokenBudget": 3000000,
+      "tokensToday": 0,
+      "maxConcurrentRuns": 3,
+      "retentionHours": 72
+    }
+  }
+}

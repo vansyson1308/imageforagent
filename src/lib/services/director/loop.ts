@@ -66,6 +66,8 @@ export interface DirectorDeps {
   readonly now?: () => number;
   /** Shots drawn in parallel (DIRECTOR_CONCURRENCY; default 1 keeps the scripted tests ordered). */
   readonly concurrency?: number;
+  /** Demo stop rule (D37): the floor redraw can be switched off; absent = on. */
+  readonly floorRedraw?: { readonly enabled: boolean; readonly reason: string | null };
 }
 
 // ---------- in-memory registry of live runs (cancel) ----------
@@ -180,6 +182,7 @@ export async function executeRun(
   try {
     await prisma.project.update({ where: { id: req.projectId }, data: { aspectRatio, resolution: "1K", playbackSpeed: 3 } });
     for (const n of deps.modelNotes) await recordStep(ctx, { role: "system", model: "catalog", action: "models", summary: n });
+    if (deps.floorRedraw && !deps.floorRedraw.enabled) await recordStep(ctx, { role: "system", model: "policy", action: "stop-rule", summary: `Floor redraw off for this run (${deps.floorRedraw.reason ?? "demo policy"})` });
 
     // 1 · Research (optional, Tavily)
     let references: string | null = null;
@@ -292,7 +295,8 @@ export async function executeRun(
       }
       // FLOOR (WP4.4): still below the bar → one fresh redraw with a different approach; kept only if it scores higher
       const fb = best.critique;
-      if (fb && fb.score < FLOOR_SCORE) {
+      if (fb && fb.score < FLOOR_SCORE && deps.floorRedraw?.enabled === false) st.belowFloor = true;
+      else if (fb && fb.score < FLOOR_SCORE) {
         const fresh = await drawShot(ctx, {
           plan,
           shot,

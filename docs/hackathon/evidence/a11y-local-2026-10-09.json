@@ -2,7 +2,7 @@
   "date": "2026-10-09",
   "tool": "lighthouse 13.5.0 (accessibility category only)",
   "target": "local production build (next start), LLM_PROVIDER=mock, demo mode off; /unlock rendered directly",
-  "note": "Local measurement. Hosted scores to be re-measured after the M2 deploy.",
+  "note": "Local measurement for all pages; hosted measurement for the public pages after the M2 deploy.",
   "base": "claude/gifted-cannon-1nhl2s @ 4ee4ef2 + the a11y fixes in the same commit as this file",
   "results": [
     {
@@ -51,5 +51,26 @@
         "heading-order"
       ]
     }
-  ]
+  ],
+  "hosted": {
+    "at": "2026-10-09",
+    "target": "https://studio-production-049c.up.railway.app @ 4c9951f (public pages; gated pages need the passcode, B10)",
+    "results": [
+      {
+        "page": "/unlock",
+        "accessibility": 100,
+        "failed": []
+      },
+      {
+        "page": "/showcase",
+        "accessibility": 100,
+        "failed": []
+      },
+      {
+        "page": "/showcase/replay/tea-house",
+        "accessibility": 100,
+        "failed": []
+      }
+    ]
+  }
 }

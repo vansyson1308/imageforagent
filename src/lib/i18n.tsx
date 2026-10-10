@@ -35,6 +35,11 @@ function subscribe(cb: () => void): () => void {
   };
 }
 
+/** The visitor's language outside React (e.g. store actions); "en" on the server. */
+export function currentLang(): Lang {
+  return typeof window === "undefined" ? "en" : read();
+}
+
 export function useLang(): [Lang, (l: Lang) => void] {
   const lang = useSyncExternalStore(subscribe, read, () => "en" as Lang);
   const set = useCallback((l: Lang) => {
@@ -187,7 +192,26 @@ const DICT = {
   passcode: { en: "Passcode", vi: "Mật khẩu", ja: "パスコード" },
   unlock: { en: "Unlock", vi: "Mở khoá", ja: "ロック解除" },
   notConfigured: { en: "This server has no DEMO_PASSCODE set.", vi: "Server chưa đặt DEMO_PASSCODE.", ja: "このサーバーには DEMO_PASSCODE が設定されていません。" },
+  // ── projects list ──
+  projectsSub: { en: "Each project is one storyboard film", vi: "Mỗi project = 1 video storyboard", ja: "1つのプロジェクト = 1本の絵コンテ映画" },
+  newProjectBtn: { en: "+ New project", vi: "+ Project mới", ja: "+ 新しいプロジェクト" },
+  newProjectName: { en: "New storyboard", vi: "Storyboard mới", ja: "新しい絵コンテ" },
+  noProjects: { en: "No projects yet: create your first one to start.", vi: "Chưa có project nào — tạo project đầu tiên để bắt đầu.", ja: "まだプロジェクトがありません。最初のプロジェクトを作成しましょう。" },
+  loadFailed: { en: "Couldn't load the list", vi: "Không tải được danh sách", ja: "一覧を読み込めませんでした" },
+  projStats: {
+    en: "{frames} frames · {done} rendered · {aspect} · {res} · updated {date}",
+    vi: "{frames} frame · {done} đã generate · {aspect} · {res} · cập nhật {date}",
+    ja: "{frames}フレーム · 描画済み{done} · {aspect} · {res} · 更新 {date}",
+  },
+  duplicate: { en: "⧉ Duplicate", vi: "⧉ Nhân bản", ja: "⧉ 複製" },
+  duplicateTitle: { en: "Duplicate: keeps the script and assets (for a video series)", vi: "Nhân bản — giữ kịch bản + asset cho video series", ja: "複製: 台本と素材を引き継ぎます (シリーズ用)" },
+  deleteNow: { en: "Delete", vi: "Xoá luôn", ja: "削除" },
+  cancelAction: { en: "Cancel", vi: "Huỷ", ja: "キャンセル" },
+  deleteProject: { en: "Delete project", vi: "Xoá project", ja: "プロジェクトを削除" },
 } as const satisfies Record<string, Entry>;
+
+/** Locale for dates in the visitor's language. */
+export const DATE_LOCALE: Record<Lang, string> = { en: "en-US", vi: "vi-VN", ja: "ja-JP" };
 
 export type I18nKey = keyof typeof DICT;
 

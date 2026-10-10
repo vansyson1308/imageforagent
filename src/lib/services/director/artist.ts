@@ -11,7 +11,7 @@ import { actingLayer, speakerId } from "@/lib/services/director/acting";
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
 import { extractJsonBlock, extractSvgFragment, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
-import { closeUpProblem, emptyFrameProblem, measureFrame, nearDuplicateProblem, readableSetProblem, similarity, thumb, type Box } from "@/lib/services/director/frameGates";
+import { closeUpProblem, emptyFrameProblem, GATE, measureFrame, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
 
@@ -179,10 +179,14 @@ async function qualityGates(
   // Measured on the BACKGROUND (every character removed): flat blocks the set is made of
   let background = svg;
   for (const id of opts.characters ?? []) background = withoutUses(background, id);
-  const bg = await measureFrame(background === svg ? png : await renderArtwork(opts.castDefs, background, opts.aspectRatio, "1K"));
+  const bgAll = await measureFrame(background === svg ? png : await renderArtwork(opts.castDefs, background, opts.aspectRatio, "1K"));
+  // blocks that come from the Cast's set symbol are not the Artist's to fix (sets are gated at cast time)
+  const setUses = [...svg.matchAll(/<use\b[^>]*>/g)].map((m) => m[0]).filter((u) => opts.sets?.includes(u.match(/href\s*=\s*["']#([^"']+)/)?.[1] ?? ""));
+  const bg: FrameMeasure & { inheritedShare?: number } = setUses.length && bgAll.blockShare > GATE.maxBlockShare ? withoutInherited(bgAll, await measureFrame(await renderArtwork(opts.castDefs, setUses.map((u) => (u.endsWith("/>") ? u : `${u}</use>`)).join(""), opts.aspectRatio, "1K"))) : bgAll;
   const unreadable = readableSetProblem(bg, opts.canvas);
   if (unreadable) problems.push(unreadable);
   else facts.push("set readable (no stray flat blocks)");
+  if ((bg.inheritedShare ?? 0) > 0.01) facts.push(`${Math.round((bg.inheritedShare ?? 0) * 100)}% flat blocks come from the set symbol itself (not counted against this shot)`);
   const empty = emptyFrameProblem(await measureFrame(png));
   if (empty) problems.push(empty);
   if (subject && minSubjectPct(opts.shot.shotType) >= 75) {
@@ -212,6 +216,11 @@ async function qualityGates(
     else facts.push(`night lighting OK (mean brightness ${lum}/255)`);
   }
   return { problems, facts };
+}
+
+/** The kind of an engine rejection, numbers removed (the same problem measured slightly differently is the same kind). */
+export function errorKind(message: string): string {
+  return message.replace(/#[0-9a-f]{3,8}\b/gi, "#").replace(/-?\d+(\.\d+)?/g, "N").slice(0, 160);
 }
 
 /** Artist (Super): draw → validate → repair (≤ maxRepairs) using the validator's hint. */
@@ -267,8 +276,12 @@ export async function drawShot(
       });
       return { drawing, attempts: attempt + 1, lastError: null };
     } catch (e) {
+      const prevKind = lastError ? errorKind(lastError) : null;
       lastError = e instanceof Error ? e.message : String(e);
       await recordStep(ctx, { role: "artist", model: out.model, action: `${action}:invalid`, shotIndex: opts.index, attempt, summary: "Frame rejected by the engine", error: lastError });
+      // the same measured gate failure twice in a row: another strict repair won't fix it, go to the lenient last attempt
+      // (only gate failures: the lenient attempt accepts those; hard errors keep every repair)
+      if (/^Framing\/lighting check failed/.test(lastError) && prevKind === errorKind(lastError) && attempt < maxAttempts - 2) attempt = maxAttempts - 2;
       previous = extractSvgFragment(out.text) || out.text.slice(0, 4000);
       feedback = `${opts.feedback ? `${opts.feedback}\n` : ""}ENGINE ERROR: ${lastError}`;
     }

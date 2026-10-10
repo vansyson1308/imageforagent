@@ -6,7 +6,8 @@ import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@
 import { castRepairUser, castSystem, castUser } from "@/lib/services/director/prompts";
 import sharp from "sharp";
 import { castSheetFrame, extractJsonBlock, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
-import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
+import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalSkin, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
+import { measureFrame, readableSetProblem } from "@/lib/services/director/frameGates";
 
 export type KitSpec = { readonly kind: "doll"; readonly spec: DollSpec } | { readonly kind: "critter"; readonly spec: CritterSpec };
 import { zodIssues } from "@/lib/services/director/schemas";
@@ -66,6 +67,11 @@ export async function symbolProblems(
     const alone = await renderArtwork([...neededExtras(symbol, extras).values(), symbol].join("\n"), `<use href="#${id}" x="0" y="0" width="${canvas.w}" height="${canvas.h}"/>`, aspectRatio, "1K").catch(() => null);
     const clear = alone ? await transparentShare(alone) : 1;
     if (clear > 0.03) problems.push(`#${id} leaves ${Math.round(clear * 100)}% of the frame transparent: start the set with a full-bleed sky/wall <rect width="${canvas.w}" height="${canvas.h}" fill="…"/> and draw the ground to the bottom edge`);
+    else if (alone) {
+      // a set made of flat blocks fails every shot it is used in, and the Artist can't edit it: fix it here, once
+      const flat = readableSetProblem(await measureFrame(alone), canvas);
+      if (flat) problems.push(`#${id} (the set itself): ${flat}`);
+    }
   }
   return problems;
 }
@@ -163,12 +169,18 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     // Human characters come as doll specs (```json {"dolls": {...}}); the engine draws them
     const dolls = new Map<string, string>();
     const dollProblems: string[] = [];
+    const skinFixes: string[] = [];
     try {
       const raw = extractJsonBlock(out.text) as { dolls?: Record<string, unknown>; critters?: Record<string, unknown> } | null;
       for (const [id, spec] of Object.entries(raw?.dolls ?? {})) {
         if (!pending.some((c) => c.id === id && c.kind === "character")) continue;
         const r = dollSchema.safeParse(spec);
         if (r.success) {
+          const natural = naturalSkin(r.data.skin);
+          if (natural.corrected) {
+            skinFixes.push(`${id} ${r.data.skin} → ${natural.skin}`);
+            r.data.skin = natural.skin;
+          }
           const markup = buildDoll(id, r.data);
           dolls.set(id, markup);
           kitBySymbol.set(splitLibrary(markup).symbols.get(id) ?? markup, { id, kit: { kind: "doll", spec: r.data } });
@@ -188,6 +200,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     } catch (e) {
       dollProblems.push(`the \`\`\`json kit block is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
     }
+    if (skinFixes.length) await recordStep(ctx, { role: "cast", model: "engine", action: "skin-tone", attempt, summary: `Skin tone corrected to a natural tone: ${skinFixes.join("; ")}` });
     const drawn = extractSvgFragment(out.text);
     const defs = [drawn, ...dolls.values()].filter(Boolean).join("\n");
     let parsed: ReturnType<typeof splitLibrary>;
