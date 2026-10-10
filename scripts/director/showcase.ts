@@ -27,6 +27,8 @@ import sharp from "sharp";
 import { SHOWCASE_V2 } from "./showcaseStories";
 import { checklistProblems, checklistTemplate, publishProblems, voiceProblems } from "@/lib/services/director/publishGate";
 import { loadPackage } from "./pilot";
+import { appendCredits } from "./credits";
+import { OWNER_VOICE } from "@/lib/services/director/editor";
 import { heroProp } from "@/lib/services/director/plan";
 import type { Plan } from "@/lib/services/director/schemas";
 
@@ -222,6 +224,9 @@ async function publish(client: StudioClient, s: { slug: string; language: string
   }
   const film = await client.download(`/api/projects/${pid}/film.mp4`);
   writeFileSync(`${dir}/film.mp4`, film);
+  // a film narrated by the owner's AivisSpeech recordings ends with the voice credit (owner decision A1)
+  const ownerVoiced = ((trace.steps ?? []) as Array<{ role: string; action: string; model: string }>).some((st) => st.role === "dialogue" && st.action === "voice" && st.model === OWNER_VOICE);
+  if (ownerVoiced) appendCredits(`${dir}/film.mp4`, "16:9");
   // the label states what the published file IS (measured), not what was asked for
   const probe = spawnSync("ffprobe", ["-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height,r_frame_rate", "-of", "csv=p=0", `${dir}/film.mp4`], { encoding: "utf8" }).stdout.trim();
   const [fw, fh, rate] = probe.split(",");

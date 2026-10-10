@@ -463,6 +463,11 @@ tests/                            Vitest — sanitizer bypass-vector suite + con
 - LLM keys (`NEBIUS_API_KEY`, `TAVILY_API_KEY`) live only on the server; story text and web snippets are passed to models as quoted DATA (injection guard), and every model output goes through zod + `sanitizeSvg` + the construct/motion validators before it reaches the engine.
 - User-supplied SVG is sanitized (strict reject-list) and only ever rasterized server-side; uploads are magic-byte verified and UUID-renamed; file serving is traversal-guarded; all inputs Zod-validated; mutating routes rate-limited.
 
+## Voice credits
+
+- Japanese narration of the published films (the fūrin showcase and the Hidamari companion Shorts) is the channel owner's own AivisSpeech pipeline: 音声合成：AivisSpeech / morioki（ボイス提供：もりおき、モデル制作：yuki、ACML 1.0）. The same credit ends each of those films.
+- The live demo's Japanese voice for judges' own runs is Piper `ja_JP-hi_fi_captain-medium` (CC BY-NC-SA 4.0), labelled in the run view as a **non-commercial demo voice**; it is never used in a published or showcase film or in the demo video. English and Vietnamese Piper voices: public domain (LibriVox) and CC BY 4.0 (VAIS-1000).
+
 ## License
 
 [MIT](LICENSE)

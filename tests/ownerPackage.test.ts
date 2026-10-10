@@ -13,7 +13,6 @@ describe("owner narration package", () => {
       { lines: [{ text: "老紳士は、手紙を、声に出して読みはじめました。" }, { text: "「やっと、言えた気がします」。" }] },
       { lines: [{ text: "まあるい月が、縁側を、明るく照らしました。", tts: "まあるいつきが、縁側を、明るく照らしました。" }] },
     ],
-    { pageChars: 14 },
   );
 
   it("is one scene per shot, with S01_L01 ids, the narrator, pause_after 0.5 and the owner's voice block", () => {
@@ -34,9 +33,14 @@ describe("owner narration package", () => {
     expect(ttsText("「おばあちゃん」と言いました。")).toBe("おばあちゃんと言いました。");
   });
 
-  it("splits subtitles into pages after 、 within the page width, never inside a clause", () => {
-    expect(subPages("春の午後、喫茶ひだまりの窓から、やわらかな日が差しこみます", 14)).toEqual(["春の午後", "喫茶ひだまりの窓から", "やわらかな日が差しこみます"]);
-    expect(subPages("春の午後、喫茶ひだまり", 22)).toEqual(["春の午後、喫茶ひだまり"]);
+  it("subtitle pages as in EP013: one page per line, rows of about 20 characters joined with \\N, two pages only for a long line", () => {
+    expect(subPages("春の午後、喫茶ひだまりの窓から、やわらかな日が差しこみます")).toEqual(["春の午後、喫茶ひだまりの窓から、\\Nやわらかな日が差しこみます"]);
+    expect(subPages("「やっと、言えた気がします」")).toEqual(["「やっと、言えた気がします」"]);
+    const long = subPages("夏の終わり、できあがった梅干しを、小さな瓶に詰めて、ハルさんは、トメさんに手渡しました");
+    expect(long).toHaveLength(2);
+    expect(long.join("")).toBe("夏の終わり、できあがった梅干しを、小さな瓶に詰めて、ハルさんは、\\Nトメさんに手渡しました");
+    for (const page of long) for (const row of page.split("\\N")) expect([...row].length).toBeLessThanOrEqual(20);
+    expect(p.scenes[0].lines[0].sub_pages).toEqual(["春の午後、喫茶ひだまりの窓から、\\Nやわらかな日が差しこみます"]);
   });
 
   it("reading_check.txt: a header comment, then id TAB text, newline, TAB kana", () => {
@@ -57,6 +61,11 @@ describe("owner narration package", () => {
       const meta = JSON.parse(readFileSync(`${dir}/director.json`, "utf8")) as { maxSeconds: number | null; estimatedSeconds: number; aspectRatio: string };
       if (meta.maxSeconds) expect(meta.estimatedSeconds, slug).toBeLessThanOrEqual(meta.maxSeconds);
       if (slug.startsWith("PILOT")) expect(meta.aspectRatio).toBe("9:16");
+      const lines = (JSON.parse(readFileSync(`${dir}/production.json`, "utf8")) as { scenes: { lines: { sub_pages: string[] }[] }[] }).scenes.flatMap((s) => s.lines);
+      for (const l of lines) {
+        expect(l.sub_pages.length, slug).toBeLessThanOrEqual(2);
+        for (const page of l.sub_pages) for (const row of page.split("\\N")) expect([...row].length, `${slug} ${row}`).toBeLessThanOrEqual(20);
+      }
     }
   });
 });
