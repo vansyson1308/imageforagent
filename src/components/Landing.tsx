@@ -146,6 +146,7 @@ export function Landing() {
                 {busy === s.key ? t(lang, "starting") : `▶ ${t(lang, "makeThis")}`}
               </button>
               <p className="mt-2 text-xs text-muted">⏱ {t(lang, "estTime", { a: s.estMinutes[0], b: s.estMinutes[1] })}</p>
+              {s.language === "ja" ? <p className="mt-1 text-xs text-amber-300">{t(lang, "jaDemoVoice")}</p> : null}
             </article>
           ))}
         </div>

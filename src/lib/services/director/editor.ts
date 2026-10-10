@@ -9,10 +9,10 @@ import { continuitySystem, editorSystem, editorUser } from "@/lib/services/direc
 import { continuitySchema, editorReplySchema, type Plan } from "@/lib/services/director/schemas";
 import { LlmError } from "@/lib/providers/types";
 import type { Frame } from "@/generated/prisma/client";
-import { NARRATION_OFFSET } from "@/lib/services/director/fixedNarration";
+import { NARRATION_OFFSET, OWNER_VOICE } from "@/lib/services/director/fixedNarration";
 
 /** The trace's voice id for a line the owner recorded (pilotPolicy counts it as cleared). */
-export const OWNER_VOICE = "owner-recording";
+export { OWNER_VOICE };
 
 /** Film language → espeak-ng voice id (validated again by tts.ts). */
 /** The editor only acts on findings it can fix with its edit vocabulary. */

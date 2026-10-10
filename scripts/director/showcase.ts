@@ -27,8 +27,8 @@ import sharp from "sharp";
 import { SHOWCASE_V2 } from "./showcaseStories";
 import { checklistProblems, checklistTemplate, publishProblems, voiceProblems } from "@/lib/services/director/publishGate";
 import { loadPackage } from "./pilot";
-import { appendCredits } from "./credits";
-import { OWNER_VOICE } from "@/lib/services/director/editor";
+import { appendCredits, readVoiceCredit } from "./credits";
+import { filmCredits, type CreditStep } from "@/lib/services/director/filmCredits";
 import { heroProp } from "@/lib/services/director/plan";
 import type { Plan } from "@/lib/services/director/schemas";
 
@@ -95,6 +95,8 @@ async function main() {
       if (!entry || !pid) throw new Error(`--refilm ${pair}: no published film "${slug}" or no project id`);
       const dir = `public/showcase/${slug}`;
       writeFileSync(`${dir}/film.mp4`, await client.download(`/api/projects/${pid}/film.mp4`));
+      const published = JSON.parse(readFileSync(`${dir}/trace.json`, "utf8")) as { steps?: CreditStep[] };
+      await appendCredits(`${dir}/film.mp4`, "16:9", filmCredits(published.steps ?? [], { voiceCredit: readVoiceCredit(packageDir(slug)) }));
       spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", "2", "-i", `${dir}/film.mp4`, "-frames:v", "1", "-q:v", "3", `${dir}/poster.jpg`]);
       const [fw, fh, rate] = spawnSync("ffprobe", ["-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height,r_frame_rate", "-of", "csv=p=0", `${dir}/film.mp4`], { encoding: "utf8" }).stdout.trim().split(",");
       const [n, d] = (rate ?? "0/1").split("/").map(Number);
@@ -171,8 +173,10 @@ async function main() {
  * recordings once they are all there (fixed narration, D59); until then its lines go as plain narration and the
  * film can't be published (voiceProblems: the JA demo voice is non-commercial).
  */
+const packageDir = (slug: string) => `docs/hackathon/pilot/SHOWCASE_${slug.replace(/^v2-/, "")}`;
+
 function narrationOf(slug: string, lines: readonly string[]): { narration: readonly string[] } | { narrationShots: ReturnType<typeof loadPackage>["shots"] } {
-  const dir = `docs/hackathon/pilot/SHOWCASE_${slug.replace(/^v2-/, "")}`;
+  const dir = packageDir(slug);
   if (!existsSync(`${dir}/audio`)) return { narration: lines };
   const pkg = loadPackage(dir, true);
   if (pkg.missing.length) {
@@ -224,9 +228,8 @@ async function publish(client: StudioClient, s: { slug: string; language: string
   }
   const film = await client.download(`/api/projects/${pid}/film.mp4`);
   writeFileSync(`${dir}/film.mp4`, film);
-  // a film narrated by the owner's AivisSpeech recordings ends with the voice credit (owner decision A1)
-  const ownerVoiced = ((trace.steps ?? []) as Array<{ role: string; action: string; model: string }>).some((st) => st.role === "dialogue" && st.action === "voice" && st.model === OWNER_VOICE);
-  if (ownerVoiced) appendCredits(`${dir}/film.mp4`, "16:9");
+  // every published film ends with its credits, read from the trace: the owner's voice (decision A1), VAIS-1000, Nemotron on Nebius, Tavily
+  await appendCredits(`${dir}/film.mp4`, "16:9", filmCredits((trace.steps ?? []) as CreditStep[], { voiceCredit: readVoiceCredit(packageDir(s.slug)) }));
   // the label states what the published file IS (measured), not what was asked for
   const probe = spawnSync("ffprobe", ["-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height,r_frame_rate", "-of", "csv=p=0", `${dir}/film.mp4`], { encoding: "utf8" }).stdout.trim();
   const [fw, fh, rate] = probe.split(",");
