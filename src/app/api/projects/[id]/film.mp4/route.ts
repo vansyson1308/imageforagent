@@ -12,7 +12,8 @@ interface RouteContext {
 export const maxDuration = 600;
 
 /**
- * GET — the project's film as MP4 (1K, 12 fps, −16 LUFS mix), assembled
+ * GET — the project's film as MP4 (the project's resolution; 12 fps, or the
+ * clips' own rate after a remaster, ≤ 30; −16 LUFS mix), assembled
  * server-side with ffmpeg on first request, then cached until any shot
  * changes. Redirects to the file route (HTTP Range for seeking).
  */
@@ -27,7 +28,7 @@ export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
     const location = `/api/files/${film.path}`;
     return new Response(null, {
       status: 302,
-      headers: { Location: location, "Cache-Control": "no-store", "X-Film-Duration": String(film.durationSec), "X-Film-Cached": String(film.cached) },
+      headers: { Location: location, "Cache-Control": "no-store", "X-Film-Duration": String(film.durationSec), "X-Film-Cached": String(film.cached), "X-Film-Fps": String(film.fps) },
     });
   });
 }

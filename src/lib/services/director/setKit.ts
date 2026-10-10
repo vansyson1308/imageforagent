@@ -38,6 +38,73 @@ export const setSchema = z.object({
 });
 export type SetSpec = z.infer<typeof setSchema>;
 
+/* Words the Cast used for a place, hour, weather or prop the kit has under another name (showcase v2-banh-chung: a kitchen
+   spec with three props outside the list was rejected whole, and the Cast hand-drew a flat set instead). */
+const PLACE_ALIASES: Record<string, (typeof INTERIOR_PLACES)[number] | (typeof EXTERIOR_PLACES)[number]> = {
+  "living room": "living-room", room: "living-room", home: "living-room", house: "living-room", "family room": "living-room",
+  "tea room": "tea-room", tearoom: "tea-room", "tea house": "tea-room", teahouse: "tea-room", washitsu: "tea-room",
+  school: "classroom", store: "shop", bakery: "shop", cafe: "shop", café: "shop", restaurant: "shop", studio: "workshop", office: "workshop", temple: "hall",
+  courtyard: "garden", yard: "garden", backyard: "garden", porch: "garden", veranda: "garden",
+  sea: "beach", ocean: "beach", shore: "beach", coast: "beach", seaside: "beach", river: "riverside", lake: "riverside", pond: "riverside",
+  port: "harbor", harbour: "harbor", dock: "harbor", pier: "harbor", city: "street", town: "street", alley: "street", road: "street",
+  field: "countryside", fields: "countryside", farm: "countryside", "rice field": "countryside", "rice paddy": "countryside", meadow: "countryside",
+  woods: "forest", jungle: "forest", hill: "mountains", hills: "mountains", mountain: "mountains", snow: "snowfield",
+};
+const TIME_ALIASES: Record<string, (typeof SET_TIMES)[number]> = { morning: "dawn", sunrise: "dawn", noon: "day", afternoon: "day", daytime: "day", sunset: "golden", evening: "dusk", twilight: "dusk", midnight: "night" };
+const WEATHER_ALIASES: Record<string, (typeof SET_WEATHER)[number]> = { sunny: "clear", fair: "clear", overcast: "cloudy", rainy: "rain", storm: "rain", stormy: "rain", drizzle: "rain", snowy: "snow", snowing: "snow", foggy: "fog", mist: "fog", misty: "fog" };
+const PROP_ALIASES: Record<string, (typeof SET_PROPS)[number]> = {
+  altar: "shelf", cabinet: "shelf", cupboard: "shelf", dresser: "shelf", oven: "stove", fireplace: "stove", hearth: "stove", "cooking pot": "stove", sink: "counter", kettle: "teapot", pot: "teapot",
+  couch: "sofa", curtain: "window", curtains: "window", picture: "painting", photo: "painting", frame: "painting", candle: "lantern", lanterns: "lantern", "paper lantern": "lantern",
+  books: "bookcase", bookshelf: "bookcase", chalkboard: "blackboard", stool: "chair", mat: "rug", carpet: "rug", tatami: "rug", flower: "flowers", vase: "flowers",
+  "lamp post": "streetlamp", lamppost: "streetlamp", "street lamp": "streetlamp", gate: "temple-gate", torii: "temple-gate", shrine: "temple-gate", ship: "boat", dock: "pier",
+  rock: "rocks", stones: "rocks", sakura: "cherry-tree", "cherry blossom": "cherry-tree", stand: "stall", booth: "stall", trees: "tree", houses: "house", plants: "plant",
+};
+
+/**
+ * A Cast set spec, made usable: names outside the kit's lists are mapped to
+ * the kit's word for them, and props the kit has no word for are dropped (a
+ * kitchen without its altar is still a lit kitchen; a hand-drawn fallback is a
+ * flat one). Returns what changed so the run can say it.
+ */
+export function normalizeSetSpec(raw: unknown): { spec: unknown; notes: string[] } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { spec: raw, notes: [] };
+  const spec: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  const notes: string[] = [];
+  const key = (v: unknown) => (typeof v === "string" ? v.trim().toLowerCase().replace(/[_]+/g, " ") : "");
+  const fix = <T extends string>(field: string, allowed: readonly T[], aliases: Record<string, T>) => {
+    const v = key(spec[field]);
+    if (!v) return;
+    if ((allowed as readonly string[]).includes(v)) {
+      spec[field] = v;
+      return;
+    }
+    const mapped = (allowed as readonly string[]).includes(v.replace(/ /g, "-")) ? v.replace(/ /g, "-") : aliases[v];
+    if (mapped) {
+      notes.push(`${field} "${spec[field]}" → "${mapped}"`);
+      spec[field] = mapped;
+    }
+  };
+  fix("place", [...INTERIOR_PLACES, ...EXTERIOR_PLACES], PLACE_ALIASES);
+  fix("time", SET_TIMES, TIME_ALIASES);
+  fix("weather", SET_WEATHER, WEATHER_ALIASES);
+  if (Array.isArray(spec.props)) {
+    const kept: string[] = [];
+    const dropped: string[] = [];
+    for (const p of spec.props) {
+      const v = key(p);
+      const known = (SET_PROPS as readonly string[]).includes(v) ? v : (SET_PROPS as readonly string[]).includes(v.replace(/ /g, "-")) ? v.replace(/ /g, "-") : PROP_ALIASES[v];
+      if (known && !kept.includes(known)) {
+        if (known !== p) notes.push(`prop "${p}" → "${known}"`);
+        kept.push(known);
+      } else if (!known) dropped.push(String(p));
+    }
+    if (dropped.length) notes.push(`dropped props the kit doesn't draw: ${dropped.join(", ")}`);
+    if (kept.length > 6) notes.push(`kept the first 6 props of ${kept.length}`);
+    spec.props = kept.slice(0, 6);
+  }
+  return { spec, notes };
+}
+
 export const SET_VOCABULARY = [
   `{"place": "${[...INTERIOR_PLACES, ...EXTERIOR_PLACES].join("|")}", "time": "${SET_TIMES.join("|")}", "weather": "${SET_WEATHER.join("|")}",`,
   ` "main": "#rrggbb (interior wall / exterior land)", "accent": "#rrggbb", "ground": "#rrggbb (floor / near ground, optional)",`,

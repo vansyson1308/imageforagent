@@ -54,3 +54,30 @@ describe("set kit (D41)", () => {
     expect(naturalHair("#3355ff").corrected).toBe(true);
   });
 });
+
+describe("set spec normalisation (showcase v2-banh-chung)", () => {
+  it("maps the Cast's words to the kit's and drops props the kit doesn't draw, instead of rejecting the set", async () => {
+    const { normalizeSetSpec } = await import("@/lib/services/director/setKit");
+    // the real failure: a kitchen whose props 3–5 were outside the list → the whole spec was rejected, the Cast hand-drew a flat set
+    const raw = { place: "Kitchen", time: "evening", weather: "sunny", main: "#c9a27a", accent: "#7a4a2a", props: ["stove", "table", "shelf", "altar", "cooking pot", "banana leaves", "bamboo basket", "stove"] };
+    expect(setSchema.safeParse(raw).success).toBe(false);
+    const n = normalizeSetSpec(raw);
+    const r = setSchema.safeParse(n.spec);
+    expect(r.success).toBe(true);
+    expect(r.data).toMatchObject({ place: "kitchen", time: "dusk", weather: "clear", props: ["stove", "table", "shelf"] });
+    expect(n.notes.join(" ")).toMatch(/dropped props the kit doesn't draw: banana leaves, bamboo basket/);
+    // place synonyms land on a kit place; the result still passes the cast-time gates
+    const yard = normalizeSetSpec({ place: "courtyard", main: "#8fb08a", accent: "#c97d60", props: ["lanterns", "sakura"] });
+    const y = setSchema.parse(yard.spec);
+    expect(y).toMatchObject({ place: "garden", props: ["lantern", "cherry-tree"] });
+    const markup = buildSet("yard", y, { w: 1920, h: 1080 });
+    expect(() => sanitizeSvg(markup, "defs")).not.toThrow();
+  });
+
+  it("leaves a valid spec untouched and an unmappable place invalid (the Cast then draws it by hand)", async () => {
+    const { normalizeSetSpec } = await import("@/lib/services/director/setKit");
+    const ok = { place: "tea-room", time: "night", weather: "clear", main: "#d8c8a8", accent: "#7a5a3a", props: ["shoji", "teapot"] };
+    expect(normalizeSetSpec(ok)).toEqual({ spec: ok, notes: [] });
+    expect(setSchema.safeParse(normalizeSetSpec({ ...ok, place: "spaceship" }).spec).success).toBe(false);
+  });
+});

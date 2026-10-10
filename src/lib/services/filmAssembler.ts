@@ -21,6 +21,16 @@ import { MAX_MIX_SECONDS } from "@/lib/config/limits";
 
 export const FILM_OUTPUT_FPS = 12;
 
+/**
+ * The film's frame rate follows its clips: 12 fps (the animation standard)
+ * unless the shots were rendered smoother (a remaster to 24 fps), never more
+ * than 30. Assembling a 24 fps remaster at 12 would throw half its frames away.
+ */
+export function filmFps(clipFps: ReadonlyArray<number | null | undefined>): number {
+  const top = Math.max(FILM_OUTPUT_FPS, ...clipFps.filter((f): f is number => typeof f === "number" && Number.isFinite(f)));
+  return Math.min(30, Math.round(top));
+}
+
 export interface AssembleShotInput {
   readonly badge: string;
   readonly entry: TimelineEntry;
@@ -125,11 +135,12 @@ export interface AssembleResult {
   readonly shots: number;
   readonly cached: boolean;
   readonly hasAudio: boolean;
+  readonly fps: number;
 }
 
 /** Assemble (or reuse) the project's film.mp4. One assembly per project at a time. */
-export function assembleFilm(projectId: string, fps = FILM_OUTPUT_FPS): Promise<AssembleResult> {
-  const key = `${projectId}@${fps}`;
+export function assembleFilm(projectId: string, fps?: number): Promise<AssembleResult> {
+  const key = `${projectId}@${fps ?? "clips"}`;
   const existing = inFlight.get(key);
   if (existing) return existing;
   const p = doAssemble(projectId, fps).finally(() => inFlight.delete(key));
@@ -137,7 +148,7 @@ export function assembleFilm(projectId: string, fps = FILM_OUTPUT_FPS): Promise<
   return p;
 }
 
-async function doAssemble(projectId: string, fps: number): Promise<AssembleResult> {
+async function doAssemble(projectId: string, requestedFps: number | undefined): Promise<AssembleResult> {
   if (!ffmpegAvailable()) throw new AppError("INTERNAL", "ffmpeg is not installed on this server.", "Install ffmpeg, or download the package ZIP and run `sh assemble.sh` locally.", 503);
   const project = await prisma.project.findUnique({ where: { id: projectId }, include: { frames: { orderBy: { index: "asc" } } } });
   if (!project) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
@@ -159,6 +170,7 @@ async function doAssemble(projectId: string, fps: number): Promise<AssembleResul
       // voice missing → subtitle-only shot
     }
   }
+  const fps = requestedFps ?? filmFps(frames.filter((f) => clipOk.has(f.index)).map((f) => f.clipFps));
   const timeline = buildTimeline(frames.map((f) => timelineInputOf(f, { clip: clipOk.has(f.index), voice: voices.has(f.index) })), project.playbackSpeed);
   const duration = timelineDuration(timeline);
 
@@ -167,7 +179,7 @@ async function doAssemble(projectId: string, fps: number): Promise<AssembleResul
     .digest("hex")
     .slice(0, 12);
   const outRel = toPosix(`${projectId}/film/film-${hash}.mp4`);
-  if (await fileExists(outRel)) return { path: outRel, durationSec: duration, shots: timeline.length, cached: true, hasAudio: voices.size > 0 || !!project.musicPath };
+  if (await fileExists(outRel)) return { path: outRel, durationSec: duration, shots: timeline.length, cached: true, hasAudio: voices.size > 0 || !!project.musicPath, fps };
 
   const workRel = toPosix(`${projectId}/film/_work`);
   await removeDirQuiet(toPosix(`${projectId}/film`));
@@ -208,5 +220,5 @@ async function doAssemble(projectId: string, fps: number): Promise<AssembleResul
     throw new AppError("INTERNAL", `Film assembly failed: ${e instanceof Error ? e.message : String(e)}`, "Download the package ZIP and run `sh assemble.sh` to see the full ffmpeg output.");
   }
   await removeDirQuiet(workRel);
-  return { path: outRel, durationSec: duration, shots: timeline.length, cached: false, hasAudio: mixAbs !== null };
+  return { path: outRel, durationSec: duration, shots: timeline.length, cached: false, hasAudio: mixAbs !== null, fps };
 }

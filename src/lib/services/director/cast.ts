@@ -8,7 +8,7 @@ import sharp from "sharp";
 import { badPaints, castSheetFrame, extractJsonBlock, fixPaints, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
 import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalHair, naturalSkin, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
 import { measureFrame, readableSetProblem } from "@/lib/services/director/frameGates";
-import { buildSet, setSchema } from "@/lib/services/director/setKit";
+import { buildSet, normalizeSetSpec, setSchema } from "@/lib/services/director/setKit";
 
 export type KitSpec = { readonly kind: "doll"; readonly spec: DollSpec } | { readonly kind: "critter"; readonly spec: CritterSpec };
 import { zodIssues } from "@/lib/services/director/schemas";
@@ -173,6 +173,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     const dolls = new Map<string, string>();
     const dollProblems: string[] = [];
     const skinFixes: string[] = [];
+    const setFixes: string[] = [];
     try {
       const raw = extractJsonBlock(out.text) as { dolls?: Record<string, unknown>; critters?: Record<string, unknown> } | null;
       for (const [id, spec] of Object.entries(raw?.dolls ?? {})) {
@@ -197,7 +198,9 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
       }
       for (const [id, spec] of Object.entries((raw as { sets?: Record<string, unknown> } | null)?.sets ?? {})) {
         if (dolls.has(id) || !pending.some((c) => c.id === id && c.kind === "set")) continue;
-        const r = setSchema.safeParse(spec);
+        const norm = normalizeSetSpec(spec);
+        const r = setSchema.safeParse(norm.spec);
+        if (r.success && norm.notes.length) setFixes.push(`${id}: ${norm.notes.join("; ")}`);
         if (r.success) dolls.set(id, buildSet(id, r.data, ctx.canvas));
         else dollProblems.push(`#${id} set spec invalid: ${zodIssues(r.error)}`);
       }
@@ -215,6 +218,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
       dollProblems.push(`the \`\`\`json kit block is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
     }
     if (skinFixes.length) await recordStep(ctx, { role: "cast", model: "engine", action: "skin-tone", attempt, summary: `Corrected to natural tones: ${skinFixes.join("; ")}` });
+    if (setFixes.length) await recordStep(ctx, { role: "cast", model: "engine", action: "set-spec", attempt, summary: `Set specs mapped to the kit: ${setFixes.join(" · ")}` });
     const drawn = extractSvgFragment(out.text);
     const defs = [drawn, ...dolls.values()].filter(Boolean).join("\n");
     let parsed: ReturnType<typeof splitLibrary>;

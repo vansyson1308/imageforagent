@@ -80,3 +80,6 @@
 {"at":"2026-10-10T01:53:24.727Z","script":"hosted-run","label":"en-kite:cmv1qg8in00012avrirwspqvj","model":"crew","tokensIn":212119,"tokensOut":0,"costUsd":0.14830104}
 {"at":"2026-10-10T02:15:17.926Z","script":"hosted-run","label":"en-kite:cmv1rb05700012am8pa66t6xz","model":"crew","tokensIn":191791,"tokensOut":0,"costUsd":0.13585122}
 {"at":"2026-10-10T02:41:41.506Z","script":"hosted-run","label":"en-kite:cmv1sb2e100012at1ujsiq58x","model":"crew","tokensIn":161814,"tokensOut":0,"costUsd":0.1134879}
+{"at":"2026-10-10T02:59:46.345Z","script":"showcase","label":"v2-kite","model":"crew","tokensIn":56833,"tokensOut":75810,"costUsd":0.09532752}
+{"at":"2026-10-10T03:06:22.506Z","script":"showcase","label":"v2-banh-chung","model":"crew","tokensIn":66794,"tokensOut":93683,"costUsd":0.11433198}
+{"at":"2026-10-10T03:13:12.178Z","script":"showcase","label":"v2-furin","model":"crew","tokensIn":80220,"tokensOut":126576,"costUsd":0.14828406}
