@@ -4,14 +4,14 @@ import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
 import { demoConfig, passcodeMatches } from "@/lib/services/demoMode";
 import { createNemotronProvider } from "@/lib/providers";
-import { JUDGE_MODELS } from "@/lib/services/evalJudges";
+import { JUDGE_MAX_TOKENS, JUDGE_MODELS } from "@/lib/services/evalJudges";
 
 const bodySchema = z.object({
   model: z.enum(JUDGE_MODELS),
   prompt: z.string().min(1).max(4000),
   /** One frame as a data URI (the bench sends ≤ 1024 px JPEG). */
   image: z.string().max(3_000_000).regex(/^data:image\/(png|jpeg);base64,[A-Za-z0-9+/]+=*$/),
-  maxTokens: z.number().int().min(16).max(400).default(200),
+  maxTokens: z.number().int().min(16).max(JUDGE_MAX_TOKENS).default(JUDGE_MAX_TOKENS),
   json: z.boolean().default(true),
 });
 
