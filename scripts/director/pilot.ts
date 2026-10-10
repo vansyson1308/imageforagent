@@ -31,6 +31,7 @@ import { productionSchema } from "@/lib/services/director/ownerPackage";
 import { timingsById } from "@/lib/services/director/fixedNarration";
 import { audioDuration, decodeWav } from "@/lib/services/audio/wav";
 import { symbolHash } from "@/lib/services/director/series";
+import { appendCredits } from "./credits";
 import { symbolIds } from "@/lib/services/director/svgTools";
 
 const argv = process.argv.slice(2);
@@ -154,7 +155,10 @@ async function main() {
     writeFileSync(`docs/hackathon/evidence/pilot-ep${n}.json`, JSON.stringify(evidence, null, 2) + "\n");
     if (media) {
       mkdirSync(media, { recursive: true });
-      writeFileSync(path.join(media, `hidamari-${folder}${evidence.publishable ? "" : ".DRAFT-not-for-publication"}.mp4`), await client.download(`/api/projects/${pid}/film.mp4?v=${runId}`));
+      const file = path.join(media, `hidamari-${folder}${evidence.publishable ? "" : ".DRAFT-not-for-publication"}.mp4`);
+      writeFileSync(file, await client.download(`/api/projects/${pid}/film.mp4?v=${runId}`));
+      // narrated by the owner's AivisSpeech voice: the end credits name it (owner decision A1)
+      if (!pkg.missing.length) appendCredits(file, pkg.meta.aspectRatio === "9:16" ? "9:16" : "16:9");
     }
     console.log(`${folder}: ${evidence.shots} shots · ${Number(sum.durationSec ?? 0).toFixed(1)} s · ${wallSec}s wall · $${trace.costUsd.toFixed(4)} · series ${seriesId} · ${evidence.publishable ? "publishable" : `DRAFT (${blockers.join("; ")})`}`);
   }
