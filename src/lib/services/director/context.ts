@@ -58,6 +58,8 @@ export interface RunSummary {
   readonly revisions: number;
   /** shots whose final version still fails a measured gate (kept on the lenient last attempt) */
   readonly gateFailures?: number;
+  /** shots whose final version Nano still judges off-plan (wrong time of day, place or key action) */
+  readonly offPlan?: number[];
   /** shots whose final version still scores below the floor (7) */
   readonly belowFloor?: number[];
   /** "openbmb/MiniCPM-V-4_5 looks · Nemotron Nano scores" when a vision model was used */

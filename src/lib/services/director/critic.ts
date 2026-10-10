@@ -3,6 +3,7 @@ import { saveBuffer } from "@/lib/services/storage";
 import { callJson, recordStep, ReplyInvalidError, type DirectorContext } from "@/lib/services/director/context";
 import { criticSystem, criticUser, lookSystem, lookUser } from "@/lib/services/director/prompts";
 import { critiqueSchema, lookSchema, type Critique, type Look, type ShotPlan } from "@/lib/services/director/schemas";
+import { enforceFidelity, fidelityFailures } from "@/lib/services/director/fidelity";
 import { compositionStats, toJpegDataUri } from "@/lib/services/director/svgTools";
 import { snapshotPath } from "@/lib/services/director/cast";
 import type { Drawing } from "@/lib/services/director/artist";
@@ -24,7 +25,7 @@ export interface CritiqueOutcome {
  * If the vision model rejects image input, the run switches to text mode and
  * records that switch. A critic failure never blocks the film (critique: null).
  */
-export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan; index: number; drawing: Drawing; round: number }): Promise<CritiqueOutcome> {
+export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan; index: number; drawing: Drawing; round: number; context?: string }): Promise<CritiqueOutcome> {
   const { uri, jpeg } = await toJpegDataUri(opts.drawing.png);
   const imagePath = snapshotPath(ctx.projectId, ctx.runId, `f${String(opts.index).padStart(2, "0")}-r${opts.round}.jpg`);
   await saveBuffer(imagePath, jpeg);
@@ -54,13 +55,15 @@ export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan;
   try {
     const stats = `svg ${Math.round(Buffer.byteLength(opts.drawing.svg) / 1024)} KB, ${(opts.drawing.svg.match(/<(path|rect|circle|ellipse|polygon)\b/g) ?? []).length} shapes${opts.drawing.ambient ? `, ambient ${opts.drawing.ambient.shapes.length} shapes/${opts.drawing.ambient.tracks.length} tracks` : ""}. ${await compositionStats(opts.drawing.svg, opts.drawing.png, ctx.canvas)}.${checks}`;
     const lookText = look ? [`Sees: ${look.sees.join("; ") || "—"}.`, `Visible problems: ${look.problems.join("; ") || "none"}.`, `Matches the shot: ${look.matchesShot ? "yes" : "NO"}.`].join("\n") : undefined;
-    const critique = await callJson(
+    const judged = await callJson(
       ctx,
-      { ...base, action: opts.round === 0 ? "critique" : "re-critique", model: ctx.models.fast, maxTokens: 1200, system: criticSystem("text"), user: criticUser({ shot: opts.shot, index: opts.index, svgExcerpt: opts.drawing.svg.slice(0, 6000), stats, look: lookText }) },
+      { ...base, action: opts.round === 0 ? "critique" : "re-critique", model: ctx.models.fast, maxTokens: 1200, system: criticSystem("text"), user: criticUser({ shot: opts.shot, index: opts.index, svgExcerpt: opts.drawing.svg.slice(0, 6000), stats, look: lookText, context: opts.context }) },
       critiqueSchema,
       "critique",
       1,
     );
+    // an off-plan frame (wrong time of day, place or key action) is never accepted
+    const critique = enforceFidelity(judged);
     await noteScore(ctx, opts.index, critique, mode, imagePath);
     return { critique, mode, imagePath };
   } catch (e) {
@@ -84,7 +87,7 @@ async function noteScore(ctx: DirectorContext, index: number, c: Critique, mode:
     action: "score",
     shotIndex: index,
     score: c.score,
-    summary: `${mode} critic ${c.score}/10 · ${c.verdict}${mode === "vision" ? ` (${ctx.models.vision} looked, ${ctx.models.fast} scored)` : ""}${c.issues[0] ? ` · ${c.issues[0]}` : ""}`,
+    summary: `${mode} critic ${c.score}/10 · ${c.verdict}${mode === "vision" ? ` (${ctx.models.vision} looked, ${ctx.models.fast} scored)` : ""}${fidelityFailures(c).length ? ` · OFF-PLAN ${fidelityFailures(c).join("+")}` : ""}${c.issues[0] ? ` · ${c.issues[0]}` : ""}`,
     output: JSON.stringify(c),
     imagePath,
   });

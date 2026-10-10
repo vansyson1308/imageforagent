@@ -10,6 +10,7 @@ import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/d
 import { actingLayer, attachHeldProps, speakerId } from "@/lib/services/director/acting";
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
+import { shotTime } from "@/lib/services/director/fidelity";
 import { applyPlacement, badPaints, coveredShare, minPropArea, visibleArea, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, emptyFrameProblem, GATE, measureFrame, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
@@ -262,9 +263,11 @@ async function qualityGates(
     if (w < opts.canvas.w * 0.9) problems.push(`#${id} is a set (a background), but it is placed ${Math.round(w)} wide like an object: use it full-frame <use href="#${id}" x="0" y="0" width="${opts.canvas.w}" height="${opts.canvas.h}"/> as the first element, and only one set per shot`);
   }
   const lum = await meanBrightness(png);
-  if (NIGHT_WORDS.test(opts.shot.description)) {
+  if (NIGHT_WORDS.test(`${opts.shot.scene} ${opts.shot.description}`)) {
     if (lum > 120) problems.push(`this is a night/dark scene but the frame's mean brightness is ${lum}/255 (should be ≤ 120): add a full-canvas <rect width="${opts.canvas.w}" height="${opts.canvas.h}" fill="#0b1330" fill-opacity="0.45"/> over the set BEFORE the characters, and warm glows around the light sources`);
     else facts.push(`night lighting OK (mean brightness ${lum}/255)`);
+  } else if (shotTime(opts.shot) === "day" && lum < 60) {
+    problems.push(`this is a daytime scene but the frame's mean brightness is only ${lum}/255 (should be ≥ 60): remove dark overlays over the set and use a day sky`);
   }
   return { problems, facts, subject: subject && subjectId && kitIds.has(subjectId) ? { id: subjectId, box: subject } : null };
 }

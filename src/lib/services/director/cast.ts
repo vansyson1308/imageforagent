@@ -8,6 +8,7 @@ import sharp from "sharp";
 import { badPaints, castSheetFrame, extractJsonBlock, fixPaints, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
 import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalHair, naturalSkin, normalizeDollSpec, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
 import { measureFrame, readableSetProblem } from "@/lib/services/director/frameGates";
+import { setTimeFix } from "@/lib/services/director/fidelity";
 import { buildSet, normalizeSetSpec, setSchema, type SetSpec } from "@/lib/services/director/setKit";
 
 export type KitSpec = { readonly kind: "doll"; readonly spec: DollSpec } | { readonly kind: "critter"; readonly spec: CritterSpec };
@@ -19,6 +20,8 @@ export interface CastLibrary {
   readonly symbols: string[];
   /** characters drawn by the engine's kits (posable: acting variants, blinks, lip-sync) */
   readonly kits: Map<string, KitSpec>;
+  /** the time of day each kit set is lit for (the fidelity check's "planned light") */
+  readonly setTimes?: ReadonlyMap<string, string>;
   /** true when the Artist's library failed every attempt and placeholders were used. */
   readonly placeholder: boolean;
 }
@@ -209,6 +212,12 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
         const r = setSchema.safeParse(norm.spec);
         if (r.success && norm.notes.length) kitFixes.push(`${id}: ${norm.notes.join("; ")}`);
         if (r.success) {
+          // a set lit for the wrong time of day (the plan's night shots on a day set) is relit by the engine
+          const relit = setTimeFix(plan, id, r.data.time);
+          if (relit) {
+            r.data.time = relit.time;
+            kitFixes.push(`${id}: ${relit.note}`);
+          }
           dolls.set(id, buildSet(id, r.data, ctx.canvas));
           setSpecs.set(id, r.data);
           const member = plan.cast.find((c) => c.id === id);
@@ -359,5 +368,5 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     imagePath: sheetPath,
     error: placeholder ? "cast library invalid after all repairs" : placeholders.length ? `placeholders used for ${placeholders.join(", ")}` : null,
   });
-  return { defs, symbols: symbolIds(defs), placeholder, kits };
+  return { defs, symbols: symbolIds(defs), placeholder, kits, setTimes: new Map([...setSpecs].map(([id, s]) => [id, s.time] as const)) };
 }

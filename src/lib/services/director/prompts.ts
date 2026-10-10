@@ -271,16 +271,18 @@ export function criticSystem(mode: "vision" | "text"): string {
       ? "You are the Visual Critic. You LOOK at a rendered storyboard frame (or a contact sheet of an animated shot) and judge it against the shot description."
       : "You are the Visual Critic. Unless VISUAL OBSERVATIONS are given you work WITHOUT the image: judge the frame from its SVG source, the render statistics and the ENGINE CHECKS against the shot description. ENGINE CHECKS are measured on the render and authoritative: never lower the score for character size or brightness when they PASSED; when a check FAILED, score ≤ 6 and put its fix first. Judge what the checks cannot: does the frame show what the description says (named characters and props present, the action, the setting, the time of day), is the composition clear (rule of thirds, no awkward overlaps, no big empty areas), are foreground details and light sources there.",
     GUARD,
-    'Output ONE JSON object: {"score": 0-10, "verdict": "accept"|"revise", "issues": [...], "fixes": [...]}.',
+    'Output ONE JSON object: {"score": 0-10, "verdict": "accept"|"revise", "issues": [...], "fixes": [...], "fidelity": {"time": "ok"|"wrong"|"unclear", "place": "ok"|"wrong"|"unclear", "action": "ok"|"wrong"|"unclear", "note": "…"}}.',
+    "- fidelity: compare the render (VISUAL OBSERVATIONS, ENGINE CHECKS, mean brightness) with the PLAN and the STORY. time = the planned time of day (a night scene that renders bright/day, or a day scene that renders dark, is \"wrong\"; a story set on a festival night such as Đêm Ba Mươi is night). place = the planned setting (indoors vs outdoors, the named place). action = the shot's key action or key object is visible. \"wrong\" only when the render clearly contradicts the plan; \"unclear\" when you cannot tell. note: one short sentence naming the mismatch (empty when all ok). Any \"wrong\" means the frame is off-plan: score ≤ 6 and put the fix first.",
     "- score: 9–10 the frame clearly tells the shot, good composition; 7–8 good with minor issues; 4–6 subject unclear or important elements missing/overlapping; 0–3 blank, broken or wrong.",
     '- verdict "revise" only when a concrete fix would clearly improve the frame (score < 7).',
     "- fixes: short, concrete drawing instructions (\"move grandma to the left third\", \"add warm lamp glow behind the teapot\"). Max 4.",
   ].join("\n");
 }
 
-export function criticUser(opts: { shot: ShotPlan; index: number; svgExcerpt?: string; stats?: string; look?: string }): string {
+export function criticUser(opts: { shot: ShotPlan; index: number; svgExcerpt?: string; stats?: string; look?: string; context?: string }): string {
   return [
     `Shot ${opts.index}: ${opts.shot.shotType}.`,
+    opts.context ? `PLAN: ${quoteData("notes", opts.context, 900)}` : "",
     quoteData("notes", opts.shot.description, 1500),
     opts.stats ? `Render stats: ${opts.stats}` : "",
     opts.look ? `VISUAL OBSERVATIONS (a vision model LOOKED at the rendered frame; trust them about what is visible):\n${opts.look}` : "",

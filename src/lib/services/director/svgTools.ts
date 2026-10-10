@@ -385,7 +385,7 @@ export async function meanBrightness(png: Buffer): Promise<number> {
   return Math.round(0.2126 * s.channels[0].mean + 0.7152 * s.channels[1].mean + 0.0722 * s.channels[2].mean);
 }
 
-export const NIGHT_WORDS = /\b(night|midnight|moonlit|moonlight|at dusk|evening|dark)\b|đêm|tối|trăng|夜|晩|月明|闇/i;
+export { NIGHT_WORDS } from "@/lib/services/director/fidelity";
 
 // ---------- Library surgery (per-symbol accept / repair) ----------
 

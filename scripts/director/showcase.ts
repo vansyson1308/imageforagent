@@ -132,9 +132,9 @@ async function main() {
       continue;
     }
     // v2 acceptance: no frame of a showcase film may fail a gate, and every shot must be drawn
-    const sum = trace.summary as { gateFailures?: number; rendered?: number; shots?: number };
-    if (set === "v2" && ((sum.gateFailures ?? 0) > 0 || sum.rendered !== sum.shots)) {
-      console.log(`✘ ${s.slug}: ${sum.gateFailures ?? 0} gate failure(s), ${sum.rendered}/${sum.shots} shots. Kept the trace as evidence and skipped publishing.`);
+    const sum = trace.summary as { gateFailures?: number; rendered?: number; shots?: number; offPlan?: number[] };
+    if (set === "v2" && ((sum.gateFailures ?? 0) > 0 || sum.rendered !== sum.shots || (sum.offPlan?.length ?? 0) > 0)) {
+      console.log(`✘ ${s.slug}: ${sum.gateFailures ?? 0} gate failure(s), ${sum.rendered}/${sum.shots} shots, off-plan shots [${(sum.offPlan ?? []).join(", ")}]. Kept the trace as evidence and skipped publishing.`);
       continue;
     }
     const dir = `public/showcase/${s.slug}`;
