@@ -8,6 +8,7 @@ import { storageRoot } from "@/lib/services/storage";
 import { demoConfig } from "@/lib/services/demoMode";
 import { tokensToday } from "@/lib/services/demoGuard";
 import { ttsEngines } from "@/lib/services/tts";
+import { demoFloorPolicy } from "@/lib/services/director/demoPolicy";
 
 /**
  * Public health report (`GET /api/health`) for judges, the daily GitHub
@@ -128,6 +129,14 @@ export async function runHealthChecks(deps: HealthDeps): Promise<HealthReport> {
       used >= cfg.dailyTokenBudget
         ? { status: "fail", detail: `today's demo token budget is used up (${used} / ${cfg.dailyTokenBudget})` }
         : { status: "ok", detail: `${Math.round((used / cfg.dailyTokenBudget) * 100)}% of today's token budget used` };
+    try {
+      const floor = await demoFloorPolicy(env);
+      const v = floor.verdict;
+      const measured = v.runs < 2 ? ` (${v.runs} finished demo crew run(s) so far; the rule needs 2)` : ` (median ${v.usdPerMin === null ? "—" : `$${v.usdPerMin}/finished min`}, ${v.wallPer8ShotsMin ?? "—"} min per 8 shots, last ${v.runs} demo runs)`;
+      checks.demoStopRule = floor.enabled ? { status: "ok", detail: `floor redraw on${measured}` } : { status: "off", detail: `floor redraw OFF: ${floor.reason}${measured}` };
+    } catch {
+      checks.demoStopRule = { status: "off", detail: "not measured (database unavailable)" };
+    }
     checks.passcode = cfg.passcode ? { status: "ok", detail: "set" } : { status: "fail", detail: "DEMO_MODE is on but DEMO_PASSCODE is empty: nobody can unlock" };
   }
 

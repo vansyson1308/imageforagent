@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api, type ProjectListItemDto } from "@/lib/api";
+import { DATE_LOCALE, LangToggle, t, useLang } from "@/lib/i18n";
+
+const LOAD_FAILED = "load-failed";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -11,13 +14,14 @@ export default function ProjectsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [lang, setLang] = useLang();
 
   function load(): void {
     api
       .listProjects()
       .then(setProjects)
       .catch((err: unknown) => {
-        setError(err instanceof Error ? err.message : "Không tải được danh sách");
+        setError(err instanceof Error ? err.message : LOAD_FAILED);
       });
   }
 
@@ -28,7 +32,7 @@ export default function ProjectsPage() {
   async function createProject() {
     setBusy("create");
     try {
-      const project = await api.createProject("Storyboard mới");
+      const project = await api.createProject(t(lang, "newProjectName"));
       router.push(`/studio?p=${project.id}`);
     } finally {
       setBusy(null);
@@ -63,19 +67,22 @@ export default function ProjectsPage() {
           <div className="btn-gradient h-10 w-10 rounded-xl shadow-lg shadow-accent/30" />
           <div>
             <h1 className="text-xl font-bold">Projects</h1>
-            <p className="text-sm text-muted">Mỗi project = 1 video storyboard</p>
+            <p className="text-sm text-muted">{t(lang, "projectsSub")}</p>
           </div>
         </div>
+        <div className="flex items-center gap-2">
+        <LangToggle lang={lang} setLang={setLang} />
         <button
           onClick={() => void createProject()}
           disabled={busy === "create"}
           className="btn-gradient rounded-xl px-5 py-2.5 text-sm font-bold text-white"
         >
-          + Project mới
+          {t(lang, "newProjectBtn")}
         </button>
+        </div>
       </header>
 
-      {error && <p className="text-rose-400">{error}</p>}
+      {error && <p className="text-rose-400">{error === LOAD_FAILED ? t(lang, "loadFailed") : error}</p>}
 
       {projects === null ? (
         <div className="flex flex-col gap-3">
@@ -85,7 +92,7 @@ export default function ProjectsPage() {
         </div>
       ) : projects.length === 0 ? (
         <p className="rounded-card border border-dashed border-line px-4 py-12 text-center text-muted">
-          Chưa có project nào — tạo project đầu tiên để bắt đầu.
+          {t(lang, "noProjects")}
         </p>
       ) : (
         <div className="flex flex-col gap-3">
@@ -99,9 +106,7 @@ export default function ProjectsPage() {
                   {p.name}
                 </h2>
                 <p className="mt-0.5 text-xs text-muted">
-                  {p.frameCount} frame · {p.doneCount} đã generate · {p.aspectRatio} ·{" "}
-                  {p.resolution} · cập nhật{" "}
-                  {new Date(p.updatedAt).toLocaleString("vi-VN")}
+                  {t(lang, "projStats", { frames: p.frameCount, done: p.doneCount, aspect: p.aspectRatio, res: p.resolution, date: new Date(p.updatedAt).toLocaleString(DATE_LOCALE[lang]) })}
                 </p>
               </Link>
               <div className="flex shrink-0 items-center gap-2">
@@ -109,9 +114,9 @@ export default function ProjectsPage() {
                   onClick={() => void duplicate(p.id)}
                   disabled={busy === p.id}
                   className="rounded-xl border border-line px-3 py-1.5 text-xs text-muted transition hover:border-accent hover:text-ink"
-                  title="Nhân bản — giữ kịch bản + asset cho video series"
+                  title={t(lang, "duplicateTitle")}
                 >
-                  ⧉ Nhân bản
+                  {t(lang, "duplicate")}
                 </button>
                 {confirmDeleteId === p.id ? (
                   <>
@@ -120,18 +125,19 @@ export default function ProjectsPage() {
                       disabled={busy === p.id}
                       className="rounded-xl bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white"
                     >
-                      Xoá luôn
+                      {t(lang, "deleteNow")}
                     </button>
                     <button
                       onClick={() => setConfirmDeleteId(null)}
                       className="rounded-xl border border-line px-3 py-1.5 text-xs text-muted"
                     >
-                      Huỷ
+                      {t(lang, "cancelAction")}
                     </button>
                   </>
                 ) : (
                   <button
                     onClick={() => setConfirmDeleteId(p.id)}
+                    aria-label={t(lang, "deleteProject")}
                     className="rounded-xl border border-line px-3 py-1.5 text-xs text-muted transition hover:border-rose-500 hover:text-rose-400"
                   >
                     ✕

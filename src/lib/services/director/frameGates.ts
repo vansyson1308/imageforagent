@@ -111,6 +111,25 @@ export async function measureFrame(png: Buffer): Promise<FrameMeasure> {
   return { blocks, blockShare: blocks.reduce((t, b) => t + b.area, 0), edgeDensity: edges / n, regions };
 }
 
+/**
+ * The blocks of `m` that the shot added itself: blocks that also appear (same
+ * colour, ≥ 80 % box overlap) in `inherited` (a render of only the set
+ * symbols the shot uses) belong to the Cast's set, which the Artist can't
+ * edit, so they don't count against the shot. Sets are gated at cast time.
+ */
+export function withoutInherited(m: FrameMeasure, inherited: FrameMeasure): FrameMeasure & { inheritedShare: number } {
+  const overlap = (a: Block, b: Block) => {
+    const ix = Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0));
+    const iy = Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
+    const inter = ix * iy;
+    const union = (a.x1 - a.x0) * (a.y1 - a.y0) + (b.x1 - b.x0) * (b.y1 - b.y0) - inter;
+    return union > 0 ? inter / union : 0;
+  };
+  const own = m.blocks.filter((b) => !inherited.blocks.some((h) => h.color === b.color && overlap(b, h) >= 0.8));
+  const blockShare = own.reduce((t, b) => t + b.area, 0);
+  return { ...m, blocks: own, blockShare, inheritedShare: m.blockShare - blockShare };
+}
+
 /** Thresholds (calibrated, see the test). */
 export const GATE = {
   /** flat rectangles covering more than this share of the background = an unreadable set (v1: broken frames 0.11/0.28, good frames 0.00) */

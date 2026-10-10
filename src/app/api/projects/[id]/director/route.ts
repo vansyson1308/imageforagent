@@ -7,6 +7,7 @@ import { demoConfig } from "@/lib/services/demoMode";
 import { cleanupDemoProjects, dailyGate, requireDemoSession } from "@/lib/services/demoGuard";
 import { directorDeps } from "@/lib/services/director/deps";
 import { createRun, isRunLive } from "@/lib/services/director/loop";
+import { demoFloorPolicy } from "@/lib/services/director/demoPolicy";
 import { reapOrphanRuns, runEventStream, SSE_HEADERS, startDetachedRun } from "@/lib/services/director/runHub";
 import { STYLE_PRESETS } from "@/lib/services/director/prompts";
 import { loadSeries } from "@/lib/services/director/series";
@@ -67,7 +68,8 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
       await cleanupDemoProjects(cfg);
       gate = await dailyGate(cfg);
     }
-    const runDeps = { ...deps, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }) };
+    const floor = cfg.enabled ? await demoFloorPolicy() : null;
+    const runDeps = { ...deps, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }), ...(floor && { floorRedraw: { enabled: floor.enabled, reason: floor.reason } }) };
     const series = body.seriesId ? await loadSeries(body.seriesId, sid, cfg.enabled) : null;
     const { seriesId: _ignored, ...rest } = body;
     void _ignored;

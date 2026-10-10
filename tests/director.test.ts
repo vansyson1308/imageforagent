@@ -9,7 +9,7 @@ import { LlmError } from "@/lib/providers/types";
 import { motionSpecSchema } from "@/lib/validation/motionSchema";
 import { parseTsv } from "@/lib/services/tsvParser";
 import { LOGICAL_CANVAS, renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
-import { demoHandler, demoPlan, DEMO_LIBRARY, MOCK_MODELS } from "@/lib/services/director/demoCrew";
+import { demoFrame, demoHandler, demoPlan, DEMO_LIBRARY, MOCK_MODELS } from "@/lib/services/director/demoCrew";
 import { createRun, executeRun, cancelRun, registerRun, runPool, unregisterRun, type DirectorDeps } from "@/lib/services/director/loop";
 import { BudgetExceededError, BudgetTracker, clampBudget, DEFAULT_BUDGET, type DirectorBudget } from "@/lib/services/director/budget";
 import { extractJson, jsonSchemaOf, planSchema, critiqueSchema } from "@/lib/services/director/schemas";
@@ -434,6 +434,23 @@ describe("director loop (mock crew)", () => {
     expect(steps.some((s) => s.action === "give-up")).toBe(true);
   }, 120_000);
 
+  it("stop-loss: the same measured gate failure twice goes straight to the lenient last attempt (one call saved, hosted-run root cause)", async () => {
+    const base = demoHandler({ criticScores: [9] });
+    const handler: MockHandler = (m, o, i) => {
+      if (m[0].content.startsWith("ROLE: ARTIST") && /shot 1 of/.test(m[1].content)) {
+        // the shot's OWN big flat block (not from the set): fails the readable-set gate every time
+        return demoFrame(1, false).replace("<circle ", '<rect x="700" y="60" width="820" height="300" fill="#3355aa"/>\n<circle ');
+      }
+      return base(m, o, i);
+    };
+    const { runId, summary } = await run(handler, {}, { maxShots: 2 });
+    expect(summary.status).toBe("done");
+    expect(summary.rendered).toBe(2);
+    const calls = await prisma.directorStep.findMany({ where: { runId, shotIndex: 1, role: "artist", action: { in: ["draw", "repair"] } }, orderBy: { seq: "asc" } });
+    expect(calls.map((c) => c.attempt)).toEqual([0, 1, DEFAULT_BUDGET.maxRepairs]);
+    expect(summary.gateFailures).toBeGreaterThanOrEqual(1);
+  }, 120_000);
+
   it("accepts library symbols one by one: a repair redraws only the failing member", async () => {
     const base = demoHandler({ criticScores: [9] });
     const lib = splitLibrary(DEMO_LIBRARY);
@@ -566,6 +583,15 @@ describe("director loop (mock crew)", () => {
     expect(looks.every((l) => l.model === "mock-vision" && l.imagePath)).toBe(true);
     const scores = await prisma.directorStep.findMany({ where: { runId: won.runId, action: "score" } });
     expect(scores.every((x) => x.model === "mock-fast" && /^vision critic .*mock-vision looked, mock-fast scored/.test(x.outputSummary ?? ""))).toBe(true);
+  }, 180_000);
+
+  it("demo stop rule (D37): with the floor redraw off, no fresh redraw is drawn and the run says why", async () => {
+    const off = await run(demoHandler({ criticScores: [5, 5, 8, 9] }), { floorRedraw: { enabled: false, reason: "demo stop rule: test" } }, { maxShots: 2 });
+    expect(off.summary.status).toBe("done");
+    const steps = await prisma.directorStep.findMany({ where: { runId: off.runId } });
+    expect(steps.some((s) => /^Fresh redraw/.test(s.outputSummary ?? ""))).toBe(false);
+    expect(steps.find((s) => s.action === "stop-rule")?.outputSummary).toBe("Floor redraw off for this run (demo stop rule: test)");
+    expect((off.summary.belowFloor ?? []).length).toBeGreaterThan(0);
   }, 180_000);
 
   it("stops with budget_exceeded when the token budget runs out, keeping the trace", async () => {

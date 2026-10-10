@@ -1,6 +1,7 @@
 "use client";
 
 import { create } from "zustand";
+import { currentLang, t } from "@/lib/i18n";
 import {
   api,
   ApiError,
@@ -70,7 +71,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!id) {
       const projects = await api.listProjects();
       if (projects.length === 0) {
-        const created = await api.createProject("Storyboard mới");
+        const created = await api.createProject(t(currentLang(), "newProjectName"));
         id = created.id;
       } else {
         id = projects[0].id;
