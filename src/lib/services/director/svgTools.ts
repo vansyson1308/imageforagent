@@ -250,6 +250,42 @@ export function reframePlacement(p: Placement, visible: { y0: number; y1: number
   return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
 }
 
+/** Element nesting depth at `index` of a fragment (0 = top level). */
+function depthAt(svg: string, index: number): number {
+  let depth = 0;
+  for (const t of svg.slice(0, index).matchAll(/<(\/?)([a-zA-Z][\w:-]*)\b[^>]*?(\/?)>/g)) {
+    if (t[3] === "/") continue;
+    depth += t[1] ? -1 : 1;
+  }
+  return depth;
+}
+
+/**
+ * Night readability fix (owner QC 2026-10-10): a translucent full-canvas tint
+ * drawn AFTER the characters darkens them with the set. Moves every such
+ * top-level tint to just before the first character, so it darkens the set
+ * only. Null when there is nothing to move.
+ */
+export function tintUnderFigures(svg: string, characters: readonly string[], canvas: { w: number; h: number }): { svg: string; note: string } | null {
+  if (!characters.length) return null;
+  const ids = characters.map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const first = new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#(?:${ids})(?:--[a-z0-9_-]+)?["']`).exec(svg);
+  if (!first || depthAt(svg, first.index) !== 0) return null;
+  const num = (tag: string, a: string) => {
+    const v = tag.match(new RegExp(`\\s${a}\\s*=\\s*["']?(-?[\\d.]+)(%?)["']?`));
+    return v ? (v[2] ? (Number(v[1]) / 100) * (a === "height" || a === "y" ? canvas.h : canvas.w) : Number(v[1])) : a === "x" || a === "y" ? 0 : NaN;
+  };
+  const tints = [...svg.matchAll(/<rect\b[^>]*\/>/g)].filter((m) => {
+    if (m.index! < first.index || depthAt(svg, m.index!) !== 0) return false;
+    const op = Number(m[0].match(/\s(?:fill-)?opacity\s*=\s*["']?([\d.]+)/)?.[1] ?? 1);
+    return op < 1 && num(m[0], "width") >= canvas.w * 0.95 && num(m[0], "height") >= canvas.h * 0.95 && Math.abs(num(m[0], "x")) <= canvas.w * 0.05 && Math.abs(num(m[0], "y")) <= canvas.h * 0.05;
+  });
+  if (!tints.length) return null;
+  let rest = svg;
+  for (const t of [...tints].reverse()) rest = rest.slice(0, t.index!) + rest.slice(t.index! + t[0].length);
+  return { svg: rest.slice(0, first.index) + tints.map((t) => t[0]).join("") + rest.slice(first.index), note: `${tints.length} full-frame tint(s) moved under the characters (they darkened the figures too)` };
+}
+
 /** The fragment with that `<use>`'s x, y, width and height replaced. */
 export function applyPlacement(svg: string, placed: { tag: string; at: number }, to: Placement): string {
   const set = (tag: string, a: string, v: number) => tag.replace(new RegExp(`(\\s${a}\\s*=\\s*)(["']?)-?[\\d.]+\\2`), `$1"${v}"`);
@@ -295,6 +331,36 @@ export async function coveredShare(full: Buffer, alone: Buffer, beneath: Buffer)
     }
   }
   return { head: n.head ? hid.head / n.head : 0, rest: n.rest ? hid.rest / n.rest : 0 };
+}
+
+/** Share of the frame's pixels that `withUse` changes over `without` (what an element visibly adds, 0..1). */
+export async function visibleArea(withUse: Buffer, without: Buffer): Promise<number> {
+  const a = await rgba(withUse);
+  const b = await rgba(without);
+  let n = 0;
+  let total = 0;
+  for (let y = 0; y < a.h; y += 2) {
+    for (let x = 0; x < a.w; x += 2) {
+      const i = (y * a.w + x) * 4;
+      total++;
+      if (Math.abs(a.data[i] - b.data[i]) + Math.abs(a.data[i + 1] - b.data[i + 1]) + Math.abs(a.data[i + 2] - b.data[i + 2]) > 30) n++;
+    }
+  }
+  return total ? n / total : 0;
+}
+
+/**
+ * Minimum visible area of a planned prop, as a share of the frame, by shot
+ * type (owner QC 2026-10-10: hero props story-sized). An insert of the prop
+ * must be big; in a wide shot it still has to be findable.
+ */
+export function minPropArea(shotType: string): number {
+  const s = shotType.toLowerCase();
+  if (/insert|detail|chi tiết|extreme close|macro|インサート/.test(s)) return 0.04;
+  if (/close|cận|アップ|クローズ/.test(s)) return 0.012;
+  if (/medium|trung|waist|two[- ]shot|over[- ]the|ミディアム|バスト/.test(s)) return 0.004;
+  if (/wide|establish|toàn|long|rộng|aerial|bird|ロング|全景/.test(s)) return 0.0015;
+  return 0.003;
 }
 
 /**
@@ -355,7 +421,7 @@ export async function meanBrightness(png: Buffer): Promise<number> {
   return Math.round(0.2126 * s.channels[0].mean + 0.7152 * s.channels[1].mean + 0.0722 * s.channels[2].mean);
 }
 
-export const NIGHT_WORDS = /\b(night|midnight|moonlit|moonlight|at dusk|evening|dark)\b|đêm|tối|trăng|夜|晩|月明|闇/i;
+export { NIGHT_WORDS } from "@/lib/services/director/fidelity";
 
 // ---------- Library surgery (per-symbol accept / repair) ----------
 

@@ -19,6 +19,7 @@ import { buildTimeline, timelineDuration, timelineInputOf } from "@/lib/services
 import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { commitShot, drawShot, type Drawing } from "@/lib/services/director/artist";
 import { critiqueShot, fixesText } from "@/lib/services/director/critic";
+import { fidelityBrief, fidelityFailures } from "@/lib/services/director/fidelity";
 import { lintProject, runContinuity, runDialogue, runEditor } from "@/lib/services/director/editor";
 import type { Critique } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
@@ -125,6 +126,10 @@ interface ShotStats {
   belowFloor?: boolean;
   /** gate problems the FINAL version still has (accepted on the lenient last attempt) */
   gateFailures?: number;
+  /** off-plan axes (time/place/action) the FINAL version still has, per Nano's fidelity verdict */
+  offPlan?: string[];
+  /** the final version places none of the shot's sets */
+  setless?: boolean;
   firstPassOk: boolean;
   repairs: number;
   before: number | null;
@@ -258,7 +263,7 @@ export async function executeRun(
       const st: ShotStats = { firstPassOk: false, repairs: 0, before: null, after: null, revisions: 0 };
       shotStats.set(frame.index, st);
       emit({ type: "status", message: `Artist is drawing shot ${frame.index}/${frames.length}…` });
-      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits) });
+      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits });
       st.repairs += first.attempts - 1;
       st.firstPassOk = first.drawing !== null && first.attempts === 1;
       if (!first.drawing) {
@@ -270,18 +275,20 @@ export async function executeRun(
       if (first.drawing.checks?.problems.length) st.gateFailures = first.drawing.checks.problems.length;
       let committed: Frame = await commitAndAnnounce(ctx, { frame, shot, index: frame.index, drawing: first.drawing, castDefs: library.defs, patterns, background, acting: { kits: library.kits, plan } }, null);
       let best: { drawing: Drawing; critique: Critique | null } = { drawing: first.drawing, critique: null };
+      st.setless = !placesASet(first.drawing.svg, plan);
       if (!options.critic) return;
-      const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0 });
+      const planBrief = fidelityBrief(plan, shot, library.setTimes ?? new Map());
+      const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0, context: planBrief });
       best = { drawing: first.drawing, critique: c0.critique };
       st.before = c0.critique?.score ?? null;
       st.after = st.before;
       for (let round = 1; round <= budget.maxCriticRounds; round++) {
         const c = best.critique;
         if (!c || c.score >= options.acceptScore || c.verdict === "accept") break;
-        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits) });
+        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits });
         st.repairs += Math.max(0, rev.attempts - 1);
         if (!rev.drawing) break;
-        const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round });
+        const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round, context: planBrief });
         st.revisions++;
         if (cr.critique && cr.critique.score > c.score) {
           best = { drawing: rev.drawing, critique: cr.critique };
@@ -310,10 +317,11 @@ export async function executeRun(
           feedback: `START OVER. The best version so far scored ${fb.score}/10 (${fb.issues.slice(0, 3).join("; ") || "weak"}). Draw a NEW composition with a different approach: another camera angle or distance, a different layout of the characters, clearer staging of the action. Do not copy the earlier layout.`,
           neighbours: neighbours(frame.index),
           actingBrief: actingBrief(shot, library.kits),
+          kits: library.kits,
         });
         st.repairs += Math.max(0, fresh.attempts - 1);
         if (fresh.drawing) {
-          const cf = await critiqueShot(ctx, { shot, index: frame.index, drawing: fresh.drawing, round: budget.maxCriticRounds + 1 });
+          const cf = await critiqueShot(ctx, { shot, index: frame.index, drawing: fresh.drawing, round: budget.maxCriticRounds + 1, context: planBrief });
           st.revisions++;
           if (cf.critique && cf.critique.score > fb.score) {
             best = { drawing: fresh.drawing, critique: cf.critique };
@@ -328,6 +336,9 @@ export async function executeRun(
         }
         if ((best.critique?.score ?? 0) < FLOOR_SCORE) st.belowFloor = true;
       }
+      st.offPlan = fidelityFailures(best.critique);
+      st.setless = !placesASet(best.drawing.svg, plan);
+      if (st.offPlan.length) await recordStep(ctx, { role: "critic", model: ctx.models.fast, action: "off-plan", shotIndex: frame.index, score: best.critique?.score ?? null, summary: `Shot ${frame.index} still off-plan after revisions (${st.offPlan.join(" + ")})`, error: best.critique?.fidelity?.note || null });
     };
     await runPool(frames, Math.max(1, Math.min(6, deps.concurrency ?? 1)), doShot);
 
@@ -363,6 +374,11 @@ export async function executeRun(
   if (error) emit({ type: "error", message: error });
   emit({ type: "done", status, summary });
   return summary;
+}
+
+/** The drawing places one of the film's sets (a shot without a set reads as characters on a void). */
+function placesASet(svg: string, plan: { cast: readonly { id: string; kind: string }[] }): boolean {
+  return plan.cast.some((c) => c.kind === "set" && new RegExp(`href\\s*=\\s*["']#${c.id}["']`).test(svg));
 }
 
 /**
@@ -419,6 +435,9 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     criticAfter: mean(scored.map((s) => s.after!)),
     revisions: all.reduce((n, s) => n + s.revisions, 0),
     gateFailures: all.filter((s) => (s.gateFailures ?? 0) > 0).length,
+    offPlan: [...stats.entries()].filter(([, s]) => s.offPlan?.length).map(([i]) => i).sort((a, b) => a - b),
+    setless: [...stats.entries()].filter(([, s]) => s.setless).map(([i]) => i).sort((a, b) => a - b),
+    shotScores: Object.fromEntries([...stats.entries()].sort(([a], [b]) => a - b).map(([i, s]) => [i, s.after])),
     belowFloor: [...stats.entries()].filter(([, s]) => s.belowFloor).map(([i]) => i).sort((a, b) => a - b),
     criticModel: criticEyes,
     lintErrors: lint.findings.filter((f) => f.severity === "error").length,
@@ -468,10 +487,12 @@ async function castForEpisode(ctx: DirectorContext, plan: Parameters<typeof runC
   const fresh = plan.cast.filter((c) => !recurring.has(c.id));
   const kits = new Map(series.kits);
   let defs = series.library;
+  let setTimes: ReadonlyMap<string, string> | undefined;
   if (fresh.length) {
     const guests = await runCast(ctx, { ...plan, cast: fresh, shots: plan.shots.map((s) => ({ ...s, cast: s.cast.filter((id) => !recurring.has(id)) })) }, aspectRatio);
     defs = mergeLibraries(series.library, guests.defs);
     for (const [k, v] of guests.kits) kits.set(k, v);
+    setTimes = guests.setTimes;
   }
   await prisma.project.update({ where: { id: ctx.projectId }, data: { artworkDefs: defs } });
   await recordStep(ctx, {
@@ -480,5 +501,5 @@ async function castForEpisode(ctx: DirectorContext, plan: Parameters<typeof runC
     action: "series-cast",
     summary: `Series "${series.name}": reused ${plan.cast.filter((c) => recurring.has(c.id)).map((c) => c.id).join(", ") || "no"} verbatim (pixel-identical)${fresh.length ? `; drew new: ${fresh.map((c) => c.id).join(", ")}` : ""}`,
   });
-  return { defs, symbols: symbolIds(defs), placeholder: false, kits };
+  return { defs, symbols: symbolIds(defs), placeholder: false, kits, setTimes };
 }

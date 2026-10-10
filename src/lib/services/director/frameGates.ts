@@ -141,7 +141,34 @@ export const GATE = {
   maxSimilarity: 0.88,
   /** share of a kit figure's head (top 30%) hidden by what is drawn after it, and by at least 15 points more than its body (hosted run 4: kite over a face 0.27 vs body 0.00; a figure standing behind another 0.22 vs 0.26 = staging, not a hidden face; D42) */
   maxFaceCover: 0.2,
+  /** a figure's visible box this close to a side of the frame is cut by it (rendered at 1K, sampled every 2 px) */
+  edge: 0.002,
+  /** night readability, on figures in a night or dark frame: mean luminance as rendered, and mean per-pixel contrast against what is behind them (v1 + v2 showcase night figures: lum ≥ 110, contrast ≥ 39) */
+  nightFigureLum: 95,
+  nightFigureContrast: 35,
+  /** a frame darker than this is judged for night readability even when its words don't say night */
+  darkFrame: 110,
 } as const;
+
+/** The plan marks a character leaving or entering the frame: an edge cut is allowed then (owner QC 2026-10-10). */
+export const EXIT_ENTRY_WORDS = /\b(exits?|exiting|enters?|entering|leaves|leaving|walks? (?:out|off|away|in)|runs? (?:out|off|away|in)|steps? (?:in|out)|arrives?|arriving|comes? in|off[- ]?screen|(?:into|out of) (?:the )?frame)\b|ra khỏi|bước vào|đi vào|chạy vào|chạy ra|đi ra|rời đi|出て|入って|入る|去って|現れ|立ち去/i;
+/** An over-the-shoulder shot frames the foreground character cut by the edge on purpose. */
+export const OVER_SHOULDER = /over[- ]the[- ]shoulder|\bOTS\b|qua vai|từ vai|肩越し/i;
+
+export type EdgeSide = "left" | "right" | "bottom";
+
+/**
+ * The frame edges a figure's visible box is cut by. The bottom counts only in
+ * a wide shot (closer shots crop the legs on purpose); the top is the
+ * head-cut gate's.
+ */
+export function edgeCuts(box: { x0: number; x1: number; y1: number }, wide: boolean): EdgeSide[] {
+  const out: EdgeSide[] = [];
+  if (box.x0 <= GATE.edge) out.push("left");
+  if (box.x1 >= 1 - GATE.edge) out.push("right");
+  if (wide && box.y1 >= 1 - GATE.edge) out.push("bottom");
+  return out;
+}
 
 const pctOf = (v: number) => `${Math.round(v * 100)}%`;
 const px = (v: number, size: number) => Math.round(v * size);
@@ -222,4 +249,36 @@ export function nearDuplicateProblem(sim: number, otherIndex: number, shotType: 
   if (sim < GATE.maxSimilarity) return null;
   const alt = /close/i.test(shotType) ? "a medium or wide shot from another side" : /wide|establish/i.test(shotType) ? "a close-up on a face or a hand-held object" : "a close-up, an over-the-shoulder, or a different corner of the set";
   return `this frame is ${pctOf(sim)} similar to shot ${otherIndex} (same composition). Change the camera so the cut is visible: ${alt}, different character placement, another part of the set`;
+}
+
+/**
+ * How a figure reads against what is behind it (owner QC 2026-10-10, night
+ * readability). The figure's pixels are where the render differs from the
+ * same frame without it; `lum` is their mean luminance as rendered, `behind`
+ * the mean luminance of the background at those same pixels, `contrast` the
+ * mean per-pixel luminance difference between the two.
+ */
+export async function figureLight(withUse: Buffer, without: Buffer): Promise<{ lum: number; behind: number; contrast: number } | null> {
+  const load = async (png: Buffer) => sharp(png).flatten({ background: "#000000" }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const a = await load(withUse);
+  const b = await load(without);
+  const L = (d: Buffer, i: number) => 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+  let n = 0;
+  let lum = 0;
+  let behind = 0;
+  let contrast = 0;
+  const { width: w, height: h } = a.info;
+  for (let y = 0; y < h; y += 2) {
+    for (let x = 0; x < w; x += 2) {
+      const i = (y * w + x) * 3;
+      if (Math.abs(a.data[i] - b.data[i]) + Math.abs(a.data[i + 1] - b.data[i + 1]) + Math.abs(a.data[i + 2] - b.data[i + 2]) <= 30) continue;
+      const la = L(a.data, i);
+      const lb = L(b.data, i);
+      n++;
+      lum += la;
+      behind += lb;
+      contrast += Math.abs(la - lb);
+    }
+  }
+  return n < 50 ? null : { lum: Math.round(lum / n), behind: Math.round(behind / n), contrast: Math.round(contrast / n) };
 }

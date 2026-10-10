@@ -64,12 +64,24 @@ export type CastMember = z.infer<typeof castMemberSchema>;
 export type ShotPlan = z.infer<typeof shotPlanSchema>;
 export type Plan = z.infer<typeof planSchema>;
 
+const FIDELITY_VERDICTS = ["ok", "wrong", "unclear"] as const;
+
 export const critiqueSchema = z.object({
   /** 0 = unreadable/wrong, 10 = clearly shows the shot with good composition. */
   score: z.number().min(0).max(10),
   verdict: z.enum(["accept", "revise"]),
   issues: z.array(z.string().max(240)).max(6),
   fixes: z.array(z.string().max(240)).max(6),
+  /** Plan-vs-render fidelity (sprint b): does the render show the planned time of day, place and key action? */
+  fidelity: z
+    .object({
+      time: z.enum(FIDELITY_VERDICTS),
+      place: z.enum(FIDELITY_VERDICTS),
+      action: z.enum(FIDELITY_VERDICTS),
+      note: z.string().max(240),
+    })
+    .nullable()
+    .default(null),
 });
 
 export type Critique = z.infer<typeof critiqueSchema>;

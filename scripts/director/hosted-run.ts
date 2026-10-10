@@ -4,7 +4,7 @@
  * finished minute and wall time per 8 shots. The passcode comes from the
  * environment (DEMO_PASSCODE) and is never printed or written.
  *
- *   DEMO_PASSCODE=… npx tsx scripts/director/hosted-run.ts [--base https://…] [--sample en-kite] [--max-shots 8] [--out docs/hackathon/evidence] [--media <dir>]
+ *   DEMO_PASSCODE=… npx tsx scripts/director/hosted-run.ts [--base https://…] [--sample en-kite] [--max-shots 8] [--research auto|on|off] [--out docs/hackathon/evidence] [--media <dir>]
  *
  * Writes <out>/hosted-run-v2-<date>-<sample>-runN.json (never overwrites); with --media, also the film and stills (for review, not committed).
  */
@@ -35,6 +35,12 @@ interface Step {
   score?: number | null;
 }
 
+/** `--research on|off|auto` (default auto): `on` forces Tavily research, for a citation trace. */
+const researchArg = (): boolean | "auto" => {
+  const r = arg("--research", "auto");
+  return r === "on" ? true : r === "off" ? false : "auto";
+};
+
 async function main() {
   const base = arg("--base", "https://studio-production-049c.up.railway.app");
   const sample = sampleByKey(arg("--sample", "en-kite"));
@@ -52,7 +58,7 @@ async function main() {
   let summary: Record<string, unknown> | null = null;
   let plan: { title?: string; shots?: unknown[] } | null = null;
   const t0 = Date.now();
-  const runId = await client.direct(pid, { story: sample.story, language: sample.language, style: sample.style, maxShots, critic: true, research: "auto" }, (e: SseEvent) => {
+  const runId = await client.direct(pid, { story: sample.story, language: sample.language, style: sample.style, maxShots, critic: true, research: researchArg() }, (e: SseEvent) => {
     if (e.type === "run") models = e.models;
     if (e.type === "plan") plan = { title: e.title as string, shots: e.shots as unknown[] };
     if (e.type === "step") {

@@ -8,7 +8,8 @@ import sharp from "sharp";
 import { badPaints, castSheetFrame, extractJsonBlock, fixPaints, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
 import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalHair, naturalSkin, normalizeDollSpec, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
 import { measureFrame, readableSetProblem } from "@/lib/services/director/frameGates";
-import { buildSet, normalizeSetSpec, setSchema } from "@/lib/services/director/setKit";
+import { setTimeFix } from "@/lib/services/director/fidelity";
+import { buildSet, normalizeSetSpec, setSchema, type SetSpec } from "@/lib/services/director/setKit";
 
 export type KitSpec = { readonly kind: "doll"; readonly spec: DollSpec } | { readonly kind: "critter"; readonly spec: CritterSpec };
 import { zodIssues } from "@/lib/services/director/schemas";
@@ -19,6 +20,8 @@ export interface CastLibrary {
   readonly symbols: string[];
   /** characters drawn by the engine's kits (posable: acting variants, blinks, lip-sync) */
   readonly kits: Map<string, KitSpec>;
+  /** the time of day each kit set is lit for (the fidelity check's "planned light") */
+  readonly setTimes?: ReadonlyMap<string, string>;
   /** true when the Artist's library failed every attempt and placeholders were used. */
   readonly placeholder: boolean;
 }
@@ -165,6 +168,11 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
   let problems: string[] = [];
   // the kit spec behind each kit-built symbol (the exact markup it produced)
   const kitBySymbol = new Map<string, { id: string; kit: KitSpec }>();
+  // kit sets and their dressing (owner QC 2026-10-10): culturally specific elements the kit can't draw become
+  // prop members `<set>-d<n>` the Cast must draw; the set is rebuilt with them at assembly
+  const setSpecs = new Map<string, SetSpec>();
+  const dressMembers: CastMember[] = [];
+  const allMembers = () => [...plan.cast, ...dressMembers];
   for (let attempt = 0; attempt <= ctx.budget.budget.maxRepairs && pending.length; attempt++) {
     throwIfCancelled(ctx);
     const user = attempt === 0 ? castUser(plan) : castRepairUser(plan, pending, [...accepted.keys()], problems);
@@ -203,7 +211,22 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
         const norm = normalizeSetSpec(spec);
         const r = setSchema.safeParse(norm.spec);
         if (r.success && norm.notes.length) kitFixes.push(`${id}: ${norm.notes.join("; ")}`);
-        if (r.success) dolls.set(id, buildSet(id, r.data, ctx.canvas));
+        if (r.success) {
+          // a set lit for the wrong time of day (the plan's night shots on a day set) is relit by the engine
+          const relit = setTimeFix(plan, id, r.data.time);
+          if (relit) {
+            r.data.time = relit.time;
+            kitFixes.push(`${id}: ${relit.note}`);
+          }
+          dolls.set(id, buildSet(id, r.data, ctx.canvas));
+          setSpecs.set(id, r.data);
+          const member = plan.cast.find((c) => c.id === id);
+          r.data.dressing.forEach((name, i) => {
+            const did = `${id.slice(0, 28)}-d${i + 1}`;
+            if (dressMembers.some((d) => d.id === did)) return;
+            dressMembers.push({ id: did, name: name.slice(0, 60), kind: "prop", look: `${name}: a culturally specific element of the set "${id}" (${r.data.place}), drawn as an object the engine places in the set`.slice(0, 500), colors: member?.colors ?? ["#8a6a4a"] });
+          });
+        }
         else dollProblems.push(`#${id} set spec invalid: ${zodIssues(r.error)}`);
       }
       for (const [id, spec] of Object.entries(raw?.critters ?? {})) {
@@ -236,7 +259,9 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     problems = [...dollProblems];
     const known = new Set([...accepted.keys(), ...parsed.symbols.keys()]);
     const strict = attempt < ctx.budget.budget.maxRepairs;
-    for (const c of pending) {
+    // this attempt's members: the pending ones plus set dressing named in this very reply
+    const checkList = [...pending, ...dressMembers.filter((d) => !accepted.has(d.id) && !pending.some((p) => p.id === d.id))];
+    for (const c of checkList) {
       const symbol = parsed.symbols.get(c.id);
       const found = await symbolProblems(c, symbol, parsed.extras, ctx.canvas, aspectRatio, known);
       // Animals go through the animal kit: a hand-drawn one is rejected (until the lenient last attempt)
@@ -255,14 +280,14 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
         if (!prev || found.length <= prev.problems.length) best.set(c.id, cand);
       }
     }
-    pending = plan.cast.filter((c) => !accepted.has(c.id));
+    pending = allMembers().filter((c) => !accepted.has(c.id));
     if (pending.length) {
       await recordStep(ctx, {
         role: "cast",
         model: out.model,
         action: "defs:invalid",
         attempt,
-        summary: `Kept ${accepted.size}/${plan.cast.length} symbols; redrawing ${pending.map((c) => c.id).join(", ")}`,
+        summary: `Kept ${accepted.size}/${allMembers().length} symbols; redrawing ${pending.map((c) => c.id).join(", ")}`,
         error: `Library too simple or mis-sized: ${problems.join("; ")}.`,
       });
     }
@@ -274,7 +299,28 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
   const fallback: string[] = [];
   const placeholders: string[] = [];
   const kits = new Map<string, KitSpec>();
-  for (const c of plan.cast) {
+  // set dressing: drawn items join their set; an item that never passed is reported, not dropped silently
+  const dressNotes: string[] = [];
+  const missingDress: string[] = [];
+  for (const [setId, spec] of setSpecs) {
+    const items = dressMembers.filter((d) => d.id.startsWith(`${setId.slice(0, 28)}-d`));
+    if (!items.length) continue;
+    const usable = items.filter((d) => accepted.has(d.id) || best.has(d.id));
+    for (const d of items) (usable.includes(d) ? dressNotes : missingDress).push(`${setId}: ${d.name} (#${d.id}${accepted.has(d.id) ? "" : usable.includes(d) ? ", best attempt" : ""})`);
+    const lib = splitLibrary(buildSet(setId, spec, ctx.canvas, usable.map((d) => ({ id: d.id, name: d.name }))));
+    const symbol = lib.symbols.get(setId);
+    if (symbol) accepted.set(setId, { symbol, extras: lib.extras, attempt: accepted.get(setId)?.attempt ?? 0, problems: [] });
+  }
+  if (dressNotes.length || missingDress.length) {
+    await recordStep(ctx, {
+      role: "cast",
+      model: "engine",
+      action: "set-dressing",
+      summary: `Set dressing placed: ${dressNotes.join(" · ") || "none"}`,
+      error: missingDress.length ? `Set dressing NOT drawn (the set shows without it): ${missingDress.join(" · ")}` : null,
+    });
+  }
+  for (const c of allMembers().filter((m) => plan.cast.includes(m) || accepted.has(m.id) || best.has(m.id))) {
     const cand = accepted.get(c.id) ?? best.get(c.id);
     const fromKit = cand ? kitBySymbol.get(cand.symbol) : undefined;
     if (fromKit && fromKit.id === c.id) kits.set(c.id, fromKit.kit);
@@ -322,5 +368,5 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     imagePath: sheetPath,
     error: placeholder ? "cast library invalid after all repairs" : placeholders.length ? `placeholders used for ${placeholders.join(", ")}` : null,
   });
-  return { defs, symbols: symbolIds(defs), placeholder, kits };
+  return { defs, symbols: symbolIds(defs), placeholder, kits, setTimes: new Map([...setSpecs].map(([id, s]) => [id, s.time] as const)) };
 }

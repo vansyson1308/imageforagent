@@ -1,0 +1,223 @@
+{
+ "at": "2026-10-10T07:50:34.634Z",
+ "base": "https://studio-production-049c.up.railway.app",
+ "commit": "9ef1bfb",
+ "runId": "cmv23bfnf00012aox7zsxdpri",
+ "projectId": "cmv23bfik00002aoxatqagcou",
+ "story": "Chiều Ba Mươi Tết, bé An cùng bà gói bánh chưng trong sân nhà ở phố cổ Hà Nội. Lá dong xanh, gạo nếp trắng, nhân đậu xanh và thịt. Đêm xuống, hai bà cháu ngồi canh nồi bánh bên bếp lửa hồng, bà kể chuyện Lang Liêu dâng bánh cho vua Hùng. An ngủ gục trên vai bà. Sáng mùng Một, An mở mắt và thấy chiếc bánh chưng vuông vức đầu tiên do chính tay mình gói đặt trên bàn thờ.",
+ "language": "vi",
+ "config": {
+  "research": "on",
+  "critic": true,
+  "profile": "crew"
+ },
+ "researchSteps": [
+  {
+   "seq": 2,
+   "role": "researcher",
+   "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+   "action": "queries",
+   "outputSummary": "queries",
+   "costUsd": 2.454e-05,
+   "latencyMs": 485,
+   "error": null
+  },
+  {
+   "seq": 3,
+   "role": "researcher",
+   "model": "tavily/search",
+   "action": "search",
+   "outputSummary": "“Hanoi Old Quarter traditional house interior” → 3 results",
+   "costUsd": 0,
+   "latencyMs": 1587,
+   "error": null
+  },
+  {
+   "seq": 4,
+   "role": "researcher",
+   "model": "tavily/search",
+   "action": "search",
+   "outputSummary": "“Vietnamese bánh chưng preparation steps” → 3 results",
+   "costUsd": 0,
+   "latencyMs": 1734,
+   "error": null
+  },
+  {
+   "seq": 5,
+   "role": "researcher",
+   "model": "tavily/extract",
+   "action": "extract",
+   "outputSummary": "Extracted 1500 chars from https://en.wikipedia.org/wiki/B%C3%A1nh_ch%C6%B0ng",
+   "costUsd": 0,
+   "latencyMs": 41,
+   "error": null
+  },
+  {
+   "seq": 6,
+   "role": "researcher",
+   "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+   "action": "notes",
+   "outputSummary": "notes",
+   "costUsd": 0.0001518,
+   "latencyMs": 2056,
+   "error": null
+  },
+  {
+   "seq": 7,
+   "role": "researcher",
+   "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+   "action": "references",
+   "outputSummary": "Researcher found 6 reference note(s) from 5 source(s)",
+   "costUsd": 0,
+   "latencyMs": 0,
+   "error": null
+  },
+  {
+   "seq": 9,
+   "role": "researcher",
+   "model": "engine",
+   "action": "bible-use",
+   "outputSummary": "The Bible cites 6 of 6 research notes (8 cast designs, 6 shots)",
+   "costUsd": 0,
+   "latencyMs": 0,
+   "error": null
+  }
+ ],
+ "references": [
+  {
+   "note": "Traditional Vietnamese house with dark wooden interiors, tiled roofs, and quiet courtyards for natural light and airflow",
+   "url": "https://www.tripadvisor.com/Attraction_Review-g293924-d2264809-Reviews-Ancient_House-Hanoi.html",
+   "title": "Ancient House - All You SHOULD Know Before Going ...",
+   "use": "set"
+  },
+  {
+   "note": "Ancient house at 87 Ma May in Hanoi's Old Quarter, built around the end of the 19th century, featuring traditional Vietnamese design",
+   "url": "https://lasiestahotels.com/hangthung/hanois-old-quarter-an-ancient-space-in-the-bustling-capital.html",
+   "title": "Hanoi’s Old Quarter - An ancient space in the bustling capital - Luxury Boutique Hotel in Hanoi, Vietnam | La Siesta Classic Hang Thung",
+   "use": "set"
+  },
+  {
+   "note": "Bánh chưng made from glutinous rice, mung beans, and pork, traditionally consumed during Tết",
+   "url": "https://en.wikipedia.org/wiki/B%C3%A1nh_ch%C6%B0ng",
+   "title": "Bánh chưng - Wikipedia",
+   "use": "costume"
+  },
+  {
+   "note": "Bamboo leaves used to wrap bánh chưng, folded into corners to create a square shape",
+   "url": "https://www.vietworldkitchen.com/blog/2015/02/how-to-make-banh-chung-vietnamese-tet-rice-cakes.html",
+   "title": "How to Make Banh Chung Vietnamese Tet Rice Cakes - Viet World Kitchen",
+   "use": "props"
+  },
+  {
+   "note": "Bánh chưng placed on a table during Tết celebrations, often displayed on a family altar",
+   "url": "https://en.wikipedia.org/wiki/B%C3%A1nh_ch%C6%B0ng",
+   "title": "Bánh chưng - Wikipedia",
+   "use": "props"
+  },
+  {
+   "note": "Traditional Vietnamese clothing worn by elders during Tết, including áo dài and nón lá",
+   "url": "https://www.facebook.com/laceyphotographs/posts/ancient-house-on-ma-may-old-quarter-hanoi-well-worth-the-visit-/1333943242078255",
+   "title": "Ancient House on Ma May, old quarter Hanoi, well worth ...",
+   "use": "costume"
+  }
+ ],
+ "castCites": {
+  "an": [
+   6
+  ],
+  "grandma": [
+   6
+  ],
+  "banh-chung": [
+   3,
+   4
+  ],
+  "bamboo-leaves": [
+   4
+  ],
+  "fire-pit": [
+   1
+  ],
+  "altar": [
+   5
+  ],
+  "courtyard": [
+   1,
+   2
+  ],
+  "kitchen": [
+   1,
+   2
+  ]
+ },
+ "shotCites": {
+  "1": [
+   1,
+   2,
+   4,
+   6
+  ],
+  "2": [
+   3,
+   4
+  ],
+  "3": [
+   1,
+   3,
+   6
+  ],
+  "4": [
+   6
+  ],
+  "5": [
+   3,
+   4,
+   5
+  ],
+  "6": [
+   1,
+   2,
+   5
+  ]
+ },
+ "summary": {
+  "status": "done",
+  "shots": 6,
+  "rendered": 6,
+  "firstPassOk": 4,
+  "repairs": 11,
+  "criticBefore": 4.5,
+  "criticAfter": 5,
+  "revisions": 6,
+  "gateFailures": 1,
+  "belowFloor": [
+   2,
+   3,
+   4,
+   5,
+   6
+  ],
+  "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+  "lintErrors": 0,
+  "lintWarnings": 5,
+  "durationSec": 24.166667,
+  "wallMs": 267399,
+  "tokens": 186179,
+  "costUsd": 0.1242768,
+  "continuity": [],
+  "textCritic": false,
+  "research": {
+   "notes": 6,
+   "cited": 6,
+   "castCiting": 8,
+   "shotsCiting": 6,
+   "byUse": {
+    "costume": 2,
+    "props": 2,
+    "set": 2
+   }
+  }
+ },
+ "costUsd": 0.1242768,
+ "note": "Real Tavily search + extract on the hosted demo (research forced on). Full run evidence: hosted-run-v2-2026-10-10-vi-banh-chung-run1.json."
+}
