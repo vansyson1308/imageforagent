@@ -31,7 +31,9 @@ import { productionSchema } from "@/lib/services/director/ownerPackage";
 import { timingsById } from "@/lib/services/director/fixedNarration";
 import { audioDuration, decodeWav } from "@/lib/services/audio/wav";
 import { symbolHash } from "@/lib/services/director/series";
-import { appendCredits, readVoiceCredit } from "./credits";
+import { appendCredits, probe, readVoiceCredit } from "./credits";
+import { contactSheet } from "./contactSheet";
+import { spawnSync } from "node:child_process";
 import { filmCredits } from "@/lib/services/director/filmCredits";
 import { symbolIds } from "@/lib/services/director/svgTools";
 
@@ -119,7 +121,7 @@ async function main() {
       seriesId = saved.id;
       console.log(`series ${SERIES_NAME} (${saved.id}): recurring ${saved.members.join(", ")}`);
     }
-    const project = await client.json<{ artworkDefs: string; frames: Array<{ id: string; index: number }> }>("GET", `/api/projects/${pid}`);
+    const project = await client.json<{ artworkDefs: string; frames: Array<{ id: string; index: number; imageUrl: string | null; shotType: string | null }> }>("GET", `/api/projects/${pid}`);
     const sum = summary as Record<string, unknown>;
     const lint = trace.steps.filter((s) => s.role === "editor" && s.action === "lint").at(-1)?.output ?? "";
     const blockers = [
@@ -159,7 +161,14 @@ async function main() {
       const file = path.join(media, `hidamari-${folder}${evidence.publishable ? "" : ".DRAFT-not-for-publication"}.mp4`);
       writeFileSync(file, await client.download(`/api/projects/${pid}/film.mp4?v=${runId}`));
       // every film ends with its credits: the owner's voice (decision A1), Nemotron on Nebius, Tavily when used
-      await appendCredits(file, pkg.meta.aspectRatio === "9:16" ? "9:16" : "16:9", filmCredits(trace.steps, { voiceCredit: readVoiceCredit(path.join(ROOT, folder)) }));
+      const aspect = pkg.meta.aspectRatio === "9:16" ? "9:16" : "16:9";
+      await appendCredits(file, aspect, filmCredits(trace.steps, { voiceCredit: readVoiceCredit(path.join(ROOT, folder)) }));
+      // for the owner's by-eye review: every shot on one sheet, and one frame of the credit card
+      const scores = (sum.shotScores ?? {}) as Record<number, number | null>;
+      const tiles = [];
+      for (const f of project.frames) if (f.imageUrl) tiles.push({ image: await client.download(f.imageUrl), label: `${String(f.index).padStart(2, "0")} · ${f.shotType ?? "?"} · critic ${scores[f.index] ?? "n/a"}/10` });
+      writeFileSync(file.replace(/\.mp4$/, "-contact.jpg"), await contactSheet(tiles, { aspect, title: `${folder} · run ${runId}` }));
+      spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", (probe(file).dur - 1.5).toFixed(2), "-i", file, "-frames:v", "1", "-q:v", "3", file.replace(/\.mp4$/, "-credits.jpg")]);
     }
     console.log(`${folder}: ${evidence.shots} shots · ${Number(sum.durationSec ?? 0).toFixed(1)} s · ${wallSec}s wall · $${trace.costUsd.toFixed(4)} · series ${seriesId} · ${evidence.publishable ? "publishable" : `DRAFT (${blockers.join("; ")})`}`);
   }
