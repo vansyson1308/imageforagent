@@ -111,6 +111,8 @@ export interface Row {
   readonly gateFailures: number;
   readonly belowFloor: number;
   readonly runId: string;
+  /** server commit the run was made on (the frozen eval commit; owner QC 2026-10-10) */
+  readonly commit?: string;
 }
 
 /** A v1 runs.jsonl row as a "crew v1" v2 row (v1 had one judge: gemma). */
@@ -232,7 +234,7 @@ const signed = (v: number) => `${v >= 0 ? "+" : ""}${r2(v)}`;
 const short = (m: string) => m.split("/").pop()!;
 
 export function toCsv(rows: readonly Row[], judges: readonly string[]): string {
-  const cols = ["version", "set", "config", "prompt", "language", "status", "shots", "rendered", "firstPassPct", "repairsPerShot", "criticBefore", "criticAfter", "lintLeft", "wallSec", "tokens", "usd", "filmSec", "usdPerMinute", "textCritic", "criticModel", "judge", ...judges.map((j) => `judge:${j}`), "upliftShots", ...judges.map((j) => `uplift:${j}`), "gateFailures", "belowFloor", "runId"];
+  const cols = ["version", "set", "config", "prompt", "language", "status", "shots", "rendered", "firstPassPct", "repairsPerShot", "criticBefore", "criticAfter", "lintLeft", "wallSec", "tokens", "usd", "filmSec", "usdPerMinute", "textCritic", "criticModel", "judge", ...judges.map((j) => `judge:${j}`), "upliftShots", ...judges.map((j) => `uplift:${j}`), "gateFailures", "belowFloor", "runId", "commit"];
   const val = (r: Row, c: string): unknown => (c.startsWith("judge:") ? r.judges[c.slice(6)] : c.startsWith("uplift:") ? r.uplift[c.slice(7)] : (r as unknown as Record<string, unknown>)[c]);
   return [cols.join(","), ...rows.map((r) => cols.map((c) => JSON.stringify(val(r, c) ?? "")).join(","))].join("\n") + "\n";
 }
@@ -249,16 +251,30 @@ export interface ResultsInput {
 }
 
 /** EVAL_RESULTS.md for v2 (numbers only from the rows; the honest reading is written by a person). */
+/** The commit(s) the v2 rows were made on: one, frozen, or a visible warning. */
+function evalCommits(rows: readonly Row[]): string {
+  const cs = [...new Set(rows.filter((r) => r.version === "v2").map((r) => r.commit ?? "unrecorded"))];
+  if (cs.length === 0) return "—";
+  if (cs.length === 1) return `\`${cs[0].slice(0, 7)}\``;
+  return `**MIXED (${cs.map((c) => c.slice(0, 7)).join(", ")}): not one frozen commit, do not compare**`;
+}
+
 export function resultsMarkdown(x: ResultsInput): string {
   const main = x.rows.filter((r) => r.set === "main");
   const pilot = x.rows.filter((r) => r.set === "pilot");
   const configs = [...x.configs, ...(main.some((r) => r.config === "crew v1") ? ["crew v1"] : [])];
   const agg = configs.map((c) => aggregate(c, main, x.judges));
   const crew = agg.find((a) => a.config === "crew v2");
+  // the headline judge is the v1 judge (gemma), so v2 compares with v1's 5.49 like for like; other judges are reported separately (owner QC 2026-10-10)
+  const primary = x.judges.includes(V1_JUDGE) ? V1_JUDGE : null;
+  const others = x.judges.filter((j) => j !== primary);
+  const head = (r: Row) => (primary ? (r.judges[primary] ?? null) : r.judge);
+  const headAgg = (a: Agg | undefined) => (a === undefined ? null : primary ? (a.judges[primary] ?? null) : a.judge);
+  const v1Agg = agg.find((a) => a.config === "crew v1");
   const vsSuper = pairStats(
     main.filter((r) => r.config === "super-only v2"),
     main.filter((r) => r.config === "crew v2"),
-    (r) => r.judge,
+    head,
   );
   const vsV1 = pairStats(
     main.filter((r) => r.config === "crew v1"),
@@ -267,8 +283,14 @@ export function resultsMarkdown(x: ResultsInput): string {
   );
   const ok = (b: boolean | null) => (b === null ? "not measured" : b ? "✅ met" : "❌ missed");
   const targets = [
-    ["Judge mean, crew v2 (mean of both judges)", `≥ ${TARGETS.judgeMean}`, fmt(crew?.judge), ok(crew?.judge === null || crew === undefined ? null : crew.judge >= TARGETS.judgeMean)],
-    ["Crew v2 wins vs super-only v2 (paired, ±0.25 = tie)", `≥ ${TARGETS.winsOf10}/10`, vsSuper.n ? `${vsSuper.wins}/${vsSuper.n}` : "—", ok(vsSuper.n ? vsSuper.wins >= TARGETS.winsOf10 : null)],
+    [
+      primary ? `Judge mean, crew v2 (${short(primary)}, the v1 judge${v1Agg ? `; crew v1 = ${fmt(headAgg(v1Agg))}` : ""})` : "Judge mean, crew v2",
+      `≥ ${TARGETS.judgeMean}`,
+      fmt(headAgg(crew)),
+      ok(headAgg(crew) === null ? null : headAgg(crew)! >= TARGETS.judgeMean),
+    ],
+    ...others.map((j) => [`Second judge, crew v2 (${short(j)}, reported separately)`, "—", fmt(crew?.judges[j]), "for information"]),
+    [`Crew v2 wins vs super-only v2 (paired${primary ? `, ${short(primary)}` : ""}, ±0.25 = tie)`, `≥ ${TARGETS.winsOf10}/10`, vsSuper.n ? `${vsSuper.wins}/${vsSuper.n}` : "—", ok(vsSuper.n ? vsSuper.wins >= TARGETS.winsOf10 : null)],
     ["Critic uplift, independently judged", `≥ +${TARGETS.uplift}`, crew?.uplift === null || crew === undefined ? "—" : signed(crew.uplift), ok(crew?.uplift === null || crew === undefined ? null : crew.uplift >= TARGETS.uplift)],
     ["USD per finished minute, crew v2", `≤ $${TARGETS.usdPerMin.toFixed(2)}`, crew?.usdPerMin === null || crew === undefined ? "—" : `$${crew.usdPerMin.toFixed(3)}`, ok(crew?.usdPerMin === null || crew === undefined ? null : crew.usdPerMin <= TARGETS.usdPerMin)],
   ];
@@ -276,11 +298,11 @@ export function resultsMarkdown(x: ResultsInput): string {
   const lines = [
     "# Director benchmark v2: results",
     x.mock ? "\n> ⚠ **MOCK DRY RUN: NOT RESULTS.** Produced by the scripted crew to test the bench pipeline.\n" : "",
-    `Generated ${x.generatedAt} against \`${x.base}\` · provider **${x.provider}** · ${x.rows.filter((r) => r.version === "v2").length} v2 runs · raw data: [eval/v2/runs.csv](eval/v2/runs.csv), [eval/v2/runs.jsonl](eval/v2/runs.jsonl). v1 results: [EVAL_RESULTS_V1.md](EVAL_RESULTS_V1.md).`,
+    `Generated ${x.generatedAt} against \`${x.base}\` · provider **${x.provider}** · eval commit ${evalCommits(x.rows)} · ${x.rows.filter((r) => r.version === "v2").length} v2 runs · raw data: [eval/v2/runs.csv](eval/v2/runs.csv), [eval/v2/runs.jsonl](eval/v2/runs.jsonl). v1 results: [EVAL_RESULTS_V1.md](EVAL_RESULTS_V1.md).`,
     "",
     "Same 10 prompts and the same judge prompt as v1. Configs: **super-only v2** = every role on Nemotron Super, no critic · **crew v2** = Ultra plans, Super draws, the hybrid critic (a VLM looks, Nemotron Nano scores, D33) with the floor, Nano edits · **crew v2+tavily** = crew v2 plus research (only when the server has a Tavily key) · **crew v1** = the v1 rows, reused, not re-run (judged by gemma only).",
     "",
-    `**Independent judges** (blind to config, both different from the critic and from every crew model, checked per run): ${x.judges.length ? x.judges.map((j) => `\`${j}\``).join(" and ") : "**off** (no judge configured)"}. Each scores every final frame 0–10 against its shot description. "Judge" is the mean of the two. **Critic uplift** is judged independently too: for every shot where a revision replaced the first version, both judges score the pre-revision snapshot and the accepted one, and the uplift is the mean (after − before).`,
+    `**Independent judges** (blind to config, both different from the critic and from every crew model, checked per run): ${x.judges.length ? x.judges.map((j) => `\`${j}\``).join(" and ") : "**off** (no judge configured)"}. Each scores every final frame 0–10 against its shot description. The headline judge is \`${V1_JUDGE}\`, the v1 judge, so v2 compares with v1 like for like; the second judge is reported in its own column and its own paired table. "Judge (mean)" in the tables is the mean of both. **Critic uplift** is judged independently too: for every shot where a revision replaced the first version, both judges score the pre-revision snapshot and the accepted one, and the uplift is the mean (after − before).`,
     "",
     "## Targets (SPEC v2 WP7)",
     "",
@@ -310,7 +332,11 @@ export function resultsMarkdown(x: ResultsInput): string {
           "",
         ]
       : [];
-  lines.push(...pairTable("Paired: crew v2 vs super-only v2 (mean of both judges)", vsSuper, "super-only v2", "crew v2", ""));
+  lines.push(...pairTable(`Paired: crew v2 vs super-only v2 (${primary ? `judge ${short(primary)}` : "mean of the judges"})`, vsSuper, "super-only v2", "crew v2", ""));
+  for (const j of others) {
+    const p2 = pairStats(main.filter((r) => r.config === "super-only v2"), main.filter((r) => r.config === "crew v2"), (r) => r.judges[j] ?? null);
+    lines.push(...pairTable(`Paired: crew v2 vs super-only v2 (second judge ${short(j)}, reported separately)`, p2, "super-only v2", "crew v2", ""));
+  }
   lines.push(...pairTable(`Paired: crew v2 vs crew v1 (judge ${short(V1_JUDGE)} only, as in v1)`, vsV1, "crew v1", "crew v2", "Same prompts, same judge, same judge prompt; v1 frames were not kept, so the second judge can't score v1."));
   if (pilot.length) {
     lines.push(

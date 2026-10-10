@@ -11,12 +11,15 @@
  * 0–10 against its shot description, blind to config. The critic's uplift is
  * judged independently too: pre-revision vs accepted snapshot of each revised shot.
  *
- *   npm run director:bench -- --base http://localhost:3000 [--passcode p] [--configs A,B,C] [--limit 10] [--judges a,b] [--prompts main|pilot] [--out docs/hackathon]
+ *   npm run director:bench -- --base http://localhost:3000 --eval-commit <sha> [--passcode p] [--configs A,B,C] [--limit 10] [--judges a,b] [--prompts main|pilot] [--out docs/hackathon]
  *   npm run director:bench -- --base http://localhost:3100 --out /tmp/bench-dry --allow-mock --judges ""   # pipeline dry run (never published)
  *
  * Writes <out>/eval/v2/runs.{jsonl,csv}, <out>/eval/v2/chart.png, <out>/EVAL_RESULTS.md
  * (keeping an existing "Reading the results (honest)" section). Real numbers only:
  * refuses the mock crew unless --allow-mock, and then stamps everything "MOCK — NOT RESULTS".
+ * --eval-commit: the ONE frozen server commit the whole bench runs on (owner QC 2026-10-10). The bench
+ * refuses to start on another commit, stops if the server's commit changes mid-bench, records the commit
+ * on every row, and on resume keeps only rows made on this commit.
  * `--prompts pilot` runs the owner's Hidamari prompts from eval/pilot-prompts.json (a separate table).
  */
 import "../director/env";
@@ -154,6 +157,10 @@ async function main() {
   await client.unlock();
   const meta = await client.json<{ director: { provider: string; research: boolean } }>("GET", "/api/meta");
   const mock = meta.director.provider !== "nemotron";
+  const serverCommit = async () => (await client.json<{ commit?: string }>("GET", "/api/health")).commit ?? "";
+  const evalCommit = arg("--eval-commit");
+  if (!mock && !evalCommit) throw new Error("--eval-commit <sha> is required: the whole bench runs on ONE frozen server commit (owner QC 2026-10-10).");
+  if (evalCommit && !(await serverCommit()).startsWith(evalCommit)) throw new Error(`The server runs ${(await serverCommit()).slice(0, 7)}, not the eval commit ${evalCommit}: deploy it (and nothing newer) first.`);
   if (mock && !allowMock) throw new Error(`Server provider is "${meta.director.provider}". The bench only reports real Nemotron runs (use --allow-mock for a labelled dry run).`);
   const prompts: readonly Prompt[] =
     set === "pilot"
@@ -176,7 +183,7 @@ async function main() {
         .split("\n")
         .filter(Boolean)
         .map((l) => JSON.parse(l) as Row & { mock?: boolean })
-        .filter((r) => Boolean(r.mock) === mock && r.status !== "error")
+        .filter((r) => Boolean(r.mock) === mock && r.status !== "error" && (!evalCommit || (r.commit ?? "").startsWith(evalCommit)))
     : [];
   if (rows.length) console.log(`resuming: ${rows.length} runs already in ${jsonl}`);
 
@@ -190,6 +197,10 @@ async function main() {
       }
       if (rows.some((r) => r.config === cfg.name && r.prompt === p.id && r.set === set)) continue;
       // a run that hits the demo's daily token budget mid-film would come back cut short: stop cleanly and resume after 00:00 UTC
+      if (!mock && evalCommit && !(await serverCommit()).startsWith(evalCommit)) {
+        console.log(`STOP: the server's commit changed to ${(await serverCommit()).slice(0, 7)} mid-bench; the eval commit is ${evalCommit}`);
+        break outer;
+      }
       if (!mock) {
         const used = await dailyBudgetUsedPct(client);
         if (used !== null && used >= 80) {
@@ -278,6 +289,7 @@ async function main() {
         gateFailures: Number(s.gateFailures ?? 0),
         belowFloor: Array.isArray(s.belowFloor) ? s.belowFloor.length : 0,
         runId,
+        commit: mock ? "mock" : await serverCommit(),
       };
       rows.push(row);
       appendFileSync(jsonl, JSON.stringify({ ...row, at: new Date().toISOString(), mock }) + "\n");

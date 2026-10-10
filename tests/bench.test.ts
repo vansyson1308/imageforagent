@@ -95,8 +95,11 @@ describe("bench v2 core (WP7)", () => {
     const v2 = v1.map((r, i) => row({ prompt: r.prompt, judges: { [V1_JUDGE]: 7, [J2]: 6 }, judge: 6.5, upliftShots: i % 2, uplift: { [V1_JUDGE]: 1, [J2]: 0.5 } }));
     const so = v1.map((r) => row({ config: "super-only v2", prompt: r.prompt, judge: 5.5, judges: { [V1_JUDGE]: 5, [J2]: 6 } }));
     const md = resultsMarkdown({ generatedAt: "2026-10-09T00:00:00Z", base: "http://x", provider: "nemotron", mock: false, judges: [V1_JUDGE, J2], rows: [...so, ...v2, ...v1], configs: ["super-only v2", "crew v2"] });
-    expect(md).toContain("| Judge mean, crew v2 (mean of both judges) | ≥ 6.5 | 6.5 | ✅ met |");
-    expect(md).toContain("| Crew v2 wins vs super-only v2 (paired, ±0.25 = tie) | ≥ 8/10 | 10/10 | ✅ met |");
+    // the headline is the v1 judge alone (gemma), compared with v1's 5.49; the second judge is reported separately (owner QC 2026-10-10)
+    expect(md).toContain("| Judge mean, crew v2 (gemma-3-27b-it, the v1 judge; crew v1 = 5.49) | ≥ 6.5 | 7 | ✅ met |");
+    expect(md).toContain(`| Second judge, crew v2 (${J2.split("/").pop()}, reported separately) | — | 6 | for information |`);
+    expect(md).toContain("| Crew v2 wins vs super-only v2 (paired, gemma-3-27b-it, ±0.25 = tie) | ≥ 8/10 | 10/10 | ✅ met |");
+    expect(md).toMatch(/Paired: crew v2 vs super-only v2 \(second judge Kimi-K3, reported separately\)/);
     expect(md).toContain("| Critic uplift, independently judged | ≥ +0.5 | +0.75 | ✅ met |");
     expect(md).toContain("| USD per finished minute, crew v2 | ≤ $0.40 | $0.150 | ✅ met |");
     expect(md).toMatch(/Paired: crew v2 vs crew v1 \(judge gemma-3-27b-it only, as in v1\)/);
@@ -118,6 +121,13 @@ describe("bench v2 core (WP7)", () => {
         else expect(cells(l), `${judges.length} judge(s): ${l}`).toBe(header);
       }
     }
+  });
+
+  it("names the one frozen eval commit, and flags rows from several commits as not comparable", () => {
+    const one = resultsMarkdown({ generatedAt: "t", base: "b", provider: "nemotron", mock: false, judges: [V1_JUDGE], rows: [row({ commit: "abcdef1234" }), row({ config: "super-only v2", commit: "abcdef1234" })], configs: ["super-only v2", "crew v2"] });
+    expect(one).toContain("eval commit `abcdef1`");
+    const mixed = resultsMarkdown({ generatedAt: "t", base: "b", provider: "nemotron", mock: false, judges: [V1_JUDGE], rows: [row({ commit: "abcdef1234" }), row({ config: "super-only v2", commit: "1234567890" })], configs: ["super-only v2", "crew v2"] });
+    expect(mixed).toMatch(/eval commit \*\*MIXED \(abcdef1, 1234567\): not one frozen commit, do not compare\*\*/);
   });
 
   it("a missed target is reported as missed, never hidden", () => {

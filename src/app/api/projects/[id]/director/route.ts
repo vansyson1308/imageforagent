@@ -32,6 +32,8 @@ const directorRequestSchema = z.object({
   profile: z.enum(["crew", "super-only"]).default("crew"),
   /** WP5: make this film an episode of a saved series. */
   seriesId: z.string().regex(/^[a-z0-9]{10,40}$/).nullish(),
+  /** A narrated episode (Hidamari): one shot per line, in order, each line the shot's narration (owner QC 2026-10-10). */
+  narration: z.array(z.string().min(1).max(220)).min(2).max(24).optional(),
 });
 
 /**

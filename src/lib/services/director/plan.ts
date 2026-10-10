@@ -8,12 +8,16 @@ import { lockSeriesCast, seriesBrief, type SeriesData } from "@/lib/services/dir
 import type { Frame } from "@/generated/prisma/client";
 
 /** Director (Ultra): story → validated Plan (shot list + Cast & Set Bible). */
-export async function runPlan(ctx: DirectorContext, story: string, references: string | null, referenceCount = 0, series: SeriesData | null = null): Promise<Plan> {
-  const seriesNote = series ? seriesBrief(series) : null;
+export async function runPlan(ctx: DirectorContext, story: string, references: string | null, referenceCount = 0, series: SeriesData | null = null, narration: readonly string[] | null = null): Promise<Plan> {
+  const seriesNote = [series ? seriesBrief(series) : null, narration ? narrationBrief(narration) : null].filter(Boolean).join("\n\n") || null;
   // series episodes: lock the recurring cast BEFORE normalising, so a recurring id the plan forgot to list isn't dropped from its shots
-  const lock = (p: Plan) => (series ? lockSeriesCast(p, series) : p);
+  // narrated episodes: each shot's narration is fixed to its line (the plan only stages it)
+  const lock = (p: Plan) => {
+    const locked = series ? lockSeriesCast(p, series) : p;
+    return narration ? withNarration(locked, narration) : locked;
+  };
   const maxShots = ctx.budget.budget.maxShots;
-  const minShots = Math.min(ctx.options.minShots, maxShots);
+  const minShots = narration ? Math.min(narration.length, maxShots) : Math.min(ctx.options.minShots, maxShots);
   const plan = await callJson(
     ctx,
     {
@@ -56,6 +60,30 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
     }
   }
   return best;
+}
+
+/** The Director's brief for a narrated episode: one shot per line, in order. */
+export function narrationBrief(lines: readonly string[]): string {
+  return [
+    `This episode is NARRATED (read aloud). Plan EXACTLY ${lines.length} shots: shot N illustrates narration line N, in order. Set each shot's "dialogue" to its line exactly and "speaker" to null (the narrator); the engine enforces it.`,
+    ...lines.map((l, i) => `${i + 1}. ${l}`),
+  ].join("\n");
+}
+
+/**
+ * A narrated episode's plan: shot N speaks line N (narrator), exactly. Extra
+ * shots lose their narration; if the plan has fewer shots, the remaining
+ * lines join the last shot, so no line is dropped.
+ */
+export function withNarration(plan: Plan, lines: readonly string[]): Plan {
+  const n = plan.shots.length;
+  return {
+    ...plan,
+    shots: plan.shots.map((s, i) => {
+      const text = i < n - 1 ? (lines[i] ?? null) : lines.slice(i).join("") || null;
+      return { ...s, dialogue: text, speaker: null };
+    }),
+  };
 }
 
 /** Shot-size class of a storyboard shot type (EN/VI/JA keywords). */
