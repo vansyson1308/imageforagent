@@ -10,7 +10,7 @@ import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/d
 import { actingLayer, speakerId } from "@/lib/services/director/acting";
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
-import { badPaints, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { badPaints, coveredShare, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, emptyFrameProblem, GATE, measureFrame, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
@@ -175,6 +175,15 @@ async function qualityGates(
     if (pct === 0) problems.push(`#${id} is placed but not visible (off-canvas or covered)`);
     else if (touchesTop) problems.push(`#${id}'s head is cut off by the top edge of the frame: move it down so the whole head is inside (y ≥ 0); in a close-up let the canvas crop the legs at the bottom, never the head`);
     else facts.push(`#${id} visible, ${pct}% of the frame height, head fully in frame`);
+    // a kit figure's face hidden by something drawn after it (a prop held up, another character in front)
+    const upTo = pct > 0 && kitIds.has(id) ? upToUse(svg, id) : null;
+    if (upTo && upTo.length < svg.length) {
+      const alone = await renderArtwork(opts.castDefs, upTo, opts.aspectRatio, "1K");
+      const cover = await coveredShare(png, alone, await renderArtwork(opts.castDefs, withoutUses(upTo, id), opts.aspectRatio, "1K"));
+      if (cover && cover.head >= GATE.maxFaceCover && cover.head - cover.rest >= 0.15) {
+        problems.push(`#${id}'s face is covered by something drawn after it (${Math.round(cover.head * 100)}% of the head hidden): move that prop or character aside so the face shows (a held prop goes at chest or hand height, beside the head), or draw it before #${id}`);
+      }
+    }
     if ((kitIds.has(id) || kitIds.size === 0) && pct > biggest) {
       biggest = pct;
       subject = await visibleBox(png, without);

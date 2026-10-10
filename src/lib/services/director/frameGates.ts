@@ -139,6 +139,8 @@ export const GATE = {
   minRegions: 12,
   /** consecutive frames at or above this similarity are near-duplicates (v1 tea-house 1→2 0.93, 4→5 0.90; distinct cuts ≤ 0.73) */
   maxSimilarity: 0.88,
+  /** share of a kit figure's head (top 30%) hidden by what is drawn after it, and by at least 15 points more than its body (hosted run 4: kite over a face 0.27 vs body 0.00; a figure standing behind another 0.22 vs 0.26 = staging, not a hidden face; D42) */
+  maxFaceCover: 0.2,
 } as const;
 
 const pctOf = (v: number) => `${Math.round(v * 100)}%`;

@@ -168,6 +168,69 @@ export function withoutUses(svg: string, id: string): string {
 }
 
 /**
+ * The fragment cut right after the first `<use>` of `id` (or a posed variant),
+ * with the elements still open at that point closed again: the frame as it
+ * stands when the character is drawn, before anything painted over it.
+ * Null when the character is not placed.
+ */
+export function upToUse(svg: string, id: string): string | null {
+  const esc = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m = new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#${esc}(?:--[a-z0-9_-]+)?["'][^>]*?(/>|>\\s*</use>|>)`).exec(svg);
+  if (!m) return null;
+  const prefix = svg.slice(0, m.index + m[0].length);
+  const open: string[] = [];
+  for (const t of prefix.matchAll(/<(\/?)([a-zA-Z][\w:-]*)\b[^>]*?(\/?)>/g)) {
+    if (t[3] === "/") continue;
+    if (t[1]) {
+      const at = open.lastIndexOf(t[2]);
+      if (at >= 0) open.length = at;
+    } else open.push(t[2]);
+  }
+  // a bare `<use …>` left open by the match itself is closed like any other
+  return prefix + open.reverse().map((n) => `</${n}>`).join("");
+}
+
+/**
+ * How much of a character is hidden by what is drawn after it. `alone` is the
+ * frame up to the character, `beneath` the same without it, `full` the whole
+ * frame. The character's pixels are where `alone` differs from `beneath`; a
+ * pixel is covered where `full` differs from `alone`. Measured separately on
+ * the head (top 30% of the character) and the rest, so a tint laid over the
+ * whole frame (which covers both alike) is told apart from a prop on a face.
+ */
+export async function coveredShare(full: Buffer, alone: Buffer, beneath: Buffer): Promise<{ head: number; rest: number } | null> {
+  const f = await rgba(full);
+  const a = await rgba(alone);
+  const b = await rgba(beneath);
+  const diff = (p: Buffer, q: Buffer, i: number) => Math.abs(p[i] - q[i]) + Math.abs(p[i + 1] - q[i + 1]) + Math.abs(p[i + 2] - q[i + 2]);
+  let y0 = -1;
+  let y1 = -1;
+  for (let y = 0; y < a.h; y += 2) {
+    for (let x = 0; x < a.w; x += 2) {
+      if (diff(a.data, b.data, (y * a.w + x) * 4) > 30) {
+        if (y0 < 0) y0 = y;
+        y1 = y;
+        break;
+      }
+    }
+  }
+  if (y0 < 0 || y1 - y0 < 8) return null;
+  const headEnd = y0 + (y1 - y0) * 0.3;
+  const n = { head: 0, rest: 0 };
+  const hid = { head: 0, rest: 0 };
+  for (let y = y0; y <= y1; y += 2) {
+    const band = y < headEnd ? "head" : "rest";
+    for (let x = 0; x < a.w; x += 2) {
+      const i = (y * a.w + x) * 4;
+      if (diff(a.data, b.data, i) <= 30) continue;
+      n[band]++;
+      if (diff(f.data, a.data, i) > 30) hid[band]++;
+    }
+  }
+  return { head: n.head ? hid.head / n.head : 0, rest: n.rest ? hid.rest / n.rest : 0 };
+}
+
+/**
  * Visible height (% of frame) of what `withUse` adds over `without`: the
  * vertical extent of pixels that differ. Measures the character as the viewer
  * sees it, whatever transforms, groups or cropping are involved.
