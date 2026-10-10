@@ -1,0 +1,1236 @@
+{
+  "at": "2026-10-10T01:53:28.982Z",
+  "base": "https://studio-production-049c.up.railway.app",
+  "server": {
+    "version": "2.0.0",
+    "commit": "3616292d22c1a80a137fdeea2de64a5f51e034f1",
+    "tts": "piper (en, vi, ja), espeak-ng",
+    "tavily": "off"
+  },
+  "sample": {
+    "key": "en-kite",
+    "language": "en",
+    "style": "storybook",
+    "maxShots": 8
+  },
+  "runId": "cmv1qg8in00012avrirwspqvj",
+  "projectId": "cmv1qg8dz00002avr5kipic0g",
+  "models": {
+    "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+    "mid": "nvidia/nemotron-3-super-120b-a12b",
+    "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+    "vision": "openbmb/MiniCPM-V-4_5"
+  },
+  "title": "The Mended Kite",
+  "summary": {
+    "status": "done",
+    "shots": 7,
+    "rendered": 7,
+    "firstPassOk": 5,
+    "repairs": 14,
+    "criticBefore": 4,
+    "criticAfter": 5,
+    "revisions": 6,
+    "gateFailures": 0,
+    "belowFloor": [
+      1,
+      2,
+      4,
+      5,
+      6
+    ],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 0,
+    "lintWarnings": 0,
+    "durationSec": 25.5,
+    "wallMs": 448511,
+    "tokens": 212119,
+    "costUsd": 0.14830104,
+    "continuity": [],
+    "textCritic": false
+  },
+  "clientWallSec": 449,
+  "filmBytes": 1171998,
+  "filmAssembleSec": 4.3,
+  "byRole": {
+    "system": {
+      "calls": 3,
+      "tokens": 0,
+      "usd": 0
+    },
+    "director": {
+      "calls": 1,
+      "tokens": 6381,
+      "usd": 0.013347
+    },
+    "dialogue": {
+      "calls": 5,
+      "tokens": 0,
+      "usd": 0
+    },
+    "cast": {
+      "calls": 6,
+      "tokens": 27128,
+      "usd": 0.017887
+    },
+    "artist": {
+      "calls": 39,
+      "tokens": 147625,
+      "usd": 0.103544
+    },
+    "critic": {
+      "calls": 45,
+      "tokens": 30257,
+      "usd": 0.013481
+    },
+    "editor": {
+      "calls": 3,
+      "tokens": 728,
+      "usd": 0.000046
+    }
+  },
+  "stopRule": {
+    "rule": {
+      "maxUsdPerMin": 0.4,
+      "maxWallMinPer8Shots": 8
+    },
+    "usdPerMin": 0.349,
+    "wallPer8ShotsMin": 8.543,
+    "tripped": true,
+    "reasons": [
+      "8.543 min per 8 shots > 8"
+    ]
+  },
+  "steps": [
+    {
+      "seq": 0,
+      "role": "system",
+      "model": "catalog",
+      "action": "models",
+      "shot": null,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 1,
+      "role": "system",
+      "model": "policy",
+      "action": "stop-rule",
+      "shot": null,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 2,
+      "role": "director",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "action": "plan",
+      "shot": null,
+      "score": null,
+      "usd": 0.013347,
+      "ms": 14093
+    },
+    {
+      "seq": 3,
+      "role": "dialogue",
+      "model": "piper:en_US-kristin-medium",
+      "action": "voice",
+      "shot": 1,
+      "score": null,
+      "usd": 0,
+      "ms": 2241
+    },
+    {
+      "seq": 4,
+      "role": "dialogue",
+      "model": "piper:en_US-kristin-medium@3",
+      "action": "voice",
+      "shot": 2,
+      "score": null,
+      "usd": 0,
+      "ms": 2049
+    },
+    {
+      "seq": 5,
+      "role": "dialogue",
+      "model": "piper:en_US-john-medium@-2",
+      "action": "voice",
+      "shot": 4,
+      "score": null,
+      "usd": 0,
+      "ms": 2034
+    },
+    {
+      "seq": 6,
+      "role": "dialogue",
+      "model": "piper:en_US-kristin-medium",
+      "action": "voice",
+      "shot": 6,
+      "score": null,
+      "usd": 0,
+      "ms": 2392
+    },
+    {
+      "seq": 7,
+      "role": "dialogue",
+      "model": "piper:en_US-kristin-medium@3",
+      "action": "voice",
+      "shot": 7,
+      "score": null,
+      "usd": 0,
+      "ms": 2124
+    },
+    {
+      "seq": 8,
+      "role": "cast",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "defs",
+      "shot": null,
+      "score": null,
+      "usd": 0.0072639,
+      "ms": 36088
+    },
+    {
+      "seq": 9,
+      "role": "cast",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "defs:invalid",
+      "shot": null,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 10,
+      "role": "cast",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "defs:repair",
+      "shot": null,
+      "score": null,
+      "usd": 0.0075801,
+      "ms": 41109
+    },
+    {
+      "seq": 11,
+      "role": "cast",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "defs:invalid",
+      "shot": null,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 12,
+      "role": "cast",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "defs:repair",
+      "shot": null,
+      "score": null,
+      "usd": 0.0030426,
+      "ms": 10793
+    },
+    {
+      "seq": 13,
+      "role": "cast",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "library",
+      "shot": null,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 14,
+      "role": "cast",
+      "model": "engine",
+      "action": "acting-variants",
+      "shot": null,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 15,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "draw",
+      "shot": 2,
+      "score": null,
+      "usd": 0.0021195,
+      "ms": 12043
+    },
+    {
+      "seq": 16,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 2,
+      "score": null,
+      "usd": 0,
+      "ms": 1632
+    },
+    {
+      "seq": 17,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "draw",
+      "shot": 1,
+      "score": null,
+      "usd": 0.0023265,
+      "ms": 14120
+    },
+    {
+      "seq": 18,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "draw:invalid",
+      "shot": 1,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 19,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 2,
+      "score": null,
+      "usd": 0.0009894,
+      "ms": 2211
+    },
+    {
+      "seq": 20,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "critique",
+      "shot": 2,
+      "score": null,
+      "usd": 0.0001242,
+      "ms": 1388
+    },
+    {
+      "seq": 21,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 2,
+      "score": 3,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 22,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "draw",
+      "shot": 3,
+      "score": null,
+      "usd": 0.0043587,
+      "ms": 28488
+    },
+    {
+      "seq": 23,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 1,
+      "score": null,
+      "usd": 0.002541,
+      "ms": 14622
+    },
+    {
+      "seq": 24,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 3,
+      "score": null,
+      "usd": 0,
+      "ms": 3628
+    },
+    {
+      "seq": 25,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise",
+      "shot": 2,
+      "score": null,
+      "usd": 0.0025959,
+      "ms": 15527
+    },
+    {
+      "seq": 26,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise:invalid",
+      "shot": 2,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 27,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 3,
+      "score": null,
+      "usd": 0.0008364,
+      "ms": 1815
+    },
+    {
+      "seq": 28,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 1,
+      "score": null,
+      "usd": 0,
+      "ms": 5637
+    },
+    {
+      "seq": 29,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "critique",
+      "shot": 3,
+      "score": null,
+      "usd": 0.00009336,
+      "ms": 759
+    },
+    {
+      "seq": 30,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 3,
+      "score": 7,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 31,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 1,
+      "score": null,
+      "usd": 0.0010146,
+      "ms": 2401
+    },
+    {
+      "seq": 32,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "critique",
+      "shot": 1,
+      "score": null,
+      "usd": 0.00011784,
+      "ms": 1014
+    },
+    {
+      "seq": 33,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 1,
+      "score": 6,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 34,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "draw",
+      "shot": 4,
+      "score": null,
+      "usd": 0.0022488,
+      "ms": 13366
+    },
+    {
+      "seq": 35,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 4,
+      "score": null,
+      "usd": 0,
+      "ms": 2903
+    },
+    {
+      "seq": 36,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 4,
+      "score": null,
+      "usd": 0.0009816,
+      "ms": 2206
+    },
+    {
+      "seq": 37,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 2,
+      "score": null,
+      "usd": 0.0034488,
+      "ms": 20629
+    },
+    {
+      "seq": 38,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair:invalid",
+      "shot": 2,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 39,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "critique",
+      "shot": 4,
+      "score": null,
+      "usd": 0.00010938,
+      "ms": 939
+    },
+    {
+      "seq": 40,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 4,
+      "score": 3,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 41,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise",
+      "shot": 1,
+      "score": null,
+      "usd": 0.0046866,
+      "ms": 33465
+    },
+    {
+      "seq": 42,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 1,
+      "score": null,
+      "usd": 0.0008586,
+      "ms": 1800
+    },
+    {
+      "seq": 43,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "re-critique",
+      "shot": 1,
+      "score": null,
+      "usd": 0.00013116,
+      "ms": 880
+    },
+    {
+      "seq": 44,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 1,
+      "score": 6,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 45,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "keep",
+      "shot": 1,
+      "score": 6,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 46,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 2,
+      "score": null,
+      "usd": 0.0038529,
+      "ms": 26297
+    },
+    {
+      "seq": 47,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 2,
+      "score": null,
+      "usd": 0.0008646,
+      "ms": 1859
+    },
+    {
+      "seq": 48,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "re-critique",
+      "shot": 2,
+      "score": null,
+      "usd": 0.0001356,
+      "ms": 1228
+    },
+    {
+      "seq": 49,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 2,
+      "score": 3,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 50,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "keep",
+      "shot": 2,
+      "score": 3,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 51,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise",
+      "shot": 4,
+      "score": null,
+      "usd": 0.0045594,
+      "ms": 34187
+    },
+    {
+      "seq": 52,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise:invalid",
+      "shot": 4,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 53,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "draw",
+      "shot": 5,
+      "score": null,
+      "usd": 0.003078,
+      "ms": 35456
+    },
+    {
+      "seq": 54,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 5,
+      "score": null,
+      "usd": 0,
+      "ms": 1734
+    },
+    {
+      "seq": 55,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 5,
+      "score": null,
+      "usd": 0.0010524,
+      "ms": 2341
+    },
+    {
+      "seq": 56,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "draw",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0026079,
+      "ms": 31152
+    },
+    {
+      "seq": 57,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "draw:invalid",
+      "shot": 6,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 58,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "critique",
+      "shot": 5,
+      "score": null,
+      "usd": 0.00012096,
+      "ms": 1418
+    },
+    {
+      "seq": 59,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 5,
+      "score": 3,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 60,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 4,
+      "score": null,
+      "usd": 0.0042654,
+      "ms": 52617
+    },
+    {
+      "seq": 61,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair:invalid",
+      "shot": 4,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 62,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise",
+      "shot": 5,
+      "score": null,
+      "usd": 0.0037719,
+      "ms": 27148
+    },
+    {
+      "seq": 63,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise:invalid",
+      "shot": 5,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 64,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0042789,
+      "ms": 31458
+    },
+    {
+      "seq": 65,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 6,
+      "score": null,
+      "usd": 0,
+      "ms": 6028
+    },
+    {
+      "seq": 66,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0009774,
+      "ms": 2308
+    },
+    {
+      "seq": 67,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "critique",
+      "shot": 6,
+      "score": null,
+      "usd": 0.00012564,
+      "ms": 1316
+    },
+    {
+      "seq": 68,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 6,
+      "score": 3,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 69,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 4,
+      "score": null,
+      "usd": 0.0049041,
+      "ms": 33980
+    },
+    {
+      "seq": 70,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 4,
+      "score": null,
+      "usd": 0.0008748,
+      "ms": 1883
+    },
+    {
+      "seq": 71,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "re-critique",
+      "shot": 4,
+      "score": null,
+      "usd": 0.00014262,
+      "ms": 1348
+    },
+    {
+      "seq": 72,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 4,
+      "score": 2,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 73,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "keep",
+      "shot": 4,
+      "score": 3,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 74,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 5,
+      "score": null,
+      "usd": 0.0060417,
+      "ms": 38826
+    },
+    {
+      "seq": 75,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair:invalid",
+      "shot": 5,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 76,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0043149,
+      "ms": 28276
+    },
+    {
+      "seq": 77,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise:invalid",
+      "shot": 6,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 78,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "draw",
+      "shot": 7,
+      "score": null,
+      "usd": 0.0018306,
+      "ms": 11304
+    },
+    {
+      "seq": 79,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 7,
+      "score": null,
+      "usd": 0,
+      "ms": 2120
+    },
+    {
+      "seq": 80,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 7,
+      "score": null,
+      "usd": 0.0007524,
+      "ms": 1494
+    },
+    {
+      "seq": 81,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "critique",
+      "shot": 7,
+      "score": null,
+      "usd": 0.00010356,
+      "ms": 1678
+    },
+    {
+      "seq": 82,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 7,
+      "score": 3,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 83,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 5,
+      "score": null,
+      "usd": 0.0052701,
+      "ms": 31295
+    },
+    {
+      "seq": 84,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair:invalid",
+      "shot": 5,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 85,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise",
+      "shot": 7,
+      "score": null,
+      "usd": 0.0031506,
+      "ms": 19452
+    },
+    {
+      "seq": 86,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0051966,
+      "ms": 32768
+    },
+    {
+      "seq": 87,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair:invalid",
+      "shot": 6,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 88,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 7,
+      "score": null,
+      "usd": 0.000858,
+      "ms": 1814
+    },
+    {
+      "seq": 89,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "re-critique",
+      "shot": 7,
+      "score": null,
+      "usd": 0.00011892,
+      "ms": 1294
+    },
+    {
+      "seq": 90,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 7,
+      "score": 7,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 91,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 7,
+      "score": null,
+      "usd": 0,
+      "ms": 2240
+    },
+    {
+      "seq": 92,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "uplift",
+      "shot": 7,
+      "score": 7,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 93,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 5,
+      "score": null,
+      "usd": 0.0046344,
+      "ms": 24555
+    },
+    {
+      "seq": 94,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair:invalid",
+      "shot": 5,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 95,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0069129,
+      "ms": 43019
+    },
+    {
+      "seq": 96,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair:invalid",
+      "shot": 6,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 97,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "repair",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0048051,
+      "ms": 28258
+    },
+    {
+      "seq": 98,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0009066,
+      "ms": 1893
+    },
+    {
+      "seq": 99,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "re-critique",
+      "shot": 6,
+      "score": null,
+      "usd": 0.00015702,
+      "ms": 2139
+    },
+    {
+      "seq": 100,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 6,
+      "score": 5,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 101,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 6,
+      "score": null,
+      "usd": 0,
+      "ms": 5507
+    },
+    {
+      "seq": 102,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "uplift",
+      "shot": 6,
+      "score": 5,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 103,
+      "role": "artist",
+      "model": "nvidia/nemotron-3-super-120b-a12b",
+      "action": "revise",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0057399,
+      "ms": 24929
+    },
+    {
+      "seq": 104,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "look",
+      "shot": 6,
+      "score": null,
+      "usd": 0.0008394,
+      "ms": 1785
+    },
+    {
+      "seq": 105,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "re-critique",
+      "shot": 6,
+      "score": null,
+      "usd": 0.00019368,
+      "ms": 2551
+    },
+    {
+      "seq": 106,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "score",
+      "shot": 6,
+      "score": 6,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 107,
+      "role": "system",
+      "model": "engine",
+      "action": "render-clip",
+      "shot": 6,
+      "score": null,
+      "usd": 0,
+      "ms": 5780
+    },
+    {
+      "seq": 108,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "uplift",
+      "shot": 6,
+      "score": 6,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 109,
+      "role": "editor",
+      "model": "storyboardLint",
+      "action": "lint",
+      "shot": null,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 110,
+      "role": "editor",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "continuity",
+      "shot": null,
+      "score": null,
+      "usd": 0.0000462,
+      "ms": 481
+    },
+    {
+      "seq": 111,
+      "role": "editor",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "continuity:report",
+      "shot": null,
+      "score": null,
+      "usd": 0,
+      "ms": 0
+    },
+    {
+      "seq": 112,
+      "role": "system",
+      "model": "engine:score",
+      "action": "music",
+      "shot": null,
+      "score": null,
+      "usd": 0,
+      "ms": 640
+    }
+  ]
+}

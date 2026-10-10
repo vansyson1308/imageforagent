@@ -4,10 +4,12 @@ import { symbolProblems } from "@/lib/services/director/cast";
 import { GATE, measureFrame, readableSetProblem, withoutInherited } from "@/lib/services/director/frameGates";
 import { errorKind } from "@/lib/services/director/artist";
 import { renderArtwork } from "@/lib/services/svgRenderer";
+import { badPaints, fixPaints } from "@/lib/services/director/svgTools";
+import sharp from "sharp";
 import type { CastMember } from "@/lib/services/director/schemas";
 
 /**
- * Root causes found in the first hosted v2 run (evidence/hosted-run-v2-2026-10-10-en-kite.json):
+ * Root causes found in the first hosted v2 run (evidence/hosted-run-v2-2026-10-10-en-kite-run1.json):
  * the Cast gave the grandfather the palette's green as skin, and the kitchen
  * set symbol was made of flat blocks, so every shot using it failed the
  * readable-set gate and the Artist (which can't edit the set) burned 45 repairs.
@@ -42,6 +44,26 @@ describe("cast quality (hosted run root causes)", () => {
     // the shot adds its OWN big flat block: that one still counts
     const worse = await measureFrame(await renderArtwork(defs, `<use href="#kitchen" x="0" y="0" width="1920" height="1080"/><rect x="900" y="480" width="560" height="300" fill="#3355aa"/>`, "16:9", "1K"));
     expect(readableSetProblem(withoutInherited(worse, setOnly), canvas)).toMatch(/flat rectangles/);
+  }, 30_000);
+
+  it("hosted run 2: a mangled url() paint (the beach set rendered black) is caught at cast time and never reaches a frame", async () => {
+    // the real symbol head from the hosted library (evidence/hosted-run-v2-2026-10-10-en-kite-run2.json)
+    const beach = `<symbol id="beach" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="url://beach-skyGrad)"/><rect y="760" width="1920" height="320" fill="#efd9b0"/>${Array.from({ length: 16 }, (_, i) => `<circle cx="${60 + i * 120}" cy="900" r="8" fill="#d9b98a"/>`).join("")}</symbol>`;
+    expect(badPaints(beach)).toEqual(["url://beach-skyGrad)"]);
+    for (const ok of ['fill="url(#sky)"', 'fill="url(#sky) #fff"', 'stroke="rgba(0,0,0,0.4)"', 'style="fill:#fff;stroke:url(#a)"', 'fill="none"', 'stop-color="hsl(30, 50%, 60%)"']) expect(badPaints(`<rect ${ok}/>`), ok).toEqual([]);
+    for (const bad of ['fill="url(sky)"', 'fill="url(#sky"', 'style="fill:url(//x)"', 'fill="linear-gradient(#fff,#000)"']) expect(badPaints(`<rect ${bad}/>`).length, bad).toBe(1);
+    const member: CastMember = { id: "beach", name: "Beach", kind: "set", look: "a shingle beach", colors: ["#a8c8e8"] };
+    expect((await symbolProblems(member, beach, new Map(), canvas, "16:9", new Set(["beach"])))[0]).toMatch(/^#beach uses paint values the renderer can't resolve, which paint BLACK: "url:\/\/beach-skyGrad\)"/);
+    // the last-resort repair: the sky becomes the member's first colour, not black
+    const dark = async (svg: string) => {
+      const png = await renderArtwork(svg, `<use href="#beach" x="0" y="0" width="1920" height="1080"/>`, "16:9", "1K");
+      const { data } = await sharp(png).flatten({ background: "#000000" }).resize(64, 36).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+      let n = 0;
+      for (let i = 0; i < data.length; i += 3) if (data[i] + data[i + 1] + data[i + 2] < 60) n++;
+      return n / (data.length / 3);
+    };
+    expect(await dark(beach)).toBeGreaterThan(0.5);
+    expect(await dark(fixPaints(beach, "#a8c8e8"))).toBeLessThan(0.05);
   }, 30_000);
 
   it("stop-loss: two rejections of the same kind (numbers aside) count as the same failure", () => {

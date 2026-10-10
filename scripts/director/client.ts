@@ -93,6 +93,37 @@ export class StudioClient {
     }
   }
 
+  /**
+   * Re-render a finished film at a higher quality WITHOUT any model call
+   * (SPEC v2: showcase films at 1080p/24 fps; the Director renders at 1K/12).
+   * Motion specs are pure functions of time, so a clip re-evaluated at 24 fps
+   * and a frame re-rendered at 2K are the same drawing, sharper and smoother.
+   */
+  async remaster(projectId: string, opts: { resolution: "1K" | "2K" | "4K"; fps: number }): Promise<{ clips: number; stills: number }> {
+    await this.json("PATCH", `/api/projects/${projectId}`, { resolution: opts.resolution });
+    const p = await this.json<{ frames: Array<{ id: string; motionSpec?: string | null; artworkSvg?: string | null }> }>("GET", `/api/projects/${projectId}`);
+    let clips = 0;
+    for (const f of p.frames) {
+      if (!f.motionSpec) continue;
+      const motion = JSON.parse(f.motionSpec) as Record<string, unknown>;
+      motion.fps = opts.fps;
+      delete motion.holdFrames;
+      for (let tries = 0; ; tries++) {
+        try {
+          await this.json("PUT", `/api/frames/${f.id}/motion`, { motion });
+          break;
+        } catch (e) {
+          if (tries < 5 && /→ 429/.test(String(e))) await new Promise((r) => setTimeout(r, 11_000));
+          else throw e;
+        }
+      }
+      clips++;
+    }
+    const stills = p.frames.filter((f) => !f.motionSpec && f.artworkSvg).map((f) => f.id);
+    if (stills.length) await this.json("POST", "/api/render", { projectId, frameIds: stills });
+    return { clips, stills: stills.length };
+  }
+
   async download(p: string): Promise<Buffer> {
     const res = await fetch(this.url(p), { headers: this.headers(false), redirect: "follow" });
     if (!res.ok) throw new Error(`GET ${p} → ${res.status}`);
