@@ -56,7 +56,7 @@ describe("set kit (D41)", () => {
 });
 
 describe("set spec normalisation (showcase v2-banh-chung)", () => {
-  it("maps the Cast's words to the kit's and drops props the kit doesn't draw, instead of rejecting the set", async () => {
+  it("maps the Cast's words to the kit's and moves props the kit doesn't draw to the set dressing, instead of rejecting the set", async () => {
     const { normalizeSetSpec } = await import("@/lib/services/director/setKit");
     // the real failure: a kitchen whose props 3–5 were outside the list → the whole spec was rejected, the Cast hand-drew a flat set
     const raw = { place: "Kitchen", time: "evening", weather: "sunny", main: "#c9a27a", accent: "#7a4a2a", props: ["stove", "table", "shelf", "altar", "cooking pot", "banana leaves", "bamboo basket", "stove"] };
@@ -65,7 +65,9 @@ describe("set spec normalisation (showcase v2-banh-chung)", () => {
     const r = setSchema.safeParse(n.spec);
     expect(r.success).toBe(true);
     expect(r.data).toMatchObject({ place: "kitchen", time: "dusk", weather: "clear", props: ["stove", "table", "shelf"] });
-    expect(n.notes.join(" ")).toMatch(/dropped props the kit doesn't draw: banana leaves, bamboo basket/);
+    // never dropped silently (owner QC 2026-10-10): the Cast draws them as set dressing
+    expect(r.data?.dressing).toEqual(["banana leaves", "bamboo basket"]);
+    expect(n.notes.join(" ")).toMatch(/go to the set dressing \(the Cast draws them\): banana leaves, bamboo basket/);
     // place synonyms land on a kit place; the result still passes the cast-time gates
     const yard = normalizeSetSpec({ place: "courtyard", main: "#8fb08a", accent: "#c97d60", props: ["lanterns", "sakura"] });
     const y = setSchema.parse(yard.spec);
@@ -79,5 +81,22 @@ describe("set spec normalisation (showcase v2-banh-chung)", () => {
     const ok = { place: "tea-room", time: "night", weather: "clear", main: "#d8c8a8", accent: "#7a5a3a", props: ["shoji", "teapot"] };
     expect(normalizeSetSpec(ok)).toEqual({ spec: ok, notes: [] });
     expect(setSchema.safeParse(normalizeSetSpec({ ...ok, place: "spaceship" }).spec).success).toBe(false);
+  });
+});
+
+describe("set dressing (owner QC 2026-10-10: culturally specific elements, never dropped)", () => {
+  it("places each drawn item in the set by kind: sky items high, hanging items under the ceiling, the rest on the ground", async () => {
+    const { buildSet, dressingSpot } = await import("@/lib/services/director/setKit");
+    expect(["kite on a string in the sky", "fūrin wind chime", "ancestor altar with incense", "stone well", "đèn lồng", "凧"].map(dressingSpot)).toEqual(["sky", "hanging", "ground", "ground", "hanging", "sky"]);
+    const spec = setSchema.parse({ place: "kitchen", main: "#c9a27a", accent: "#7a4a2a", dressing: ["ancestor altar", "fūrin"] });
+    const markup = buildSet("kitchen", spec, { w: 1920, h: 1080 }, [{ id: "kitchen-d1", name: "ancestor altar" }, { id: "kitchen-d2", name: "fūrin" }]);
+    const uses = [...markup.matchAll(/<use href="#(kitchen-d\d)" x="([\d.-]+)" y="([\d.-]+)" width="([\d.]+)"/g)].map((m) => ({ id: m[1], y: Number(m[3]), size: Number(m[4]) }));
+    expect(uses.map((u) => u.id)).toEqual(["kitchen-d1", "kitchen-d2"]);
+    // the altar stands on the floor line (bottom at 70% + 30 px), the fūrin hangs under the ceiling beam
+    expect(uses[0].y + uses[0].size).toBeCloseTo(1080 * 0.7 + 30, 0);
+    expect(uses[1].y).toBe(40);
+    // the dressing is part of the set: inside its symbol, before the light of the hour
+    expect(markup.indexOf("kitchen-d1")).toBeLessThan(markup.indexOf("</symbol>"));
+    expect(() => sanitizeSvg(markup, "defs")).not.toThrow();
   });
 });

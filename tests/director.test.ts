@@ -501,6 +501,30 @@ describe("director loop (mock crew)", () => {
     expect(lib.outputSummary).toMatch(/^Library ready/);
   }, 120_000);
 
+  it("set dressing (owner QC 2026-10-10): the Cast draws the culturally specific elements, the engine places them in the kit set; a missing one is reported", async () => {
+    const base = demoHandler({ criticScores: [9] });
+    const heroOnly = DEMO_LIBRARY.split("\n").filter((l) => l.includes('id="hero"')).join("\n");
+    const kite = '<symbol id="home-d1" viewBox="0 0 400 400"><path d="M200 20 L380 200 L200 380 L20 200 Z" fill="#d9603b"/><path d="M200 20 L200 380" stroke="#7a2a12" stroke-width="8"/><path d="M20 200 L380 200" stroke="#7a2a12" stroke-width="8"/><circle cx="200" cy="200" r="18" fill="#f4b23c"/><path d="M200 380 Q260 400 300 400" stroke="#7a2a12" stroke-width="5" fill="none"/></symbol>';
+    const handler: MockHandler = (m, o, i) => {
+      if (m[0].content.startsWith("ROLE: CAST")) {
+        expect(m[0].content).toContain('"dressing"');
+        // the kite is drawn; the stone well never is
+        return "```svg\n" + heroOnly + "\n" + kite + "\n```\n```json\n" + JSON.stringify({ sets: { home: { place: "village", time: "day", main: "#b5a58f", accent: "#c97d60", props: ["tree"], dressing: ["kite on a string in the sky", "stone well"] } } }) + "\n```";
+      }
+      return base(m, o, i);
+    };
+    const { runId, summary, projectId } = await run(handler, {}, { maxShots: 2 });
+    expect(summary.status).toBe("done");
+    const defs = (await prisma.project.findUniqueOrThrow({ where: { id: projectId } })).artworkDefs ?? "";
+    expect(defs).toContain('<symbol id="home-d1" viewBox="0 0 400 400">');
+    const home = defs.slice(defs.indexOf('<symbol id="home" '), defs.indexOf("</symbol>", defs.indexOf('<symbol id="home" ')));
+    expect(home).toContain('<use href="#home-d1"');
+    expect(home).not.toContain("home-d2");
+    const step = await prisma.directorStep.findFirstOrThrow({ where: { runId, action: "set-dressing" } });
+    expect(step.outputSummary).toMatch(/Set dressing placed: home: kite on a string in the sky \(#home-d1\)/);
+    expect(step.error).toMatch(/Set dressing NOT drawn \(the set shows without it\): home: stone well \(#home-d2\)/);
+  }, 120_000);
+
   it("accepts library symbols one by one: a repair redraws only the failing member", async () => {
     const base = demoHandler({ criticScores: [9] });
     const lib = splitLibrary(DEMO_LIBRARY);

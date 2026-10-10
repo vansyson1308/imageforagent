@@ -35,6 +35,11 @@ export const setSchema = z.object({
   /** interior floor / exterior near ground (default: derived from main) */
   ground: hex.optional(),
   props: z.array(z.enum(SET_PROPS)).max(6).default([]),
+  /**
+   * Culturally specific elements the kit can't draw (an ancestor altar, a stone well, a fūrin, a kite in the sky):
+   * the Cast draws each one as a prop symbol `<set-id>-d<n>` and the engine places it in the set (owner QC 2026-10-10).
+   */
+  dressing: z.array(z.string().trim().min(2).max(60)).max(4).default([]),
 });
 export type SetSpec = z.infer<typeof setSchema>;
 
@@ -98,7 +103,12 @@ export function normalizeSetSpec(raw: unknown): { spec: unknown; notes: string[]
         kept.push(known);
       } else if (!known) dropped.push(String(p));
     }
-    if (dropped.length) notes.push(`dropped props the kit doesn't draw: ${dropped.join(", ")}`);
+    if (dropped.length) {
+      // never dropped silently: they become set dressing, drawn by the Cast and placed by the engine
+      const dressing = [...(Array.isArray(spec.dressing) ? (spec.dressing as unknown[]).map(String) : []), ...dropped];
+      spec.dressing = [...new Set(dressing)].slice(0, 4);
+      notes.push(`props the kit doesn't draw go to the set dressing (the Cast draws them): ${dropped.join(", ")}`);
+    }
     if (kept.length > 6) notes.push(`kept the first 6 props of ${kept.length}`);
     spec.props = kept.slice(0, 6);
   }
@@ -108,7 +118,9 @@ export function normalizeSetSpec(raw: unknown): { spec: unknown; notes: string[]
 export const SET_VOCABULARY = [
   `{"place": "${[...INTERIOR_PLACES, ...EXTERIOR_PLACES].join("|")}", "time": "${SET_TIMES.join("|")}", "weather": "${SET_WEATHER.join("|")}",`,
   ` "main": "#rrggbb (interior wall / exterior land)", "accent": "#rrggbb", "ground": "#rrggbb (floor / near ground, optional)",`,
-  ` "props": [up to 6 of ${SET_PROPS.map((p) => `"${p}"`).join(", ")}]}`,
+  ` "props": [up to 6 of ${SET_PROPS.map((p) => `"${p}"`).join(", ")}],`,
+  ` "dressing": [up to 4 culturally specific elements the kit can't draw, e.g. "ancestor altar with incense", "stone well", "fūrin wind chime", "kite on a string in the sky"]}`,
+  `For each dressing item n (1-based) of a set, ALSO draw it in the \`\`\`svg block as <symbol id="<set-id>-d<n>" viewBox="0 0 400 400"> (the object centred, resting on y=400, 5–30 shapes); the engine places it in the set.`,
 ].join("\n");
 
 export const isInterior = (p: SetPlace) => (INTERIOR_PLACES as readonly string[]).includes(p);
@@ -497,11 +509,41 @@ function weather(c: Ctx): void {
 }
 
 /** One set as a <symbol> (viewBox = the canvas) with its gradients, ids prefixed by `id`. */
-export function buildSet(id: string, spec: SetSpec, canvas: { w: number; h: number } = { w: 1920, h: 1080 }): string {
+/** Dressing that belongs in the sky (a kite, the moon, fireworks), hanging from the ceiling (a fūrin, a lantern), or stands on the ground. */
+export function dressingSpot(name: string): "sky" | "hanging" | "ground" {
+  const n = name.toLowerCase();
+  // hanging first: "chime" contains "chim" (bird)
+  if (/chime|fūrin|furin|風鈴|lantern|lồng đèn|đèn lồng|提灯|bell|chuông|mobile|garland/.test(n)) return "hanging";
+  if (/kite|diều|凧|moon|trăng|月|firework|pháo hoa|花火|balloon|\bbird|\bchim\b|鳥|\bstar|\bsao\b|星|cloud/.test(n)) return "sky";
+  return "ground";
+}
+
+/**
+ * The dressing items' <use>s, placed by kind: sky items high in the sky, hanging items under the ceiling (or a
+ * branch), ground items against the back wall or on the far ground, centred on free slots, behind the characters.
+ */
+function dressingLayer(c: Ctx, items: ReadonlyArray<{ id: string; name: string }>): void {
+  const { W, H } = c;
+  const interior = isInterior(c.spec.place);
+  const base = interior ? H * 0.7 + 30 : H * 0.74 + 20;
+  const slots = { sky: [0.3, 0.62, 0.45], hanging: [0.3, 0.7, 0.5], ground: interior ? [0.25, 0.75, 0.12, 0.88] : [0.24, 0.76, 0.42, 0.58] };
+  const used = { sky: 0, hanging: 0, ground: 0 };
+  for (const it of items) {
+    const spot = dressingSpot(it.name);
+    const x = W * slots[spot][used[spot]++ % slots[spot].length];
+    const size = spot === "sky" ? H * 0.17 : spot === "hanging" ? H * 0.18 : H * (interior ? 0.3 : 0.24);
+    const top = spot === "sky" ? H * 0.1 : spot === "hanging" ? 40 : base - size;
+    c.out.push(`<use href="#${it.id}" x="${n(x - size / 2)}" y="${n(top)}" width="${n(size)}" height="${n(size)}"/>`);
+  }
+}
+
+export function buildSet(id: string, spec: SetSpec, canvas: { w: number; h: number } = { w: 1920, h: 1080 }, dressing: ReadonlyArray<{ id: string; name: string }> = []): string {
   const sky = SKY[spec.time];
   const c: Ctx = { id, W: canvas.w, H: canvas.h, spec, defs: [], out: [], sky, night: spec.time === "night" };
   if (isInterior(spec.place)) room(c);
   else landscape(c);
+  // culturally specific elements drawn by the Cast, under the light of the hour like the rest of the set
+  dressingLayer(c, dressing);
   weather(c);
   // light of the hour over everything, then a soft vignette
   if (sky.tintOpacity) c.out.push(`<rect width="${c.W}" height="${c.H}" fill="${sky.tint}" fill-opacity="${sky.tintOpacity}"/>`);
