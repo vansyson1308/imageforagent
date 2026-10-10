@@ -10,7 +10,7 @@ import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/d
 import { actingLayer, speakerId } from "@/lib/services/director/acting";
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
-import { extractJsonBlock, extractSvgFragment, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { badPaints, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, emptyFrameProblem, GATE, measureFrame, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
@@ -86,8 +86,12 @@ export async function validateDrawing(
     neighbours?: readonly Neighbour[];
   },
 ): Promise<Drawing> {
-  const svg = extractSvgFragment(text);
+  let svg = extractSvgFragment(text);
   if (!svg) throw new Error("No SVG fragment found. Put the frame inside a ```svg block.");
+  // an unresolvable paint renders BLACK: strict attempts get it back to fix, the lenient one is repaired with a neutral colour
+  const bad = badPaints(svg);
+  if (bad.length && opts.strict !== false) throw new Error(`Unresolvable paint value(s) ${bad.map((b) => `"${b}"`).join(", ")} render BLACK: write url(#gradient-id) exactly (and declare the gradient in <defs>), or use a plain #rrggbb colour.`);
+  if (bad.length) svg = fixPaints(svg, "#9aa3ad");
   try {
     sanitizeSvg(svg, "frame");
   } catch (e) {

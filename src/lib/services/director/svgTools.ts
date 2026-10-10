@@ -313,3 +313,33 @@ export async function opaquePieces(png: Buffer): Promise<number[]> {
   }
   return sizes.sort((a, b) => b - a).map((s) => s / Math.max(1, total));
 }
+
+const PAINT_RE = /\b(fill|stroke|stop-color|flood-color|lighting-color)\s*(?:=\s*(["'])([^"']*)\2|:\s*([^;"'}<>]+))/gi;
+
+function isBadPaint(v: string): boolean {
+  if (/^url/i.test(v)) return !/^url\(\s*#[A-Za-z_][\w.:-]*\s*\)(\s+[#\w(),.%\s-]+)?$/.test(v);
+  return v.includes("(") && !/^(rgba?|hsla?)\(\s*[\d.%\s,/-]+\)$/i.test(v);
+}
+
+/**
+ * Paint values librsvg can't resolve (hosted run 2: `fill="url://beach-skyGrad)"`,
+ * a mangled url()) silently paint BLACK: the whole beach set rendered black and
+ * no gate noticed. Returns the distinct bad values.
+ */
+export function badPaints(svg: string): string[] {
+  const out = new Set<string>();
+  for (const m of svg.matchAll(PAINT_RE)) {
+    const v = (m[3] ?? m[4] ?? "").trim();
+    if (v && isBadPaint(v)) out.add(v);
+  }
+  return [...out];
+}
+
+/** Replace every unresolvable paint with a plain colour (last-resort repair of a kept symbol). */
+export function fixPaints(svg: string, color: string): string {
+  return svg.replace(PAINT_RE, (all, prop: string, q: string | undefined, a: string | undefined, b: string | undefined) => {
+    const v = (a ?? b ?? "").trim();
+    if (!v || !isBadPaint(v)) return all;
+    return q ? `${prop}=${q}${color}${q}` : `${prop}:${color}`;
+  });
+}

@@ -6,10 +6,10 @@
  *
  *   DEMO_PASSCODE=… npx tsx scripts/director/hosted-run.ts [--base https://…] [--sample en-kite] [--max-shots 8] [--out docs/hackathon/evidence] [--media <dir>]
  *
- * Writes <out>/hosted-run-v2-<date>-<sample>.json; with --media, also the film and stills (for review, not committed).
+ * Writes <out>/hosted-run-v2-<date>-<sample>-runN.json (never overwrites); with --media, also the film and stills (for review, not committed).
  */
 import "./env";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { StudioClient, type SseEvent } from "./client";
 import { appendLedger, assertSpendUnder } from "./ledger";
@@ -100,7 +100,10 @@ async function main() {
     steps: steps.map((st) => ({ seq: st.seq, role: st.role, model: st.model, action: st.action, shot: st.shotIndex, score: st.score ?? null, usd: st.costUsd ?? 0, ms: st.latencyMs ?? null })),
   };
   mkdirSync(out, { recursive: true });
-  const file = path.join(out, `hosted-run-v2-${date}-${sample.key}.json`);
+  // never overwrite an earlier run's evidence: -run1, -run2, …
+  let k = 1;
+  while (existsSync(path.join(out, `hosted-run-v2-${date}-${sample.key}-run${k}.json`))) k++;
+  const file = path.join(out, `hosted-run-v2-${date}-${sample.key}-run${k}.json`);
   writeFileSync(file, JSON.stringify(evidence, null, 2) + "\n");
   if (media) {
     mkdirSync(media, { recursive: true });

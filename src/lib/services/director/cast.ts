@@ -5,7 +5,7 @@ import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
 import { castRepairUser, castSystem, castUser } from "@/lib/services/director/prompts";
 import sharp from "sharp";
-import { castSheetFrame, extractJsonBlock, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
+import { badPaints, castSheetFrame, extractJsonBlock, fixPaints, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
 import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalSkin, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
 import { measureFrame, readableSetProblem } from "@/lib/services/director/frameGates";
 
@@ -41,6 +41,8 @@ export async function symbolProblems(
   const id = member.id;
   if (!symbol) return [`#${id} is missing: add <symbol id="${id}" viewBox="…">`];
   if (!/^<symbol\b[^>]*viewBox\s*=/.test(symbol)) return [`#${id} has no viewBox (it would not scale)`];
+  const bad = badPaints([symbol, ...neededExtras(symbol, extras).values()].join("\n"));
+  if (bad.length) return [`#${id} uses paint values the renderer can't resolve, which paint BLACK: ${bad.map((b) => `"${b}"`).join(", ")}. Write url(#gradient-id) exactly and declare that gradient in the same reply, or use a plain #rrggbb colour`];
   const dangling = missingRefs(symbol, new Set([...extras.keys(), ...known]));
   if (dangling.length) return [`#${id} references undefined ${dangling.map((d) => `#${d}`).join(", ")}: declare those gradients in the same reply`];
   const s = symbolInfo(symbol).get(id);
@@ -263,7 +265,10 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
       symbols.push(placeholderLibrary([c], ctx.canvas));
       continue;
     }
-    const { symbol, extras: own } = namespaced(cand, extras);
+    const named = namespaced(cand, extras);
+    // last resort for a kept symbol: an unresolvable paint becomes the member's first colour (never black)
+    const symbol = fixPaints(named.symbol, c.colors[0] ?? "#888888");
+    const own = new Map([...named.extras].map(([k, v]) => [k, fixPaints(v, c.colors[0] ?? "#888888")] as const));
     for (const [k, v] of own) if (!extras.has(k)) extras.set(k, v);
     if (accepted.has(c.id)) symbols.push(symbol);
     else {
