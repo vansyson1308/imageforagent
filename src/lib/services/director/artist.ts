@@ -10,7 +10,7 @@ import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/d
 import { actingLayer, speakerId } from "@/lib/services/director/acting";
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
-import { badPaints, coveredShare, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { applyPlacement, badPaints, coveredShare, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, emptyFrameProblem, GATE, measureFrame, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
@@ -128,7 +128,21 @@ export async function validateDrawing(
     throw new Error(errText(e));
   }
   if (await isNearlyBlank(png)) throw new Error("The frame renders as one flat colour. Draw the background, the characters and the details.");
-  const checks = await qualityGates(svg, png, opts);
+  let checks = await qualityGates(svg, png, opts);
+  // D45: when the only problems are the main figure's size/headroom and it is placed plainly, the engine frames it (re-measured, every gate again)
+  const placed = checks.subject && checks.problems.length && checks.problems.every((p) => REFRAMABLE.some((r) => r.test(p))) ? plainPlacement(svg, checks.subject.id) : null;
+  if (placed && checks.subject) {
+    const to = reframePlacement(placed, checks.subject.box, opts.canvas, { closeUp: minSubjectPct(opts.shot.shotType) >= 75, minPct: minSubjectPct(opts.shot.shotType) });
+    const svg2 = applyPlacement(svg, placed, to);
+    const png2 = await renderArtwork(opts.castDefs, svg2, opts.aspectRatio, "1K");
+    const checks2 = await qualityGates(svg2, png2, opts);
+    if (checks2.problems.length === 0) {
+      checks2.facts.push(`framed by the engine: #${checks.subject.id} ${Math.round(placed.w)}×${Math.round(placed.h)} at (${Math.round(placed.x)}, ${Math.round(placed.y)}) → ${to.w}×${to.h} at (${to.x}, ${to.y}) (was: ${checks.problems.join("; ")})`);
+      svg = svg2;
+      png = png2;
+      checks = checks2;
+    }
+  }
   const small = await thumb(png);
   if (!opts.shot.intentionalRepeat) {
     for (const n of opts.neighbours ?? []) {
@@ -154,9 +168,10 @@ async function qualityGates(
   svg: string,
   png: Buffer,
   opts: { castDefs: string; aspectRatio: string; shot: ShotPlan; characters?: readonly string[]; sets?: readonly string[]; canvas: { w: number; h: number } },
-): Promise<{ problems: string[]; facts: string[] }> {
+): Promise<{ problems: string[]; facts: string[]; subject: { id: string; box: Box } | null }> {
   const problems: string[] = [];
   const facts: string[] = [];
+  let subjectId: string | null = null;
   const inShot = opts.shot.cast.filter((id) => opts.characters?.includes(id));
   // Size targets are the kit-built figures (people, animals); drawn "others" (swarms, spirits) only need to be visible
   const isKit = (id: string) => opts.castDefs.includes(`id="${id}-torso"`) || opts.castDefs.includes(`id="${id}-fur"`);
@@ -187,6 +202,7 @@ async function qualityGates(
     if ((kitIds.has(id) || kitIds.size === 0) && pct > biggest) {
       biggest = pct;
       subject = await visibleBox(png, without);
+      subjectId = id;
     }
   }
   // Measured on the BACKGROUND (every character removed): flat blocks the set is made of
@@ -228,8 +244,11 @@ async function qualityGates(
     if (lum > 120) problems.push(`this is a night/dark scene but the frame's mean brightness is ${lum}/255 (should be ≤ 120): add a full-canvas <rect width="${opts.canvas.w}" height="${opts.canvas.h}" fill="#0b1330" fill-opacity="0.45"/> over the set BEFORE the characters, and warm glows around the light sources`);
     else facts.push(`night lighting OK (mean brightness ${lum}/255)`);
   }
-  return { problems, facts };
+  return { problems, facts, subject: subject && subjectId && kitIds.has(subjectId) ? { id: subjectId, box: subject } : null };
 }
+
+/** Problems the engine can fix itself by moving the main figure (its size and headroom), D45. */
+const REFRAMABLE = [/^the main character is only \d+% of the frame height/, /^in this close-up the subject's head starts/];
 
 /** The kind of an engine rejection, numbers removed (the same problem measured slightly differently is the same kind). */
 export function errorKind(message: string): string {

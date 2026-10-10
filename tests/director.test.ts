@@ -215,6 +215,30 @@ describe("director validators", () => {
     expect(minSubjectPct("Wide shot")).toBe(25);
   });
 
+  it("frames a kit figure itself when size/headroom is the only problem (D45: VI showcase shot 7 failed 4 repairs on it)", async () => {
+    const kid = buildDoll("kid", dollSchema.parse({ age: "child", skin: "#f1c9a5", hairStyle: "bob", hairColor: "#2b1d16", top: "tshirt", topColor: "#e8b04a", bottom: "shorts", bottomColor: "#5b6b3a", accent: "#d9483b", accessories: [] }));
+    const kitOpts = { ...opts, castDefs: DEMO_LIBRARY + kid, symbols: ["hero", "home", "kid"], characters: ["kid"] };
+    const closeUp = { ...kitOpts, shot: { ...shot, shotType: "Close-up", cast: ["kid"] } };
+    // the real failure: head 41% down, figure 59% of the frame in a close-up
+    const low = '```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><use href="#kid" x="800" y="440" width="427" height="640"/><circle cx="200" cy="200" r="30" fill="#fff"/>\n```';
+    const d = await validateDrawing(low, closeUp);
+    expect(d.checks?.problems).toEqual([]);
+    expect(d.checks?.facts.join(" ")).toMatch(/framed by the engine: #kid 427×640 at \(800, 440\) → \d+×\d+ at/);
+    const use = d.svg.match(/<use href="#kid"[^>]*>/)![0];
+    expect(Number(use.match(/height="(\d+)"/)![1])).toBeGreaterThan(1080);
+    expect(d.svg).toContain('<circle cx="200" cy="200" r="30" fill="#fff"/>');
+    // a medium shot grows the figure, feet stay on the ground line
+    const med = await validateDrawing('```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><use href="#kid" x="900" y="760" width="200" height="300"/>\n```', { ...kitOpts, shot: { ...shot, shotType: "Medium shot", cast: ["kid"] } });
+    const m = med.svg.match(/<use href="#kid" x="(-?\d+)" y="(-?\d+)" width="(\d+)" height="(\d+)"/)!;
+    expect(Number(m[2]) + Number(m[4])).toBe(1060);
+    // never through a transform: the Artist keeps the repair
+    const wrapped = '```svg\n<use href="#home" x="0" y="0" width="1920" height="1080"/><g transform="translate(0 0)"><use href="#kid" x="800" y="440" width="427" height="640"/></g>\n```';
+    await expect(validateDrawing(wrapped, closeUp)).rejects.toThrow(/close-up the subject's head starts|main character is only/);
+    // and never when another problem is there too (a set used as an object)
+    const pip = '```svg\n<rect width="1920" height="1080" fill="#335"/><use href="#home" x="300" y="100" width="600" height="340"/><use href="#kid" x="800" y="440" width="427" height="640"/>\n```';
+    await expect(validateDrawing(pip, { ...closeUp, sets: ["home"] })).rejects.toThrow(/#home is a set/);
+  });
+
   it("gates night lighting on the measured brightness of the render", async () => {
     const night = { ...opts, shot: { ...shot, description: "The hero waits under the moonlight at night." } };
     const bright = '```svg\n<rect width="1920" height="1080" fill="#f4f0e0"/><circle cx="960" cy="540" r="200" fill="#e0c080"/>\n```';

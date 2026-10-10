@@ -190,6 +190,73 @@ export function upToUse(svg: string, id: string): string | null {
   return prefix + open.reverse().map((n) => `</${n}>`).join("");
 }
 
+export interface Placement {
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+/**
+ * The first `<use>` of `id` (or a posed variant) placed plainly: at the top
+ * level of the fragment (inside no element), no transform, numeric x, y,
+ * width and height. Null otherwise (the engine then leaves framing to the
+ * Artist: it never guesses through a transform).
+ */
+export function plainPlacement(svg: string, id: string): (Placement & { tag: string; at: number }) | null {
+  const esc = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const m = new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#${esc}(?:--[a-z0-9_-]+)?["'][^>]*?/?>`).exec(svg);
+  if (!m || /\btransform\s*=/.test(m[0])) return null;
+  let depth = 0;
+  for (const t of svg.slice(0, m.index).matchAll(/<(\/?)([a-zA-Z][\w:-]*)\b[^>]*?(\/?)>/g)) {
+    if (t[3] === "/") continue;
+    depth += t[1] ? -1 : 1;
+  }
+  if (depth !== 0) return null;
+  const num = (a: string) => {
+    const v = m[0].match(new RegExp(`\\s${a}\\s*=\\s*["']?(-?[\\d.]+)["']?`))?.[1];
+    return v === undefined ? NaN : Number(v);
+  };
+  const p = { x: num("x"), y: num("y"), w: num("width"), h: num("height") };
+  if (![p.x, p.y, p.w, p.h].every(Number.isFinite) || p.w <= 0 || p.h <= 0) return null;
+  return { ...p, tag: m[0], at: m.index };
+}
+
+/**
+ * Where to put a figure so the shot's framing holds, from where it is and
+ * what it measured (`visible`, its rendered box in [0,1]). A close-up puts
+ * the head 6% below the top and lets the canvas crop the legs; other shots
+ * grow the figure (never shrink it) to the required share of the frame
+ * height, feet where they were unless that pushes the head out of frame.
+ * The horizontal centre is kept.
+ */
+export function reframePlacement(p: Placement, visible: { y0: number; y1: number }, canvas: { w: number; h: number }, target: { closeUp: boolean; minPct: number }): Placement {
+  const H = canvas.h;
+  const topFrac = Math.min(0.3, Math.max(0, (visible.y0 * H - p.y) / p.h));
+  const bottomCropped = visible.y1 >= 0.99;
+  const figureFrac = bottomCropped ? 1 - topFrac : Math.min(1 - topFrac, ((visible.y1 - visible.y0) * H) / p.h);
+  let h: number;
+  let y: number;
+  if (target.closeUp) {
+    h = Math.max(p.h, H * 1.35);
+    y = H * 0.06 - topFrac * h;
+  } else {
+    h = Math.max(p.h, ((target.minPct / 100) * 1.08 * H) / Math.max(0.3, figureFrac));
+    y = p.y + p.h - h;
+    if (y + topFrac * h < H * 0.03) y = H * 0.03 - topFrac * h;
+  }
+  const w = (h * p.w) / p.h;
+  const x = Math.min(canvas.w - 0.8 * w, Math.max(-0.2 * w, p.x + p.w / 2 - w / 2));
+  return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
+}
+
+/** The fragment with that `<use>`'s x, y, width and height replaced. */
+export function applyPlacement(svg: string, placed: { tag: string; at: number }, to: Placement): string {
+  const set = (tag: string, a: string, v: number) => tag.replace(new RegExp(`(\\s${a}\\s*=\\s*)(["']?)-?[\\d.]+\\2`), `$1"${v}"`);
+  const tag = set(set(set(set(placed.tag, "x", to.x), "y", to.y), "width", to.w), "height", to.h);
+  return svg.slice(0, placed.at) + tag + svg.slice(placed.at + placed.tag.length);
+}
+
 /**
  * How much of a character is hidden by what is drawn after it. `alone` is the
  * frame up to the character, `beneath` the same without it, `full` the whole
