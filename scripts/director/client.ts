@@ -42,6 +42,14 @@ export class StudioClient {
     return JSON.parse(text) as T;
   }
 
+  /** Score one frame with an eval judge on the server (operator only, D48): the provider key stays there. */
+  async judge(body: { model: string; prompt: string; image: string; maxTokens?: number; json?: boolean }): Promise<{ text: string; model: string; usage: { promptTokens: number; completionTokens: number }; costUsd: number }> {
+    const res = await fetch(this.url("/api/eval/judge"), { method: "POST", headers: { ...this.headers(), "x-operator-passcode": this.opts.passcode ?? "" }, body: JSON.stringify(body) });
+    const text = await res.text();
+    if (!res.ok) throw new Error(`POST /api/eval/judge → ${res.status}: ${text.slice(0, 300)}`);
+    return JSON.parse(text);
+  }
+
   /** In demo mode a session holds ≤ N projects: on QUOTA_EXCEEDED, unlock a fresh session and retry once. */
   async createProject(name: string): Promise<string> {
     try {
