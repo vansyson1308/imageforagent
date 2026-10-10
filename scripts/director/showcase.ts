@@ -6,6 +6,7 @@
  *   npm run director:showcase -- --base https://<host> --passcode <p>   # drive a hosted app
  *   npm run director:showcase -- --base http://localhost:3000           # a local `npm run dev` with NEBIUS_API_KEY
  *   … [--only lantern] [--max-shots 8] [--max-usd 0.6] [--set v2] [--remaster 2K@24]
+ *   … --refilm v2-kite=<projectId>[,…]   # re-assemble a published film from its project (no model call; D43)
  *
  * Refuses to run against the mock crew: showcase films must be real.
  */
@@ -72,6 +73,23 @@ async function main() {
   mkdirSync("docs/hackathon/evidence", { recursive: true });
   const indexPath = "public/showcase/index.json";
   const index: { films: Array<Record<string, unknown>> } = existsSync(indexPath) ? JSON.parse(readFileSync(indexPath, "utf8")) : { films: [] };
+
+  if (arg("--refilm")) {
+    for (const pair of arg("--refilm").split(",")) {
+      const [slug, pid] = pair.split("=");
+      const entry = index.films.find((f) => f.slug === slug);
+      if (!entry || !pid) throw new Error(`--refilm ${pair}: no published film "${slug}" or no project id`);
+      const dir = `public/showcase/${slug}`;
+      writeFileSync(`${dir}/film.mp4`, await client.download(`/api/projects/${pid}/film.mp4`));
+      spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", "2", "-i", `${dir}/film.mp4`, "-frames:v", "1", "-q:v", "3", `${dir}/poster.jpg`]);
+      const [fw, fh, rate] = spawnSync("ffprobe", ["-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height,r_frame_rate", "-of", "csv=p=0", `${dir}/film.mp4`], { encoding: "utf8" }).stdout.trim().split(",");
+      const [n, d] = (rate ?? "0/1").split("/").map(Number);
+      entry.remastered = `${fw}×${fh} @ ${Math.round(n / (d || 1))} fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call; re-assembled ${new Date().toISOString().slice(0, 10)}, D43)`;
+      console.log(`✔ ${slug}: ${entry.remastered}`);
+    }
+    writeFileSync(indexPath, JSON.stringify(index, null, 2));
+    return;
+  }
 
   for (const s of stories) {
     if (only && s.slug !== only) continue;

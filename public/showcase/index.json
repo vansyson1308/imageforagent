@@ -207,7 +207,7 @@
       "createdAt": "2026-10-10T03:01:45.470Z",
       "source": "studio-production-049c.up.railway.app",
       "version": "v2",
-      "remastered": "2048×1152 @ 12 fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call; the film was assembled at 12 fps, see D43)",
+      "remastered": "2048×1152 @ 24 fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call; re-assembled 2026-10-10, D43)",
       "stills": {
         "1": "/showcase/v2-kite/shots/F01.jpg",
         "2": "/showcase/v2-kite/shots/F02.jpg",
@@ -261,7 +261,7 @@
       "createdAt": "2026-10-10T03:16:08.579Z",
       "source": "studio-production-049c.up.railway.app",
       "version": "v2",
-      "remastered": "2048×1152 @ 12 fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call; the film was assembled at 12 fps, see D43)",
+      "remastered": "2048×1152 @ 24 fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call; re-assembled 2026-10-10, D43)",
       "stills": {
         "1": "/showcase/v2-furin/shots/F01.jpg",
         "2": "/showcase/v2-furin/shots/F02.jpg",
@@ -273,5 +273,5 @@
       }
     }
   ],
-  "hero": "tea-house"
+  "hero": "v2-furin"
 }
