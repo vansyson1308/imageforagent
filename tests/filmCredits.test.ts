@@ -3,7 +3,11 @@ import { readFileSync } from "node:fs";
 import { filmCredits, NEMOTRON_LINE, TAVILY_LINE, VAIS_CREDIT, voiceCreditLine, type CreditStep } from "@/lib/services/director/filmCredits";
 import { OWNER_VOICE } from "@/lib/services/director/fixedNarration";
 import { VOICE_CREDIT } from "@/lib/services/director/ownerPackage";
-import { creditSvg, readVoiceCredit } from "../scripts/director/credits";
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { appendCredits, CARD_TYPE, cardRows, creditFilter, CRF, ems, FADE_IN, FADE_OUT, probe, readVoiceCredit, TEXT_WIDTH, wrapTwo } from "../scripts/director/credits";
 
 /** The end card of every published film (owner plan 2026-10-10, item 2): built from the run's trace. */
 describe("film credits", () => {
@@ -46,17 +50,61 @@ describe("film credits", () => {
     expect(mains.slice(0, 2)).toEqual([VAIS_CREDIT.main, NEMOTRON_LINE]);
   });
 
-  it("the card fits every line inside the box at both aspects", () => {
-    const blocks = [{ main: "音声合成：AivisSpeech / morioki", detail: "（ボイス提供：もりおき、モデル制作：yuki、ACML 1.0）" }, VAIS_CREDIT, { main: NEMOTRON_LINE }, { main: TAVILY_LINE }];
+  const ALL = [{ main: "音声合成：AivisSpeech / morioki", detail: "（ボイス提供：もりおき、モデル制作：yuki、ACML 1.0）" }, VAIS_CREDIT, { main: NEMOTRON_LINE }, { main: TAVILY_LINE }];
+
+  it("no row shrinks below its floor (9:16 main ≥ 40, detail ≥ 30; 16:9 main ≥ 36, detail ≥ 26) and every row fits", () => {
     for (const aspect of ["16:9", "9:16"] as const) {
-      const svg = creditSvg(aspect, blocks);
-      const w = aspect === "16:9" ? 1920 : 1080;
-      const lines = [...svg.matchAll(/font-size="(\d+)"[^>]*>([^<]+)</g)].map((m) => ({ size: Number(m[1]), text: m[2] }));
-      expect(lines.map((l) => l.text)).toContain(NEMOTRON_LINE);
-      for (const l of lines) {
-        const em = [...l.text].reduce((n, ch) => n + (/[　-ヿ㐀-鿿＀-￯]/u.test(ch) ? 1 : 0.56), 0);
-        expect(em * l.size, `${aspect} ${l.text}`).toBeLessThanOrEqual(w * 0.76 + 1);
+      const T = CARD_TYPE[aspect];
+      const rows = cardRows(aspect, ALL);
+      for (const r of rows) {
+        const floor = r.fill === "#5a3a22" ? T.mainFloor : T.detailFloor;
+        expect(r.size, `${aspect} ${r.text}`).toBeGreaterThanOrEqual(floor);
+        expect(ems(r.text) * r.size, `${aspect} ${r.text}`).toBeLessThanOrEqual(T.width * TEXT_WIDTH + 1);
       }
+    }
+    expect(CARD_TYPE["9:16"].main).toBe(56);
+    // at 9:16 the long lines wrap onto two rows instead of shrinking
+    const tall = cardRows("9:16", ALL).map((r) => r.text);
+    expect(tall).toContain("Made with NVIDIA Nemotron");
+    expect(tall).toContain("on Nebius Token Factory");
+    expect(tall).toContain("Vietnamese voice: Piper");
+    // at 16:9 they stay on one row
+    expect(cardRows("16:9", ALL).map((r) => r.text)).toContain(NEMOTRON_LINE);
+  });
+
+  it("wraps at the space nearest the middle, or after 、/： in Japanese", () => {
+    expect(wrapTwo("Made with NVIDIA Nemotron on Nebius Token Factory")).toEqual(["Made with NVIDIA Nemotron", "on Nebius Token Factory"]);
+    expect(wrapTwo("（ボイス提供：もりおき、モデル制作：yuki、ACML 1.0）")).toEqual(["（ボイス提供：もりおき、", "モデル制作：yuki、ACML 1.0）"]);
+    expect(wrapTwo("あいうえおかきくけこ")).toEqual(["あいうえお", "かきくけこ"]);
+  });
+
+  it("fades the film out over its last 0.5 s (picture and sound) and the card in over 0.3 s", () => {
+    const f = creditFilter({ w: 1080, h: 1920, fps: 12, audio: true, dur: 60 });
+    expect(FADE_OUT).toBe(0.5);
+    expect(FADE_IN).toBe(0.3);
+    expect(f).toContain("fade=t=out:st=59.500:d=0.5");
+    expect(f).toContain("afade=t=out:st=59.500:d=0.5");
+    expect(f).toContain("fade=t=in:st=0:d=0.3");
+    expect(f).toContain("concat=n=2:v=1:a=1");
+    expect(creditFilter({ w: 1080, h: 1920, fps: 12, audio: false, dur: 60 })).toContain("concat=n=2:v=1:a=0");
+  });
+
+  const hasFfmpeg = spawnSync("ffmpeg", ["-version"]).status === 0;
+  it.skipIf(!hasFfmpeg)("appends the card to a real film: total = film + 3 s, sound faded at the cut, x264 CRF 18", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "credits-"));
+    try {
+      const film = path.join(dir, "film.mp4");
+      const make = spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-f", "lavfi", "-i", "testsrc2=s=320x568:r=12:d=2", "-f", "lavfi", "-i", "sine=f=440:d=2", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", film]);
+      expect(make.status).toBe(0);
+      await appendCredits(film, "9:16", [{ main: NEMOTRON_LINE }]);
+      const p = probe(film);
+      expect(p.dur).toBeGreaterThan(4.95);
+      expect(p.dur).toBeLessThan(5.1);
+      const peak = (from: number, to: number) => Number(/max_volume: (-?[\d.]+|-inf) dB/.exec(spawnSync("ffmpeg", ["-i", film, "-af", `atrim=${from}:${to},volumedetect`, "-f", "null", "-"], { encoding: "utf8" }).stderr)?.[1] ?? "-inf");
+      expect(peak(1.9, 1.98)).toBeLessThan(peak(0.5, 1.4) - 12);
+      expect(spawnSync("grep", ["-c", "-a", `crf=${CRF}.0`, film], { encoding: "utf8" }).stdout.trim()).not.toBe("0");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });
