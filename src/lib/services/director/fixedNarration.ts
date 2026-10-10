@@ -1,4 +1,34 @@
 import { audioDuration, decodeWav, encodeWav, resample, toChannels, type AudioBuffer } from "@/lib/services/audio/wav";
+import { measureLoudness } from "@/lib/services/audio/loudness";
+import { limitPeaks } from "@/lib/services/audio/mix";
+
+/** Every owner line is levelled to this integrated loudness before the mix (owner, 2026-10-10: the lines run −15.9 to −21.6 LUFS). */
+export const LINE_LUFS = -18;
+/** Sample-peak ceiling after levelling (dBFS); a boosted line is limited, never clipped. */
+export const LINE_PEAK_DB = -1;
+
+/**
+ * One line levelled to LINE_LUFS (BS.1770-4 integrated, the same meter the
+ * mix uses), then a lookahead limiter holds its peaks under LINE_PEAK_DB.
+ * Mono in, mono out; returns the measured loudness before and after.
+ */
+export function levelLine(a: AudioBuffer, target = LINE_LUFS): { audio: AudioBuffer; lufsIn: number; lufsOut: number; gainDb: number } {
+  const lufsIn = measureLoudness(a).integrated;
+  if (!Number.isFinite(lufsIn)) return { audio: a, lufsIn, lufsOut: lufsIn, gainDb: 0 };
+  // gain to the target, limit the peaks, and once more if the limiter took more than 0.3 LU back (a quiet line with loud peaks)
+  let ch = a.channels;
+  let gainDb = 0;
+  let lufsOut = lufsIn;
+  for (let pass = 0; pass < 4 && Math.abs(target - lufsOut) > 0.3; pass++) {
+    const step = target - lufsOut;
+    const g = 10 ** (step / 20);
+    ch = ch.map((c) => Float32Array.from(c, (v) => v * g));
+    limitPeaks(ch, a.sampleRate, 10 ** (LINE_PEAK_DB / 20));
+    gainDb += step;
+    lufsOut = measureLoudness({ sampleRate: a.sampleRate, channels: ch }).integrated;
+  }
+  return { audio: { sampleRate: a.sampleRate, channels: ch }, lufsIn, lufsOut, gainDb };
+}
 
 /**
  * Fixed narration (owner decision 2026-10-10, section B): the narration is
@@ -35,19 +65,21 @@ export function hasRecording(shot: NarrationShot): boolean {
 }
 
 /**
- * One WAV for a shot: its lines in order, each followed by its pause_after
- * of silence, mono, at the first line's sample rate, 16-bit (the owner's
- * format). Null when a line has no recording.
+ * One WAV for a shot: its lines in order, each levelled to −18 LUFS
+ * (levelLine) and followed by its pause_after of silence, mono, at the first
+ * line's sample rate, 16-bit (the owner's format). Null when a line has no
+ * recording.
  */
-export function shotVoice(shot: NarrationShot): { wav: Buffer; seconds: number; lines: Array<{ id: string; seconds: number }> } | null {
+export function shotVoice(shot: NarrationShot): { wav: Buffer; seconds: number; lines: Array<{ id: string; seconds: number; lufsIn: number; lufsOut: number }> } | null {
   if (!hasRecording(shot)) return null;
   const parts = shot.lines.map((l) => ({ id: l.id, pauseAfter: l.pauseAfter, audio: toChannels(decodeWav(l.wav!), 1) }));
   const rate = parts[0].audio.sampleRate;
   const pieces: Float32Array[] = [];
-  const lines: Array<{ id: string; seconds: number }> = [];
+  const lines: Array<{ id: string; seconds: number; lufsIn: number; lufsOut: number }> = [];
   for (const p of parts) {
-    const a: AudioBuffer = resample(p.audio, rate);
-    lines.push({ id: p.id, seconds: Math.round(audioDuration(a) * 1000) / 1000 });
+    const lv = levelLine(resample(p.audio, rate));
+    const a: AudioBuffer = lv.audio;
+    lines.push({ id: p.id, seconds: Math.round(audioDuration(a) * 1000) / 1000, lufsIn: Math.round(lv.lufsIn * 10) / 10, lufsOut: Math.round(lv.lufsOut * 10) / 10 });
     pieces.push(a.channels[0], new Float32Array(Math.round(Math.max(0, p.pauseAfter) * rate)));
   }
   const total = pieces.reduce((n, x) => n + x.length, 0);

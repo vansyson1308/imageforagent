@@ -7,7 +7,8 @@ import { MockLlmProvider, type MockHandler } from "@/lib/providers/mockLlmProvid
 import { demoHandler, MOCK_MODELS } from "@/lib/services/director/demoCrew";
 import { createRun, executeRun, registerRun, unregisterRun } from "@/lib/services/director/loop";
 import { DEFAULT_BUDGET } from "@/lib/services/director/budget";
-import { hasRecording, shotText, shotVoice, timingsById, type NarrationShot } from "@/lib/services/director/fixedNarration";
+import { hasRecording, levelLine, LINE_LUFS, shotText, shotVoice, timingsById, type NarrationShot } from "@/lib/services/director/fixedNarration";
+import { measureLoudness } from "@/lib/services/audio/loudness";
 import { OWNER_VOICE } from "@/lib/services/director/editor";
 import { shotDuration } from "@/lib/services/director/artist";
 import { audioDuration, decodeWav, encodeWav } from "@/lib/services/audio/wav";
@@ -25,12 +26,29 @@ describe("fixed narration: one voice per shot from the owner's lines", () => {
     const shot: NarrationShot = { lines: [{ id: "S01_L01", text: "一。", pauseAfter: 0.5, wav: tone(1.0) }, { id: "S01_L02", text: "二。", pauseAfter: 0.5, wav: tone(0.5, 48000) }] };
     const v = shotVoice(shot)!;
     expect(v.seconds).toBeCloseTo(2.5, 2);
-    expect(v.lines).toEqual([{ id: "S01_L01", seconds: 1 }, { id: "S01_L02", seconds: 0.5 }]);
+    expect(v.lines.map((l) => [l.id, l.seconds])).toEqual([["S01_L01", 1], ["S01_L02", 0.5]]);
     const a = decodeWav(v.wav);
     expect(a.sampleRate).toBe(24000);
     expect(a.channels).toHaveLength(1);
     expect(audioDuration(a)).toBeCloseTo(2.5, 2);
     expect(v.wav.readUInt16LE(34)).toBe(16);
+  });
+
+  it("levels every line to −18 LUFS before the mix, limiting peaks to −1 dBFS (a quiet line with loud peaks too)", () => {
+    const rate = 24000;
+    // a quiet voice-like tone (about −26 LUFS) with short loud spikes, like a line whose peaks already sit near full scale
+    const ch = Float32Array.from({ length: rate * 3 }, (_, i) => 0.05 * Math.sin((2 * Math.PI * 220 * i) / rate) + (i % 6000 < 3 ? 0.85 : 0));
+    const lv = levelLine({ sampleRate: rate, channels: [ch] });
+    expect(lv.lufsIn).toBeLessThan(-24);
+    expect(Math.abs(lv.lufsOut - LINE_LUFS)).toBeLessThanOrEqual(0.3);
+    expect(measureLoudness(lv.audio).samplePeak).toBeLessThanOrEqual(-0.99);
+    const loud = levelLine({ sampleRate: rate, channels: [Float32Array.from({ length: rate * 2 }, (_, i) => 0.5 * Math.sin((2 * Math.PI * 220 * i) / rate))] });
+    expect(loud.gainDb).toBeLessThan(0);
+    expect(Math.abs(loud.lufsOut - LINE_LUFS)).toBeLessThanOrEqual(0.3);
+    // shotVoice levels each line (and keeps their lengths)
+    const v = shotVoice({ lines: [{ id: "S01_L01", text: "一。", pauseAfter: 0.5, wav: encodeWav({ sampleRate: rate, channels: [ch] }, 16) }] })!;
+    expect(v.lines[0].seconds).toBe(3);
+    expect(Math.abs(v.lines[0].lufsOut - LINE_LUFS)).toBeLessThanOrEqual(0.3);
   });
 
   it("a shot with an unrecorded line has no owner voice (it is a draft)", () => {
@@ -113,7 +131,7 @@ describe("director loop: fixed narration (mock crew)", () => {
     expect(steps.some((s) => s.action === "fixed-narration" && /4 line\(s\) over 3 shot\(s\); 3 shot\(s\) carry the owner's recordings/.test(s.outputSummary ?? ""))).toBe(true);
     const voices = steps.filter((s) => s.role === "dialogue" && s.action === "voice");
     expect(voices.map((s) => s.model)).toEqual([OWNER_VOICE, OWNER_VOICE, OWNER_VOICE]);
-    expect(voices[1].outputSummary).toMatch(/Owner narration S02_L01 2.5s \+ S02_L02 1.5s \(5s with pauses\)/);
+    expect(voices[1].outputSummary).toMatch(/Owner narration S02_L01 2.5s \+ S02_L02 1.5s \(5s with pauses; levelled -?[\d.]+→-1[78](\.\d)? LUFS, -?[\d.]+→-1[78](\.\d)? LUFS\)/);
     // owner recordings clear the publication rule; no VOICE_OVERRUN
     expect(publishVerdict(spokenLines(steps.map((s) => ({ ...s, model: s.model }))), new Set()).publishable).toBe(true);
     const lint = steps.filter((s) => s.role === "editor" && s.action === "lint").at(-1);
