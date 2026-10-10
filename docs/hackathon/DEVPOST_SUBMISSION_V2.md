@@ -12,7 +12,7 @@ Nemotron writes the film as code; a deterministic engine renders it and *measure
 _(unchanged from v1; changing the track needs the owner, SPEC §1.7)_
 
 ## Built with
-nemotron, nebius-token-factory, next.js, react, typescript, prisma, sqlite, sharp, librsvg, ffmpeg, piper, espeak-ng, docker, railway{{PENDING: add `tavily` only if WP3 is live on the hosted demo (BLOCKERS B2)}}
+nemotron, nebius-token-factory, next.js, react, typescript, prisma, sqlite, sharp, librsvg, ffmpeg, piper, espeak-ng, docker, railway, tavily
 
 ## Links
 - Demo: https://studio-production-049c.up.railway.app (judges: passcode in the Judge Access PDF)
