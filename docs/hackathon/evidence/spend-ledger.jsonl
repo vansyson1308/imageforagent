@@ -123,3 +123,26 @@
 {"at":"2026-10-10T05:22:01.058Z","script":"bench-judge","label":"A:en-lighthouse#5","model":"google/gemma-3-27b-it","tokensIn":420,"tokensOut":49,"costUsd":0.0003696}
 {"at":"2026-10-10T05:22:03.943Z","script":"bench-judge","label":"A:en-lighthouse#5","model":"moonshotai/Kimi-K3","tokensIn":1064,"tokensOut":92,"costUsd":0.0008592}
 {"at":"2026-10-10T05:22:03.944Z","script":"bench","label":"A:en-lighthouse","model":"super-only v2","tokensIn":56094,"tokensOut":0,"costUsd":0.0381102}
+{"at":"2026-10-10T05:27:34.297Z","script":"bench-judge","label":"B:en-lighthouse#1","model":"google/gemma-3-27b-it","tokensIn":413,"tokensOut":37,"costUsd":0.0003366}
+{"at":"2026-10-10T05:27:58.602Z","script":"bench-judge","label":"B:en-lighthouse#1","model":"moonshotai/Kimi-K3","tokensIn":1061,"tokensOut":692,"costUsd":0.0022974}
+{"at":"2026-10-10T05:28:02.582Z","script":"bench-judge","label":"B:en-lighthouse#2","model":"google/gemma-3-27b-it","tokensIn":417,"tokensOut":47,"costUsd":0.000363}
+{"at":"2026-10-10T05:28:08.619Z","script":"bench-judge","label":"B:en-lighthouse#2","model":"moonshotai/Kimi-K3","tokensIn":1064,"tokensOut":173,"costUsd":0.0010536}
+{"at":"2026-10-10T05:28:11.643Z","script":"bench-judge","label":"B:en-lighthouse#3","model":"google/gemma-3-27b-it","tokensIn":405,"tokensOut":42,"costUsd":0.0003438}
+{"at":"2026-10-10T05:28:19.258Z","script":"bench-judge","label":"B:en-lighthouse#3","model":"moonshotai/Kimi-K3","tokensIn":1052,"tokensOut":138,"costUsd":0.0009624}
+{"at":"2026-10-10T05:28:20.390Z","script":"bench-judge","label":"B:en-lighthouse#4","model":"google/gemma-3-27b-it","tokensIn":413,"tokensOut":38,"costUsd":0.000339}
+{"at":"2026-10-10T05:28:26.274Z","script":"bench-judge","label":"B:en-lighthouse#4","model":"moonshotai/Kimi-K3","tokensIn":1064,"tokensOut":153,"costUsd":0.0010056}
+{"at":"2026-10-10T05:28:27.560Z","script":"bench-judge","label":"B:en-lighthouse#5","model":"google/gemma-3-27b-it","tokensIn":418,"tokensOut":44,"costUsd":0.0003564}
+{"at":"2026-10-10T05:28:49.850Z","script":"bench-judge","label":"B:en-lighthouse#5","model":"moonshotai/Kimi-K3","tokensIn":1064,"tokensOut":735,"costUsd":0.0024024}
+{"at":"2026-10-10T05:28:51.097Z","script":"bench-judge","label":"B:en-lighthouse#1:before","model":"google/gemma-3-27b-it","tokensIn":413,"tokensOut":36,"costUsd":0.0003342}
+{"at":"2026-10-10T05:28:52.135Z","script":"bench-judge","label":"B:en-lighthouse#1:after","model":"google/gemma-3-27b-it","tokensIn":413,"tokensOut":48,"costUsd":0.000363}
+{"at":"2026-10-10T05:29:00.798Z","script":"bench-judge","label":"B:en-lighthouse#1:before","model":"moonshotai/Kimi-K3","tokensIn":1061,"tokensOut":302,"costUsd":0.0013614}
+{"at":"2026-10-10T05:29:14.730Z","script":"bench-judge","label":"B:en-lighthouse#1:after","model":"moonshotai/Kimi-K3","tokensIn":1061,"tokensOut":732,"costUsd":0.0023934}
+{"at":"2026-10-10T05:29:15.888Z","script":"bench-judge","label":"B:en-lighthouse#3:before","model":"google/gemma-3-27b-it","tokensIn":405,"tokensOut":45,"costUsd":0.000351}
+{"at":"2026-10-10T05:29:16.865Z","script":"bench-judge","label":"B:en-lighthouse#3:after","model":"google/gemma-3-27b-it","tokensIn":405,"tokensOut":46,"costUsd":0.0003534}
+{"at":"2026-10-10T05:29:30.293Z","script":"bench-judge","label":"B:en-lighthouse#3:before","model":"moonshotai/Kimi-K3","tokensIn":1052,"tokensOut":245,"costUsd":0.0012192}
+{"at":"2026-10-10T05:29:55.941Z","script":"bench-judge","label":"B:en-lighthouse#3:after","model":"moonshotai/Kimi-K3","tokensIn":1052,"tokensOut":139,"costUsd":0.0009648}
+{"at":"2026-10-10T05:29:57.326Z","script":"bench-judge","label":"B:en-lighthouse#4:before","model":"google/gemma-3-27b-it","tokensIn":413,"tokensOut":44,"costUsd":0.0003534}
+{"at":"2026-10-10T05:30:02.508Z","script":"bench-judge","label":"B:en-lighthouse#4:after","model":"google/gemma-3-27b-it","tokensIn":413,"tokensOut":48,"costUsd":0.000363}
+{"at":"2026-10-10T05:30:14.852Z","script":"bench-judge","label":"B:en-lighthouse#4:before","model":"moonshotai/Kimi-K3","tokensIn":1064,"tokensOut":157,"costUsd":0.0010152}
+{"at":"2026-10-10T05:30:18.157Z","script":"bench-judge","label":"B:en-lighthouse#4:after","model":"moonshotai/Kimi-K3","tokensIn":1064,"tokensOut":162,"costUsd":0.0010272}
+{"at":"2026-10-10T05:30:18.158Z","script":"bench","label":"B:en-lighthouse","model":"crew v2","tokensIn":166506,"tokensOut":0,"costUsd":0.11042814}
