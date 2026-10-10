@@ -92,6 +92,17 @@ async function judgeImage(j: Judge, uri: string, shot: string, label: string, mo
   }
 }
 
+/** Share of the demo's daily token budget already used, from /api/health (null when the server doesn't say). */
+async function dailyBudgetUsedPct(client: StudioClient): Promise<number | null> {
+  try {
+    const h = await client.json<{ checks?: { demoBudget?: { detail?: string } } }>("GET", "/api/health");
+    const m = h.checks?.demoBudget?.detail?.match(/(\d+)% of today's token budget used/);
+    return m ? Number(m[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** A judge must actually see: a red disc must come back as "red". */
 async function probeVision(provider: JudgeChat, model: string): Promise<boolean> {
   const png = await sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#ffffff"/><circle cx="128" cy="128" r="90" fill="#d01010"/></svg>')).png().toBuffer();
@@ -169,7 +180,7 @@ async function main() {
     : [];
   if (rows.length) console.log(`resuming: ${rows.length} runs already in ${jsonl}`);
 
-  for (const p of prompts.slice(0, limit)) {
+  outer: for (const p of prompts.slice(0, limit)) {
     for (const c of configs) {
       if (!mock) assertSpendUnder();
       const cfg = CONFIGS[c];
@@ -178,6 +189,14 @@ async function main() {
         continue;
       }
       if (rows.some((r) => r.config === cfg.name && r.prompt === p.id && r.set === set)) continue;
+      // a run that hits the demo's daily token budget mid-film would come back cut short: stop cleanly and resume after 00:00 UTC
+      if (!mock) {
+        const used = await dailyBudgetUsedPct(client);
+        if (used !== null && used >= 80) {
+          console.log(`STOP: ${used}% of the server's daily token budget is used; resume after 00:00 UTC (rows so far are kept)`);
+          break outer;
+        }
+      }
       const steps: StepLike[] = [];
       let models: Record<string, string | null> = {};
       let summary: Record<string, unknown> | null = null;
