@@ -28,7 +28,7 @@ export async function runDialogue(
   plan: Plan,
   frames: readonly Frame[],
   fixedVoices: Record<string, string> = {},
-  recorded?: ReadonlyMap<number, { wav: Buffer; seconds: number; lines: ReadonlyArray<{ id: string; seconds: number }> }>,
+  recorded?: ReadonlyMap<number, { wav: Buffer; seconds: number; lines: ReadonlyArray<{ id: string; seconds: number; lufsIn?: number; lufsOut?: number }> }>,
 ): Promise<{ frames: Frame[]; map: Record<string, string> }> {
   const tts = ttsAvailable() || piperVoices().length > 0;
   const out: Frame[] = [];
@@ -51,7 +51,7 @@ export async function runDialogue(
         model: OWNER_VOICE,
         action: "voice",
         shotIndex: f.index,
-        summary: `Owner narration ${own.lines.map((l) => `${l.id} ${l.seconds}s`).join(" + ")} (${own.seconds}s with pauses): “${line.slice(0, 80)}”`,
+        summary: `Owner narration ${own.lines.map((l) => `${l.id} ${l.seconds}s`).join(" + ")} (${own.seconds}s with pauses; levelled ${own.lines.map((l) => `${l.lufsIn ?? "?"}→${l.lufsOut ?? "?"} LUFS`).join(", ")}): “${line.slice(0, 80)}”`,
       });
       continue;
     }
