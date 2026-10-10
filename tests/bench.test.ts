@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { aggregate, fromV1, judgeProblems, pairStats, parseJudgeScore, resultsMarkdown, revisedShots, toCsv, upliftOf, V1_JUDGE, type Row } from "../scripts/eval/benchCore";
 
-const J2 = "Qwen/Qwen3.5-397B-A17B";
+const J2 = "moonshotai/Kimi-K3";
 const row = (o: Partial<Row>): Row => ({
   version: "v2",
   set: "main",

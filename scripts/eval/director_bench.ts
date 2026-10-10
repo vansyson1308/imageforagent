@@ -24,6 +24,7 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import sharp from "sharp";
 import { StudioClient, type SseEvent } from "../director/client";
 import { NemotronProvider } from "@/lib/providers/nemotronProvider";
+import { JUDGE_MAX_TOKENS } from "@/lib/services/evalJudges";
 import { appendLedger, assertSpendUnder } from "../director/ledger";
 import { aggregate, fromV1, JUDGE_PROMPT, judgeProblems, mean, parseJudgeScore, r2, resultsMarkdown, revisedShots, SECOND_JUDGE_CANDIDATES, toCsv, V1_JUDGE, type Row, type StepLike } from "./benchCore";
 
@@ -82,7 +83,7 @@ async function toJpeg(img: Buffer): Promise<string> {
 /** Score one image with one judge; billed to the ledger (not to the run). */
 async function judgeImage(j: Judge, uri: string, shot: string, label: string, mock: boolean): Promise<number | null> {
   try {
-    const r = await j.provider.chat([{ role: "user", content: `${JUDGE_PROMPT}\n\n${shot}`, images: [uri] }], { model: j.model, maxTokens: 200, temperature: 0, responseFormat: { type: "json_object" } });
+    const r = await j.provider.chat([{ role: "user", content: `${JUDGE_PROMPT}\n\n${shot}`, images: [uri] }], { model: j.model, maxTokens: JUDGE_MAX_TOKENS, temperature: 0, responseFormat: { type: "json_object" } });
     if (!mock) appendLedger({ script: "bench-judge", label, model: j.model, tokensIn: r.usage.promptTokens, tokensOut: r.usage.completionTokens, costUsd: r.costUsd });
     return parseJudgeScore(r.text);
   } catch (e) {
@@ -95,7 +96,7 @@ async function judgeImage(j: Judge, uri: string, shot: string, label: string, mo
 async function probeVision(provider: JudgeChat, model: string): Promise<boolean> {
   const png = await sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#ffffff"/><circle cx="128" cy="128" r="90" fill="#d01010"/></svg>')).png().toBuffer();
   try {
-    const r = await provider.chat([{ role: "user", content: 'What colour is the disc? Answer ONLY JSON {"color": "<one word>"}.', images: [`data:image/png;base64,${png.toString("base64")}`] }], { model, maxTokens: 40, temperature: 0 });
+    const r = await provider.chat([{ role: "user", content: 'What colour is the disc? Answer ONLY JSON {"color": "<one word>"}.', images: [`data:image/png;base64,${png.toString("base64")}`] }], { model, maxTokens: 400, temperature: 0 });
     appendLedger({ script: "bench-judge-probe", label: model, model, tokensIn: r.usage.promptTokens, tokensOut: r.usage.completionTokens, costUsd: r.costUsd });
     return /red/i.test(r.text);
   } catch (e) {

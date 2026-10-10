@@ -85,3 +85,10 @@
 {"at":"2026-10-10T03:13:12.178Z","script":"showcase","label":"v2-furin","model":"crew","tokensIn":80220,"tokensOut":126576,"costUsd":0.14828406}
 {"at":"2026-10-10T03:39:02.323Z","script":"showcase","label":"v2-banh-chung","model":"crew","tokensIn":57835,"tokensOut":71350,"costUsd":0.09102264}
 {"at":"2026-10-10T04:00:33.142Z","script":"showcase","label":"v2-banh-chung","model":"crew","tokensIn":38731,"tokensOut":44758,"costUsd":0.0606864}
+{"at":"2026-10-10T04:36:47.166Z","script":"bench-judge-probe","label":"google/gemma-3-27b-it","model":"google/gemma-3-27b-it","tokensIn":286,"tokensOut":7,"costUsd":0.0001884}
+{"at":"2026-10-10T04:36:48.722Z","script":"bench-judge-probe","label":"moonshotai/Kimi-K3","model":"moonshotai/Kimi-K3","tokensIn":210,"tokensOut":40,"costUsd":0.000222}
+{"at":"2026-10-10T04:36:49.198Z","script":"bench-judge-probe","label":"moonshotai/Kimi-K2.6","model":"moonshotai/Kimi-K2.6","tokensIn":130,"tokensOut":40,"costUsd":0.000174}
+{"at":"2026-10-10T04:37:54.373Z","script":"bench-judge-probe","label":"moonshotai/Kimi-K3 (400 tok)","model":"moonshotai/Kimi-K3","tokensIn":210,"tokensOut":70,"costUsd":0.000294}
+{"at":"2026-10-10T04:37:55.265Z","script":"bench-judge-probe","label":"moonshotai/Kimi-K2.6 (400 tok)","model":"moonshotai/Kimi-K2.6","tokensIn":130,"tokensOut":98,"costUsd":0.0003132}
+{"at":"2026-10-10T04:39:05.606Z","script":"bench-judge-probe","label":"moonshotai/Kimi-K3 json judge check","model":"moonshotai/Kimi-K3","tokensIn":570,"tokensOut":108,"costUsd":0.0006012}
+{"at":"2026-10-10T04:39:06.707Z","script":"bench-judge-probe","label":"google/gemma-3-27b-it json judge check","model":"google/gemma-3-27b-it","tokensIn":401,"tokensOut":48,"costUsd":0.0003558}
