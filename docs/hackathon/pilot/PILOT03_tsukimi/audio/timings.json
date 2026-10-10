@@ -1,0 +1,105 @@
+{
+  "lines": [
+    {
+      "id": "S01_L01",
+      "scene_id": "S01",
+      "start": 0.0,
+      "end": 6.374916666666667,
+      "pause_after": 0.5,
+      "speech_duration": 6.374916666666667
+    },
+    {
+      "id": "S02_L01",
+      "scene_id": "S02",
+      "start": 6.874916666666667,
+      "end": 11.172166666666667,
+      "pause_after": 0.5,
+      "speech_duration": 4.29725
+    },
+    {
+      "id": "S02_L02",
+      "scene_id": "S02",
+      "start": 11.672166666666667,
+      "end": 16.305541666666667,
+      "pause_after": 0.5,
+      "speech_duration": 4.633375
+    },
+    {
+      "id": "S03_L01",
+      "scene_id": "S03",
+      "start": 16.805541666666667,
+      "end": 20.800333333333334,
+      "pause_after": 0.5,
+      "speech_duration": 3.9947916666666665
+    },
+    {
+      "id": "S03_L02",
+      "scene_id": "S03",
+      "start": 21.300333333333334,
+      "end": 25.806541666666668,
+      "pause_after": 0.5,
+      "speech_duration": 4.506208333333333
+    },
+    {
+      "id": "S04_L01",
+      "scene_id": "S04",
+      "start": 26.306541666666668,
+      "end": 31.055958333333333,
+      "pause_after": 0.5,
+      "speech_duration": 4.749416666666667
+    },
+    {
+      "id": "S05_L01",
+      "scene_id": "S05",
+      "start": 31.555958333333333,
+      "end": 37.989375,
+      "pause_after": 0.5,
+      "speech_duration": 6.433416666666667
+    }
+  ],
+  "scenes": [
+    {
+      "id": "S01",
+      "start": 0.0,
+      "end": 6.874916666666667
+    },
+    {
+      "id": "S02",
+      "start": 6.874916666666667,
+      "end": 16.805541666666667
+    },
+    {
+      "id": "S03",
+      "start": 16.805541666666667,
+      "end": 26.306541666666668
+    },
+    {
+      "id": "S04",
+      "start": 26.306541666666668,
+      "end": 31.555958333333333
+    },
+    {
+      "id": "S05",
+      "start": 31.555958333333333,
+      "end": 38.489375
+    }
+  ],
+  "duration": 38.489375,
+  "sample_rate": 24000,
+  "voice": {
+    "name": "morioki",
+    "speaker_uuid": "396a746d-742f-4e43-b722-1182a7fab9af",
+    "styles": [
+      {
+        "name": "ノーマル",
+        "id": 497929760,
+        "type": "talk"
+      }
+    ],
+    "version": "1.0.0",
+    "supported_features": {
+      "permitted_synthesis_morphing": "NOTHING"
+    }
+  },
+  "credit": "音声合成：AivisSpeech / morioki（ボイス提供：もりおき、モデル制作：yuki、ACML 1.0）"
+}

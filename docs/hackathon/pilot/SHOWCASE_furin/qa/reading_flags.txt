@@ -1,0 +1,13 @@
+Whisper large-v3 (ja) checked 11/11 lines. Remaining kana-level differences after up to 5 takes:
+
+S08_L01
+EXPECTED: 「おばあちゃんの風鈴が、また、鳴りますように」
+WHISPER: 小ばあちゃんの風鈴がまた鳴りますように。
+EXPECTED KANA: オバアチャンノフウリンガマタナリマスヨオニ
+ASR KANA: コバアチャンノフウリンガマタナリマスヨオニ
+
+S09_L01
+EXPECTED: ゆいが、短冊を風鈴に結ぶと、夜風が、そっと吹きました
+WHISPER: ゆいが短冊を風鈴に結ぶと夜風がそっと吹きました。
+EXPECTED KANA: ユイガタンザクオフウリンニムスブトヨカゼガソットフキマシタ
+ASR KANA: ユイガタンザクオフウリンニムスブトヨルカゼガソットフキマシタ
