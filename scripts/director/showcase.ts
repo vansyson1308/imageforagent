@@ -5,7 +5,7 @@
  *
  *   npm run director:showcase -- --base https://<host> --passcode <p>   # drive a hosted app
  *   npm run director:showcase -- --base http://localhost:3000           # a local `npm run dev` with NEBIUS_API_KEY
- *   … [--only lantern] [--max-shots 8] [--max-usd 0.6]
+ *   … [--only lantern] [--max-shots 8] [--max-usd 0.6] [--set v2] [--remaster 2K@24]
  *
  * Refuses to run against the mock crew: showcase films must be real.
  */
@@ -15,6 +15,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { StudioClient, type SseEvent } from "./client";
 import { appendLedger, assertSpendUnder } from "./ledger";
+import { SAMPLE_STORIES } from "@/lib/director/sampleStories";
 
 export const SHOWCASE_STORIES = [
   {
@@ -40,6 +41,13 @@ export const SHOWCASE_STORIES = [
   },
 ] as const;
 
+/**
+ * v2 showcase (SPEC v2 WP4.7): the three one-click sample stories (EN/VI/JA),
+ * so a judge can compare their own run with the showcase film of the same
+ * story. Published as `v2-<key>` with version "v2"; the v1 films stay.
+ */
+export const SHOWCASE_STORIES_V2 = SAMPLE_STORIES.map((s) => ({ slug: `v2-${s.key.split("-").slice(1).join("-")}`, language: s.language, style: s.style, story: s.story }));
+
 const argv = process.argv.slice(2);
 const arg = (k: string, d = "") => {
   const i = argv.indexOf(k);
@@ -51,6 +59,8 @@ async function main() {
   const only = arg("--only");
   const maxShots = Number(arg("--max-shots", "8"));
   const maxUsd = Number(arg("--max-usd", "0.6"));
+  const set = arg("--set", "v1");
+  const stories = set === "v2" ? SHOWCASE_STORIES_V2 : SHOWCASE_STORIES;
   const spent = assertSpendUnder();
   console.log(`ledger spend so far: $${spent.toFixed(4)}`);
   const client = new StudioClient({ base, passcode: arg("--passcode") || process.env.DEMO_PASSCODE });
@@ -63,7 +73,7 @@ async function main() {
   const indexPath = "public/showcase/index.json";
   const index: { films: Array<Record<string, unknown>> } = existsSync(indexPath) ? JSON.parse(readFileSync(indexPath, "utf8")) : { films: [] };
 
-  for (const s of SHOWCASE_STORIES) {
+  for (const s of stories) {
     if (only && s.slug !== only) continue;
     assertSpendUnder();
     const log = `docs/hackathon/evidence/showcase-${s.slug}.log`;
@@ -103,8 +113,22 @@ async function main() {
       console.log(`✘ ${s.slug}: status ${trace.status}. Kept the trace as evidence and skipped publishing.`);
       continue;
     }
+    // v2 acceptance: no frame of a showcase film may fail a gate, and every shot must be drawn
+    const sum = trace.summary as { gateFailures?: number; rendered?: number; shots?: number };
+    if (set === "v2" && ((sum.gateFailures ?? 0) > 0 || sum.rendered !== sum.shots)) {
+      console.log(`✘ ${s.slug}: ${sum.gateFailures ?? 0} gate failure(s), ${sum.rendered}/${sum.shots} shots. Kept the trace as evidence and skipped publishing.`);
+      continue;
+    }
     const dir = `public/showcase/${s.slug}`;
     mkdirSync(dir, { recursive: true });
+    // --remaster 2K@24: the same drawings re-rendered sharper and smoother, no model call
+    const rm = arg("--remaster").match(/^(1K|2K|4K)@(\d{2})$/);
+    let remastered: string | null = null;
+    if (rm) {
+      const r = await client.remaster(pid, { resolution: rm[1] as "1K" | "2K" | "4K", fps: Number(rm[2]) });
+      remastered = `${rm[1]} @ ${rm[2]} fps (${r.clips} clips, ${r.stills} stills re-rendered from the same SVG, no model call)`;
+      console.log(`  remastered: ${remastered}`);
+    }
     const film = await client.download(`/api/projects/${pid}/film.mp4`);
     writeFileSync(`${dir}/film.mp4`, film);
     spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", "2", "-i", `${dir}/film.mp4`, "-frames:v", "1", "-q:v", "3", `${dir}/poster.jpg`]);
@@ -123,6 +147,8 @@ async function main() {
       summary: trace.summary,
       createdAt: new Date().toISOString(),
       source: path.basename(base),
+      version: set,
+      ...(remastered && { remastered }),
     };
     index.films = [...index.films.filter((f) => f.slug !== s.slug), entry];
     writeFileSync(indexPath, JSON.stringify(index, null, 2));
