@@ -1,4 +1,5 @@
 import type { RunSummary } from "@/lib/services/director/context";
+import { publishVerdict, spokenLines } from "@/lib/services/director/pilotPolicy";
 
 /**
  * The showcase publish gate (owner QC 2026-10-10, sprint e). A film is
@@ -29,6 +30,14 @@ export function publishProblems(status: string, s: Partial<RunSummary>): string[
   const d = s.durationSec ?? 0;
   if (d < SHOWCASE_MIN_SEC || d > SHOWCASE_MAX_SEC) out.push(`film is ${d.toFixed(1)} s (a showcase film runs ${SHOWCASE_MIN_SEC}–${SHOWCASE_MAX_SEC} s)`);
   return out;
+}
+
+/**
+ * Owner decision A1 (2026-10-10): no published or showcase film may carry a
+ * line in a non-commercial voice (Piper JA). Read from the run's voice steps.
+ */
+export function voiceProblems(steps: ReadonlyArray<{ role: string; action: string; shotIndex: number | null; model: string; error?: string | null }>): string[] {
+  return publishVerdict(spokenLines(steps), new Set()).blocking.map((l) => `shot ${l.shot} is spoken by ${l.voice}, a non-commercial voice: the line needs the owner's recording`);
 }
 
 export const BY_EYE_CHECKS = ["no character cropped", "readable (not too dark)", "hero object visible", "story beat present"] as const;

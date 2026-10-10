@@ -9,6 +9,10 @@ import { continuitySystem, editorSystem, editorUser } from "@/lib/services/direc
 import { continuitySchema, editorReplySchema, type Plan } from "@/lib/services/director/schemas";
 import { LlmError } from "@/lib/providers/types";
 import type { Frame } from "@/generated/prisma/client";
+import { NARRATION_OFFSET } from "@/lib/services/director/fixedNarration";
+
+/** The trace's voice id for a line the owner recorded (pilotPolicy counts it as cleared). */
+export const OWNER_VOICE = "owner-recording";
 
 /** Film language → espeak-ng voice id (validated again by tts.ts). */
 /** The editor only acts on findings it can fix with its edit vocabulary. */
@@ -19,7 +23,13 @@ export const FIXABLE = new Set(["READING_SPEED", "VOICE_OVERRUN", "JUMP_CUT"]);
  * TTS voice (espeak-ng, offline, via resolveVoice). Runs BEFORE drawing, so
  * each shot can be timed to hold its line. No TTS → subtitle only (recorded).
  */
-export async function runDialogue(ctx: DirectorContext, plan: Plan, frames: readonly Frame[], fixedVoices: Record<string, string> = {}): Promise<{ frames: Frame[]; map: Record<string, string> }> {
+export async function runDialogue(
+  ctx: DirectorContext,
+  plan: Plan,
+  frames: readonly Frame[],
+  fixedVoices: Record<string, string> = {},
+  recorded?: ReadonlyMap<number, { wav: Buffer; seconds: number; lines: ReadonlyArray<{ id: string; seconds: number }> }>,
+): Promise<{ frames: Frame[]; map: Record<string, string> }> {
   const tts = ttsAvailable() || piperVoices().length > 0;
   const out: Frame[] = [];
   const map: Record<string, string> = {};
@@ -29,6 +39,20 @@ export async function runDialogue(ctx: DirectorContext, plan: Plan, frames: read
     const line = shot?.dialogue?.trim();
     if (!line) {
       out.push(f);
+      continue;
+    }
+    // fixed narration: the owner's recording is the shot's voice, as delivered (no TTS)
+    const own = recorded?.get(f.index);
+    if (own) {
+      const r = await writeFrameDialogue(f.id, { text: line, wav: own.wav.toString("base64"), offset: NARRATION_OFFSET });
+      out.push(r.frame);
+      await recordStep(ctx, {
+        role: "dialogue",
+        model: OWNER_VOICE,
+        action: "voice",
+        shotIndex: f.index,
+        summary: `Owner narration ${own.lines.map((l) => `${l.id} ${l.seconds}s`).join(" + ")} (${own.seconds}s with pauses): “${line.slice(0, 80)}”`,
+      });
       continue;
     }
     const v = speakerVoice(ctx, plan, shot.speaker, fixedVoices);
@@ -76,7 +100,7 @@ export async function lintProject(projectId: string): Promise<{ findings: LintFi
  * limited to dialogue text, voice offset and transitions. Picture is never
  * touched here, so an edit can't break a render.
  */
-export async function runEditor(ctx: DirectorContext, plan?: Plan, fixedVoices: Record<string, string> = {}): Promise<LintFinding[]> {
+export async function runEditor(ctx: DirectorContext, plan?: Plan, fixedVoices: Record<string, string> = {}, lockedLines = false): Promise<LintFinding[]> {
   let { findings } = await lintProject(ctx.projectId);
   await recordStep(ctx, {
     role: "editor",
@@ -122,7 +146,7 @@ export async function runEditor(ctx: DirectorContext, plan?: Plan, fixedVoices: 
         await prisma.frame.update({ where: { id: frame.id }, data: { transition: edit.transition, transitionDuration: 0.6 } });
         applied++;
       }
-      if (edit.dialogue !== undefined) {
+      if (edit.dialogue !== undefined && !lockedLines) {
         if (edit.dialogue === null || edit.dialogue.trim() === "") {
           await prisma.frame.update({ where: { id: frame.id }, data: { dialogue: null, voicePath: null, voiceDuration: null } });
         } else {

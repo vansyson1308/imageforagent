@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checklistProblems, checklistTemplate, publishProblems, SHOWCASE_MAX_SEC, SHOWCASE_MIN_SEC } from "@/lib/services/director/publishGate";
+import { checklistProblems, checklistTemplate, publishProblems, SHOWCASE_MAX_SEC, SHOWCASE_MIN_SEC, voiceProblems } from "@/lib/services/director/publishGate";
 import { SHOWCASE_V2, spokenSeconds } from "../scripts/director/showcaseStories";
 import { validateDrawing } from "@/lib/services/director/artist";
 import { demoPlan, DEMO_LIBRARY } from "@/lib/services/director/demoCrew";
@@ -28,6 +28,14 @@ describe("automatic publish gate", () => {
     expect(publishProblems("budget_exceeded", good)[0]).toMatch(/run status is "budget_exceeded"/);
     expect(publishProblems("done", { ...good, durationSec: 95 }).join()).toMatch(/95.0 s/);
     expect(publishProblems("done", { ...good, shotScores: undefined }).join()).toMatch(/no per-shot critic scores/);
+  });
+});
+
+describe("no non-commercial voice in a published film (owner decision A1)", () => {
+  it("blocks a line spoken by the Piper JA voice; the owner's recordings and permissive voices pass", () => {
+    const step = (shotIndex: number, model: string) => ({ role: "dialogue", action: "voice", shotIndex, model, error: null });
+    expect(voiceProblems([step(1, "owner-recording"), step(2, "owner-recording")])).toEqual([]);
+    expect(voiceProblems([step(1, "owner-recording"), step(2, "piper:ja_JP-hi_fi_captain-medium")])).toEqual(["shot 2 is spoken by piper:ja_JP-hi_fi_captain-medium, a non-commercial voice: the line needs the owner's recording"]);
   });
 });
 

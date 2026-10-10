@@ -25,7 +25,8 @@ import { StudioClient, type SseEvent } from "./client";
 import { appendLedger, assertSpendUnder } from "./ledger";
 import sharp from "sharp";
 import { SHOWCASE_V2 } from "./showcaseStories";
-import { checklistProblems, checklistTemplate, publishProblems } from "@/lib/services/director/publishGate";
+import { checklistProblems, checklistTemplate, publishProblems, voiceProblems } from "@/lib/services/director/publishGate";
+import { loadPackage } from "./pilot";
 import { heroProp } from "@/lib/services/director/plan";
 import type { Plan } from "@/lib/services/director/schemas";
 
@@ -121,7 +122,7 @@ async function main() {
       try {
         pid = await client.createProject(`Showcase · ${s.slug}`);
         console.log(`▶ ${s.slug} (${s.language}) project ${pid}${attempt ? " (retry)" : ""}`);
-        const v2 = "narration" in s ? { narration: s.narration, research: arg("--research", "on") === "on" } : { maxShots, research: false };
+        const v2 = "narration" in s ? { ...narrationOf(s.slug, s.narration), research: arg("--research", "on") === "on" } : { maxShots, research: false };
         runId = await client.direct(pid, { story: s.story, language: s.language, style: s.style, maxUsd, critic: true, ...v2 }, (e) => {
           appendFileSync(log, JSON.stringify(e) + "\n");
           if (e.type === "step") {
@@ -150,7 +151,7 @@ async function main() {
     }
     if (set === "v2") {
       // v2: the automatic publish gate, then a by-eye candidate; nothing is published from here
-      const problems = publishProblems(trace.status, trace.summary);
+      const problems = [...publishProblems(trace.status, trace.summary), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0])];
       if (problems.length) {
         console.log(`✘ ${s.slug}: ${problems.join("; ")}. Kept the trace as evidence and skipped publishing.`);
         continue;
@@ -161,6 +162,24 @@ async function main() {
     }
     await publish(client, { slug: s.slug, language: s.language, story: s.story }, pid, trace, base, set, index, indexPath);
   }
+}
+
+/**
+ * A film with an owner package (docs/hackathon/pilot/SHOWCASE_<name>/, e.g. fūrin) is narrated by the owner's
+ * recordings once they are all there (fixed narration, D59); until then its lines go as plain narration and the
+ * film can't be published (voiceProblems: the JA demo voice is non-commercial).
+ */
+function narrationOf(slug: string, lines: readonly string[]): { narration: readonly string[] } | { narrationShots: ReturnType<typeof loadPackage>["shots"] } {
+  const dir = `docs/hackathon/pilot/SHOWCASE_${slug.replace(/^v2-/, "")}`;
+  if (!existsSync(`${dir}/audio`)) return { narration: lines };
+  const pkg = loadPackage(dir, true);
+  if (pkg.missing.length) {
+    console.log(`  ${dir}: ${pkg.missing.length} line(s) not recorded yet, narrating with the demo voice (not publishable)`);
+    return { narration: lines };
+  }
+  for (const m of pkg.mismatched) console.log(`  ⚠ ${m}`);
+  console.log(`  ${dir}: the owner's recordings narrate every line`);
+  return { narrationShots: pkg.shots };
 }
 
 type Trace = Record<string, unknown> & { costUsd: number; tokensIn: number; tokensOut: number; bible: { title: string; logline: string } | null; summary: Record<string, unknown>; models: Record<string, string>; provider: string; status: string; id?: string };
@@ -248,7 +267,7 @@ async function publishChecked(client: StudioClient, pairs: string, base: string,
     if (!dir) throw new Error(`--publish ${pair}: no by-eye candidate for that project in ${root}/`);
     const cand = JSON.parse(readFileSync(`${dir}/candidate.json`, "utf8")) as { runId: string };
     const trace = await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${cand.runId}`);
-    const problems = [...publishProblems(trace.status, trace.summary), ...checklistProblems(readFileSync(`${dir}/checklist.md`, "utf8"), Number(trace.summary.shots ?? 0))];
+    const problems = [...publishProblems(trace.status, trace.summary), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0]), ...checklistProblems(readFileSync(`${dir}/checklist.md`, "utf8"), Number(trace.summary.shots ?? 0))];
     if (problems.length) {
       console.log(`✘ ${slug}: not published. ${problems.join("; ")}`);
       continue;

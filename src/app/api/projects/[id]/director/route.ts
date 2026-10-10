@@ -11,6 +11,8 @@ import { demoFloorPolicy } from "@/lib/services/director/demoPolicy";
 import { reapOrphanRuns, runEventStream, SSE_HEADERS, startDetachedRun } from "@/lib/services/director/runHub";
 import { STYLE_PRESETS } from "@/lib/services/director/prompts";
 import { loadSeries } from "@/lib/services/director/series";
+import { decodeWav } from "@/lib/services/audio/wav";
+import type { NarrationShot } from "@/lib/services/director/fixedNarration";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -34,6 +36,22 @@ const directorRequestSchema = z.object({
   seriesId: z.string().regex(/^[a-z0-9]{10,40}$/).nullish(),
   /** A narrated episode (Hidamari): one shot per line, in order, each line the shot's narration (owner QC 2026-10-10). */
   narration: z.array(z.string().min(1).max(220)).min(2).max(24).optional(),
+  /**
+   * Fixed narration from the owner's package (D59): one entry per shot, its lines in order, each with the owner's
+   * recording (WAV base64) when it exists. Never rewritten; each shot holds its real audio + pause_after.
+   */
+  narrationShots: z
+    .array(
+      z.object({
+        lines: z
+          .array(z.object({ id: z.string().regex(/^S\d{2}_L\d{2}$/), text: z.string().trim().min(1).max(400), pauseAfter: z.number().min(0).max(5).default(0.5), wav: z.string().max(12_000_000).optional() }))
+          .min(1)
+          .max(4),
+      }),
+    )
+    .min(2)
+    .max(24)
+    .optional(),
 });
 
 /**
@@ -73,13 +91,30 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     const floor = cfg.enabled ? await demoFloorPolicy() : null;
     const runDeps = { ...deps, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }), ...(floor && { floorRedraw: { enabled: floor.enabled, reason: floor.reason } }) };
     const series = body.seriesId ? await loadSeries(body.seriesId, sid, cfg.enabled) : null;
-    const { seriesId: _ignored, ...rest } = body;
+    const { seriesId: _ignored, narrationShots, ...rest } = body;
     void _ignored;
-    const request = { projectId: id, ...rest, series, critic: body.profile === "super-only" ? false : body.critic };
+    if (narrationShots && body.narration) throw new AppError("VALIDATION", "Send either narration or narrationShots, not both.");
+    const request = { projectId: id, ...rest, ...(narrationShots && { narrationShots: decodeNarration(narrationShots) }), series, critic: body.profile === "super-only" ? false : body.critic };
     const { runId, budget } = await createRun(request, runDeps);
     startDetachedRun(runId, request, runDeps, budget);
     return new Response(runEventStream(runId, { replay: true }), { headers: { ...SSE_HEADERS, "X-Director-Run": runId } });
   });
+}
+
+/** The owner's recordings as bytes, each checked to be a readable WAV before any model call. */
+function decodeNarration(shots: ReadonlyArray<{ lines: ReadonlyArray<{ id: string; text: string; pauseAfter: number; wav?: string }> }>): NarrationShot[] {
+  return shots.map((s) => ({
+    lines: s.lines.map((l) => {
+      if (!l.wav) return { id: l.id, text: l.text, pauseAfter: l.pauseAfter };
+      const wav = Buffer.from(l.wav, "base64");
+      try {
+        decodeWav(wav);
+      } catch (e) {
+        throw new AppError("VALIDATION", `Line ${l.id}: the recording is not a readable WAV (${e instanceof Error ? e.message : String(e)}).`);
+      }
+      return { id: l.id, text: l.text, pauseAfter: l.pauseAfter, wav };
+    }),
+  }));
 }
 
 /** GET — this project's runs (newest first). */
