@@ -113,6 +113,20 @@ export function normalizePlan(plan: Plan, maxShots: number, referenceCount = 0):
     transition: i === 0 ? ("cut" as const) : s.transition === "cut" && s.scene.trim() !== kept[i - 1].scene.trim() ? ("dissolve" as const) : s.transition,
     cites: cites(s.cites),
   }));
+  // every shot stands in a place: a shot whose cast names no set takes the set of its scene, else the nearest shot's (VI showcase run 3, shot 2: no set → a flat cream background)
+  const sets = new Set(cast.filter((c) => c.kind === "set").map((c) => c.id));
+  const setOf = (i: number) => shots[i]?.cast.find((id) => sets.has(id));
+  if (sets.size) {
+    const own = shots.map((_, i) => setOf(i));
+    shots.forEach((s, i) => {
+      if (own[i]) return;
+      const nearest = (js: number[]) => js.sort((a, b) => Math.abs(a - i) - Math.abs(b - i) || a - b)[0];
+      const withSet = [...own.keys()].filter((j) => own[j]);
+      const j = nearest(withSet.filter((k) => shots[k].scene.trim() === s.scene.trim())) ?? nearest(withSet);
+      const pick = j === undefined ? undefined : own[j];
+      if (pick) s.cast = [...s.cast, pick];
+    });
+  }
   return { ...plan, cast, shots };
 }
 

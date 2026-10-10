@@ -176,7 +176,8 @@ describe("director plan", () => {
     p.shots[1].cast = ["hero", "nobody"];
     const n = normalizePlan(planSchema.parse(p), 4);
     expect(n.shots).toHaveLength(4);
-    expect(n.shots[1].cast).toEqual(["hero"]);
+    // "nobody" is dropped; the shot had no set, so it stands in its scene's set (home)
+    expect(n.shots[1].cast).toEqual(["hero", "home"]);
     const parsed = parseTsv(planToTsv(n));
     expect(parsed.ok).toBe(true);
     if (parsed.ok) expect(parsed.frames).toHaveLength(4);

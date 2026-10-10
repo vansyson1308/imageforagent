@@ -73,3 +73,21 @@ describe("cast quality (hosted run root causes)", () => {
     expect(errorKind(a)).not.toBe(errorKind("Framing/lighting check failed: the main character is only 20% of the frame height as rendered"));
   });
 });
+
+describe("doll spec normalisation (VI showcase run 3)", () => {
+  it("maps the Cast's words to the kit's options and drops accessories the kit doesn't draw, instead of rejecting the doll", async () => {
+    const { dollSchema, normalizeDollSpec, buildDoll } = await import("@/lib/services/director/dollKit");
+    const raw = { age: "Grandmother", skin: "#e9c09c", hairStyle: "top knot", hairColor: "#d8d4cc", top: "áo bà ba", topColor: "#4a7c59", bottom: "trousers", bottomColor: "#8b5e3c", accent: "#8b5e3c", accessories: ["nón lá", "betel nut box", "walking stick"] };
+    expect(dollSchema.safeParse(raw).success).toBe(false);
+    const n = normalizeDollSpec(raw);
+    const r = dollSchema.parse(n.spec);
+    expect(r).toMatchObject({ age: "elder", hairStyle: "bun", top: "shirt", bottom: "pants", accessories: ["conical-hat", "cane"] });
+    expect(n.notes.join(" ")).toMatch(/dropped accessories the kit doesn't draw: betel nut box/);
+    expect(buildDoll("ba", r)).toContain('id="ba-torso"');
+    expect(dollSchema.parse(normalizeDollSpec({ ...raw, top: "T-Shirt", age: "child" }).spec).top).toBe("tshirt");
+    // a valid spec is untouched; an option with no kit word stays invalid (the Cast is asked again)
+    const ok = { age: "child", skin: "#f1c9a5", hairStyle: "bob", hairColor: "#2b1d16", top: "aodai", topColor: "#e8b04a", accent: "#d9483b", accessories: ["bow"] };
+    expect(normalizeDollSpec(ok)).toEqual({ spec: ok, notes: [] });
+    expect(dollSchema.safeParse(normalizeDollSpec({ ...ok, top: "spacesuit" }).spec).success).toBe(false);
+  });
+});
