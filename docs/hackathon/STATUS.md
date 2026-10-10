@@ -26,7 +26,7 @@ _Started 2026-10-09 (ICT). Branch `claude/gifted-cannon-1nhl2s` → small PRs to
 - **Scope vs. 2 weeks**: WP4 is large. If M2 slips: gates → acting → voices → critic → variety, then series, then UI. Video + Devpost (M3) never slip.
 - **Railway deploy source** is still the v1 branch `claude/gracious-ritchie-a739ft`. Deploys switch it to `main` after each merged milestone PR (reversible).
 
-**What I need from the owner** (details and click-by-click steps in BLOCKERS.md): O1 Tavily key (B2) · O2 remaining Token Factory credit + expiry · O3 Railway plan through 2026-12-15 · B5 live access for this session · O4 Hidamari look + 3 stories · O6/O7 later.
+**What I need from the owner** (details and click-by-click steps in BLOCKERS.md): O4 Hidamari narration WAVs (line list: [eval/pilot-lines.md](eval/pilot-lines.md)) and the look · O7 GitHub social preview (after the re-shot hero) · O6 later. Resolved 2026-10-10: O1 Tavily key on Railway, O2 Token Factory balance $23.06 with no expiry, O3 Railway Hobby plan with a $40 hard limit.
 
 **Spend (v2)**: v1 total **$3.23** (ledger). v2 stop line `SPEND_ALERT_USD` = 3.23 + 10 = **13.23**. Token Factory balance reported by the owner: _pending (O2)_.
 
