@@ -205,7 +205,10 @@ export function modelLabel(model: string): string {
   if (m.includes("nano") || m.includes("lightning")) return "Nemotron Nano";
   if (m.includes("omni")) return "Nemotron Omni";
   if (m === "engine" || m === "catalog") return "Engine";
+  // the Japanese Piper voice is CC BY-NC-SA: labelled in the demo so nobody mistakes it for a publishable voice (owner decision A1)
+  if (m.startsWith("piper:ja_jp")) return "Piper voice (non-commercial demo voice)";
   if (m.startsWith("espeak") || m.startsWith("piper")) return m.split(":")[0] === "piper" ? "Piper voice" : "espeak-ng";
+  if (m === "owner-recording") return "Owner recording (AivisSpeech)";
   if (m.startsWith("tavily")) return "Tavily";
   if (m.startsWith("mock")) return `mock ${m.replace(/^mock-?/, "")}`;
   return model.replace(/^[^/]+\//, "");

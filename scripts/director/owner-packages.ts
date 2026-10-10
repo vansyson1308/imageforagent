@@ -46,7 +46,7 @@ function films(): Film[] {
 
 function main() {
   for (const f of films()) {
-    const production = buildProduction(f.scenes, { pageChars: f.aspectRatio === "9:16" ? 14 : 22 });
+    const production = buildProduction(f.scenes);
     const lines = production.scenes.flatMap((s) => s.lines);
     const readings = kana(lines.map((l) => l.tts_text));
     const est = lines.reduce((t, l, i) => t + estimateSeconds(readings[i], l.tts_text, l.pause_after), 0) + production.scenes.length * 0.3 + 0.4;

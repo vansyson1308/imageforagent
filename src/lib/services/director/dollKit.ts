@@ -308,18 +308,22 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
       out.push(`<ellipse cx="${n(footX + 4)}" cy="${n(footY + 2)}" rx="${n(legW * 0.9)}" ry="11" fill="${shoe}"/>`);
     }
   } else if (pose === "sit") {
-    // on a stool, seen 3/4: thighs go sideways from the hip to the knee (the bend reads in silhouette), shins drop to the floor
+    // on a stool, seen 3/4: short thighs run to the seat edge and bend at the knee there, shins drop to the floor, feet flat
+    // (owner QC 2026-10-10: the legs no longer stick out sideways past the seat)
     const thighColor = long || spec.top === "dress" ? spec.topColor : skirted ? bottomColor : legColor;
     const shinColor = long ? spec.topColor : longSkirt ? bottomColor : legColor;
-    const kx = cx + hhw * 2.05;
     const seatTop = hp + legW * 0.55;
-    out.push(`<rect x="${n(cx - hhw * 1.35)}" y="${n(seatTop)}" width="${n(hhw * 3.2)}" height="18" rx="7" fill="#9a6a43"/>`);
-    for (const x of [cx - hhw * 1.15, cx + hhw * 1.55]) out.push(`<rect x="${n(x - 7)}" y="${n(seatTop + 14)}" width="14" height="${n(fy - seatTop - 16)}" rx="5" fill="#7a5233"/>`);
-    for (const [k, o] of [[0, -9], [1, 9]] as const) {
+    const edge = cx + hhw * 1.55;
+    out.push(`<rect x="${n(cx - hhw * 1.35)}" y="${n(seatTop)}" width="${n(edge - (cx - hhw * 1.35) + 6)}" height="18" rx="7" fill="#9a6a43"/>`);
+    for (const x of [cx - hhw * 1.15, edge - 8]) out.push(`<rect x="${n(x - 7)}" y="${n(seatTop + 14)}" width="14" height="${n(fy - seatTop - 16)}" rx="5" fill="#7a5233"/>`);
+    for (const [k, o] of [[0, -10], [1, 10]] as const) {
       const c = k === 0 ? mix(thighColor, "#1d1a26", 0.18) : thighColor;
-      out.push(`<path d="M${n(cx - hhw * 0.2)} ${n(hp + o * 0.4)} L${n(kx + o * 0.3)} ${n(hp + 6 + o)}" fill="none" stroke="${c}" stroke-width="${n(legW + 10)}" stroke-linecap="round"/>`);
-      out.push(`<path d="M${n(kx + o * 0.3)} ${n(hp + 6 + o)} L${n(kx + 6 + o * 0.3)} ${n(fy - 16)}" fill="none" stroke="${k === 0 ? mix(shinColor, "#1d1a26", 0.18) : shinColor}" stroke-width="${n(legW)}" stroke-linecap="round"/>`);
-      out.push(`<ellipse cx="${n(kx + 22 + o * 0.3)}" cy="${n(fy - 6)}" rx="${n(legW * 0.95)}" ry="11" fill="${shoe}"/>`);
+      const kx = edge + o * 0.5;
+      const ky = hp + legW * 0.5 + o * 0.6;
+      out.push(`<path d="M${n(cx - hhw * 0.1 + o)} ${n(hp + o * 0.3)} L${n(kx)} ${n(ky)}" fill="none" stroke="${c}" stroke-width="${n(legW + (longSkirt ? 14 : 10))}" stroke-linecap="round"/>`);
+      out.push(`<path d="M${n(kx)} ${n(ky)} L${n(kx - 4)} ${n(fy - 16)}" fill="none" stroke="${k === 0 ? mix(shinColor, "#1d1a26", 0.18) : shinColor}" stroke-width="${n(legW + (longSkirt ? 14 : 0))}" stroke-linecap="${longSkirt ? "butt" : "round"}"/>`);
+      if (longSkirt) out.push(`<path d="M${n(kx - 4)} ${n(fy - 34)} L${n(kx - 4)} ${n(fy - 14)}" stroke="${spec.skin}" stroke-width="${n(legW * 0.7)}"/>`);
+      out.push(`<ellipse cx="${n(kx + 10)}" cy="${n(fy - 6)}" rx="${n(legW * 0.95)}" ry="11" fill="${shoe}"/>`);
     }
   } else if (pose === "kneel") {
     // seiza: legs folded under the hips, seen from the front as a wide base with two knees
@@ -386,8 +390,8 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
       my = sy + 46;
     } else if (pose === "sit") {
       // hands rest on the thighs
-      x1 = cx + hhw * (s === -1 ? 0.35 : 1.15);
-      y1 = hp - 6;
+      x1 = cx + hhw * (s === -1 ? 0.3 : 0.95);
+      y1 = hp - 2;
       mx = cx + s * (shw + 12);
       my = (y0 + y1) / 2;
     } else if (pose === "kneel") {
@@ -398,8 +402,14 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
       my = (y0 + y1) / 2;
     }
     const arm = armsInFront ? sleeves : out;
-    arm.push(`<path d="M${n(x0)} ${n(y0)} Q${n(mx)} ${n(my)} ${n(x1)} ${n(y1)}" fill="none" stroke="${shortSleeve ? spec.skin : spec.topColor}" stroke-width="${n(armW)}" stroke-linecap="round"/>`);
-    if (armsInFront && !shortSleeve) arm.push(`<path d="M${n(x0)} ${n(y0)} Q${n(mx)} ${n(my)} ${n(x1)} ${n(y1)}" fill="none" stroke="${mix(spec.topColor, "#1d1a26", 0.22)}" stroke-width="2.5" stroke-opacity="0.6"/>`);
+    if (armsInFront) {
+      // upper arm down the side to the elbow, then the forearm straight to the hands (owner QC 2026-10-10: no looping sleeve)
+      const ex = cx + s * (shw - 2);
+      const ey = y0 + (y1 - y0) * 0.62;
+      const d = `M${n(x0)} ${n(y0)} L${n(ex)} ${n(ey)} L${n(x1)} ${n(y1)}`;
+      arm.push(`<path d="${d}" fill="none" stroke="${shortSleeve ? spec.skin : spec.topColor}" stroke-width="${n(armW)}" stroke-linecap="round" stroke-linejoin="round"/>`);
+      if (!shortSleeve) arm.push(`<path d="M${n(ex)} ${n(ey)} L${n(x1)} ${n(y1)}" fill="none" stroke="${mix(spec.topColor, "#1d1a26", 0.22)}" stroke-width="2.5" stroke-opacity="0.5"/>`);
+    } else arm.push(`<path d="M${n(x0)} ${n(y0)} Q${n(mx)} ${n(my)} ${n(x1)} ${n(y1)}" fill="none" stroke="${shortSleeve ? spec.skin : spec.topColor}" stroke-width="${n(armW)}" stroke-linecap="round"/>`);
     if (shortSleeve) {
       const t = 0.42;
       const ex = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * mx + t * t * x1;

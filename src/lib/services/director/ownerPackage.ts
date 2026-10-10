@@ -67,35 +67,61 @@ export function ttsText(text: string, override?: string): string {
   return (override ?? text).replace(/[「」『』]/g, "").trim();
 }
 
-/**
- * Subtitle pages: the subtitle split after 、 or 。 into pages of at most
- * `max` characters (a clause longer than that is a page of its own). A page
- * drops the 、 it ends on.
- */
-export function subPages(sub: string, max: number): string[] {
+/** Characters per subtitle row (the owner's EP013 layout). */
+export const SUB_ROW_CHARS = 20;
+/** Rows per subtitle page; a line that needs more becomes two pages. */
+export const SUB_PAGE_ROWS = 2;
+/** The row break inside a page (ASS/libass `\N`, as in EP013). */
+export const SUB_BREAK = "\\N";
+
+/** Rows of a subtitle: whole clauses (after 、 or 。) packed up to `width` characters; a longer clause is a row of its own. */
+function rows(sub: string, width: number): string[] {
   const clauses = sub.match(/[^、。]+[、。]?/gu) ?? [sub];
-  const pages: string[] = [];
+  const out: string[] = [];
   let cur = "";
   for (const c of clauses) {
-    if (cur && [...cur + c].length > max) {
-      pages.push(cur);
+    if (cur && [...cur + c].length > width) {
+      out.push(cur);
       cur = "";
     }
     cur += c;
   }
-  if (cur) pages.push(cur);
-  return pages.map((p) => p.replace(/、$/u, "").trim()).filter(Boolean);
+  if (cur) out.push(cur);
+  return out;
+}
+
+/**
+ * Subtitle pages, as in the owner's EP013: one page per line; two pages only
+ * when the line needs more than two rows. Rows break after a 、 or 。 at about
+ * 20 characters, joined inside a page with `\N`. A clause is never split.
+ */
+export function subPages(sub: string, width = SUB_ROW_CHARS): string[] {
+  const r = rows(sub, width);
+  if (r.length <= SUB_PAGE_ROWS) return [r.join(SUB_BREAK)];
+  // two pages, split where the characters balance best
+  let best = 1;
+  let gap = Infinity;
+  const len = (xs: string[]) => xs.reduce((n, x) => n + [...x].length, 0);
+  for (let k = 1; k < r.length; k++) {
+    const d = Math.abs(len(r.slice(0, k)) - len(r.slice(k)));
+    if (d < gap) {
+      gap = d;
+      best = k;
+    }
+  }
+  const pack = (xs: string[]) => rows(xs.join(""), width).join(SUB_BREAK);
+  return [pack(r.slice(0, best)), pack(r.slice(best))];
 }
 
 /** production.json for a film: one scene per shot, every line read by the narrator. */
-export function buildProduction(scenes: readonly SourceScene[], opts: { pageChars: number }): Production {
+export function buildProduction(scenes: readonly SourceScene[], opts: { rowChars?: number } = {}): Production {
   return {
     voice: { ...VOICE },
     scenes: scenes.map((s, i) => ({
       id: `S${pad(i + 1)}`,
       lines: s.lines.map((l, j) => {
         const sub = subText(l.text);
-        return { id: `S${pad(i + 1)}_L${pad(j + 1)}`, speaker: "narrator", text: l.text.trim(), tts_text: ttsText(l.text, l.tts), sub_text: sub, sub_pages: subPages(sub, opts.pageChars), pause_after: PAUSE_AFTER };
+        return { id: `S${pad(i + 1)}_L${pad(j + 1)}`, speaker: "narrator", text: l.text.trim(), tts_text: ttsText(l.text, l.tts), sub_text: sub, sub_pages: subPages(sub, opts.rowChars ?? SUB_ROW_CHARS), pause_after: PAUSE_AFTER };
       }),
     })),
   };

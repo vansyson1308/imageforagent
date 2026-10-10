@@ -1,0 +1,7 @@
+Whisper large-v3 (ja) checked 7/7 lines. Remaining kana-level differences after up to 5 takes:
+
+S05_L01
+EXPECTED: 三人の声が重なって、まあるい月が、縁側を、明るく照らしました
+WHISPER: 三人の声が重なって丸い月が縁側を明るく照らしました。
+EXPECTED KANA: サンニンノコエガカサナッテマアルイツキガエンガワオアカルクテラシマシタ
+ASR KANA: サンニンノコエガカサナッテマルイツキガエンガワオアカルクテラシマシタ

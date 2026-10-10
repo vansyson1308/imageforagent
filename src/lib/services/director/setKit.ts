@@ -16,7 +16,7 @@ export const SET_TIMES = ["dawn", "day", "golden", "dusk", "night"] as const;
 export const SET_WEATHER = ["clear", "cloudy", "rain", "snow", "fog"] as const;
 export const SET_PROPS = [
   // interior
-  "table", "low-table", "chair", "window", "shelf", "lamp", "stove", "plant", "rug", "door", "clock", "painting", "bed", "counter", "teapot", "siphon", "radio", "lantern", "shoji", "bookcase", "sofa", "desk", "blackboard",
+  "table", "low-table", "chair", "window", "shelf", "lamp", "stove", "plant", "rug", "door", "clock", "painting", "bed", "counter", "teapot", "siphon", "radio", "stool", "cafe-table", "lantern", "shoji", "bookcase", "sofa", "desk", "blackboard",
   // exterior
   "tree", "cherry-tree", "pine", "house", "boat", "pier", "fence", "streetlamp", "stall", "bench", "rocks", "bridge", "lighthouse", "temple-gate", "flowers",
 ] as const;
@@ -60,7 +60,7 @@ const WEATHER_ALIASES: Record<string, (typeof SET_WEATHER)[number]> = { sunny: "
 const PROP_ALIASES: Record<string, (typeof SET_PROPS)[number]> = {
   altar: "shelf", cabinet: "shelf", cupboard: "shelf", dresser: "shelf", oven: "stove", fireplace: "stove", hearth: "stove", "cooking pot": "stove", sink: "counter", kettle: "teapot", pot: "teapot",
   couch: "sofa", curtain: "window", curtains: "window", picture: "painting", photo: "painting", frame: "painting", candle: "lantern", lanterns: "lantern", "paper lantern": "lantern",
-  books: "bookcase", bookshelf: "bookcase", chalkboard: "blackboard", stool: "chair", mat: "rug", carpet: "rug", tatami: "rug", flower: "flowers", vase: "flowers",
+  books: "bookcase", bookshelf: "bookcase", chalkboard: "blackboard", stool: "stool", "bar stool": "stool", "counter stool": "stool", "cafe table": "cafe-table", "café table": "cafe-table", "small table": "cafe-table", "round table": "cafe-table", "coffee table": "cafe-table", mat: "rug", carpet: "rug", tatami: "rug", flower: "flowers", vase: "flowers",
   "lamp post": "streetlamp", lamppost: "streetlamp", "street lamp": "streetlamp", gate: "temple-gate", torii: "temple-gate", shrine: "temple-gate", ship: "boat", dock: "pier",
   "siphon coffee maker": "siphon", "coffee siphon": "siphon", "coffee maker": "siphon", "tube radio": "radio", "old radio": "radio", "vintage radio": "radio", "wall clock": "clock", "potted plant": "plant", "potted plants": "plant",
   rock: "rocks", stones: "rocks", sakura: "cherry-tree", "cherry blossom": "cherry-tree", stand: "stall", booth: "stall", trees: "tree", houses: "house", plants: "plant",
@@ -239,6 +239,18 @@ function drawProp(c: Ctx, p: SetProp, x: number, base: number, s: number): void 
       if (c.night) glow(x, base - 48 * s, 90 * s);
       break;
     }
+    case "stool":
+      // counter stool: round padded seat on one post, a footrest ring, a round foot
+      o.push(`<ellipse cx="${n(x)}" cy="${n(base - 4 * s)}" rx="${n(46 * s)}" ry="${n(10 * s)}" fill="${dark}"/><rect x="${n(x - 6 * s)}" y="${n(base - 190 * s)}" width="${n(12 * s)}" height="${n(186 * s)}" fill="#8b8f96"/>`);
+      o.push(`<ellipse cx="${n(x)}" cy="${n(base - 70 * s)}" rx="${n(34 * s)}" ry="${n(8 * s)}" fill="none" stroke="#8b8f96" stroke-width="${n(5 * s)}"/>`);
+      o.push(`<rect x="${n(x - 52 * s)}" y="${n(base - 212 * s)}" width="${n(104 * s)}" height="${n(26 * s)}" rx="${n(13 * s)}" fill="${mix(c.spec.accent, "#7a2e22", 0.45)}"/><rect x="${n(x - 48 * s)}" y="${n(base - 192 * s)}" width="${n(96 * s)}" height="${n(8 * s)}" rx="${n(4 * s)}" fill="${dark}"/>`);
+      break;
+    case "cafe-table":
+      // a small round table (pedestal) with a cup and saucer on it
+      o.push(`<ellipse cx="${n(x)}" cy="${n(base - 4 * s)}" rx="${n(60 * s)}" ry="${n(12 * s)}" fill="${dark}"/><rect x="${n(x - 9 * s)}" y="${n(base - 150 * s)}" width="${n(18 * s)}" height="${n(146 * s)}" fill="${dark}"/>`);
+      o.push(`<ellipse cx="${n(x)}" cy="${n(base - 150 * s)}" rx="${n(120 * s)}" ry="${n(24 * s)}" fill="${wood}"/><ellipse cx="${n(x)}" cy="${n(base - 156 * s)}" rx="${n(116 * s)}" ry="${n(20 * s)}" fill="${mix(wood, "#ffffff", 0.15)}"/>`);
+      o.push(`<ellipse cx="${n(x + 20 * s)}" cy="${n(base - 160 * s)}" rx="${n(26 * s)}" ry="${n(6 * s)}" fill="#f6f0e2"/><path d="M${n(x + 6 * s)} ${n(base - 186 * s)} h${n(28 * s)} l${n(-3 * s)} ${n(24 * s)} h${n(-22 * s)} Z" fill="#f6f0e2"/>`);
+      break;
     case "plant":
     case "flowers":
       o.push(`<path d="M${n(x - 40 * s)} ${n(base - 80 * s)} L${n(x + 40 * s)} ${n(base - 80 * s)} L${n(x + 30 * s)} ${n(base)} L${n(x - 30 * s)} ${n(base)} Z" fill="${p === "plant" ? mix(c.spec.accent, "#a0522d", 0.5) : "#6b8e4e"}"/>`);
@@ -494,18 +506,65 @@ function kissaten(c: Ctx): void {
   drawProp(c, "teapot", cX + 125 * cs, top, 0.6 * cs);
   // a tall potted plant in the corner
   drawProp(c, "plant", W * 0.92, floorY + 70 * k, 1.3 * Math.max(k, 0.7));
+  // customer seating (owner QC 2026-10-10: the stories seat guests): two stools at the counter, a small table for two by the window
+  for (const dx of [-90, 75]) drawProp(c, "stool", cX + dx * cs, floorY + 70 * k, 0.95 * cs);
+  const ts = 1.15 * k * (W > H ? 1 : 1.5);
+  const tX = W * (W > H ? 0.74 : 0.72);
+  const tBase = floorY + (W > H ? 150 : 260) * k;
+  cafeChair(c, tX - 165 * ts, tBase - 10 * ts, ts, 1);
+  cafeChair(c, tX + 165 * ts, tBase - 10 * ts, ts, -1);
+  drawProp(c, "cafe-table", tX, tBase, ts);
   // the spec's own props on the free floor slots
-  const built = new Set<SetProp>(["counter", "siphon", "teapot", "radio", "clock", "plant", "window"]);
+  const built = new Set<SetProp>(["counter", "siphon", "teapot", "radio", "clock", "plant", "window", "stool", "cafe-table", "chair"]);
   const slots = [0.66, 0.5, 0.08];
   let f = 0;
   for (const p of spec.props) if (!built.has(p)) drawProp(c, p, W * slots[f++ % slots.length], floorY + 90 * k, (p === "rug" ? 1 : 1.4) * k);
 }
 
+/** A wooden café chair seen from the side, its back away from the table (`facing` 1 = the table is to the right). */
+function cafeChair(c: Ctx, x: number, base: number, s: number, facing: 1 | -1): void {
+  const wood = mix(c.spec.accent, "#6b4a2b", 0.55);
+  const dark = mix(wood, "#1d1a26", 0.35);
+  const bx = x - facing * 48 * s;
+  c.out.push(`<rect x="${n(bx - 7 * s)}" y="${n(base - 230 * s)}" width="${n(14 * s)}" height="${n(230 * s)}" rx="${n(4 * s)}" fill="${dark}"/>`);
+  for (let k = 0; k < 3; k++) c.out.push(`<rect x="${n(Math.min(bx, bx + facing * 20 * s) - 7 * s)}" y="${n(base - (220 - k * 32) * s)}" width="${n(34 * s)}" height="${n(8 * s)}" rx="${n(3 * s)}" fill="${wood}"/>`);
+  c.out.push(`<rect x="${n(Math.min(bx, x + facing * 50 * s) - 7 * s)}" y="${n(base - 112 * s)}" width="${n(Math.abs(x + facing * 50 * s - bx) + 14 * s)}" height="${n(16 * s)}" rx="${n(5 * s)}" fill="${wood}"/>`);
+  c.out.push(`<rect x="${n(x + facing * 44 * s - 6 * s)}" y="${n(base - 98 * s)}" width="${n(12 * s)}" height="${n(98 * s)}" fill="${dark}"/>`);
+}
+
 /** A back veranda (縁側) at the hour: the garden beyond, wooden deck boards in front, the eaves above, a shoji edge. */
 function veranda(c: Ctx): void {
   const { W, H, spec, out: o } = c;
-  landscape({ ...c, spec: { ...spec, place: "garden", props: [] } });
+  landscape({ ...c, spec: { ...spec, props: [] } });
   const k = Math.min(W / 1920, H / 1080);
+  // the garden beyond: low shrubs with a lit rim and clumps of susuki (owner QC 2026-10-10: no dark blobs)
+  const groundY = H * 0.74;
+  const leaf = mix(spec.main, c.night ? "#1b2a3a" : "#3f6b4a", c.night ? 0.55 : 0.25);
+  const rim = c.night ? "#c9d3e6" : mix(spec.main, "#ffffff", 0.35);
+  for (let i = 0; i < 6; i++) {
+    const sx = W * (0.12 + i * 0.16 + 0.04 * (rand(c.id, i + 1500) - 0.5));
+    const sw = (170 + 90 * rand(c.id, i + 1510)) * k * (W > H ? 1 : 1.4);
+    const sh = (70 + 40 * rand(c.id, i + 1520)) * k * (W > H ? 1 : 1.4);
+    const top = groundY + 10 * k - sh;
+    let d = `M${n(sx - sw / 2)} ${n(groundY + 30 * k)}`;
+    for (let j = 0; j <= 4; j++) d += ` Q${n(sx - sw / 2 + (sw * (j + 0.5)) / 5)} ${n(top - 18 * k * rand(c.id, i * 10 + j))} ${n(sx - sw / 2 + (sw * (j + 1)) / 5)} ${n(top + 12 * k + 10 * k * rand(c.id, i * 10 + j + 5))}`;
+    o.push(`<path d="${d} L${n(sx + sw / 2)} ${n(groundY + 30 * k)} Z" fill="${leaf}"/>`);
+    o.push(`<path d="M${n(sx - sw * 0.35)} ${n(top + 8 * k)} Q${n(sx)} ${n(top - 10 * k)} ${n(sx + sw * 0.3)} ${n(top + 10 * k)}" fill="none" stroke="${rim}" stroke-opacity="${c.night ? 0.45 : 0.35}" stroke-width="${n(4 * Math.max(k, 0.6))}" stroke-linecap="round"/>`);
+  }
+  const plume = c.night ? "#d8d2bc" : "#e2cf9e";
+  for (const [i, fx] of [[0, 0.3], [1, 0.62], [2, 0.88]] as const) {
+    const bx = W * fx;
+    const by = groundY + 40 * k;
+    const tall = 300 * k * (W > H ? 1 : 1.4);
+    for (let j = 0; j < 9; j++) {
+      const a = (j - 4) * 0.11 + (rand(c.id, i * 20 + j + 1600) - 0.5) * 0.08;
+      const L = tall * (0.7 + 0.3 * rand(c.id, i * 20 + j + 1620));
+      const tx = bx + Math.sin(a) * L + 30 * k;
+      const ty = by - Math.cos(a) * L;
+      o.push(`<path d="M${n(bx)} ${n(by)} Q${n(bx + Math.sin(a) * L * 0.5)} ${n(by - L * 0.55)} ${n(tx)} ${n(ty)}" fill="none" stroke="${mix(leaf, plume, 0.35)}" stroke-width="${n(3 * Math.max(k, 0.6))}"/>`);
+      o.push(`<path d="M${n(tx)} ${n(ty)} q${n(18 * k)} ${n(14 * k)} ${n(40 * k)} ${n(48 * k)}" fill="none" stroke="${plume}" stroke-opacity="0.85" stroke-width="${n(9 * Math.max(k, 0.6))}" stroke-linecap="round"/>`);
+    }
+  }
   const deckY = H * 0.8;
   const wood = mix(spec.accent, "#7a5233", 0.55);
   const lit = c.night ? mix(wood, "#0b1330", 0.35) : wood;
@@ -576,7 +635,7 @@ function landscape(c: Ctx): void {
       const r = (spec.place === "forest" ? 90 : 70) + 30 * rand(c.id, k + 710);
       o.push(`<circle cx="${n(tx)}" cy="${n(groundY - 120 - 40 * rand(c.id, k + 720))}" r="${n(r)}" fill="${mix(mix("#3f7d4e", spec.main, 0.3), sky.horizon, c.night ? 0.55 : 0.3)}"/>`);
     }
-  } else {
+  } else if (spec.place !== "veranda") {
     // countryside / mountains / snowfield: rolling fields
     for (let k = 0; k < 3; k++) o.push(`<path d="M0 ${n(groundY - 120 + k * 40)} Q${n(W * 0.3)} ${n(groundY - 190 + k * 50)} ${n(W * 0.6)} ${n(groundY - 110 + k * 40)} T${W} ${n(groundY - 130 + k * 40)} L${W} ${n(groundY + 40)} L0 ${n(groundY + 40)} Z" fill="${mix(spec.place === "snowfield" ? "#e9eef5" : spec.main, sky.horizon, 0.45 - k * 0.15)}"/>`);
   }

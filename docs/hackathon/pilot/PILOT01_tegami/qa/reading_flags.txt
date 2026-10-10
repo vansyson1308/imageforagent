@@ -1,0 +1,7 @@
+Whisper large-v3 (ja) checked 8/8 lines. Remaining kana-level differences after up to 5 takes:
+
+S02_L01
+EXPECTED: カランと扉が鳴って、古い封筒を手にした、老紳士が入ってきました
+WHISPER: カランと扉が鳴って、古い封筒を手にした脳心子が入ってきました。
+EXPECTED KANA: カラントトビラガナッテフルイフウトオオテニシタロオシンシガハイッテキマシタ
+ASR KANA: カラントトビラガナッテフルイフウトオオテニシタノオシンコガハイッテキマシタ
