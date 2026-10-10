@@ -19,6 +19,7 @@ import { buildTimeline, timelineDuration, timelineInputOf } from "@/lib/services
 import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { commitShot, drawShot, type Drawing } from "@/lib/services/director/artist";
 import { critiqueShot, fixesText } from "@/lib/services/director/critic";
+import { shotText, shotVoice, type NarrationShot } from "@/lib/services/director/fixedNarration";
 import { fidelityBrief, fidelityFailures } from "@/lib/services/director/fidelity";
 import { lintProject, runContinuity, runDialogue, runEditor } from "@/lib/services/director/editor";
 import type { Critique } from "@/lib/services/director/schemas";
@@ -52,6 +53,11 @@ export interface DirectorRequest {
   readonly series?: SeriesData | null;
   /** A narrated episode: one shot per line, in order; each line is that shot's narration. */
   readonly narration?: readonly string[];
+  /**
+   * Fixed narration (owner packages, D59): one entry per shot, its lines and
+   * (when recorded) their WAVs. Supersedes `narration`; never rewritten.
+   */
+  readonly narrationShots?: readonly NarrationShot[];
 }
 
 export interface DirectorDeps {
@@ -103,7 +109,7 @@ export function isRunLive(runId: string): boolean {
 // ---------- run lifecycle ----------
 
 export async function createRun(req: DirectorRequest, deps: DirectorDeps): Promise<{ runId: string; budget: DirectorBudget }> {
-  const budget = clampBudget(deps.ceiling, { maxShots: req.narration?.length ?? req.maxShots, maxUsd: req.maxUsd });
+  const budget = clampBudget(deps.ceiling, { maxShots: req.narrationShots?.length ?? req.narration?.length ?? req.maxShots, maxUsd: req.maxUsd });
   const run = await prisma.directorRun.create({
     data: {
       projectId: req.projectId,
@@ -207,7 +213,27 @@ export async function executeRun(
 
     // 2 · Plan (Ultra)
     emit({ type: "status", message: "Director is planning the shots…" });
-    const plan = await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null, req.narration ?? null);
+    const narration = req.narrationShots ? req.narrationShots.map((s) => shotText(s, req.language)) : (req.narration ?? null);
+    const fixedVoices = req.narrationShots ? new Map<number, NonNullable<ReturnType<typeof shotVoice>>>() : null;
+    let plan = await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null, narration);
+    if (req.narrationShots && fixedVoices) {
+      // the owner's recordings, one per planned shot (a shorter plan gets the remaining lines on its last shot, like withNarration)
+      const n = plan.shots.length;
+      req.narrationShots.forEach((_, i) => {
+        if (i >= n) return;
+        const lines = i < n - 1 ? req.narrationShots![i].lines : req.narrationShots!.slice(i).flatMap((x) => x.lines);
+        const v = shotVoice({ lines });
+        if (v) fixedVoices.set(i + 1, v);
+      });
+      // a recorded shot holds exactly its audio (+ lead-in and tail), not the plan's guess
+      plan = { ...plan, shots: plan.shots.map((s, i) => (fixedVoices.has(i + 1) ? { ...s, durationSec: 1.5 } : s)) };
+      await recordStep(ctx, {
+        role: "dialogue",
+        model: "owner-narration",
+        action: "fixed-narration",
+        summary: `Narration fixed before the run: ${req.narrationShots.reduce((k, x) => k + x.lines.length, 0)} line(s) over ${req.narrationShots.length} shot(s); ${fixedVoices.size} shot(s) carry the owner's recordings${fixedVoices.size < plan.shots.length ? `, ${plan.shots.length - fixedVoices.size} use the demo TTS (draft)` : ""}`,
+      });
+    }
     if (referenceNotes.length) {
       researchUse = measureResearchUse(plan, referenceNotes);
       await recordStep(ctx, {
@@ -231,7 +257,7 @@ export async function executeRun(
 
     // 4 · Dialogue first, so each shot is timed to hold its line
     emit({ type: "status", message: "Recording dialogue (local TTS)…" });
-    const voices = await runDialogue(ctx, plan, frames, req.series?.voices ?? {});
+    const voices = await runDialogue(ctx, plan, frames, req.series?.voices ?? {}, fixedVoices ?? undefined);
     frames = voices.frames;
     await persistRunCast(runId, { voices: voices.map });
 
@@ -344,7 +370,8 @@ export async function executeRun(
 
     // 7 · Editor (Nano): lint fixes + continuity
     emit({ type: "status", message: "Editor is checking timing and continuity…" });
-    await runEditor(ctx, plan, req.series?.voices ?? {});
+    // narrated films: the lines are fixed (the Editor may move a voice or a transition, never rewrite a line)
+    await runEditor(ctx, plan, req.series?.voices ?? {}, Boolean(narration));
     continuity = await runContinuity(ctx, plan);
 
     // 8 · Original score bed from the engine's own synth (WP4.6), ducked under dialogue by the film mix

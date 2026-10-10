@@ -440,10 +440,14 @@ export async function drawShot(
   return { drawing: null, attempts: maxAttempts, lastError };
 }
 
-/** Shot duration: the plan's length, stretched to hold the spoken line (+ tail). */
+/**
+ * Shot duration: the plan's length, stretched to hold the spoken line (+ tail).
+ * Usually at most 12 s; a longer recorded line (fixed narration) holds to its
+ * end, up to the motion limit of 20 s, so a line is never cut.
+ */
 export function shotDuration(shot: ShotPlan, frame: Pick<Frame, "voiceDuration" | "voiceOffset">): number {
   const voiceEnd = frame.voiceDuration ? frame.voiceOffset + frame.voiceDuration + 0.4 : 0;
-  return Math.min(12, Math.max(shot.durationSec, voiceEnd));
+  return Math.min(voiceEnd > 12 ? Math.min(20, Math.ceil(voiceEnd * 10) / 10) : 12, Math.max(shot.durationSec, voiceEnd));
 }
 
 /**
