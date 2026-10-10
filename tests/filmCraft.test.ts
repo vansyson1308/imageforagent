@@ -71,3 +71,27 @@ describe("score bed (WP4.6)", () => {
     expect(renderScoreBed(p, tl([3, 3, 4, 5]), 15).wav.equals(wav)).toBe(true);
   }, 60_000);
 });
+
+describe("every shot stands in a place", () => {
+  it("a shot whose cast names no set gets its scene's set, else the nearest one (VI showcase run 3: a flat cream shot 2)", () => {
+    const real = planSchema.parse(JSON.parse(readFileSync(path.join(process.cwd(), "docs/hackathon/evidence/showcase-v2-banh-chung-trace.json"), "utf8")).bible);
+    expect(real.shots[1].cast).toEqual(["an", "ba", "ingredients"]);
+    const n = normalizePlan(real, 8);
+    expect(n.shots[1].cast).toEqual(["an", "ba", "ingredients", "san-nha-pho-co"]);
+    // shots that have a set keep exactly their own
+    expect(n.shots.map((s, i) => (i === 1 ? null : s.cast))).toEqual(real.shots.map((s, i) => (i === 1 ? null : s.cast)));
+    // the same scene wins over a nearer shot in another scene
+    const p = planSchema.parse({
+      ...real,
+      shots: [
+        { ...real.shots[0], scene: "Yard" },
+        { ...real.shots[2], scene: "Kitchen" },
+        { ...real.shots[1], scene: "Yard" },
+      ],
+    });
+    expect(normalizePlan(p, 8).shots[2].cast).toContain("san-nha-pho-co");
+    // a film without sets is left alone
+    const noSets = planSchema.parse({ ...real, cast: real.cast.filter((c) => c.kind !== "set"), shots: real.shots.map((s) => ({ ...s, cast: s.cast.filter((id) => !["bep-lua", "san-nha-pho-co", "ban-tho"].includes(id)) })) });
+    expect(normalizePlan(noSets, 8).shots[1].cast).toEqual(["an", "ba", "ingredients"]);
+  });
+});

@@ -6,7 +6,7 @@ import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@
 import { castRepairUser, castSystem, castUser } from "@/lib/services/director/prompts";
 import sharp from "sharp";
 import { badPaints, castSheetFrame, extractJsonBlock, fixPaints, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
-import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalHair, naturalSkin, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
+import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalHair, naturalSkin, normalizeDollSpec, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
 import { measureFrame, readableSetProblem } from "@/lib/services/director/frameGates";
 import { buildSet, normalizeSetSpec, setSchema } from "@/lib/services/director/setKit";
 
@@ -173,12 +173,14 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     const dolls = new Map<string, string>();
     const dollProblems: string[] = [];
     const skinFixes: string[] = [];
-    const setFixes: string[] = [];
+    const kitFixes: string[] = [];
     try {
       const raw = extractJsonBlock(out.text) as { dolls?: Record<string, unknown>; critters?: Record<string, unknown> } | null;
       for (const [id, spec] of Object.entries(raw?.dolls ?? {})) {
         if (!pending.some((c) => c.id === id && c.kind === "character")) continue;
-        const r = dollSchema.safeParse(spec);
+        const dn = normalizeDollSpec(spec);
+        const r = dollSchema.safeParse(dn.spec);
+        if (r.success && dn.notes.length) kitFixes.push(`${id}: ${dn.notes.join("; ")}`);
         if (r.success) {
           const natural = naturalSkin(r.data.skin);
           if (natural.corrected) {
@@ -200,7 +202,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
         if (dolls.has(id) || !pending.some((c) => c.id === id && c.kind === "set")) continue;
         const norm = normalizeSetSpec(spec);
         const r = setSchema.safeParse(norm.spec);
-        if (r.success && norm.notes.length) setFixes.push(`${id}: ${norm.notes.join("; ")}`);
+        if (r.success && norm.notes.length) kitFixes.push(`${id}: ${norm.notes.join("; ")}`);
         if (r.success) dolls.set(id, buildSet(id, r.data, ctx.canvas));
         else dollProblems.push(`#${id} set spec invalid: ${zodIssues(r.error)}`);
       }
@@ -218,7 +220,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
       dollProblems.push(`the \`\`\`json kit block is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
     }
     if (skinFixes.length) await recordStep(ctx, { role: "cast", model: "engine", action: "skin-tone", attempt, summary: `Corrected to natural tones: ${skinFixes.join("; ")}` });
-    if (setFixes.length) await recordStep(ctx, { role: "cast", model: "engine", action: "set-spec", attempt, summary: `Set specs mapped to the kit: ${setFixes.join(" · ")}` });
+    if (kitFixes.length) await recordStep(ctx, { role: "cast", model: "engine", action: "kit-spec", attempt, summary: `Specs mapped to the kit: ${kitFixes.join(" · ")}` });
     const drawn = extractSvgFragment(out.text);
     const defs = [drawn, ...dolls.values()].filter(Boolean).join("\n");
     let parsed: ReturnType<typeof splitLibrary>;

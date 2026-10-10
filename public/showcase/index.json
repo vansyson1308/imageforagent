@@ -271,6 +271,58 @@
         "6": "/showcase/v2-furin/shots/F06.jpg",
         "7": "/showcase/v2-furin/shots/F07.jpg"
       }
+    },
+    {
+      "slug": "v2-banh-chung",
+      "title": "Bánh Chưng Tết",
+      "language": "vi",
+      "logline": "Chiều Ba Mươi Tết, An và bà gói bánh, đêm nghe chuyện cổ, sáng nhận bánh đầu tiên trên bàn thờ.",
+      "story": "Chiều Ba Mươi Tết, bé An cùng bà gói bánh chưng trong sân nhà ở phố cổ Hà Nội. Lá dong xanh, gạo nếp trắng, nhân đậu xanh và thịt. Đêm xuống, hai bà cháu ngồi canh nồi bánh bên bếp lửa hồng, bà kể chuyện Lang Liêu dâng bánh cho vua Hùng. An ngủ gục trên vai bà. Sáng mùng Một, An mở mắt và thấy chiếc bánh chưng vuông vức đầu tiên do chính tay mình gói đặt trên bàn thờ.",
+      "film": "/showcase/v2-banh-chung/film.mp4",
+      "poster": "/showcase/v2-banh-chung/poster.jpg",
+      "trace": "/showcase/v2-banh-chung/trace.json",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/nemotron-3-super-120b-a12b",
+        "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        "vision": "openbmb/MiniCPM-V-4_5"
+      },
+      "provider": "nemotron",
+      "summary": {
+        "status": "done",
+        "shots": 6,
+        "rendered": 6,
+        "firstPassOk": 5,
+        "repairs": 1,
+        "criticBefore": 6.67,
+        "criticAfter": 6.67,
+        "revisions": 1,
+        "gateFailures": 0,
+        "belowFloor": [
+          2
+        ],
+        "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+        "lintErrors": 0,
+        "lintWarnings": 5,
+        "durationSec": 19.833333,
+        "wallMs": 160190,
+        "tokens": 83489,
+        "costUsd": 0.0606864,
+        "continuity": [],
+        "textCritic": false
+      },
+      "createdAt": "2026-10-10T04:02:14.690Z",
+      "source": "studio-production-049c.up.railway.app",
+      "version": "v2",
+      "remastered": "2048×1152 @ 24 fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call)",
+      "stills": {
+        "1": "/showcase/v2-banh-chung/shots/F01.jpg",
+        "2": "/showcase/v2-banh-chung/shots/F02.jpg",
+        "3": "/showcase/v2-banh-chung/shots/F03.jpg",
+        "4": "/showcase/v2-banh-chung/shots/F04.jpg",
+        "5": "/showcase/v2-banh-chung/shots/F05.jpg",
+        "6": "/showcase/v2-banh-chung/shots/F06.jpg"
+      }
     }
   ],
   "hero": "v2-furin"

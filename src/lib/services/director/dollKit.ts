@@ -32,6 +32,51 @@ export const dollSchema = z.object({
 });
 export type DollSpec = z.infer<typeof dollSchema>;
 
+/* Words the Cast used for a kit option under another name (VI showcase run 3: "top" outside the list rejected both dolls). */
+const DOLL_ALIASES: Record<string, Record<string, string>> = {
+  age: { kid: "child", girl: "child", boy: "child", baby: "child", teen: "child", teenager: "child", young: "adult", man: "adult", woman: "adult", grown: "adult", old: "elder", senior: "elder", grandma: "elder", grandpa: "elder", grandmother: "elder", grandfather: "elder", elderly: "elder" },
+  build: { thin: "slim", skinny: "slim", normal: "average", medium: "average", chubby: "round", plump: "round", stout: "round", heavy: "round" },
+  hairStyle: { curly: "short", buzz: "short", crew: "short", "pixie": "short", "pony-tail": "ponytail", "pigtails": "braids", braid: "braids", plait: "braids", "top-knot": "bun", topknot: "bun", "updo": "bun", shoulder: "bob", straight: "long", wavy: "long", none: "bald", shaved: "bald" },
+  top: { "t-shirt": "tshirt", tee: "tshirt", blouse: "shirt", tunic: "shirt", "ao-ba-ba": "shirt", "áo-bà-ba": "shirt", "ba-ba": "shirt", polo: "shirt", sweater: "jacket", hoodie: "jacket", coat: "jacket", cardigan: "jacket", vest: "jacket", uniform: "jacket", gown: "dress", sundress: "dress", frock: "dress", cloak: "robe", kaftan: "robe", yukata: "kimono", happi: "kimono", hanbok: "robe", "ao-dai": "aodai", "áo-dài": "aodai" },
+  bottom: { trousers: "pants", jeans: "pants", slacks: "pants", leggings: "pants", "quần": "pants", short: "shorts", dress: "none", gown: "none", hakama: "pants" },
+};
+const DOLL_ACCESSORY_ALIASES: Record<string, (typeof ACCESSORIES)[number]> = { spectacles: "glasses", "non-la": "conical-hat", "nón-lá": "conical-hat", "conical": "conical-hat", cap: "hat", beanie: "hat", ribbon: "bow", "hair-bow": "bow", backpack: "bag", purse: "bag", basket: "bag", moustache: "mustache", bracelet: "bangle", walking: "cane", stick: "cane", "walking-stick": "cane", pinafore: "apron" };
+
+/**
+ * A Cast doll spec, made usable (like sets, D44): an option outside the kit's
+ * list is mapped to the kit's word for it, and accessories the kit has no word
+ * for are dropped. Returns what changed so the run can say it.
+ */
+export function normalizeDollSpec(raw: unknown): { spec: unknown; notes: string[] } {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { spec: raw, notes: [] };
+  const spec: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  const notes: string[] = [];
+  const allowed: Record<string, readonly string[]> = { age: ["child", "adult", "elder"], build: ["slim", "average", "round"], hairStyle: HAIR_STYLES, top: TOPS, bottom: BOTTOMS };
+  const key = (v: unknown) => (typeof v === "string" ? v.trim().toLowerCase().replace(/[\s_]+/g, "-") : "");
+  for (const [field, list] of Object.entries(allowed)) {
+    const v = key(spec[field]);
+    if (!v) continue;
+    const mapped = list.includes(v) ? v : list.includes(v.replace(/-/g, "")) ? v.replace(/-/g, "") : DOLL_ALIASES[field]?.[v];
+    if (mapped && mapped !== spec[field]) {
+      if (mapped !== v) notes.push(`${field} "${spec[field]}" → "${mapped}"`);
+      spec[field] = mapped;
+    }
+  }
+  if (Array.isArray(spec.accessories)) {
+    const kept: string[] = [];
+    const dropped: string[] = [];
+    for (const a of spec.accessories) {
+      const v = key(a);
+      const known = (ACCESSORIES as readonly string[]).includes(v) ? v : DOLL_ACCESSORY_ALIASES[v];
+      if (known && !kept.includes(known)) kept.push(known);
+      else if (!known) dropped.push(String(a));
+    }
+    if (dropped.length) notes.push(`dropped accessories the kit doesn't draw: ${dropped.join(", ")}`);
+    spec.accessories = kept.slice(0, 4);
+  }
+  return { spec, notes };
+}
+
 /** Natural human skin tones, light to dark (the fallback when a spec's skin is not one). */
 export const SKIN_TONES = ["#f6d3b8", "#f1c9a5", "#e9c09c", "#d9a77f", "#c68863", "#a86b4a", "#8a5236", "#6b3e28", "#4e2c1d"] as const;
 
