@@ -1,0 +1,125 @@
+{
+  "note": "Narration = the story's sentences, one per shot. Target duration = 5 characters a second (300 a minute) + 0.3 s per 、 + 0.5 s at the end: a guide, not a limit; each shot is timed to the real WAV. WAV: mono or stereo, any sample rate, one file per line, named exactly as below.",
+  "episodes": [
+    {
+      "episode": 1,
+      "story": "hidamari-01-tegami",
+      "shots": 6,
+      "totalTargetSec": 33.6,
+      "lines": [
+        {
+          "id": "ep1-L01",
+          "wav": "ep1-L01.wav",
+          "text": "春の午後、茶房ひだまりに、古い封筒を手にした老紳士がやって来ました。",
+          "targetSec": 7.3
+        },
+        {
+          "id": "ep1-L02",
+          "wav": "ep1-L02.wav",
+          "text": "五十年前、好きだった人に出せなかった手紙だといいます。",
+          "targetSec": 5.8
+        },
+        {
+          "id": "ep1-L03",
+          "wav": "ep1-L03.wav",
+          "text": "ハルさんは桜の香りのお茶を淹れ、黙ってそばに座りました。",
+          "targetSec": 6
+        },
+        {
+          "id": "ep1-L04",
+          "wav": "ep1-L04.wav",
+          "text": "老紳士は手紙を声に出して読み、最後に小さく笑いました。",
+          "targetSec": 5.8
+        },
+        {
+          "id": "ep1-L05",
+          "wav": "ep1-L05.wav",
+          "text": "「やっと、言えた気がします」。",
+          "targetSec": 3
+        },
+        {
+          "id": "ep1-L06",
+          "wav": "ep1-L06.wav",
+          "text": "帰り道、川沿いの桜がひとひら、封筒の上に落ちました。",
+          "targetSec": 5.7
+        }
+      ]
+    },
+    {
+      "episode": 2,
+      "story": "hidamari-02-umeboshi",
+      "shots": 5,
+      "totalTargetSec": 34.4,
+      "lines": [
+        {
+          "id": "ep2-L01",
+          "wav": "ep2-L01.wav",
+          "text": "梅雨のはじめ、ハルさんは毎年のように、茶房ひだまりの台所で梅を漬けます。",
+          "targetSec": 7.7
+        },
+        {
+          "id": "ep2-L02",
+          "wav": "ep2-L02.wav",
+          "text": "常連のトメさんがその香りに足を止め、亡くなったお母さんの梅干しの味を思い出しました。",
+          "targetSec": 8.8
+        },
+        {
+          "id": "ep2-L03",
+          "wav": "ep2-L03.wav",
+          "text": "二人は並んで梅にしそを重ね、昔の台所の話をしました。",
+          "targetSec": 5.6
+        },
+        {
+          "id": "ep2-L04",
+          "wav": "ep2-L04.wav",
+          "text": "夏の終わり、できあがった梅干しを小さな瓶に詰めて、ハルさんはトメさんに手渡しました。",
+          "targetSec": 8.9
+        },
+        {
+          "id": "ep2-L05",
+          "wav": "ep2-L05.wav",
+          "text": "「来年は、一緒に漬けましょうね」。",
+          "targetSec": 3.4
+        }
+      ]
+    },
+    {
+      "episode": 3,
+      "story": "hidamari-03-tsukimi",
+      "shots": 5,
+      "totalTargetSec": 32.5,
+      "lines": [
+        {
+          "id": "ep3-L01",
+          "wav": "ep3-L01.wav",
+          "text": "十五夜の晩、茶房ひだまりの縁側に、ススキとお団子が並びました。",
+          "targetSec": 6.7
+        },
+        {
+          "id": "ep3-L02",
+          "wav": "ep3-L02.wav",
+          "text": "遠くに住む孫が今年は来られないと聞いて、さびしそうな老夫婦がいます。",
+          "targetSec": 7.2
+        },
+        {
+          "id": "ep3-L03",
+          "wav": "ep3-L03.wav",
+          "text": "ハルさんは二人を縁側に招き、同じ月を見ながら孫に電話をかけようと言いました。",
+          "targetSec": 8
+        },
+        {
+          "id": "ep3-L04",
+          "wav": "ep3-L04.wav",
+          "text": "電話の向こうで、孫も同じ月を見ていました。",
+          "targetSec": 4.6
+        },
+        {
+          "id": "ep3-L05",
+          "wav": "ep3-L05.wav",
+          "text": "三人の声が重なり、まあるい月が縁側を明るく照らしました。",
+          "targetSec": 6
+        }
+      ]
+    }
+  ]
+}

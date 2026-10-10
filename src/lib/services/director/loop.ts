@@ -49,6 +49,8 @@ export interface DirectorRequest {
   readonly profile?: "crew" | "super-only";
   /** WP5: make this film an episode of a saved series (recurring cast reused verbatim). */
   readonly series?: SeriesData | null;
+  /** A narrated episode: one shot per line, in order; each line is that shot's narration. */
+  readonly narration?: readonly string[];
 }
 
 export interface DirectorDeps {
@@ -100,7 +102,7 @@ export function isRunLive(runId: string): boolean {
 // ---------- run lifecycle ----------
 
 export async function createRun(req: DirectorRequest, deps: DirectorDeps): Promise<{ runId: string; budget: DirectorBudget }> {
-  const budget = clampBudget(deps.ceiling, { maxShots: req.maxShots, maxUsd: req.maxUsd });
+  const budget = clampBudget(deps.ceiling, { maxShots: req.narration?.length ?? req.maxShots, maxUsd: req.maxUsd });
   const run = await prisma.directorRun.create({
     data: {
       projectId: req.projectId,
@@ -200,7 +202,7 @@ export async function executeRun(
 
     // 2 · Plan (Ultra)
     emit({ type: "status", message: "Director is planning the shots…" });
-    const plan = await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null);
+    const plan = await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null, req.narration ?? null);
     if (referenceNotes.length) {
       researchUse = measureResearchUse(plan, referenceNotes);
       await recordStep(ctx, {

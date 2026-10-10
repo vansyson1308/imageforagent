@@ -9,8 +9,10 @@
  *   turns the proposals into that file; BLOCKERS O4). Refuses without it.
  * - Episode 1 creates the series from its run; later episodes reuse it
  *   (the host and tea room are copied, pixel-identical; D35).
- * - --owner-wavs <dir>: the owner's recordings `ep<N>-F<NN>.wav` replace those
- *   lines (the per-line WAV path).
+ * - Narration = the story's sentences (朗読), one per shot (`narrationLines`;
+ *   the line list for the owner is docs/hackathon/eval/pilot-lines.md).
+ * - --owner-wavs <dir>: the owner's recordings `ep<N>-L<NN>.wav` (line NN =
+ *   shot NN) replace those lines (the per-line WAV path).
  * - An episode is marked publishable only when no line is left in a
  *   non-commercial voice (pilotPolicy.ts). Drafts are fine for review.
  * - Writes docs/hackathon/evidence/pilot-ep<N>.json (real numbers only:
@@ -22,7 +24,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { StudioClient, type SseEvent } from "./client";
 import { appendLedger, assertSpendUnder } from "./ledger";
-import { publishVerdict, spokenLines } from "@/lib/services/director/pilotPolicy";
+import { narrationLines, publishVerdict, spokenLines } from "@/lib/services/director/pilotPolicy";
 import { symbolHash } from "@/lib/services/director/series";
 import { symbolIds } from "@/lib/services/director/svgTools";
 
@@ -62,7 +64,8 @@ async function main() {
     const pid = await client.createProject(`Hidamari ep${n}`);
     const t0 = Date.now();
     let summary: Record<string, unknown> | null = null;
-    const runId = await client.direct(pid, { story: s.story, language: s.language, style: s.style ?? "storybook", maxShots: s.shots, critic: true, research: false, ...(seriesId && { seriesId }) }, (e: SseEvent) => {
+    const lines = narrationLines(s.story);
+    const runId = await client.direct(pid, { story: s.story, language: s.language, style: s.style ?? "storybook", maxShots: lines.length, narration: lines, critic: true, research: false, ...(seriesId && { seriesId }) }, (e: SseEvent) => {
       if (e.type === "done") summary = e.summary as Record<string, unknown> | null;
     });
     const wallSec = Math.round((Date.now() - t0) / 1000);
@@ -79,13 +82,16 @@ async function main() {
     const recorded = new Set<number>();
     if (wavDir) {
       for (const f of project.frames) {
-        const wav = path.join(wavDir, `ep${n}-F${String(f.index).padStart(2, "0")}.wav`);
+        const wav = path.join(wavDir, `ep${n}-L${String(f.index).padStart(2, "0")}.wav`);
         if (!f.dialogue || !existsSync(wav)) continue;
         await client.json("PUT", `/api/frames/${f.id}/dialogue`, { text: f.dialogue, wav: readFileSync(wav).toString("base64"), offset: f.voiceOffset ?? 0.3 });
         recorded.add(f.index);
       }
     }
-    const verdict = publishVerdict(spokenLines(trace.steps), recorded);
+    const base = publishVerdict(spokenLines(trace.steps), recorded);
+    // one shot per narration line, or the owner's WAVs would land on the wrong shots
+    const verdict = project.frames.length === lines.length ? base : { publishable: false, blocking: base.blocking };
+    if (project.frames.length !== lines.length) console.log(`ep${n}: ${project.frames.length} shots for ${lines.length} narration lines: DRAFT`);
     // every base symbol (not posed variants): the recurring members' hashes must match across episodes
     const hashes = Object.fromEntries(symbolIds(project.artworkDefs).filter((id) => !id.includes("--")).map((id) => [id, symbolHash(project.artworkDefs, id)]));
     const sum = summary as Record<string, unknown>;

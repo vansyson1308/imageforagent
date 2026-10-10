@@ -29,3 +29,43 @@ export function spokenLines(steps: ReadonlyArray<{ role: string; action: string;
     .filter((s) => s.role === "dialogue" && s.action === "voice" && s.shotIndex !== null && !s.error)
     .map((s) => ({ shot: s.shotIndex!, voice: s.model === "subtitle-only" ? null : s.model }));
 }
+
+/**
+ * The narration lines of a story read aloud (朗読, owner QC 2026-10-10): its
+ * sentences, in order, split after 。！？ outside 「」 quotes, so a quoted
+ * line with its own 。 inside stays whole, the 。 right after a closing 」
+ * stays with it, and 「…」と言いました。 is one sentence.
+ */
+export function narrationLines(story: string): string[] {
+  const out: string[] = [];
+  let cur = "";
+  let depth = 0;
+  const chars = [...story.trim()];
+  for (let i = 0; i < chars.length; i++) {
+    const c = chars[i];
+    cur += c;
+    if (c === "「" || c === "『") depth++;
+    if ((c === "」" || c === "』") && depth > 0) depth--;
+    const end = depth === 0 && /[。！？!?]/.test(c);
+    if (end) {
+      if (cur.trim()) out.push(cur.trim());
+      cur = "";
+    }
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+
+/** Reading pace of the target: 300 characters a minute (NHK announcer standard; 朗読 for older listeners is no faster). */
+export const NARRATION_CHARS_PER_SEC = 5;
+
+/**
+ * Target spoken length of a line in seconds (a guide for the narrator, not a
+ * limit; the engine times each shot to the real WAV): 5 characters a second,
+ * plus 0.3 s for each 、 and 0.5 s at the end of the sentence.
+ */
+export function targetSeconds(line: string): number {
+  const spoken = [...line].filter((c) => !/[、。「」『』！？!?\s]/.test(c)).length;
+  const commas = [...line].filter((c) => c === "、").length;
+  return Math.round((spoken / NARRATION_CHARS_PER_SEC + commas * 0.3 + 0.5) * 10) / 10;
+}
