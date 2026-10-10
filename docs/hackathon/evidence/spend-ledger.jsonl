@@ -110,3 +110,5 @@
 {"at":"2026-10-10T04:54:48.575Z","script":"bench","label":"B:en-lighthouse","model":"crew v2","tokensIn":148260,"tokensOut":0,"costUsd":0.11087478}
 {"at":"2026-10-10T04:57:54.344Z","script":"bench-repro","label":"A:en-lighthouse:cmv1x876k003e2ammyzxt09zm","model":"crew","tokensIn":0,"tokensOut":0,"costUsd":0.0308469}
 {"at":"2026-10-10T05:03:15.287Z","script":"bench-repro","label":"B:en-lighthouse:cmv1xbjv5004t2ammc5ilunf1","model":"crew","tokensIn":0,"tokensOut":0,"costUsd":0.14213484}
+{"at":"2026-10-10T05:19:21.179Z","script":"bench-judge-probe","label":"google/gemma-3-27b-it","model":"google/gemma-3-27b-it","tokensIn":286,"tokensOut":7,"costUsd":0.0001884}
+{"at":"2026-10-10T05:19:22.130Z","script":"bench-judge-probe","label":"moonshotai/Kimi-K3","model":"moonshotai/Kimi-K3","tokensIn":210,"tokensOut":70,"costUsd":0.000294}
