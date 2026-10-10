@@ -61,7 +61,18 @@ const arg = (k: string, d = "") => {
   return i >= 0 ? (argv[i + 1] ?? d) : d;
 };
 
-type Judge = { model: string; provider: NemotronProvider };
+/** What a judge needs from a provider: one chat call that returns text, usage and cost. */
+interface JudgeChat {
+  chat(messages: Array<{ role: "user"; content: string; images?: string[] }>, opts: { model: string; maxTokens: number; temperature?: number; responseFormat?: { type: "json_object" } }): Promise<{ text: string; usage: { promptTokens: number; completionTokens: number }; costUsd: number }>;
+}
+type Judge = { model: string; provider: JudgeChat };
+
+/** Judges on the Studio server (D48) when this machine has no provider key: the key never leaves the server. */
+function remoteJudge(client: StudioClient): JudgeChat {
+  return {
+    chat: (messages, opts) => client.judge({ model: opts.model, prompt: messages[0].content, image: messages[0].images?.[0] ?? "", maxTokens: opts.maxTokens, json: Boolean(opts.responseFormat) }),
+  };
+}
 
 async function toJpeg(img: Buffer): Promise<string> {
   const jpeg = await sharp(img).resize({ width: 1024, height: 1024, fit: "inside" }).jpeg({ quality: 82 }).toBuffer();
@@ -81,7 +92,7 @@ async function judgeImage(j: Judge, uri: string, shot: string, label: string, mo
 }
 
 /** A judge must actually see: a red disc must come back as "red". */
-async function probeVision(provider: NemotronProvider, model: string): Promise<boolean> {
+async function probeVision(provider: JudgeChat, model: string): Promise<boolean> {
   const png = await sharp(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#ffffff"/><circle cx="128" cy="128" r="90" fill="#d01010"/></svg>')).png().toBuffer();
   try {
     const r = await provider.chat([{ role: "user", content: 'What colour is the disc? Answer ONLY JSON {"color": "<one word>"}.', images: [`data:image/png;base64,${png.toString("base64")}`] }], { model, maxTokens: 40, temperature: 0 });
@@ -93,15 +104,14 @@ async function probeVision(provider: NemotronProvider, model: string): Promise<b
   }
 }
 
-async function pickJudges(mock: boolean): Promise<Judge[]> {
+async function pickJudges(mock: boolean, client: StudioClient): Promise<Judge[]> {
   const key = process.env.NEBIUS_API_KEY;
   const explicit = argv.includes("--judges") ? arg("--judges", "").split(",").map((s) => s.trim()).filter(Boolean) : null;
   if (explicit && !explicit.length) return [];
-  if (!key) {
-    if (mock) return [];
-    throw new Error("NEBIUS_API_KEY is needed for the judges (or pass --judges \"\" to skip judging).");
-  }
-  const provider = new NemotronProvider({ apiKey: key, baseUrl: process.env.NEBIUS_BASE_URL });
+  if (!key && mock) return [];
+  // no key here: judge on the server (operator passcode required; D48)
+  const provider: JudgeChat = key ? new NemotronProvider({ apiKey: key, baseUrl: process.env.NEBIUS_BASE_URL }) : remoteJudge(client);
+  if (!key) console.log("judging on the server (/api/eval/judge): no provider key on this machine");
   const want = explicit ?? [V1_JUDGE];
   const judges: Judge[] = [];
   for (const m of want) {
@@ -141,7 +151,7 @@ async function main() {
           return JSON.parse(readFileSync(f, "utf8")) as Prompt[];
         })()
       : BENCH_PROMPTS;
-  const judges = await pickJudges(mock);
+  const judges = await pickJudges(mock, client);
   console.log(`judges: ${judges.map((j) => j.model).join(", ") || "none"}`);
   const judgeNames = judges.map((j) => j.model);
 

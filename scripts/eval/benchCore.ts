@@ -11,12 +11,8 @@ export const JUDGE_PROMPT =
   "You are an impartial judge of storyboard frames. Rate how well this frame shows the shot description: the named characters/props are present and readable, the action and setting match, the time of day and mood match, the composition is clear. " +
   'Answer ONLY JSON {"score": 0-10, "reason": "<one short sentence>"}. 9-10 excellent, 7-8 good, 4-6 partly matches or hard to read, 0-3 wrong or broken.';
 
-/** The v1 judge. v2 keeps it (comparability) and adds a second VLM. */
-export const V1_JUDGE = "google/gemma-3-27b-it";
-/** Second judge candidates, in order: served VLMs that are NOT the critic's eyes (MiniCPM, D33). Probed live with an image. */
-export const SECOND_JUDGE_CANDIDATES = ["Qwen/Qwen3.5-397B-A17B", "moonshotai/Kimi-K3", "moonshotai/Kimi-K2.6"] as const;
-/** Models the crew's critic may use (D33): never a judge. */
-export const CRITIC_MODELS = ["openbmb/MiniCPM-V-4_5"] as const;
+export { CRITIC_MODELS, SECOND_JUDGE_CANDIDATES, V1_JUDGE } from "@/lib/services/evalJudges";
+import { CRITIC_MODELS, V1_JUDGE } from "@/lib/services/evalJudges";
 
 /** SPEC v2 WP7 acceptance targets. */
 export const TARGETS = { judgeMean: 6.5, winsOf10: 8, uplift: 0.5, usdPerMin: 0.4 } as const;
