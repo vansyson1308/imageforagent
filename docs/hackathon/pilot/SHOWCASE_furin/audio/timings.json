@@ -1,0 +1,167 @@
+{
+  "lines": [
+    {
+      "id": "S01_L01",
+      "scene_id": "S01",
+      "start": 0.0,
+      "end": 5.864,
+      "pause_after": 0.5,
+      "speech_duration": 5.864
+    },
+    {
+      "id": "S02_L01",
+      "scene_id": "S02",
+      "start": 6.364,
+      "end": 12.854958333333334,
+      "pause_after": 0.5,
+      "speech_duration": 6.490958333333333
+    },
+    {
+      "id": "S03_L01",
+      "scene_id": "S03",
+      "start": 13.354958333333334,
+      "end": 17.965083333333332,
+      "pause_after": 0.5,
+      "speech_duration": 4.610125
+    },
+    {
+      "id": "S04_L01",
+      "scene_id": "S04",
+      "start": 18.465083333333332,
+      "end": 24.689541666666667,
+      "pause_after": 0.5,
+      "speech_duration": 6.224458333333334
+    },
+    {
+      "id": "S05_L01",
+      "scene_id": "S05",
+      "start": 25.189541666666667,
+      "end": 30.217625,
+      "pause_after": 0.5,
+      "speech_duration": 5.028083333333333
+    },
+    {
+      "id": "S06_L01",
+      "scene_id": "S06",
+      "start": 30.717625,
+      "end": 36.57,
+      "pause_after": 0.5,
+      "speech_duration": 5.852375
+    },
+    {
+      "id": "S07_L01",
+      "scene_id": "S07",
+      "start": 37.07,
+      "end": 43.026875,
+      "pause_after": 0.5,
+      "speech_duration": 5.956875
+    },
+    {
+      "id": "S08_L01",
+      "scene_id": "S08",
+      "start": 43.526875,
+      "end": 47.661,
+      "pause_after": 0.5,
+      "speech_duration": 4.134125
+    },
+    {
+      "id": "S09_L01",
+      "scene_id": "S09",
+      "start": 48.161,
+      "end": 53.85120833333333,
+      "pause_after": 0.5,
+      "speech_duration": 5.6902083333333335
+    },
+    {
+      "id": "S10_L01",
+      "scene_id": "S10",
+      "start": 54.35120833333333,
+      "end": 58.602041666666665,
+      "pause_after": 0.5,
+      "speech_duration": 4.2508333333333335
+    },
+    {
+      "id": "S11_L01",
+      "scene_id": "S11",
+      "start": 59.102041666666665,
+      "end": 64.87375,
+      "pause_after": 0.5,
+      "speech_duration": 5.771708333333334
+    }
+  ],
+  "scenes": [
+    {
+      "id": "S01",
+      "start": 0.0,
+      "end": 6.364
+    },
+    {
+      "id": "S02",
+      "start": 6.364,
+      "end": 13.354958333333334
+    },
+    {
+      "id": "S03",
+      "start": 13.354958333333334,
+      "end": 18.465083333333332
+    },
+    {
+      "id": "S04",
+      "start": 18.465083333333332,
+      "end": 25.189541666666667
+    },
+    {
+      "id": "S05",
+      "start": 25.189541666666667,
+      "end": 30.717625
+    },
+    {
+      "id": "S06",
+      "start": 30.717625,
+      "end": 37.07
+    },
+    {
+      "id": "S07",
+      "start": 37.07,
+      "end": 43.526875
+    },
+    {
+      "id": "S08",
+      "start": 43.526875,
+      "end": 48.161
+    },
+    {
+      "id": "S09",
+      "start": 48.161,
+      "end": 54.35120833333333
+    },
+    {
+      "id": "S10",
+      "start": 54.35120833333333,
+      "end": 59.102041666666665
+    },
+    {
+      "id": "S11",
+      "start": 59.102041666666665,
+      "end": 65.37375
+    }
+  ],
+  "duration": 65.37375,
+  "sample_rate": 24000,
+  "voice": {
+    "name": "morioki",
+    "speaker_uuid": "396a746d-742f-4e43-b722-1182a7fab9af",
+    "styles": [
+      {
+        "name": "ノーマル",
+        "id": 497929760,
+        "type": "talk"
+      }
+    ],
+    "version": "1.0.0",
+    "supported_features": {
+      "permitted_synthesis_morphing": "NOTHING"
+    }
+  },
+  "credit": "音声合成：AivisSpeech / morioki（ボイス提供：もりおき、モデル制作：yuki、ACML 1.0）"
+}

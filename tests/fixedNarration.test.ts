@@ -124,12 +124,24 @@ describe("director loop: fixed narration (mock crew)", () => {
 describe("pilot packages → fixed narration", () => {
   it("refuses a package without the owner's recordings unless --draft, and checks timings.json against the WAVs", async () => {
     const { loadPackage } = await import("../scripts/director/pilot");
-    expect(() => loadPackage("docs/hackathon/pilot/PILOT01_tegami", false)).toThrow(/no recording for S01_L01/);
-    const draft = loadPackage("docs/hackathon/pilot/PILOT01_tegami", true);
+    // the committed package now carries the owner's recordings (PR #23), so test "no recordings" on a copy without audio/
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "pkg-bare-"));
+    const bare = path.join(root, "PILOT01_tegami");
+    await fs.cp("docs/hackathon/pilot/series.json", path.join(root, "series.json"));
+    await fs.cp("docs/hackathon/pilot/PILOT01_tegami", bare, { recursive: true, filter: (src) => !src.replace(/\\/g, "/").includes("/audio") });
+    expect(() => loadPackage(bare, false)).toThrow(/no recording for S01_L01/);
+    const draft = loadPackage(bare, true);
     expect(draft.shots).toHaveLength(7);
     expect(draft.missing).toHaveLength(8);
     expect(draft.story).toMatch(/^SERIES ひだまり人生劇場\.\nHost: Haru-san/);
     expect(draft.story).toMatch(/\n【喫茶ひだまりの店内、春の午後。.*】春の午後、喫茶ひだまりの窓から/);
+    await fs.rm(root, { recursive: true, force: true });
+    // the real recordings load completely and agree with the owner's timings.json
+    for (const p of ["PILOT01_tegami", "PILOT02_umeboshi", "PILOT03_tsukimi", "SHOWCASE_furin"]) {
+      const real = loadPackage(`docs/hackathon/pilot/${p}`, false);
+      expect(real.missing).toEqual([]);
+      expect(real.mismatched).toEqual([]);
+    }
     // a package with recordings: every line carries its WAV, a timings.json disagreement is reported
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), "pkg-"));
     await fs.cp("docs/hackathon/pilot/PILOT03_tsukimi", dir, { recursive: true });

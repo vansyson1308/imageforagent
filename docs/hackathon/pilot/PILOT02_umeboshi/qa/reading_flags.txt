@@ -1,0 +1,7 @@
+Whisper large-v3 (ja) checked 9/9 lines. Remaining kana-level differences after up to 5 takes:
+
+S03_L02
+EXPECTED: 亡くなったお母さんの、梅干しの味を、思い出したのです
+WHISPER: 亡くなったお母さんの梅干しの味を思い出したのです。
+EXPECTED KANA: ナクナッタオカアサンノウメボシノアジオオモイダシタノデス
+ASR KANA: ナクナッタオカアサンノオメボシノアジオオモイダシタノデス
