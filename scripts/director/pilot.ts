@@ -74,8 +74,10 @@ export function loadPackage(dir: string, draft: boolean) {
     }),
   }));
   if (missing.length && !draft) throw new Error(`${dir}: no recording for ${missing.join(", ")}. The owner's pipeline writes audio/<line id>.wav; use --draft for a demo-TTS draft (never publishable).`);
-  // what Ultra stages: each shot's setting, then its fixed lines
-  const story = production.scenes.map((s, i) => `【${meta.shots[i]?.setting ?? s.id}】${s.lines.map((l) => l.text).join("")}`).join("\n");
+  // what Ultra stages: the series brief (host, kissaten, palette), then each shot's setting and its fixed lines
+  const series = existsSync(`${path.dirname(dir)}/series.json`) ? (JSON.parse(readFileSync(`${path.dirname(dir)}/series.json`, "utf8")) as Record<string, string>) : null;
+  const brief = series ? [`SERIES ${series.name}.`, `Host: ${series.host}`, `Set: ${series.set}`, `Palette: ${series.palette}.`, `Rules: ${series.rules}.`].join("\n") + "\n\n" : "";
+  const story = brief + production.scenes.map((s, i) => `【${meta.shots[i]?.setting ?? s.id}】${s.lines.map((l) => l.text).join("")}`).join("\n");
   return { production, meta, shots, story, missing, mismatched };
 }
 
@@ -101,7 +103,7 @@ async function main() {
     let summary: Record<string, unknown> | null = null;
     const runId = await client.direct(
       pid,
-      { story: pkg.story, language: pkg.meta.language, style: pkg.meta.style, aspectRatio: pkg.meta.aspectRatio, narrationShots: pkg.shots, critic: true, research: false, ...(seriesId && { seriesId }) },
+      { story: pkg.story, language: pkg.meta.language, style: pkg.meta.style, aspectRatio: pkg.meta.aspectRatio, figure: "adult", narrationShots: pkg.shots, critic: true, research: false, ...(seriesId && { seriesId }) },
       (e: SseEvent) => {
         if (e.type === "done") summary = e.summary as Record<string, unknown> | null;
       },

@@ -57,16 +57,21 @@ export const DEMO_LIBRARY = [
   `<symbol id="home" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="url(#home-sky)"/><circle cx="1500" cy="220" r="90" fill="#fef6e4"/><circle cx="300" cy="120" r="4" fill="#fef6e4"/><circle cx="700" cy="200" r="3" fill="#fef6e4"/><circle cx="1100" cy="90" r="4" fill="#fef6e4"/><path d="M0 700 Q300 560 600 700 T1200 690 T1920 680 L1920 1080 L0 1080 Z" fill="#2c3a63"/><rect y="860" width="1920" height="220" fill="#7ccf7c"/><rect y="860" width="1920" height="20" fill="#5cb85c"/><rect x="200" y="520" width="360" height="340" fill="#e2571b"/><polygon points="180,520 380,380 580,520" fill="#241d33"/><rect x="250" y="600" width="80" height="80" fill="#f4b23c"/><rect x="420" y="700" width="90" height="160" fill="#241d33"/><rect x="1300" y="600" width="40" height="260" fill="#3d2b1f"/><circle cx="1320" cy="560" r="120" fill="#2f6b3a"/><ellipse cx="960" cy="1000" rx="500" ry="40" fill="#5cb85c"/></symbol>`,
 ].join("\n");
 
-export function demoFrame(index: number, motion: boolean, heightPct = 55): string {
-  const x = 500 + ((index * 173) % 700);
-  const h = Math.round((heightPct / 100) * 1080);
+export function demoFrame(index: number, motion: boolean, heightPct = 55, canvas: { w: number; h: number } = { w: 1920, h: 1080 }): string {
+  // the 16:9 numbers, scaled to the canvas (a 9:16 run gets a vertical frame)
+  const sx = canvas.w / 1920;
+  const sy = canvas.h / 1080;
+  const x = Math.round((500 + ((index * 173) % 700)) * sx);
+  const h = Math.round((heightPct / 100) * canvas.h);
   const w = Math.round((h * 2) / 3);
+  const W = canvas.w;
+  const H = canvas.h;
   const svg = [
     "```svg",
     // vary the composition shot to shot (mirror the set on even shots) so neighbours are never near-duplicates
-    index % 2 === 0 ? `<g transform="translate(1920 0) scale(-1 1)"><use href="#home" x="0" y="0" width="1920" height="1080"/></g>` : `<use href="#home" x="0" y="0" width="1920" height="1080"/>`,
-    `<circle cx="${300 + index * 90}" cy="200" r="40" fill="#f4b23c" opacity="0.8"/>`,
-    `<use href="#hero" x="${x}" y="${h > 1080 ? -Math.round(h * 0.05) : Math.min(860 - h, 380)}" width="${w}" height="${h}"/>`,
+    index % 2 === 0 ? `<g transform="translate(${W} 0) scale(-1 1)"><use href="#home" x="0" y="0" width="${W}" height="${H}"/></g>` : `<use href="#home" x="0" y="0" width="${W}" height="${H}"/>`,
+    `<circle cx="${Math.round((300 + index * 90) * sx)}" cy="${Math.round(200 * sy)}" r="40" fill="#f4b23c" opacity="0.8"/>`,
+    `<use href="#hero" x="${Math.min(x, W - w)}" y="${h > H ? -Math.round(h * 0.05) : Math.min(Math.round(860 * sy) - h, Math.round(380 * sy))}" width="${w}" height="${h}"/>`,
     "```",
   ];
   if (motion) {
@@ -98,7 +103,8 @@ export function demoHandler(opts: { criticScores?: number[]; shots?: number } = 
         drawn++;
         const index = Number(user.match(/shot (\d+) of/)?.[1] ?? drawn);
         const shotType = user.match(/Shot type: ([^.]*)\./)?.[1] ?? "";
-        return demoFrame(index, /MOTION shot/.test(user), /close/i.test(shotType) ? 110 : 55);
+        const cv = messages[0]?.content.match(/Logical canvas (\d+)×(\d+)/);
+        return demoFrame(index, /MOTION shot/.test(user), /close/i.test(shotType) ? 110 : 55, cv ? { w: Number(cv[1]), h: Number(cv[2]) } : undefined);
       }
       case "CRITIC": {
         const s = scores.length > 1 ? scores.shift()! : (scores[0] ?? 8);

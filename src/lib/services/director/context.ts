@@ -89,6 +89,8 @@ export interface DirectorOptions {
   readonly minShots: number;
   /** Quality bar: critic scores below trigger a revision round. */
   readonly acceptScore: number;
+  /** "adult": the Cast's human dolls all get adult proportions (no chibi) */
+  readonly figure?: "storybook" | "adult";
 }
 
 export interface DirectorContext {

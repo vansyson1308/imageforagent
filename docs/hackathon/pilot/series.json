@@ -1,0 +1,8 @@
+{
+  "name": "ひだまり人生劇場",
+  "source": "the owner's 00_CHUNG/haru_sheet_prompt.txt + style_v1.txt, as summarised by the owner on 2026-10-10",
+  "host": "Haru-san (ハルさん), the host of every episode: 75, small and slightly plump, kind eyes with smile lines, short silver hair in a neat low bun, round tortoiseshell glasses, a mustard-yellow knit cardigan over a white blouse, a navy apron, a beige long skirt, brown slip-on shoes. Not a kimono. As a kit doll: age elder, build round, figure adult, skin #f1d2b6, hairStyle low-bun, hairColor #c9c6c2, top cardigan, topColor #d9a63a, innerColor #f8f5ee, bottom long-skirt, bottomColor #d8c7a6, accent #2f3d5c, apronColor #2f3d5c, shoeColor #7a4f2e, accessories round-glasses and apron.",
+  "set": "喫茶ひだまり, a small Showa-era kissaten: set kit place kissaten (built in: wooden counter, siphon coffee maker, teapots, old tube radio, round wall clock, potted plants, a large window with warm afternoon light), main #efe2c6, accent #b0773a. Its back veranda (縁側) is set kit place veranda.",
+  "palette": "warm amber / cream / muted sage, soft and nostalgic: #efe2c6 #b0773a #d9a63a #8fa58a #2f3d5c",
+  "rules": "adult proportions for every character (the channel forbids chibi); the same host and kissaten in every episode"
+}

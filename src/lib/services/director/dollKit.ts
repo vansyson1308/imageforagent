@@ -12,10 +12,15 @@ import { z } from "zod";
 
 const hex = z.string().regex(/^#[0-9a-fA-F]{6}$/, "a #rrggbb colour");
 
-export const HAIR_STYLES = ["short", "spiky", "bob", "long", "ponytail", "bun", "braids", "bald"] as const;
-export const TOPS = ["tshirt", "shirt", "jacket", "dress", "robe", "kimono", "aodai"] as const;
-export const BOTTOMS = ["pants", "shorts", "skirt", "none"] as const;
-export const ACCESSORIES = ["glasses", "scarf", "hat", "conical-hat", "bow", "bag", "beard", "mustache", "bangle", "cane", "apron"] as const;
+export const HAIR_STYLES = ["short", "spiky", "bob", "long", "ponytail", "bun", "low-bun", "braids", "bald"] as const;
+export const TOPS = ["tshirt", "shirt", "jacket", "cardigan", "dress", "robe", "kimono", "aodai"] as const;
+export const BOTTOMS = ["pants", "shorts", "skirt", "long-skirt", "none"] as const;
+export const ACCESSORIES = ["glasses", "round-glasses", "scarf", "hat", "conical-hat", "bow", "bag", "beard", "mustache", "bangle", "cane", "apron"] as const;
+/**
+ * Figure proportions: "storybook" (big head, about 1:5) or "adult" (about
+ * 1:6.3, for channels that forbid chibi; owner decision C, 2026-10-10).
+ */
+export const FIGURES = ["storybook", "adult"] as const;
 
 export const dollSchema = z.object({
   age: z.enum(["child", "adult", "elder"]),
@@ -29,6 +34,13 @@ export const dollSchema = z.object({
   bottomColor: hex.optional(),
   accent: hex,
   accessories: z.array(z.enum(ACCESSORIES)).max(4).default([]),
+  figure: z.enum(FIGURES).default("storybook"),
+  /** the blouse under a cardigan or jacket (default warm white) */
+  innerColor: hex.optional(),
+  /** apron colour (default cream) */
+  apronColor: hex.optional(),
+  /** shoe colour (default dark) */
+  shoeColor: hex.optional(),
 });
 export type DollSpec = z.infer<typeof dollSchema>;
 
@@ -36,11 +48,11 @@ export type DollSpec = z.infer<typeof dollSchema>;
 const DOLL_ALIASES: Record<string, Record<string, string>> = {
   age: { kid: "child", girl: "child", boy: "child", baby: "child", teen: "child", teenager: "child", young: "adult", man: "adult", woman: "adult", grown: "adult", old: "elder", senior: "elder", grandma: "elder", grandpa: "elder", grandmother: "elder", grandfather: "elder", elderly: "elder" },
   build: { thin: "slim", skinny: "slim", normal: "average", medium: "average", chubby: "round", plump: "round", stout: "round", heavy: "round" },
-  hairStyle: { curly: "short", buzz: "short", crew: "short", "pixie": "short", "pony-tail": "ponytail", "pigtails": "braids", braid: "braids", plait: "braids", "top-knot": "bun", topknot: "bun", "updo": "bun", shoulder: "bob", straight: "long", wavy: "long", none: "bald", shaved: "bald" },
-  top: { "t-shirt": "tshirt", tee: "tshirt", blouse: "shirt", tunic: "shirt", "ao-ba-ba": "shirt", "áo-bà-ba": "shirt", "ba-ba": "shirt", polo: "shirt", sweater: "jacket", hoodie: "jacket", coat: "jacket", cardigan: "jacket", vest: "jacket", uniform: "jacket", gown: "dress", sundress: "dress", frock: "dress", cloak: "robe", kaftan: "robe", yukata: "kimono", happi: "kimono", hanbok: "robe", "ao-dai": "aodai", "áo-dài": "aodai" },
-  bottom: { trousers: "pants", jeans: "pants", slacks: "pants", leggings: "pants", "quần": "pants", short: "shorts", dress: "none", gown: "none", hakama: "pants" },
+  hairStyle: { curly: "short", buzz: "short", crew: "short", "pixie": "short", "pony-tail": "ponytail", "pigtails": "braids", braid: "braids", plait: "braids", "top-knot": "bun", topknot: "bun", "updo": "bun", "low bun": "low-bun", lowbun: "low-bun", chignon: "low-bun", "nape-bun": "low-bun", shoulder: "bob", straight: "long", wavy: "long", none: "bald", shaved: "bald" },
+  top: { "t-shirt": "tshirt", tee: "tshirt", blouse: "shirt", tunic: "shirt", "ao-ba-ba": "shirt", "áo-bà-ba": "shirt", "ba-ba": "shirt", polo: "shirt", sweater: "jacket", hoodie: "jacket", coat: "jacket", knit: "cardigan", "knit-cardigan": "cardigan", vest: "jacket", uniform: "jacket", gown: "dress", sundress: "dress", frock: "dress", cloak: "robe", kaftan: "robe", yukata: "kimono", happi: "kimono", hanbok: "robe", "ao-dai": "aodai", "áo-dài": "aodai" },
+  bottom: { "long skirt": "long-skirt", longskirt: "long-skirt", "maxi-skirt": "long-skirt", "maxi": "long-skirt", "ankle-skirt": "long-skirt", trousers: "pants", jeans: "pants", slacks: "pants", leggings: "pants", "quần": "pants", short: "shorts", dress: "none", gown: "none", hakama: "pants" },
 };
-const DOLL_ACCESSORY_ALIASES: Record<string, (typeof ACCESSORIES)[number]> = { spectacles: "glasses", "non-la": "conical-hat", "nón-lá": "conical-hat", "conical": "conical-hat", cap: "hat", beanie: "hat", ribbon: "bow", "hair-bow": "bow", backpack: "bag", purse: "bag", basket: "bag", moustache: "mustache", bracelet: "bangle", walking: "cane", stick: "cane", "walking-stick": "cane", pinafore: "apron" };
+const DOLL_ACCESSORY_ALIASES: Record<string, (typeof ACCESSORIES)[number]> = { "tortoiseshell-glasses": "round-glasses", "round-spectacles": "round-glasses", "reading-glasses": "round-glasses", spectacles: "glasses", "non-la": "conical-hat", "nón-lá": "conical-hat", "conical": "conical-hat", cap: "hat", beanie: "hat", ribbon: "bow", "hair-bow": "bow", backpack: "bag", purse: "bag", basket: "bag", moustache: "mustache", bracelet: "bangle", walking: "cane", stick: "cane", "walking-stick": "cane", pinafore: "apron" };
 
 /**
  * A Cast doll spec, made usable (like sets, D44): an option outside the kit's
@@ -51,7 +63,7 @@ export function normalizeDollSpec(raw: unknown): { spec: unknown; notes: string[
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { spec: raw, notes: [] };
   const spec: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
   const notes: string[] = [];
-  const allowed: Record<string, readonly string[]> = { age: ["child", "adult", "elder"], build: ["slim", "average", "round"], hairStyle: HAIR_STYLES, top: TOPS, bottom: BOTTOMS };
+  const allowed: Record<string, readonly string[]> = { age: ["child", "adult", "elder"], build: ["slim", "average", "round"], hairStyle: HAIR_STYLES, top: TOPS, bottom: BOTTOMS, figure: FIGURES };
   const key = (v: unknown) => (typeof v === "string" ? v.trim().toLowerCase().replace(/[\s_]+/g, "-") : "");
   for (const [field, list] of Object.entries(allowed)) {
     const v = key(spec[field]);
@@ -130,7 +142,8 @@ export function naturalHair(hex: string): { hair: string; corrected: boolean } {
 export const DOLL_VOCABULARY = [
   `{"age": "child|adult|elder", "build": "slim|average|round", "skin": "#rrggbb (a natural human skin tone, never a palette colour)", "hairStyle": "${HAIR_STYLES.join("|")}", "hairColor": "#rrggbb",`,
   ` "top": "${TOPS.join("|")}", "topColor": "#rrggbb", "bottom": "${BOTTOMS.join("|")}", "bottomColor": "#rrggbb", "accent": "#rrggbb",`,
-  ` "accessories": [up to 4 of ${ACCESSORIES.map((a) => `"${a}"`).join(", ")}]}`,
+  ` "accessories": [up to 4 of ${ACCESSORIES.map((a) => `"${a}"`).join(", ")}],`,
+  ` "figure": "storybook|adult", "innerColor": "#rrggbb (blouse under a cardigan/jacket, optional)", "apronColor": "#rrggbb (optional)", "shoeColor": "#rrggbb (optional)"}`,
 ].join("\n");
 
 const n = (x: number) => String(Math.round(x * 10) / 10);
@@ -141,7 +154,7 @@ function mix(a: string, b: string, t: number): string {
   return `#${pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, "0")).join("")}`;
 }
 
-interface Frame {
+export interface Frame {
   cx: number;
   headR: number;
   headY: number;
@@ -155,10 +168,17 @@ interface Frame {
   legW: number;
 }
 
-function proportions(spec: DollSpec): Frame {
+export function dollProportions(spec: DollSpec): Frame {
   const k = spec.build === "slim" ? 0.88 : spec.build === "round" ? 1.22 : 1;
-  const base =
-    spec.age === "child"
+  // adult figure (no chibi): a smaller head on a longer body, same 400×600 box and foot line
+  const adult = spec.figure === "adult";
+  const base = adult
+    ? spec.age === "child"
+      ? { headR: 60, headY: 168, shoulderY: 246, hipY: 404, shw: 54, hhw: 46, armW: 20, legW: 25 }
+      : spec.age === "elder"
+        ? { headR: 44, headY: 112, shoulderY: 170, hipY: 356, shw: 62, hhw: 54, armW: 19, legW: 24 }
+        : { headR: 43, headY: 72, shoulderY: 128, hipY: 324, shw: 60, hhw: 50, armW: 19, legW: 24 }
+    : spec.age === "child"
       ? { headR: 80, headY: 132, shoulderY: 222, hipY: 396, shw: 58, hhw: 50, armW: 22, legW: 28 }
       : spec.age === "elder"
         ? { headR: 58, headY: 100, shoulderY: 176, hipY: 350, shw: 72, hhw: 58, armW: 24, legW: 30 }
@@ -238,7 +258,7 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
   const pose: DrawPose = opts.pose ?? "stand";
   const expr: Expression = opts.expression ?? "neutral";
   const sid = opts.symbolId ?? variantId(id, pose, expr);
-  const f = proportions(spec);
+  const f = dollProportions(spec);
   const { cx, headR: R, footY: fy, shw, hhw, armW, legW } = f;
   const g = poseGeometry(f, pose);
   const { look, sy, hy, hp } = g;
@@ -248,6 +268,9 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
   const skinShade = mix(spec.skin, "#3a2418", 0.18);
   const bottomColor = spec.bottomColor ?? mix(spec.topColor, "#1d1a26", 0.45);
   const has = (a: (typeof ACCESSORIES)[number]) => spec.accessories.includes(a);
+  const shoe = spec.shoeColor ?? "#2b2530";
+  const longSkirt = spec.bottom === "long-skirt";
+  const skirted = spec.bottom === "skirt" || longSkirt;
   const long = spec.top === "robe" || spec.top === "kimono" || spec.top === "aodai";
   const seated = pose === "sit" || pose === "kneel";
   const hem = pose === "sit" ? hp + 16 : pose === "kneel" ? hp + 10 : long ? fy - 46 : spec.top === "dress" ? ky + 10 : hp + 22;
@@ -266,6 +289,7 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
   if (spec.hairStyle === "long") out.push(`<path d="M${n(cx - R - 6)} ${n(hy)} Q${n(cx - R - 14)} ${n(sy + 70)} ${n(cx - R + 14)} ${n(sy + 84)} L${n(cx + R - 14)} ${n(sy + 84)} Q${n(cx + R + 14)} ${n(sy + 70)} ${n(cx + R + 6)} ${n(hy)} Z" fill="${spec.hairColor}"/>`);
   if (spec.hairStyle === "bob") out.push(`<path d="M${n(cx - R - 8)} ${n(hy - 6)} Q${n(cx - R - 12)} ${n(hy + R)} ${n(cx - R + 10)} ${n(hy + R * 1.02)} L${n(cx + R - 10)} ${n(hy + R * 1.02)} Q${n(cx + R + 12)} ${n(hy + R)} ${n(cx + R + 8)} ${n(hy - 6)} Z" fill="${spec.hairColor}"/>`);
   if (spec.hairStyle === "ponytail") out.push(`<ellipse cx="${n(cx + R * 0.95)}" cy="${n(hy + R * 0.45)}" rx="${n(R * 0.3)}" ry="${n(R * 0.85)}" fill="${spec.hairColor}" transform="rotate(-18 ${n(cx + R * 0.95)} ${n(hy + R * 0.45)})"/>`);
+  if (spec.hairStyle === "low-bun") out.push(`<circle cx="${n(cx + (look ? -look : 1) * R * 0.66)}" cy="${n(hy + R * 0.66)}" r="${n(R * 0.36)}" fill="${spec.hairColor}"/><path d="M${n(cx + (look ? -look : 1) * R * 0.5)} ${n(hy + R * 0.5)} q${n(R * 0.16)} ${n(R * 0.16)} ${n(R * 0.32)} 0" fill="none" stroke="${mix(spec.hairColor, "#1d1a26", 0.3)}" stroke-width="3"/>`);
   if (spec.hairStyle === "braids") for (const s of [-1, 1]) out.push(`<rect x="${n(cx + s * R * 0.82 - 11)}" y="${n(hy)}" width="22" height="${n(sy + 90 - hy)}" rx="11" fill="${spec.hairColor}"/>`);
   out.push(headGroup(false));
 
@@ -281,12 +305,12 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
       out.push(`<rect x="${n(cx - legW / 2)}" y="${n(legTop)}" width="${n(legW)}" height="${n(L)}" rx="${n(legW / 2)}" fill="${k === 0 ? legColor : mix(legColor, "#1d1a26", 0.18)}" transform="rotate(${-deg} ${n(cx)} ${n(legTop)})"/>`);
       const footX = cx + Math.sin((deg * Math.PI) / 180) * L;
       const footY = legTop + Math.cos((deg * Math.PI) / 180) * L;
-      out.push(`<ellipse cx="${n(footX + 4)}" cy="${n(footY + 2)}" rx="${n(legW * 0.9)}" ry="11" fill="#2b2530"/>`);
+      out.push(`<ellipse cx="${n(footX + 4)}" cy="${n(footY + 2)}" rx="${n(legW * 0.9)}" ry="11" fill="${shoe}"/>`);
     }
   } else if (pose === "sit") {
     // on a stool, seen 3/4: thighs go sideways from the hip to the knee (the bend reads in silhouette), shins drop to the floor
-    const thighColor = long || spec.top === "dress" ? spec.topColor : spec.bottom === "skirt" ? bottomColor : legColor;
-    const shinColor = long ? spec.topColor : legColor;
+    const thighColor = long || spec.top === "dress" ? spec.topColor : skirted ? bottomColor : legColor;
+    const shinColor = long ? spec.topColor : longSkirt ? bottomColor : legColor;
     const kx = cx + hhw * 2.05;
     const seatTop = hp + legW * 0.55;
     out.push(`<rect x="${n(cx - hhw * 1.35)}" y="${n(seatTop)}" width="${n(hhw * 3.2)}" height="18" rx="7" fill="#9a6a43"/>`);
@@ -295,30 +319,40 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
       const c = k === 0 ? mix(thighColor, "#1d1a26", 0.18) : thighColor;
       out.push(`<path d="M${n(cx - hhw * 0.2)} ${n(hp + o * 0.4)} L${n(kx + o * 0.3)} ${n(hp + 6 + o)}" fill="none" stroke="${c}" stroke-width="${n(legW + 10)}" stroke-linecap="round"/>`);
       out.push(`<path d="M${n(kx + o * 0.3)} ${n(hp + 6 + o)} L${n(kx + 6 + o * 0.3)} ${n(fy - 16)}" fill="none" stroke="${k === 0 ? mix(shinColor, "#1d1a26", 0.18) : shinColor}" stroke-width="${n(legW)}" stroke-linecap="round"/>`);
-      out.push(`<ellipse cx="${n(kx + 22 + o * 0.3)}" cy="${n(fy - 6)}" rx="${n(legW * 0.95)}" ry="11" fill="#2b2530"/>`);
+      out.push(`<ellipse cx="${n(kx + 22 + o * 0.3)}" cy="${n(fy - 6)}" rx="${n(legW * 0.95)}" ry="11" fill="${shoe}"/>`);
     }
   } else if (pose === "kneel") {
     // seiza: legs folded under the hips, seen from the front as a wide base with two knees
-    const baseColor = long || spec.top === "dress" ? spec.topColor : spec.bottom === "skirt" ? bottomColor : legColor;
+    const baseColor = long || spec.top === "dress" ? spec.topColor : skirted ? bottomColor : legColor;
     out.push(`<path d="M${n(cx - hhw * 1.6)} ${n(fy - 4)} Q${n(cx - hhw * 1.75)} ${n(hp + 4)} ${n(cx - hhw * 0.85)} ${n(hp - 10)} L${n(cx + hhw * 0.85)} ${n(hp - 10)} Q${n(cx + hhw * 1.75)} ${n(hp + 4)} ${n(cx + hhw * 1.6)} ${n(fy - 4)} Z" fill="${baseColor}"/>`);
     for (const s of [-1, 1]) out.push(`<ellipse cx="${n(cx + s * hhw * 0.78)}" cy="${n(fy - 20)}" rx="${n(legW * 1.15)}" ry="${n(legW * 0.6)}" fill="${mix(baseColor, "#ffffff", 0.12)}"/>`);
     if (spec.bottom === "shorts" && !long && spec.top !== "dress") out.push(`<path d="M${n(cx - hhw * 1.2)} ${n(hp + 34)} Q${n(cx - hhw * 1.3)} ${n(hp + 2)} ${n(cx - hhw * 0.85)} ${n(hp - 10)} L${n(cx + hhw * 0.85)} ${n(hp - 10)} Q${n(cx + hhw * 1.3)} ${n(hp + 2)} ${n(cx + hhw * 1.2)} ${n(hp + 34)} Z" fill="${bottomColor}"/>`);
   } else {
     for (const x of legX) {
       out.push(`<rect x="${n(x - legW / 2)}" y="${n(legTop)}" width="${n(legW)}" height="${n(fy - 8 - legTop)}" rx="${n(legW / 2)}" fill="${legColor}"/>`);
-      out.push(`<ellipse cx="${n(x + 4)}" cy="${n(fy - 6)}" rx="${n(legW * 0.9)}" ry="11" fill="#2b2530"/>`);
+      out.push(`<ellipse cx="${n(x + 4)}" cy="${n(fy - 6)}" rx="${n(legW * 0.9)}" ry="11" fill="${shoe}"/>`);
     }
   }
   if (!seated && pose !== "walk_a" && pose !== "walk_b") {
     if (spec.bottom === "shorts" && !long && spec.top !== "dress") for (const x of legX) out.push(`<rect x="${n(x - legW / 2 - 3)}" y="${n(legTop)}" width="${n(legW + 6)}" height="${n((ky - legTop) * 0.7)}" rx="8" fill="${bottomColor}"/>`);
     if (spec.bottom === "skirt" && !long && spec.top !== "dress") out.push(`<path d="M${n(cx - hhw - 4)} ${n(hp - 12)} L${n(cx + hhw + 4)} ${n(hp - 12)} L${n(cx + hhw * 1.5)} ${n(ky)} L${n(cx - hhw * 1.5)} ${n(ky)} Z" fill="${bottomColor}"/>`);
-  } else if (pose === "kneel" && spec.bottom === "skirt" && !long && spec.top !== "dress") {
+  }
+  // a long skirt falls to the ankles (walking too: it hides the top of the stride)
+  if (longSkirt && !seated && !long && spec.top !== "dress") {
+    const ankle = fy - 34;
+    out.push(`<path d="M${n(cx - hhw - 4)} ${n(hp - 12)} L${n(cx + hhw + 4)} ${n(hp - 12)} Q${n(cx + hhw * 1.45)} ${n((hp + ankle) / 2)} ${n(cx + hhw * 1.6)} ${n(ankle)} L${n(cx - hhw * 1.6)} ${n(ankle)} Q${n(cx - hhw * 1.45)} ${n((hp + ankle) / 2)} ${n(cx - hhw - 4)} ${n(hp - 12)} Z" fill="${bottomColor}"/>`);
+    for (const dx of [-0.6, 0, 0.6]) out.push(`<path d="M${n(cx + dx * hhw * 0.8)} ${n(hp + 10)} L${n(cx + dx * hhw * 1.3)} ${n(ankle - 4)}" stroke="${mix(bottomColor, "#1d1a26", 0.18)}" stroke-width="3" stroke-opacity="0.6"/>`);
+  }
+  if (pose === "kneel" && skirted && !long && spec.top !== "dress") {
     out.push(`<path d="M${n(cx - hhw - 4)} ${n(hp - 12)} L${n(cx + hhw + 4)} ${n(hp - 12)} L${n(cx + hhw * 1.6)} ${n(hp + 60)} L${n(cx - hhw * 1.6)} ${n(hp + 60)} Z" fill="${bottomColor}"/>`);
   }
 
   // Arms (sleeve + forearm) and hands, per pose: [shoulder, control, hand]
   const shortSleeve = spec.top === "tshirt" || spec.top === "dress";
   const hands: Array<[number, number]> = [];
+  // arms that come in front of the body (hold, bow) are drawn after the torso, so the forearms reach the hands
+  const armsInFront = pose === "hold" || pose === "bow";
+  const sleeves: string[] = [];
   const swing = pose === "walk_a" ? 1 : pose === "walk_b" ? -1 : 0;
   for (const s of [-1, 1]) {
     const x0 = cx + s * (shw - 10);
@@ -363,12 +397,14 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
       mx = cx + s * (shw + 12);
       my = (y0 + y1) / 2;
     }
-    out.push(`<path d="M${n(x0)} ${n(y0)} Q${n(mx)} ${n(my)} ${n(x1)} ${n(y1)}" fill="none" stroke="${shortSleeve ? spec.skin : spec.topColor}" stroke-width="${n(armW)}" stroke-linecap="round"/>`);
+    const arm = armsInFront ? sleeves : out;
+    arm.push(`<path d="M${n(x0)} ${n(y0)} Q${n(mx)} ${n(my)} ${n(x1)} ${n(y1)}" fill="none" stroke="${shortSleeve ? spec.skin : spec.topColor}" stroke-width="${n(armW)}" stroke-linecap="round"/>`);
+    if (armsInFront && !shortSleeve) arm.push(`<path d="M${n(x0)} ${n(y0)} Q${n(mx)} ${n(my)} ${n(x1)} ${n(y1)}" fill="none" stroke="${mix(spec.topColor, "#1d1a26", 0.22)}" stroke-width="2.5" stroke-opacity="0.6"/>`);
     if (shortSleeve) {
       const t = 0.42;
       const ex = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * mx + t * t * x1;
       const ey = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * my + t * t * y1;
-      out.push(`<path d="M${n(x0)} ${n(y0)} L${n(ex)} ${n(ey)}" fill="none" stroke="${spec.topColor}" stroke-width="${n(armW + 6)}" stroke-linecap="round"/>`);
+      arm.push(`<path d="M${n(x0)} ${n(y0)} L${n(ex)} ${n(ey)}" fill="none" stroke="${spec.topColor}" stroke-width="${n(armW + 6)}" stroke-linecap="round"/>`);
     }
     hands.push([x1, y1 + 4]);
   }
@@ -377,6 +413,17 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
   out.push(`<path d="${torso}" fill="${spec.topColor}"/>`);
   out.push(`<rect x="${cx + 6}" y="${n(sy - 12)}" width="${n(hemHW + bulge + 30)}" height="${n(hem - sy + 14)}" fill="#1d1a26" fill-opacity="0.13" clip-path="url(#${sid}-torso)"/>`);
   if (spec.top === "shirt" || spec.top === "jacket") out.push(`<path d="M${cx} ${n(sy - 6)} L${cx} ${n(hem - 4)}" stroke="${spec.accent}" stroke-width="5"/>`);
+  if (spec.top === "cardigan") {
+    // open knit cardigan over a blouse: the blouse shows down the middle, a soft collar, knit ribs at the hem, buttons
+    const inner = spec.innerColor ?? "#f6f2ea";
+    const knit = mix(spec.topColor, "#1d1a26", 0.16);
+    out.push(`<path d="M${n(cx - 22)} ${n(sy - 8)} L${n(cx + 22)} ${n(sy - 8)} L${n(cx + 13)} ${n(hem - 2)} L${n(cx - 13)} ${n(hem - 2)} Z" fill="${inner}"/>`);
+    out.push(`<path d="M${n(cx - 22)} ${n(sy - 8)} L${n(cx - 4)} ${n(sy + 16)} L${n(cx - 16)} ${n(sy + 20)} Z M${n(cx + 22)} ${n(sy - 8)} L${n(cx + 4)} ${n(sy + 16)} L${n(cx + 16)} ${n(sy + 20)} Z" fill="${mix(inner, "#1d1a26", 0.06)}"/>`);
+    out.push(`<path d="M${n(cx - 22)} ${n(sy - 8)} L${n(cx - 13)} ${n(hem - 2)} M${n(cx + 22)} ${n(sy - 8)} L${n(cx + 13)} ${n(hem - 2)}" stroke="${knit}" stroke-width="7" stroke-linecap="round"/>`);
+    out.push(`<rect x="${n(cx - hemHW - bulge * 0.3)}" y="${n(hem - 16)}" width="${n(2 * (hemHW + bulge * 0.3))}" height="14" rx="5" fill="${knit}" clip-path="url(#${sid}-torso)"/>`);
+    for (let k = 0; k < 4; k++) out.push(`<circle cx="${n(cx - 21 + k * 0.5)}" cy="${n(sy + 30 + k * ((hem - sy - 60) / 3))}" r="4" fill="${mix(spec.topColor, "#5a3a1a", 0.55)}"/>`);
+    for (let k = -3; k <= 3; k++) if (k) out.push(`<path d="M${n(cx + k * shw * 0.26)} ${n(sy + 6)} L${n(cx + k * hemHW * 0.28)} ${n(hem - 18)}" stroke="${knit}" stroke-opacity="0.35" stroke-width="2.5" clip-path="url(#${sid}-torso)"/>`);
+  }
   if (spec.top === "jacket") out.push(`<path d="M${n(cx - 26)} ${n(sy - 8)} L${cx} ${n(sy + 46)} L${n(cx + 26)} ${n(sy - 8)}" fill="none" stroke="${mix(spec.topColor, "#000000", 0.3)}" stroke-width="6"/>`);
   if (spec.top === "kimono") {
     out.push(`<path d="M${n(cx - 30)} ${n(sy - 8)} L${n(cx + 18)} ${n(sy + 70)}" stroke="${spec.accent}" stroke-width="9"/>`);
@@ -384,13 +431,23 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
   }
   if (spec.top === "aodai") out.push(`<path d="M${n(cx - 16)} ${n(sy + 40)} L${n(cx - 26)} ${n(hem)} M${n(cx + 16)} ${n(sy + 40)} L${n(cx + 26)} ${n(hem)}" stroke="${spec.accent}" stroke-width="4"/>`);
   if (spec.top === "robe") out.push(`<rect x="${n(cx - hhw)}" y="${n(hp - 30)}" width="${n(2 * hhw)}" height="14" fill="${spec.accent}"/>`);
-  if (has("apron")) out.push(`<path d="M${n(cx - hhw * 0.8)} ${n(sy + 60)} L${n(cx + hhw * 0.8)} ${n(sy + 60)} L${n(cx + hhw)} ${n(Math.min(hem, seated ? hem : ky) - 6)} L${n(cx - hhw)} ${n(Math.min(hem, seated ? hem : ky) - 6)} Z" fill="#f4efe4"/>`);
+  if (has("apron")) {
+    const apron = spec.apronColor ?? "#f4efe4";
+    // a bib apron over a long skirt reaches below the knee; otherwise the waist apron of the kit
+    const bottomY = longSkirt && !seated ? ky + 50 : Math.min(hem, seated ? hem : ky) - 6;
+    if (longSkirt || spec.top === "cardigan") {
+      out.push(`<path d="M${n(cx - hhw * 0.38)} ${n(sy + 30)} L${n(cx + hhw * 0.38)} ${n(sy + 30)} L${n(cx + hhw * 0.46)} ${n(hp - 18)} L${n(cx + hhw * 0.86)} ${n(hp - 12)} L${n(cx + hhw * 0.96)} ${n(bottomY)} L${n(cx - hhw * 0.96)} ${n(bottomY)} L${n(cx - hhw * 0.86)} ${n(hp - 12)} L${n(cx - hhw * 0.46)} ${n(hp - 18)} Z" fill="${apron}"/>`);
+      out.push(`<path d="M${n(cx - hhw * 0.38)} ${n(sy + 30)} L${n(cx - shw * 0.5)} ${n(sy - 6)} M${n(cx + hhw * 0.38)} ${n(sy + 30)} L${n(cx + shw * 0.5)} ${n(sy - 6)}" stroke="${apron}" stroke-width="5"/>`);
+      out.push(`<rect x="${n(cx - hhw * 0.34)}" y="${n(hp + 6)}" width="${n(hhw * 0.68)}" height="${n(Math.max(10, (bottomY - hp) * 0.28))}" rx="4" fill="none" stroke="${mix(apron, "#ffffff", 0.25)}" stroke-width="3"/>`);
+    } else out.push(`<path d="M${n(cx - hhw * 0.8)} ${n(sy + 60)} L${n(cx + hhw * 0.8)} ${n(sy + 60)} L${n(cx + hhw)} ${n(bottomY)} L${n(cx - hhw)} ${n(bottomY)} Z" fill="${apron}"/>`);
+  }
   if (has("bag")) {
     out.push(`<path d="M${n(cx - shw + 14)} ${n(sy)} L${n(cx + hhw + 10)} ${n(hp - 20)}" stroke="${spec.accent}" stroke-width="7"/>`);
     out.push(`<rect x="${n(cx + hhw - 6)}" y="${n(hp - 30)}" width="46" height="40" rx="8" fill="${spec.accent}"/>`);
   }
   if (spec.top !== "kimono" && spec.top !== "aodai") out.push(`<path d="M${n(cx - 24)} ${n(sy - 7)} Q${cx} ${n(sy + 18)} ${n(cx + 24)} ${n(sy - 7)}" fill="${skinShade}"/>`);
 
+  out.push(...sleeves);
   for (const [x, y] of hands) out.push(`<circle cx="${n(x)}" cy="${n(y)}" r="${n(armW * 0.66)}" fill="url(#${id}-skin)"/>`);
   if (has("bangle")) out.push(`<circle cx="${n(hands[0][0])}" cy="${n(hands[0][1] - armW * 0.7)}" r="${n(armW * 0.55)}" fill="none" stroke="${spec.accent}" stroke-width="5"/>`);
   if (has("cane") && !seated && pose !== "wave" && pose !== "point") out.push(`<path d="M${n(hands[1][0])} ${n(hands[1][1] - 6)} L${n(hands[1][0] + 12)} ${n(fy - 4)}" stroke="#6b4a2b" stroke-width="8" stroke-linecap="round"/>`);
@@ -444,6 +501,12 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
   if (has("mustache")) out.push(`<path d="M${n(fx - R * 0.3)} ${n(my - R * 0.02)} Q${n(fx)} ${n(my - R * 0.2)} ${n(fx + R * 0.3)} ${n(my - R * 0.02)} Q${n(fx)} ${n(my - R * 0.08)} ${n(fx - R * 0.3)} ${n(my - R * 0.02)} Z" fill="${spec.hairColor}"/>`);
   const by0 = hy + g.faceDy;
   if (has("beard")) out.push(`<path d="M${n(fx - R * 0.7)} ${n(by0 + R * 0.35)} Q${n(fx - R * 0.5)} ${n(by0 + R * 1.35)} ${n(fx)} ${n(by0 + R * 1.4)} Q${n(fx + R * 0.5)} ${n(by0 + R * 1.35)} ${n(fx + R * 0.7)} ${n(by0 + R * 0.35)} Q${n(fx)} ${n(by0 + R * 0.9)} ${n(fx - R * 0.7)} ${n(by0 + R * 0.35)} Z" fill="${spec.hairColor}"/>`);
+  if (has("round-glasses")) {
+    // round tortoiseshell frames: a warm brown rim with lighter flecks, temples running to the ears
+    for (const e of face.eyes) out.push(`<circle cx="${n(e.x)}" cy="${n(e.y)}" r="${n(R * 0.26)}" fill="#ffffff" fill-opacity="0.12" stroke="#6b3f22" stroke-width="${n(Math.max(3.5, R * 0.075))}"/><circle cx="${n(e.x)}" cy="${n(e.y)}" r="${n(R * 0.26)}" fill="none" stroke="#c08a4e" stroke-width="1.6" stroke-dasharray="3 5"/>`);
+    out.push(`<path d="M${n(face.eyes[0].x + R * 0.26)} ${n(face.eyes[0].y - R * 0.03)} Q${n(fx)} ${n(face.eyes[0].y - R * 0.1)} ${n(face.eyes[1].x - R * 0.26)} ${n(face.eyes[1].y - R * 0.03)}" fill="none" stroke="#6b3f22" stroke-width="3.5"/>`);
+    if (!look) for (const [k, s] of [[0, -1], [1, 1]] as const) out.push(`<path d="M${n(face.eyes[k].x + s * R * 0.26)} ${n(face.eyes[k].y)} L${n(cx + s * R * 0.94)} ${n(hy + R * 0.02)}" stroke="#6b3f22" stroke-width="3"/>`);
+  }
   if (has("glasses")) {
     for (const e of face.eyes) out.push(`<circle cx="${n(e.x)}" cy="${n(e.y)}" r="${n(R * 0.22)}" fill="none" stroke="#2a2233" stroke-width="4"/>`);
     out.push(`<path d="M${n(face.eyes[0].x + R * 0.22)} ${n(face.eyes[0].y)} L${n(face.eyes[1].x - R * 0.22)} ${n(face.eyes[1].y)}" stroke="#2a2233" stroke-width="4"/>`);
@@ -487,7 +550,7 @@ function faceGeometry(spec: { age: string }, R: number, fx: number, hy: number, 
 
 /** Face anchors of a doll variant in its 400×600 viewBox (for blink + lip-sync overlays). */
 export function dollFace(spec: DollSpec, pose: DrawPose = "stand", expr: Expression = "neutral"): FaceAnchors {
-  const f = proportions(spec);
+  const f = dollProportions(spec);
   const p = poseGeometry(f, pose);
   const g = faceGeometry(spec, f.headR, f.cx + p.headDx + p.faceDx, p.hy + p.faceDy, expr);
   const L = f.footY - 8 - (f.hipY - 10);
