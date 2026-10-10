@@ -40,14 +40,12 @@ export interface DrawOutcome {
 }
 
 /**
- * Mechanical clean-up (like stripping fences): motion tracks only take #rgb /
- * #rrggbb, but models love "#ffffff80" to fade. Drop the alpha pair; every
+ * Deterministic normalisation of the track mistakes real runs showed:
+ * #rrggbbaa colours (tracks take 6-digit hex), a track-level `ease` (ease
+ * belongs to each key: it is copied onto keys that lack one), and keys with
+ * no time or no value (bench v2 repro: `keys.2.t: expected number`), which
+ * are dropped; a track left with fewer than 2 keys is dropped (null). Every
  * other value goes to motionSpecSchema untouched.
- */
-/**
- * Deterministic normalisation of the two track mistakes real runs showed:
- * #rrggbbaa colours (tracks take 6-digit hex) and a track-level `ease`
- * (ease belongs to each key: it is copied onto keys that lack one).
  */
 function normalizeTrack(track: unknown): unknown {
   if (!track || typeof track !== "object" || !Array.isArray((track as { keys?: unknown }).keys)) return track;
@@ -57,7 +55,9 @@ function normalizeTrack(track: unknown): unknown {
     if (typeof ease === "string" && i > 0 && key && typeof key === "object" && key.ease === undefined) key = { ...key, ease };
     return key;
   });
-  return { ...t, keys };
+  const timed = keys.filter((k) => k && typeof k === "object" && typeof k.t === "number" && Number.isFinite(k.t) && k.v !== undefined);
+  if (timed.length < keys.length && timed.length < 2) return null;
+  return { ...t, keys: timed };
 }
 
 const errText = (e: unknown) => (e instanceof AppError ? `${e.message}${e.hint ? ` ${e.hint}` : ""}` : e instanceof Error ? e.message : String(e));
@@ -114,7 +114,7 @@ export async function validateDrawing(
     }
     if (raw && typeof raw === "object") {
       const r = raw as { shapes?: unknown; tracks?: unknown };
-      ambient = { shapes: Array.isArray(r.shapes) ? r.shapes.slice(0, 12) : [], tracks: Array.isArray(r.tracks) ? r.tracks.slice(0, 12).map(normalizeTrack) : [] } as AmbientLayer;
+      ambient = { shapes: Array.isArray(r.shapes) ? r.shapes.slice(0, 12) : [], tracks: Array.isArray(r.tracks) ? r.tracks.slice(0, 12).map(normalizeTrack).filter((x) => x !== null) : [] } as unknown as AmbientLayer;
       const probe = motionSpecSchema.safeParse(
         buildShotMotion({ index: opts.index, shotType: opts.shot.shotType, duration: opts.shot.durationSec, fps: opts.fps, canvas: opts.canvas, background: "#000000", ambient }),
       );

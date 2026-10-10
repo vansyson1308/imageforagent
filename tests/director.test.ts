@@ -368,6 +368,11 @@ describe("director validators", () => {
     expect((await validateDrawing(broken, { ...opts, shot: motionShot, strict: false })).ambient).toBeNull();
     const trackEase = good.replace('"tracks":[]', '"tracks":[{"target":"shapes.s.at","ease":"out","keys":[{"t":0,"v":[10,10]},{"t":1,"v":[40,10]},{"t":2,"v":[60,10],"ease":"linear"}]}]');
     expect((await validateDrawing(trackEase, { ...opts, shot: motionShot })).ambient?.tracks[0].keys.map((k) => (k as { ease?: string }).ease)).toEqual([undefined, "out", "linear"]);
+    // keys without a time or value are dropped; a track left with < 2 keys is dropped (bench v2 repro: "keys.2.t: expected number")
+    const untimed = good.replace('"tracks":[]', '"tracks":[{"target":"shapes.s.at","keys":[{"t":0,"v":[10,10]},{"t":1,"v":[40,10]},{"v":[60,10]}]},{"target":"shapes.s.r","keys":[{"t":0,"v":9},{}]}]');
+    const amb = (await validateDrawing(untimed, { ...opts, shot: motionShot })).ambient!;
+    expect(amb.tracks).toHaveLength(1);
+    expect(amb.tracks[0].keys.map((k) => k.t)).toEqual([0, 1]);
     const bad = good.replace('"fill":"#ffffff"', '"fill":"red"');
     await expect(validateDrawing(bad, { ...opts, shot: motionShot })).rejects.toThrow(/Ambient layer invalid — shapes\[0\]\.fill/);
   });

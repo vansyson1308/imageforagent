@@ -1,0 +1,13 @@
+version,set,config,prompt,language,status,shots,rendered,firstPassPct,repairsPerShot,criticBefore,criticAfter,lintLeft,wallSec,tokens,usd,filmSec,usdPerMinute,textCritic,criticModel,judge,judge:google/gemma-3-27b-it,judge:moonshotai/Kimi-K3,upliftShots,uplift:google/gemma-3-27b-it,uplift:moonshotai/Kimi-K3,gateFailures,belowFloor,runId
+"v2","main","super-only v2","en-lighthouse","en","done",5,5,100,0,"","",0,132.8,56094,0.0381102,15.5,0.14752,false,"",3.3,4.8,1.8,0,"","",0,0,"cmv1y2pv300012at802fw9g46"
+"v2","main","crew v2","en-lighthouse","en","done",5,5,40,2,4.8,6,0,324.58,166506,0.11042814,18.5,0.35814999999999997,false,"openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",6.3,7,5.6,3,1,1,0,3,"cmv1y66n800102at88ctj6gfn"
+"v1","main","crew v1","en-lighthouse","en","done",5,5,40,3.6,5,5,0,253.91,177050,0.12513324,16.33,0.45967,true,"",5.6,5.6,"",0,"","",0,0,"cmuhss75f003jgi7d1oohkpqm"
+"v1","main","crew v1","en-robot-garden","en","done",6,6,0,7,3.33,3.83,0,484.53,334249,0.22876146,20.92,0.6562100000000001,true,"",6.67,6.67,"",0,"","",0,0,"cmuht2tum007qgi7dqx9wenf2"
+"v1","main","crew v1","en-paper-boat","en","done",4,4,75,0.75,7.75,7.75,0,152.01,73225,0.05200164,14.67,0.21273,true,"",4,4,"",0,"","",0,0,"cmuhtgq0f00d4gi7d2cs7q8qv"
+"v1","main","crew v1","en-moon-bakery","en","done",8,8,62.5,0.75,7.5,7.75,0,190.91,117285,0.08153502,35.42,0.13813,true,"",5.25,5.25,"",0,"","",0,0,"cmuhtnhmi00fhgi7dq8z15csf"
+"v1","main","crew v1","vi-ao-dai","vi","done",6,6,83.33,0.33,7.67,7.83,0,141.13,67241,0.04482948,23.33,0.11528000000000001,true,"",5.83,5.83,"",0,"","",0,0,"cmuhtungp00ikgi7dxbqqnbf0"
+"v1","main","crew v1","vi-trau-vang","vi","done",5,5,100,0,7,7.6,0,121.69,63661,0.04545042,19.33,0.14105,true,"",7,7,"",0,"","",0,0,"cmuhu0wpi00kygi7d8bmsl5fm"
+"v1","main","crew v1","vi-cho-noi","vi","done",7,7,57.14,0.43,7.86,7.86,0,177.64,85374,0.05914266,26.5,0.13391,true,"",4.71,4.71,"",0,"","",0,0,"cmuhu76ow00nigi7dohiynhok"
+"v1","main","crew v1","ja-umbrella","ja","done",4,4,100,0,7.75,7.75,0,132.25,51195,0.03803814,15,0.15215,true,"",5.5,5.5,"",0,"","",0,0,"cmuhudh6000q1gi7d2sp8ta4z"
+"v1","main","crew v1","ja-tanuki","ja","done",6,6,16.67,1,7.83,7.83,0,177.3,98554,0.0698037,25,0.16753,true,"",4.83,4.83,"",0,"","",0,0,"cmuhuixc000s2gi7dj166k2jd"
+"v1","main","crew v1","ja-sakura","ja","done",9,8,33.33,1.44,7.5,7.5,1,295.42,172824,0.1190697,42.83,0.16679,true,"",5.5,5.5,"",0,"","",0,0,"cmuhuqlyb00v0gi7dw1d3i0iw"
