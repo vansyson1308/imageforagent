@@ -1,0 +1,56 @@
+{
+  "slug": "PILOT02_umeboshi",
+  "title": "梅しごと",
+  "language": "ja",
+  "style": "storybook",
+  "aspectRatio": "9:16",
+  "maxSeconds": 60,
+  "estimatedSeconds": 52.5,
+  "shots": [
+    {
+      "scene": "S01",
+      "setting": "喫茶ひだまりの店内、梅雨のはじめの昼。窓の外は小雨。カウンターに青梅のかご。",
+      "lines": [
+        "S01_L01"
+      ]
+    },
+    {
+      "scene": "S02",
+      "setting": "カウンターの中。ハルさんが大きな瓶に梅を漬ける。",
+      "lines": [
+        "S02_L01"
+      ]
+    },
+    {
+      "scene": "S03",
+      "setting": "喫茶ひだまりの入口。常連のトメさんが立ち止まる。",
+      "lines": [
+        "S03_L01",
+        "S03_L02"
+      ]
+    },
+    {
+      "scene": "S04",
+      "setting": "カウンター。二人が並んで梅に赤じそを重ねる。",
+      "lines": [
+        "S04_L01",
+        "S04_L02"
+      ]
+    },
+    {
+      "scene": "S05",
+      "setting": "喫茶ひだまり、夏の終わりの夕方。梅干しの小さな瓶（インサート）。",
+      "lines": [
+        "S05_L01"
+      ]
+    },
+    {
+      "scene": "S06",
+      "setting": "カウンター越しに、ハルさんがトメさんに瓶を手渡す。",
+      "lines": [
+        "S06_L01",
+        "S06_L02"
+      ]
+    }
+  ]
+}

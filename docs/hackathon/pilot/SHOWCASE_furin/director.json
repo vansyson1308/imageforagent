@@ -1,0 +1,88 @@
+{
+  "slug": "SHOWCASE_furin",
+  "title": "風鈴のおくりもの",
+  "language": "ja",
+  "style": "storybook",
+  "aspectRatio": "16:9",
+  "maxSeconds": 90,
+  "estimatedSeconds": 71.7,
+  "shots": [
+    {
+      "scene": "S01",
+      "setting": null,
+      "lines": [
+        "S01_L01"
+      ]
+    },
+    {
+      "scene": "S02",
+      "setting": null,
+      "lines": [
+        "S02_L01"
+      ]
+    },
+    {
+      "scene": "S03",
+      "setting": null,
+      "lines": [
+        "S03_L01"
+      ]
+    },
+    {
+      "scene": "S04",
+      "setting": null,
+      "lines": [
+        "S04_L01"
+      ]
+    },
+    {
+      "scene": "S05",
+      "setting": null,
+      "lines": [
+        "S05_L01"
+      ]
+    },
+    {
+      "scene": "S06",
+      "setting": null,
+      "lines": [
+        "S06_L01"
+      ]
+    },
+    {
+      "scene": "S07",
+      "setting": null,
+      "lines": [
+        "S07_L01"
+      ]
+    },
+    {
+      "scene": "S08",
+      "setting": null,
+      "lines": [
+        "S08_L01"
+      ]
+    },
+    {
+      "scene": "S09",
+      "setting": null,
+      "lines": [
+        "S09_L01"
+      ]
+    },
+    {
+      "scene": "S10",
+      "setting": null,
+      "lines": [
+        "S10_L01"
+      ]
+    },
+    {
+      "scene": "S11",
+      "setting": null,
+      "lines": [
+        "S11_L01"
+      ]
+    }
+  ]
+}

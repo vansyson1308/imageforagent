@@ -1,0 +1,48 @@
+{
+  "slug": "PILOT03_tsukimi",
+  "title": "同じ月",
+  "language": "ja",
+  "style": "storybook",
+  "aspectRatio": "9:16",
+  "maxSeconds": 60,
+  "estimatedSeconds": 41.6,
+  "shots": [
+    {
+      "scene": "S01",
+      "setting": "十五夜の晩、喫茶ひだまりの裏の縁側。ススキとお団子、満月。",
+      "lines": [
+        "S01_L01"
+      ]
+    },
+    {
+      "scene": "S02",
+      "setting": "夜の店内、窓ぎわの席。さびしそうな老夫婦。",
+      "lines": [
+        "S02_L01",
+        "S02_L02"
+      ]
+    },
+    {
+      "scene": "S03",
+      "setting": "夜の店内。ハルさんが老夫婦を縁側へ招く。",
+      "lines": [
+        "S03_L01",
+        "S03_L02"
+      ]
+    },
+    {
+      "scene": "S04",
+      "setting": "夜の縁側。老夫婦が携帯電話を耳に、満月を見上げる。",
+      "lines": [
+        "S04_L01"
+      ]
+    },
+    {
+      "scene": "S05",
+      "setting": "十五夜の晩、月明かりの縁側。三人が並んで月を見る。",
+      "lines": [
+        "S05_L01"
+      ]
+    }
+  ]
+}
