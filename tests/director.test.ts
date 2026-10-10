@@ -451,6 +451,26 @@ describe("director loop (mock crew)", () => {
     expect(summary.gateFailures).toBeGreaterThanOrEqual(1);
   }, 120_000);
 
+  it("set kit (D41): a set described under \"sets\" is drawn by the engine and used by the shots", async () => {
+    const base = demoHandler({ criticScores: [9] });
+    const heroOnly = DEMO_LIBRARY.split("\n").filter((l) => l.includes('id="hero"')).join("\n");
+    const handler: MockHandler = (m, o, i) => {
+      if (m[0].content.startsWith("ROLE: CAST")) {
+        expect(m[0].content).toContain('"sets": {"<set-id>"');
+        return "```svg\n" + heroOnly + "\n```\n```json\n" + JSON.stringify({ sets: { home: { place: "street", time: "dusk", main: "#b5a58f", accent: "#c97d60", props: ["streetlamp", "bench", "tree"] } } }) + "\n```";
+      }
+      return base(m, o, i);
+    };
+    const { runId, summary, projectId } = await run(handler, {}, { maxShots: 2 });
+    expect(summary.status).toBe("done");
+    expect(summary.rendered).toBe(2);
+    const defs = (await prisma.project.findUniqueOrThrow({ where: { id: projectId } })).artworkDefs ?? "";
+    expect(defs).toContain('<symbol id="home" viewBox="0 0 1920 1080">');
+    expect(defs).toContain('id="home-sky"'); // the kit's own gradient
+    const lib = await prisma.directorStep.findFirstOrThrow({ where: { runId, action: "library" } });
+    expect(lib.outputSummary).toMatch(/^Library ready/);
+  }, 120_000);
+
   it("accepts library symbols one by one: a repair redraws only the failing member", async () => {
     const base = demoHandler({ criticScores: [9] });
     const lib = splitLibrary(DEMO_LIBRARY);

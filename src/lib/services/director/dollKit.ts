@@ -66,6 +66,21 @@ export function naturalSkin(hex: string): { skin: string; corrected: boolean } {
   return { skin: best, corrected: true };
 }
 
+/**
+ * Natural hair: black, browns, blondes, reds/auburn (warm hues) or greys and
+ * whites (barely saturated). A tinted grey (hosted run 3: the grandfather's
+ * light-blue hair and beard) becomes the neutral grey of the same lightness.
+ */
+export function naturalHair(hex: string): { hair: string; corrected: boolean } {
+  const c = hsl(hex.toLowerCase());
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const max = Math.max(r, g, b);
+  const sat = max ? (max - Math.min(r, g, b)) / max : 0;
+  if (sat <= 0.12 || c.l < 0.22 || c.h <= 50 || c.h >= 340) return { hair: hex, corrected: false };
+  const v = Math.round(c.l * 255).toString(16).padStart(2, "0");
+  return { hair: `#${v}${v}${v}`, corrected: true };
+}
+
 /** The kit's vocabulary, for the Cast prompt. */
 export const DOLL_VOCABULARY = [
   `{"age": "child|adult|elder", "build": "slim|average|round", "skin": "#rrggbb (a natural human skin tone, never a palette colour)", "hairStyle": "${HAIR_STYLES.join("|")}", "hairColor": "#rrggbb",`,

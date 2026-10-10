@@ -6,8 +6,9 @@ import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@
 import { castRepairUser, castSystem, castUser } from "@/lib/services/director/prompts";
 import sharp from "sharp";
 import { badPaints, castSheetFrame, extractJsonBlock, fixPaints, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
-import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalSkin, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
+import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalHair, naturalSkin, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
 import { measureFrame, readableSetProblem } from "@/lib/services/director/frameGates";
+import { buildSet, setSchema } from "@/lib/services/director/setKit";
 
 export type KitSpec = { readonly kind: "doll"; readonly spec: DollSpec } | { readonly kind: "critter"; readonly spec: CritterSpec };
 import { zodIssues } from "@/lib/services/director/schemas";
@@ -180,14 +181,25 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
         if (r.success) {
           const natural = naturalSkin(r.data.skin);
           if (natural.corrected) {
-            skinFixes.push(`${id} ${r.data.skin} → ${natural.skin}`);
+            skinFixes.push(`${id} skin ${r.data.skin} → ${natural.skin}`);
             r.data.skin = natural.skin;
+          }
+          const hair = naturalHair(r.data.hairColor);
+          if (hair.corrected) {
+            skinFixes.push(`${id} hair ${r.data.hairColor} → ${hair.hair}`);
+            r.data.hairColor = hair.hair;
           }
           const markup = buildDoll(id, r.data);
           dolls.set(id, markup);
           kitBySymbol.set(splitLibrary(markup).symbols.get(id) ?? markup, { id, kit: { kind: "doll", spec: r.data } });
         }
         else dollProblems.push(`#${id} doll spec invalid: ${zodIssues(r.error)}`);
+      }
+      for (const [id, spec] of Object.entries((raw as { sets?: Record<string, unknown> } | null)?.sets ?? {})) {
+        if (dolls.has(id) || !pending.some((c) => c.id === id && c.kind === "set")) continue;
+        const r = setSchema.safeParse(spec);
+        if (r.success) dolls.set(id, buildSet(id, r.data, ctx.canvas));
+        else dollProblems.push(`#${id} set spec invalid: ${zodIssues(r.error)}`);
       }
       for (const [id, spec] of Object.entries(raw?.critters ?? {})) {
         if (dolls.has(id) || !pending.some((c) => c.id === id && c.kind === "character")) continue;
@@ -202,7 +214,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     } catch (e) {
       dollProblems.push(`the \`\`\`json kit block is not valid JSON: ${e instanceof Error ? e.message : String(e)}`);
     }
-    if (skinFixes.length) await recordStep(ctx, { role: "cast", model: "engine", action: "skin-tone", attempt, summary: `Skin tone corrected to a natural tone: ${skinFixes.join("; ")}` });
+    if (skinFixes.length) await recordStep(ctx, { role: "cast", model: "engine", action: "skin-tone", attempt, summary: `Corrected to natural tones: ${skinFixes.join("; ")}` });
     const drawn = extractSvgFragment(out.text);
     const defs = [drawn, ...dolls.values()].filter(Boolean).join("\n");
     let parsed: ReturnType<typeof splitLibrary>;
