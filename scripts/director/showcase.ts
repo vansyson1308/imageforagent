@@ -18,7 +18,7 @@
  * Refuses to run against the mock crew: showcase films must be real.
  */
 import "./env";
-import { mkdirSync, writeFileSync, readFileSync, existsSync, appendFileSync, readdirSync } from "node:fs";
+import { mkdirSync, writeFileSync, readFileSync, existsSync, appendFileSync, readdirSync, rmSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { StudioClient, type SseEvent } from "./client";
@@ -27,7 +27,9 @@ import sharp from "sharp";
 import { SHOWCASE_V2 } from "./showcaseStories";
 import { checklistProblems, checklistTemplate, publishProblems, voiceProblems } from "@/lib/services/director/publishGate";
 import { loadPackage } from "./pilot";
-import { appendCredits, readVoiceCredit } from "./credits";
+import { appendCredits, probe, readVoiceCredit } from "./credits";
+import { contactSheet } from "./contactSheet";
+import { tmpdir } from "node:os";
 import { filmCredits, type CreditStep } from "@/lib/services/director/filmCredits";
 import { heroProp } from "@/lib/services/director/plan";
 import type { Plan } from "@/lib/services/director/schemas";
@@ -211,7 +213,18 @@ async function writeCandidate(client: StudioClient, slug: string, pid: string, r
     });
   }
   writeFileSync(`${dir}/checklist.md`, checklistTemplate({ slug, projectId: pid, runId, commit: health.commit.slice(0, 7), hero: plan ? heroProp(plan) : null, shots }));
-  writeFileSync(`${dir}/candidate.json`, JSON.stringify({ slug, projectId: pid, runId, commit: health.commit, summary: trace.summary }, null, 2));
+  // the contact sheet: every shot on one image, for the owner's by-eye QC
+  const tiles = shots.filter((sh) => existsSync(`${dir}/${sh.image}`)).map((sh) => ({ image: `${dir}/${sh.image}`, label: `${String(sh.index).padStart(2, "0")} · ${sh.measured.split(" · ")[0]} · critic ${scores[sh.index] ?? "n/a"}/10` }));
+  writeFileSync(`${dir}/contact.jpg`, await contactSheet(tiles, { aspect: "16:9", title: `${slug} · ${plan?.title ?? ""} · run ${runId} · ${health.commit.slice(0, 7)}` }));
+  // one frame of the credit card exactly as publishing would append it (the film itself stays on the server until publish)
+  const preview = `${tmpdir()}/${slug}-${runId}-preview.mp4`;
+  writeFileSync(preview, await client.download(`/api/projects/${pid}/film.mp4?v=${runId}`));
+  const filmSec = probe(preview).dur;
+  await appendCredits(preview, "16:9", filmCredits((trace.steps ?? []) as CreditStep[], { voiceCredit: readVoiceCredit(packageDir(slug)) }));
+  const total = probe(preview).dur;
+  spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", (total - 1.5).toFixed(2), "-i", preview, "-frames:v", "1", "-vf", "scale=1280:-2", "-q:v", "3", `${dir}/credits.jpg`]);
+  rmSync(preview, { force: true });
+  writeFileSync(`${dir}/candidate.json`, JSON.stringify({ slug, projectId: pid, runId, commit: health.commit, filmSec, withCreditsSec: total, summary: trace.summary }, null, 2));
   return dir;
 }
 

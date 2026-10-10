@@ -108,3 +108,19 @@ describe("film credits", () => {
     }
   });
 });
+
+describe("contact sheet", () => {
+  it("puts every shot on one image in reading order: 4 columns at 16:9, 6 at 9:16", async () => {
+    const { contactSheet, sheetColumns, tileSize } = await import("../scripts/director/contactSheet");
+    const sharp = (await import("sharp")).default;
+    const tile = await sharp({ create: { width: 64, height: 36, channels: 3, background: "#c84" } }).png().toBuffer();
+    const tiles = Array.from({ length: 11 }, (_, i) => ({ image: tile, label: `${i + 1} · MS · critic 7/10` }));
+    expect(sheetColumns("16:9")).toBe(4);
+    expect(sheetColumns("9:16")).toBe(6);
+    const meta = await sharp(await contactSheet(tiles, { aspect: "16:9", title: "v2-kite" })).metadata();
+    const { w, h } = tileSize("16:9");
+    expect(meta.width).toBe(4 * w + 5 * 12);
+    expect(meta.height).toBe(56 + 3 * (h + 30 + 12) + 12);
+    expect(meta.format).toBe("jpeg");
+  });
+});
