@@ -131,6 +131,9 @@ describe("director loop: the fidelity check (mock crew)", () => {
   it("a revision that fixes the time of day is accepted and the film is on-plan", async () => {
     const { runId, summary } = await run(crew([DAYLIGHT, null], []));
     expect(summary.offPlan).toEqual([]);
+    // the publish gate reads these from the summary
+    expect(summary.setless).toEqual([]);
+    expect(summary.shotScores).toMatchObject({ 1: 9, 2: 9, 3: 9 });
     const up = await prisma.directorStep.findFirst({ where: { runId, shotIndex: 1, action: "uplift" } });
     expect(up?.outputSummary).toMatch(/6 → 9/);
   }, 120_000);

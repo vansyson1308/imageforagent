@@ -128,6 +128,8 @@ interface ShotStats {
   gateFailures?: number;
   /** off-plan axes (time/place/action) the FINAL version still has, per Nano's fidelity verdict */
   offPlan?: string[];
+  /** the final version places none of the shot's sets */
+  setless?: boolean;
   firstPassOk: boolean;
   repairs: number;
   before: number | null;
@@ -273,6 +275,7 @@ export async function executeRun(
       if (first.drawing.checks?.problems.length) st.gateFailures = first.drawing.checks.problems.length;
       let committed: Frame = await commitAndAnnounce(ctx, { frame, shot, index: frame.index, drawing: first.drawing, castDefs: library.defs, patterns, background, acting: { kits: library.kits, plan } }, null);
       let best: { drawing: Drawing; critique: Critique | null } = { drawing: first.drawing, critique: null };
+      st.setless = !placesASet(first.drawing.svg, plan);
       if (!options.critic) return;
       const planBrief = fidelityBrief(plan, shot, library.setTimes ?? new Map());
       const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0, context: planBrief });
@@ -334,6 +337,7 @@ export async function executeRun(
         if ((best.critique?.score ?? 0) < FLOOR_SCORE) st.belowFloor = true;
       }
       st.offPlan = fidelityFailures(best.critique);
+      st.setless = !placesASet(best.drawing.svg, plan);
       if (st.offPlan.length) await recordStep(ctx, { role: "critic", model: ctx.models.fast, action: "off-plan", shotIndex: frame.index, score: best.critique?.score ?? null, summary: `Shot ${frame.index} still off-plan after revisions (${st.offPlan.join(" + ")})`, error: best.critique?.fidelity?.note || null });
     };
     await runPool(frames, Math.max(1, Math.min(6, deps.concurrency ?? 1)), doShot);
@@ -370,6 +374,11 @@ export async function executeRun(
   if (error) emit({ type: "error", message: error });
   emit({ type: "done", status, summary });
   return summary;
+}
+
+/** The drawing places one of the film's sets (a shot without a set reads as characters on a void). */
+function placesASet(svg: string, plan: { cast: readonly { id: string; kind: string }[] }): boolean {
+  return plan.cast.some((c) => c.kind === "set" && new RegExp(`href\\s*=\\s*["']#${c.id}["']`).test(svg));
 }
 
 /**
@@ -427,6 +436,8 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     revisions: all.reduce((n, s) => n + s.revisions, 0),
     gateFailures: all.filter((s) => (s.gateFailures ?? 0) > 0).length,
     offPlan: [...stats.entries()].filter(([, s]) => s.offPlan?.length).map(([i]) => i).sort((a, b) => a - b),
+    setless: [...stats.entries()].filter(([, s]) => s.setless).map(([i]) => i).sort((a, b) => a - b),
+    shotScores: Object.fromEntries([...stats.entries()].sort(([a], [b]) => a - b).map(([i, s]) => [i, s.after])),
     belowFloor: [...stats.entries()].filter(([, s]) => s.belowFloor).map(([i]) => i).sort((a, b) => a - b),
     criticModel: criticEyes,
     lintErrors: lint.findings.filter((f) => f.severity === "error").length,

@@ -295,6 +295,11 @@ async function qualityGates(
       );
     } else facts.push(`main character size OK for a ${opts.shot.shotType} (${biggest}% ≥ ${need}%)`);
   }
+  // Every shot shows its set (owner QC 2026-10-10: no shot without a set)
+  const setsInShot = opts.shot.cast.filter((id) => opts.sets?.includes(id));
+  if (setsInShot.length && setsInShot.every((id) => withoutUses(svg, id) === svg)) {
+    problems.push(`the shot's set ${setsInShot.map((id) => `#${id}`).join(" / ")} is not placed: start the frame with <use href="#${setsInShot[0]}" x="0" y="0" width="${opts.canvas.w}" height="${opts.canvas.h}"/>`);
+  }
   // A set is a background: used full-frame, never as a small picture on top of another set
   for (const m of svg.matchAll(/<use\b([^>]*)>/g)) {
     const id = m[1].match(/href\s*=\s*["']#([^"']+)/)?.[1];
