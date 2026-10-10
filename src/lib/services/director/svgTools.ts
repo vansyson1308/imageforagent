@@ -250,6 +250,42 @@ export function reframePlacement(p: Placement, visible: { y0: number; y1: number
   return { x: Math.round(x), y: Math.round(y), w: Math.round(w), h: Math.round(h) };
 }
 
+/** Element nesting depth at `index` of a fragment (0 = top level). */
+function depthAt(svg: string, index: number): number {
+  let depth = 0;
+  for (const t of svg.slice(0, index).matchAll(/<(\/?)([a-zA-Z][\w:-]*)\b[^>]*?(\/?)>/g)) {
+    if (t[3] === "/") continue;
+    depth += t[1] ? -1 : 1;
+  }
+  return depth;
+}
+
+/**
+ * Night readability fix (owner QC 2026-10-10): a translucent full-canvas tint
+ * drawn AFTER the characters darkens them with the set. Moves every such
+ * top-level tint to just before the first character, so it darkens the set
+ * only. Null when there is nothing to move.
+ */
+export function tintUnderFigures(svg: string, characters: readonly string[], canvas: { w: number; h: number }): { svg: string; note: string } | null {
+  if (!characters.length) return null;
+  const ids = characters.map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const first = new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#(?:${ids})(?:--[a-z0-9_-]+)?["']`).exec(svg);
+  if (!first || depthAt(svg, first.index) !== 0) return null;
+  const num = (tag: string, a: string) => {
+    const v = tag.match(new RegExp(`\\s${a}\\s*=\\s*["']?(-?[\\d.]+)(%?)["']?`));
+    return v ? (v[2] ? (Number(v[1]) / 100) * (a === "height" || a === "y" ? canvas.h : canvas.w) : Number(v[1])) : a === "x" || a === "y" ? 0 : NaN;
+  };
+  const tints = [...svg.matchAll(/<rect\b[^>]*\/>/g)].filter((m) => {
+    if (m.index! < first.index || depthAt(svg, m.index!) !== 0) return false;
+    const op = Number(m[0].match(/\s(?:fill-)?opacity\s*=\s*["']?([\d.]+)/)?.[1] ?? 1);
+    return op < 1 && num(m[0], "width") >= canvas.w * 0.95 && num(m[0], "height") >= canvas.h * 0.95 && Math.abs(num(m[0], "x")) <= canvas.w * 0.05 && Math.abs(num(m[0], "y")) <= canvas.h * 0.05;
+  });
+  if (!tints.length) return null;
+  let rest = svg;
+  for (const t of [...tints].reverse()) rest = rest.slice(0, t.index!) + rest.slice(t.index! + t[0].length);
+  return { svg: rest.slice(0, first.index) + tints.map((t) => t[0]).join("") + rest.slice(first.index), note: `${tints.length} full-frame tint(s) moved under the characters (they darkened the figures too)` };
+}
+
 /** The fragment with that `<use>`'s x, y, width and height replaced. */
 export function applyPlacement(svg: string, placed: { tag: string; at: number }, to: Placement): string {
   const set = (tag: string, a: string, v: number) => tag.replace(new RegExp(`(\\s${a}\\s*=\\s*)(["']?)-?[\\d.]+\\2`), `$1"${v}"`);

@@ -11,8 +11,8 @@ import { actingLayer, attachHeldProps, speakerId } from "@/lib/services/director
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
 import { shotTime } from "@/lib/services/director/fidelity";
-import { applyPlacement, badPaints, coveredShare, minPropArea, visibleArea, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
-import { closeUpProblem, emptyFrameProblem, GATE, measureFrame, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
+import { applyPlacement, badPaints, coveredShare, minPropArea, visibleArea, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { closeUpProblem, edgeCuts, emptyFrameProblem, EXIT_ENTRY_WORDS, figureLight, GATE, measureFrame, OVER_SHOULDER, type EdgeSide, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
 
@@ -138,6 +138,16 @@ export async function validateDrawing(
   if (await isNearlyBlank(png)) throw new Error("The frame renders as one flat colour. Draw the background, the characters and the details.");
   let checks = await qualityGates(svg, png, opts);
   checks.facts.push(...held.notes);
+  // sprint c: a tint drawn over the figures and a figure cut by a side of the frame are the engine's to fix (re-measured, every gate again)
+  if (checks.cuts.length || checks.dim.length) {
+    const fixed = await edgeAndLightFixes(svg, checks, opts);
+    if (fixed) {
+      fixed.checks.facts.push(...held.notes);
+      svg = fixed.svg;
+      png = fixed.png;
+      checks = fixed.checks;
+    }
+  }
   // D45: when the only problems are the main figure's size/headroom and it is placed plainly, the engine frames it (re-measured, every gate again)
   const placed = checks.subject && checks.problems.length && checks.problems.every((p) => REFRAMABLE.some((r) => r.test(p))) ? plainPlacement(svg, checks.subject.id) : null;
   if (placed && checks.subject) {
@@ -177,9 +187,16 @@ async function qualityGates(
   svg: string,
   png: Buffer,
   opts: { castDefs: string; aspectRatio: string; shot: ShotPlan; characters?: readonly string[]; sets?: readonly string[]; props?: readonly string[]; canvas: { w: number; h: number } },
-): Promise<{ problems: string[]; facts: string[]; subject: { id: string; box: Box } | null }> {
+): Promise<{ problems: string[]; facts: string[]; subject: { id: string; box: Box } | null; cuts: { id: string; sides: EdgeSide[] }[]; dim: string[] }> {
   const problems: string[] = [];
   const facts: string[] = [];
+  const cuts: { id: string; sides: EdgeSide[] }[] = [];
+  const dim: string[] = [];
+  const lum = await meanBrightness(png);
+  const night = NIGHT_WORDS.test(`${opts.shot.scene} ${opts.shot.description}`);
+  const dark = night || lum < GATE.darkFrame;
+  const wide = minSubjectPct(opts.shot.shotType) <= 25;
+  const edgeOk = EXIT_ENTRY_WORDS.test(opts.shot.description) || OVER_SHOULDER.test(`${opts.shot.shotType} ${opts.shot.description}`);
   let subjectId: string | null = null;
   const inShot = opts.shot.cast.filter((id) => opts.characters?.includes(id));
   // Size targets are the kit-built figures (people, animals); drawn "others" (swarms, spirits) only need to be visible
@@ -208,9 +225,32 @@ async function qualityGates(
         problems.push(`#${id}'s face is covered by something drawn after it (${Math.round(cover.head * 100)}% of the head hidden): move that prop or character aside so the face shows (a held prop goes at chest or hand height, beside the head), or draw it before #${id}`);
       }
     }
+    const box = pct > 0 ? await visibleBox(png, without) : null;
+    // the figures the framing rules are about: kit people/animals (or every character in a film without kits)
+    if (box && (kitIds.has(id) || !filmHasKit)) {
+      // edge crop (owner QC 2026-10-10): no character cut by the frame unless the plan has it leave or enter
+      const sides = edgeCuts(box, wide);
+      if (sides.length && edgeOk) facts.push(`#${id} cut by the ${sides.join(" and ")} edge (the plan has an exit/entry or over-the-shoulder framing: allowed)`);
+      else if (sides.length) {
+        cuts.push({ id, sides });
+        problems.push(
+          `#${id} is cut by the ${sides.join(" and ")} edge of the frame (only ${Math.round((box.x1 - box.x0) * 100)}% of the frame wide is visible): move it inside so the whole figure shows${sides.includes("bottom") ? " (in a wide shot the feet stay in frame: make it smaller or move it up)" : ""}; a character is cut by the frame only when the shot has it leave or enter`,
+        );
+      }
+      // night readability: a figure in a dark frame keeps its own light and stands out from what is behind it
+      if (dark) {
+        const light = await figureLight(png, without);
+        if (light && (light.lum < GATE.nightFigureLum || light.contrast < GATE.nightFigureContrast)) {
+          dim.push(id);
+          problems.push(
+            `#${id} is hard to see in this dark frame (figure brightness ${light.lum}/255, contrast ${light.contrast} against what is behind it; needs ≥ ${GATE.nightFigureLum} and ≥ ${GATE.nightFigureContrast}): draw the night tint BEFORE the characters, never over them, and put a warm light (lantern glow, window light, fire) behind or beside #${id}`,
+          );
+        } else if (light) facts.push(`#${id} readable in the dark (brightness ${light.lum}/255, contrast ${light.contrast})`);
+      }
+    }
     if ((kitIds.has(id) || kitIds.size === 0) && pct > biggest) {
       biggest = pct;
-      subject = await visibleBox(png, without);
+      subject = box;
       subjectId = id;
     }
   }
@@ -262,14 +302,59 @@ async function qualityGates(
     const w = Number(m[1].match(/\bwidth\s*=\s*["']?([\d.]+)/)?.[1] ?? opts.canvas.w);
     if (w < opts.canvas.w * 0.9) problems.push(`#${id} is a set (a background), but it is placed ${Math.round(w)} wide like an object: use it full-frame <use href="#${id}" x="0" y="0" width="${opts.canvas.w}" height="${opts.canvas.h}"/> as the first element, and only one set per shot`);
   }
-  const lum = await meanBrightness(png);
-  if (NIGHT_WORDS.test(`${opts.shot.scene} ${opts.shot.description}`)) {
+  if (night) {
     if (lum > 120) problems.push(`this is a night/dark scene but the frame's mean brightness is ${lum}/255 (should be ≤ 120): add a full-canvas <rect width="${opts.canvas.w}" height="${opts.canvas.h}" fill="#0b1330" fill-opacity="0.45"/> over the set BEFORE the characters, and warm glows around the light sources`);
     else facts.push(`night lighting OK (mean brightness ${lum}/255)`);
   } else if (shotTime(opts.shot) === "day" && lum < 60) {
     problems.push(`this is a daytime scene but the frame's mean brightness is only ${lum}/255 (should be ≥ 60): remove dark overlays over the set and use a day sky`);
   }
-  return { problems, facts, subject: subject && subjectId && kitIds.has(subjectId) ? { id: subjectId, box: subject } : null };
+  return { problems, facts, subject: subject && subjectId && kitIds.has(subjectId) ? { id: subjectId, box: subject } : null, cuts, dim };
+}
+
+type GateOpts = Parameters<typeof qualityGates>[2] & { kits?: ReadonlyMap<string, KitSpec>; props?: readonly string[] };
+type Gates = Awaited<ReturnType<typeof qualityGates>>;
+
+/**
+ * Engine fixes for two measured failures (owner QC 2026-10-10): a full-frame
+ * tint drawn over dim figures moves under them, and a plainly placed figure
+ * cut by the left or right edge slides inside (4% of the frame per step, until
+ * its whole visible box is ≥ 1% from the edge). Kept only when the re-measured
+ * frame has fewer problems.
+ */
+async function edgeAndLightFixes(svg: string, checks: Gates, opts: GateOpts): Promise<{ svg: string; png: Buffer; checks: Gates } | null> {
+  let out = svg;
+  const notes: string[] = [];
+  if (checks.dim.length) {
+    const t = tintUnderFigures(out, opts.characters ?? [], opts.canvas);
+    if (t) {
+      out = t.svg;
+      notes.push(t.note);
+    }
+  }
+  for (const c of checks.cuts) {
+    if (c.sides.length !== 1 || c.sides[0] === "bottom") continue;
+    const placed = plainPlacement(out, c.id);
+    if (!placed) continue;
+    const without = await renderArtwork(opts.castDefs, withoutUses(out, c.id), opts.aspectRatio, "1K");
+    const dir = c.sides[0] === "left" ? 1 : -1;
+    for (let k = 1; k <= 6; k++) {
+      const cand = applyPlacement(out, placed, { x: Math.round(placed.x + dir * k * 0.04 * opts.canvas.w), y: placed.y, w: placed.w, h: placed.h });
+      const box = await visibleBox(await renderArtwork(opts.castDefs, cand, opts.aspectRatio, "1K"), without);
+      if (box && box.x0 >= 0.01 && box.x1 <= 0.99) {
+        out = cand;
+        notes.push(`#${c.id} moved ${k * 4}% of the frame ${dir > 0 ? "right" : "left"} (the ${c.sides[0]} edge cut it)`);
+        break;
+      }
+    }
+  }
+  if (out === svg) return null;
+  // a held prop follows its holder's hands
+  if (opts.kits && opts.props?.length) out = attachHeldProps(out, opts.shot, opts.kits, opts.props).svg;
+  const png = await renderArtwork(opts.castDefs, out, opts.aspectRatio, "1K");
+  const after = await qualityGates(out, png, opts);
+  if (after.problems.length >= checks.problems.length) return null;
+  after.facts.push(`fixed by the engine: ${notes.join("; ")} (was: ${checks.problems.filter((p) => !after.problems.includes(p)).join("; ")})`);
+  return { svg: out, png, checks: after };
 }
 
 /** Problems the engine can fix itself by moving the main figure (its size and headroom), D45. */
