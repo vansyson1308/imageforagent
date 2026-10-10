@@ -45,6 +45,9 @@ interface Story {
 const SERIES_NAME = "ひだまり人生劇場";
 
 async function main() {
+  // the stories are now owner narration packages (docs/hackathon/pilot/, one scene per shot); this script is
+  // being rewired to the fixed-narration mode (owner WAVs before the run) and is not runnable on this commit
+  if (!process.argv.includes("--legacy")) throw new Error("pilot.ts is being rewired to the owner packages in docs/hackathon/pilot/ (fixed narration, owner WAVs before the run). Not runnable on this commit.");
   const base = arg("--base", "https://studio-production-049c.up.railway.app");
   const file = "docs/hackathon/eval/pilot-prompts.json";
   if (!existsSync(file)) throw new Error(`${file} is missing: the owner's final OK on the stories creates it (BLOCKERS O4). Proposals: docs/hackathon/eval/pilot-prompts.proposed.json`);

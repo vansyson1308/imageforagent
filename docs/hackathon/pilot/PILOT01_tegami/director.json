@@ -1,0 +1,61 @@
+{
+  "slug": "PILOT01_tegami",
+  "title": "出せなかった手紙",
+  "language": "ja",
+  "style": "storybook",
+  "aspectRatio": "9:16",
+  "maxSeconds": 60,
+  "estimatedSeconds": 48,
+  "shots": [
+    {
+      "scene": "S01",
+      "setting": "喫茶ひだまりの店内、春の午後。大きな窓から温かい日差し。",
+      "lines": [
+        "S01_L01"
+      ]
+    },
+    {
+      "scene": "S02",
+      "setting": "喫茶ひだまりの入口。古い封筒を持った老紳士が入ってくる。",
+      "lines": [
+        "S02_L01"
+      ]
+    },
+    {
+      "scene": "S03",
+      "setting": "カウンターの上の、色あせた古い封筒（インサート）。",
+      "lines": [
+        "S03_L01"
+      ]
+    },
+    {
+      "scene": "S04",
+      "setting": "カウンター席。ハルさんが紅茶を淹れ、老紳士のとなりに座る。",
+      "lines": [
+        "S04_L01"
+      ]
+    },
+    {
+      "scene": "S05",
+      "setting": "カウンター席。老紳士が手紙を読み、読み終えて小さく笑う。",
+      "lines": [
+        "S05_L01",
+        "S05_L02"
+      ]
+    },
+    {
+      "scene": "S06",
+      "setting": "老紳士の顔のアップ、午後の光。",
+      "lines": [
+        "S06_L01"
+      ]
+    },
+    {
+      "scene": "S07",
+      "setting": "夕方の川沿いの道、満開の桜。花びらが封筒の上に落ちる。",
+      "lines": [
+        "S07_L01"
+      ]
+    }
+  ]
+}

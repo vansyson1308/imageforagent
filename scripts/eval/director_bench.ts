@@ -167,7 +167,9 @@ async function main() {
       ? (() => {
           const f = `${out}/eval/pilot-prompts.json`;
           if (!existsSync(f)) throw new Error(`${f} is missing: the owner supplies or approves the 3 Hidamari stories (BLOCKERS O4).`);
-          return JSON.parse(readFileSync(f, "utf8")) as Prompt[];
+          // one scene per shot (owner packages, docs/hackathon/pilot/); the story is the narration read in order
+          const pilot = JSON.parse(readFileSync(f, "utf8")) as Array<{ id: string; language: string; style?: string; scenes: Array<{ lines: Array<{ text: string }> }> }>;
+          return pilot.map((p) => ({ id: p.id, language: p.language, style: p.style, shots: p.scenes.length, story: p.scenes.flatMap((s) => s.lines.map((l) => l.text)).join("") }));
         })()
       : BENCH_PROMPTS;
   const judges = await pickJudges(mock, client);

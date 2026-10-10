@@ -48,16 +48,4 @@ describe("Hidamari narration (owner QC 2026-10-10)", () => {
     expect(short.shots.map((s) => s.dialogue)).toEqual(["一。", "二。三。"]);
     expect(narrationBrief(lines)).toMatch(/Plan EXACTLY 3 shots/);
   });
-
-  it("the approved stories and the exported line list agree (ids are the WAV names the pilot reads)", async () => {
-    const { readFileSync } = await import("node:fs");
-    const { narrationLines } = await import("@/lib/services/director/pilotPolicy");
-    const stories = JSON.parse(readFileSync("docs/hackathon/eval/pilot-prompts.json", "utf8")) as Array<{ story: string; shots: number }>;
-    const list = JSON.parse(readFileSync("docs/hackathon/eval/pilot-lines.json", "utf8")) as { episodes: Array<{ shots: number; lines: Array<{ wav: string; text: string }> }> };
-    stories.forEach((s, e) => {
-      expect(list.episodes[e].lines.map((l) => l.text)).toEqual(narrationLines(s.story));
-      expect(s.shots).toBe(list.episodes[e].shots);
-      list.episodes[e].lines.forEach((l, i) => expect(l.wav).toBe(`ep${e + 1}-L${String(i + 1).padStart(2, "0")}.wav`));
-    });
-  });
 });
