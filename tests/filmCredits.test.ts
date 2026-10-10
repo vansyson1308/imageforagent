@@ -1,0 +1,62 @@
+import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { filmCredits, NEMOTRON_LINE, TAVILY_LINE, VAIS_CREDIT, voiceCreditLine, type CreditStep } from "@/lib/services/director/filmCredits";
+import { OWNER_VOICE } from "@/lib/services/director/fixedNarration";
+import { VOICE_CREDIT } from "@/lib/services/director/ownerPackage";
+import { creditSvg, readVoiceCredit } from "../scripts/director/credits";
+
+/** The end card of every published film (owner plan 2026-10-10, item 2): built from the run's trace. */
+describe("film credits", () => {
+  const voice = (model: string): CreditStep => ({ role: "dialogue", action: "voice", model });
+  const search = (results: number, error?: string): CreditStep => ({ role: "researcher", action: "search", model: "tavily/search", output: JSON.stringify(Array.from({ length: results }, (_, i) => ({ title: `r${i}`, url: `https://example.org/${i}` }))), error });
+
+  it("every film credits Nemotron on Nebius; nothing else unless the run used it", () => {
+    expect(filmCredits([voice("piper:en_US-kristin-medium")])).toEqual([{ main: NEMOTRON_LINE }]);
+    expect(filmCredits([])).toEqual([{ main: "Made with NVIDIA Nemotron on Nebius Token Factory" }]);
+  });
+
+  it("the owner's AivisSpeech narration → the voice credit from qa/voice_credit.txt, name and detail split at （", () => {
+    const file = readFileSync("docs/hackathon/pilot/SHOWCASE_furin/qa/voice_credit.txt", "utf8");
+    expect(voiceCreditLine(file)).toBe(VOICE_CREDIT);
+    expect(readVoiceCredit("docs/hackathon/pilot/PILOT01_tegami")).toBe(VOICE_CREDIT);
+    expect(readVoiceCredit("docs/hackathon/pilot/nowhere")).toBeNull();
+    const c = filmCredits([voice(OWNER_VOICE), voice(OWNER_VOICE)], { voiceCredit: file });
+    expect(c[0]).toEqual({ main: "音声合成：AivisSpeech / morioki", detail: "（ボイス提供：もりおき、モデル制作：yuki、ACML 1.0）" });
+    expect(c).toHaveLength(2);
+    // without the file, the decided text
+    expect(filmCredits([voice(OWNER_VOICE)])[0].main).toBe("音声合成：AivisSpeech / morioki");
+  });
+
+  it("a Vietnamese Piper voice → the VAIS-1000 attribution (CC BY 4.0), once", () => {
+    const c = filmCredits([voice("piper:vi_VN-vais1000-medium"), voice("piper:vi_VN-vais1000-medium@-1")]);
+    expect(c).toEqual([VAIS_CREDIT, { main: NEMOTRON_LINE }]);
+    expect(VAIS_CREDIT.detail).toContain("CC BY 4.0");
+  });
+
+  it("Tavily only when a search returned references (not on a failed or empty search, nor a skipped one)", () => {
+    expect(filmCredits([search(3)]).map((b) => b.main)).toContain(TAVILY_LINE);
+    expect(filmCredits([search(0)]).map((b) => b.main)).not.toContain(TAVILY_LINE);
+    expect(filmCredits([search(2, "HTTP 500")]).map((b) => b.main)).not.toContain(TAVILY_LINE);
+    expect(filmCredits([{ role: "researcher", action: "search", model: "tavily", output: null }]).map((b) => b.main)).not.toContain(TAVILY_LINE);
+  });
+
+  it("the published v2 bánh chưng trace gets VAIS-1000 + Nemotron (+ Tavily if its research found references)", () => {
+    const t = JSON.parse(readFileSync("public/showcase/v2-banh-chung/trace.json", "utf8")) as { steps: CreditStep[] };
+    const mains = filmCredits(t.steps).map((b) => b.main);
+    expect(mains.slice(0, 2)).toEqual([VAIS_CREDIT.main, NEMOTRON_LINE]);
+  });
+
+  it("the card fits every line inside the box at both aspects", () => {
+    const blocks = [{ main: "音声合成：AivisSpeech / morioki", detail: "（ボイス提供：もりおき、モデル制作：yuki、ACML 1.0）" }, VAIS_CREDIT, { main: NEMOTRON_LINE }, { main: TAVILY_LINE }];
+    for (const aspect of ["16:9", "9:16"] as const) {
+      const svg = creditSvg(aspect, blocks);
+      const w = aspect === "16:9" ? 1920 : 1080;
+      const lines = [...svg.matchAll(/font-size="(\d+)"[^>]*>([^<]+)</g)].map((m) => ({ size: Number(m[1]), text: m[2] }));
+      expect(lines.map((l) => l.text)).toContain(NEMOTRON_LINE);
+      for (const l of lines) {
+        const em = [...l.text].reduce((n, ch) => n + (/[　-ヿ㐀-鿿＀-￯]/u.test(ch) ? 1 : 0.56), 0);
+        expect(em * l.size, `${aspect} ${l.text}`).toBeLessThanOrEqual(w * 0.76 + 1);
+      }
+    }
+  });
+});

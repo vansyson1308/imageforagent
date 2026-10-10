@@ -2,6 +2,9 @@ import { audioDuration, decodeWav, encodeWav, resample, toChannels, type AudioBu
 import { measureLoudness } from "@/lib/services/audio/loudness";
 import { limitPeaks } from "@/lib/services/audio/mix";
 
+/** The voice id of a line the owner recorded (AivisSpeech): traces, labels and the end credits key on it. */
+export const OWNER_VOICE = "owner-recording";
+
 /** Every owner line is levelled to this integrated loudness before the mix (owner, 2026-10-10: the lines run −15.9 to −21.6 LUFS). */
 export const LINE_LUFS = -18;
 /** Sample-peak ceiling after levelling (dBFS); a boosted line is limited, never clipped. */

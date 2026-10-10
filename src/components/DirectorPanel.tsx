@@ -166,6 +166,7 @@ export function DirectorPanel() {
                         </option>
                       ))}
                     </select>
+                    {filmLang === "ja" ? <span className="mt-1 block text-xs text-amber-300">{t(lang, "jaDemoVoice")}</span> : null}
                   </label>
                   <div>
                     <span className="font-semibold text-muted">{t(lang, "style")}</span>

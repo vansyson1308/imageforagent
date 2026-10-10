@@ -1,38 +1,81 @@
 /**
- * End credits for films narrated by the owner's AivisSpeech voice (owner
- * decision A1, 2026-10-10: credit morioki in the film, the README and
- * Devpost, although ACML 1.0 makes it optional).
+ * End credits on every published film (owner plan 2026-10-10, item 2): the
+ * voice credit when the owner's AivisSpeech narration is used (decision A1),
+ * the VAIS-1000 attribution when a Vietnamese Piper voice speaks, "Made with
+ * NVIDIA Nemotron on Nebius Token Factory", and Tavily when research found
+ * references. What goes on the card is decided by `filmCredits` (pure, tested)
+ * from the run's trace.
  *
- *   npx tsx scripts/director/credits.ts      # (re)draw public/credits/*.png (needs a Noto CJK font, once)
+ *   npx tsx scripts/director/credits.ts [outDir]   # draw sample cards (all blocks, both aspects) to look at
  *
- * The card is a committed image, drawn once with a CJK font, so the server
- * needs no font; the publish scripts (pilot.ts, showcase.ts) append it to the
- * downloaded film with ffmpeg (`appendCredits`), argv arrays, never a shell.
+ * The card is drawn by the publish scripts (pilot.ts, showcase.ts) on the
+ * machine that publishes, never on the server, and a card with Japanese
+ * refuses to draw without a Japanese font (no tofu boxes in a published film).
+ * ffmpeg appends it (`appendCredits`), argv arrays, never a shell.
  */
-import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import sharp from "sharp";
+import { STUDIO_LINE, VAIS_CREDIT, NEMOTRON_LINE, TAVILY_LINE, voiceCreditLine, type CreditBlock } from "@/lib/services/director/filmCredits";
 import { VOICE_CREDIT } from "@/lib/services/director/ownerPackage";
 
 export const CREDIT_SECONDS = 3;
-export const creditCard = (aspect: "16:9" | "9:16") => `public/credits/voice-morioki-${aspect.replace(":", "x")}.png`;
+type Aspect = "16:9" | "9:16";
 
-const ANIMATION = ["Animation: Storyboard Studio Director", "NVIDIA Nemotron on Nebius Token Factory"];
 const esc = (t: string) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const CJK = /[　-ヿ㐀-鿿＀-￯]/u;
+/** Rough rendered width in em: CJK and full-width glyphs are 1 em, the rest about 0.56 em. */
+const ems = (t: string) => [...t].reduce((n, c) => n + (CJK.test(c) ? 1 : 0.56), 0);
+/** The size that keeps a line inside `maxW` px, never above `size`. */
+const fit = (t: string, size: number, maxW: number) => Math.min(size, Math.floor(maxW / Math.max(1, ems(t))));
 
-/** The card as SVG: warm cream, the voice credit in two lines, and what made the film. */
-export function creditSvg(aspect: "16:9" | "9:16"): string {
+/** The owner's credit file for a package directory (qa/voice_credit.txt), when there is one. */
+export function readVoiceCredit(pkgDir: string): string | null {
+  const f = `${pkgDir}/qa/voice_credit.txt`;
+  return existsSync(f) ? voiceCreditLine(readFileSync(f, "utf8")) : null;
+}
+
+/** The card as SVG: warm cream, the studio name, then each block (main line + smaller detail), centred. */
+export function creditSvg(aspect: Aspect, blocks: readonly CreditBlock[]): string {
   const [w, h] = aspect === "16:9" ? [1920, 1080] : [1080, 1920];
-  const [main, detail] = VOICE_CREDIT.split("（");
-  const size = aspect === "16:9" ? 56 : 46;
-  const font = "font-family=\"Noto Sans CJK JP, Noto Sans JP, sans-serif\"";
+  const maxW = w * 0.76;
+  const base = aspect === "16:9" ? 48 : 40;
+  const font = 'font-family="Noto Sans CJK JP, Noto Sans JP, Noto Sans, DejaVu Sans, sans-serif"';
+  const rows: Array<{ text: string; size: number; fill: string; gap: number }> = [{ text: STUDIO_LINE, size: fit(STUDIO_LINE, Math.round(base * 0.6), maxW), fill: "#8a6a4a", gap: base * 0.9 }];
+  for (const b of blocks) {
+    rows.push({ text: b.main, size: fit(b.main, base, maxW), fill: "#5a3a22", gap: base * 0.55 });
+    if (b.detail) rows.push({ text: b.detail, size: fit(b.detail, Math.round(base * 0.62), maxW), fill: "#7a5233", gap: base * 0.8 });
+    else rows[rows.length - 1].gap = base * 0.8;
+  }
+  const height = rows.reduce((n, r, i) => n + r.size + (i < rows.length - 1 ? r.gap : 0), 0);
+  const pad = base * 1.1;
+  let y = h / 2 - height / 2;
+  const text = rows
+    .map((r) => {
+      y += r.size;
+      const line = `<text x="${w / 2}" y="${Math.round(y - r.size * 0.18)}" ${font} font-size="${r.size}" fill="${r.fill}" text-anchor="middle">${esc(r.text)}</text>`;
+      y += r.gap;
+      return line;
+    })
+    .join("\n");
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
 <rect width="${w}" height="${h}" fill="#f3e6cf"/>
-<rect x="${w * 0.08}" y="${h / 2 - size * 2.6}" width="${w * 0.84}" height="${size * (aspect === "16:9" ? 5.2 : 6)}" rx="24" fill="#efe2c6" stroke="#b0773a" stroke-width="3"/>
-<text x="${w / 2}" y="${h / 2 - size * 0.6}" ${font} font-size="${size}" fill="#5a3a22" text-anchor="middle">${esc(main)}</text>
-<text x="${w / 2}" y="${h / 2 + size * 0.7}" ${font} font-size="${Math.round(size * 0.62)}" fill="#7a5233" text-anchor="middle">（${esc(detail)}</text>
-${(aspect === "16:9" ? [ANIMATION.join(" · ")] : ANIMATION).map((t, i) => `<text x="${w / 2}" y="${h / 2 + size * (1.8 + i * 0.75)}" ${font} font-size="${Math.round(size * 0.5)}" fill="#8a6a4a" text-anchor="middle">${esc(t)}</text>`).join("\n")}
+<rect x="${w * 0.08}" y="${Math.round(h / 2 - height / 2 - pad)}" width="${w * 0.84}" height="${Math.round(height + pad * 2)}" rx="24" fill="#efe2c6" stroke="#b0773a" stroke-width="3"/>
+${text}
 </svg>`;
+}
+
+/** A Japanese line needs a Japanese font on this machine, or librsvg draws boxes. */
+function assertFonts(blocks: readonly CreditBlock[]): void {
+  if (!blocks.some((b) => CJK.test(b.main + (b.detail ?? "")))) return;
+  const ja = spawnSync("fc-list", [":lang=ja", "family"], { encoding: "utf8" }).stdout ?? "";
+  if (!ja.trim()) throw new Error("the end card has Japanese but this machine has no Japanese font (install fonts-noto-cjk)");
+}
+
+/** The card as a PNG file next to `film`. */
+export async function renderCard(file: string, aspect: Aspect, blocks: readonly CreditBlock[]): Promise<void> {
+  assertFonts(blocks);
+  writeFileSync(file, await sharp(Buffer.from(creditSvg(aspect, blocks))).png().toBuffer());
 }
 
 /** Duration (s) and stream facts of a film, from ffprobe. */
@@ -44,9 +87,9 @@ function probe(file: string): { w: number; h: number; fps: number; audio: boolea
 }
 
 /** Append the credit card (CREDIT_SECONDS, silent) to a film in place. */
-export function appendCredits(film: string, aspect: "16:9" | "9:16"): void {
-  const card = creditCard(aspect);
-  if (!existsSync(card)) throw new Error(`${card} is missing: run npx tsx scripts/director/credits.ts`);
+export async function appendCredits(film: string, aspect: Aspect, blocks: readonly CreditBlock[]): Promise<void> {
+  const card = `${film}.credits.png`;
+  await renderCard(card, aspect, blocks);
   const p = probe(film);
   const tmp = `${film}.credits.mp4`;
   const scale = `scale=${p.w}:${p.h}:force_original_aspect_ratio=decrease,pad=${p.w}:${p.h}:(ow-iw)/2:(oh-ih)/2:color=#f3e6cf,setsar=1,fps=${p.fps},format=yuv420p`;
@@ -58,15 +101,21 @@ export function appendCredits(film: string, aspect: "16:9" | "9:16"): void {
        "-filter_complex", `[0:v]setsar=1,fps=${p.fps},format=yuv420p[a0];[1:v]${scale}[c];[a0][c]concat=n=2:v=1:a=0[v]`,
        "-map", "[v]", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", "-movflags", "+faststart", tmp];
   const r = spawnSync("ffmpeg", args, { encoding: "utf8" });
+  rmSync(card, { force: true });
   if (r.status !== 0) throw new Error(`appending the credits failed: ${r.stderr.slice(0, 400)}`);
   renameSync(tmp, film);
 }
 
+/** Every block a card can carry: for looking at the layout. */
+export const SAMPLE_BLOCKS: CreditBlock[] = [{ main: VOICE_CREDIT.split("（")[0], detail: `（${VOICE_CREDIT.split("（")[1]}` }, VAIS_CREDIT, { main: NEMOTRON_LINE }, { main: TAVILY_LINE }];
+
 async function main() {
-  mkdirSync("public/credits", { recursive: true });
+  const out = process.argv[2] ?? "docs/hackathon/evidence/credits";
+  mkdirSync(out, { recursive: true });
   for (const a of ["16:9", "9:16"] as const) {
-    writeFileSync(creditCard(a), await sharp(Buffer.from(creditSvg(a))).png().toBuffer());
-    console.log(`wrote ${creditCard(a)}`);
+    const f = `${out}/credits-all-blocks-${a.replace(":", "x")}.png`;
+    await renderCard(f, a, SAMPLE_BLOCKS);
+    console.log(`wrote ${f}`);
   }
 }
 

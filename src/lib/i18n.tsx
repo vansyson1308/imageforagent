@@ -97,6 +97,12 @@ const DICT = {
     ja: "例: 中秋の夜、ランちゃんは星の灯籠に火をともします。風が灯籠を屋根の上へ運び…",
   },
   filmLanguage: { en: "Film language", vi: "Ngôn ngữ phim", ja: "映画の言語" },
+  // the Japanese Piper voice is CC BY-NC-SA (owner decision A1): visible before anyone presses Make
+  jaDemoVoice: {
+    en: "Japanese voice: Piper, a non-commercial demo voice (published films use a licensed voice)",
+    vi: "Giọng tiếng Nhật: Piper, giọng demo phi thương mại (phim đã phát hành dùng giọng có giấy phép)",
+    ja: "日本語の音声：Piper（非商用のデモ音声。公開作品はライセンス済みの音声を使います）",
+  },
   style: { en: "Style", vi: "Phong cách", ja: "スタイル" },
   shots: { en: "Max shots", vi: "Số shot tối đa", ja: "最大ショット数" },
   critic: { en: "Critic (scores every frame)", vi: "Critic (chấm từng khung)", ja: "批評家 (全フレームを採点)" },

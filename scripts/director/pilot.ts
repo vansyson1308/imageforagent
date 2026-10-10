@@ -31,7 +31,8 @@ import { productionSchema } from "@/lib/services/director/ownerPackage";
 import { timingsById } from "@/lib/services/director/fixedNarration";
 import { audioDuration, decodeWav } from "@/lib/services/audio/wav";
 import { symbolHash } from "@/lib/services/director/series";
-import { appendCredits } from "./credits";
+import { appendCredits, readVoiceCredit } from "./credits";
+import { filmCredits } from "@/lib/services/director/filmCredits";
 import { symbolIds } from "@/lib/services/director/svgTools";
 
 const argv = process.argv.slice(2);
@@ -157,8 +158,8 @@ async function main() {
       mkdirSync(media, { recursive: true });
       const file = path.join(media, `hidamari-${folder}${evidence.publishable ? "" : ".DRAFT-not-for-publication"}.mp4`);
       writeFileSync(file, await client.download(`/api/projects/${pid}/film.mp4?v=${runId}`));
-      // narrated by the owner's AivisSpeech voice: the end credits name it (owner decision A1)
-      if (!pkg.missing.length) appendCredits(file, pkg.meta.aspectRatio === "9:16" ? "9:16" : "16:9");
+      // every film ends with its credits: the owner's voice (decision A1), Nemotron on Nebius, Tavily when used
+      await appendCredits(file, pkg.meta.aspectRatio === "9:16" ? "9:16" : "16:9", filmCredits(trace.steps, { voiceCredit: readVoiceCredit(path.join(ROOT, folder)) }));
     }
     console.log(`${folder}: ${evidence.shots} shots · ${Number(sum.durationSec ?? 0).toFixed(1)} s · ${wallSec}s wall · $${trace.costUsd.toFixed(4)} · series ${seriesId} · ${evidence.publishable ? "publishable" : `DRAFT (${blockers.join("; ")})`}`);
   }
