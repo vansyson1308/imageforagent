@@ -147,3 +147,6 @@
 {"at":"2026-10-10T05:30:18.157Z","script":"bench-judge","label":"B:en-lighthouse#4:after","model":"moonshotai/Kimi-K3","tokensIn":1064,"tokensOut":162,"costUsd":0.0010272}
 {"at":"2026-10-10T05:30:18.158Z","script":"bench","label":"B:en-lighthouse","model":"crew v2","tokensIn":166506,"tokensOut":0,"costUsd":0.11042814}
 {"at":"2026-10-10T07:50:34.596Z","script":"hosted-run","label":"vi-banh-chung:cmv23bfnf00012aox7zsxdpri","model":"crew","tokensIn":186179,"tokensOut":0,"costUsd":0.1242768}
+{"at":"2026-10-11T00:21:00.571Z","script":"showcase","label":"v2-kite","model":"crew","tokensIn":212038,"tokensOut":298695,"costUsd":0.34409562}
+{"at":"2026-10-11T00:29:37.680Z","script":"showcase","label":"v2-banh-chung","model":"crew","tokensIn":200481,"tokensOut":303313,"costUsd":0.34030518}
+{"at":"2026-10-11T00:39:03.400Z","script":"showcase","label":"v2-furin","model":"crew","tokensIn":194722,"tokensOut":261625,"costUsd":0.31670118}

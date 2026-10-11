@@ -10,7 +10,7 @@ import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/d
 import { actingLayer, attachHeldProps, speakerId } from "@/lib/services/director/acting";
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
-import { shotTime } from "@/lib/services/director/fidelity";
+import { retimeSets, shotTime, timedSetId } from "@/lib/services/director/fidelity";
 import { applyPlacement, badPaints, coveredShare, minPropArea, visibleArea, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, edgeCuts, emptyFrameProblem, EXIT_ENTRY_WORDS, figureLight, GATE, measureFrame, OVER_SHOULDER, type EdgeSide, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
@@ -297,7 +297,7 @@ async function qualityGates(
   }
   // Every shot shows its set (owner QC 2026-10-10: no shot without a set)
   const setsInShot = opts.shot.cast.filter((id) => opts.sets?.includes(id));
-  if (setsInShot.length && setsInShot.every((id) => withoutUses(svg, id) === svg)) {
+  if (setsInShot.length && setsInShot.every((id) => [id, timedSetId(id, "day"), timedSetId(id, "night")].every((v) => withoutUses(svg, v) === svg))) {
     problems.push(`the shot's set ${setsInShot.map((id) => `#${id}`).join(" / ")} is not placed: start the frame with <use href="#${setsInShot[0]}" x="0" y="0" width="${opts.canvas.w}" height="${opts.canvas.h}"/>`);
   }
   // A set is a background: used full-frame, never as a small picture on top of another set
@@ -389,6 +389,8 @@ export async function drawShot(
     actingBrief?: string;
     /** kit specs (held props go to the hands of a character in the hold pose) */
     kits?: ReadonlyMap<string, KitSpec>;
+    /** kit sets' times of day, variants included (retimeSets) */
+    setTimes?: ReadonlyMap<string, string>;
   },
 ): Promise<DrawOutcome> {
   const system = artistSystem(ctx.canvas, ctx.options.style);
@@ -410,7 +412,8 @@ export async function drawShot(
       temperature: 0.5,
     });
     try {
-      const drawing = await validateDrawing(out.text, {
+      // each set as lit for this shot's own time of day (a day shot on a night-lit set places its day variant)
+      const drawing = await validateDrawing(opts.setTimes ? retimeSets(out.text, opts.shot, opts.setTimes) : out.text, {
         castDefs: opts.castDefs,
         symbols: opts.symbols,
         aspectRatio: opts.aspectRatio,
@@ -419,7 +422,7 @@ export async function drawShot(
         canvas: ctx.canvas,
         fps: ctx.options.fps,
         characters: opts.plan.cast.filter((c) => c.kind === "character").map((c) => c.id),
-        sets: opts.plan.cast.filter((c) => c.kind === "set").map((c) => c.id),
+        sets: opts.plan.cast.filter((c) => c.kind === "set").flatMap((c) => [c.id, ...(["day", "night"] as const).map((t) => timedSetId(c.id, t)).filter((v) => opts.setTimes?.has(v))]),
         props: opts.plan.cast.filter((c) => c.kind === "prop").map((c) => c.id),
         kits: opts.kits,
         strict: attempt < maxAttempts - 1,

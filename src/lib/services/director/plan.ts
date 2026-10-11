@@ -59,6 +59,11 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
       // keep the first plan; the film goes on
     }
   }
+  const withSets = ensureSets(best);
+  if (withSets.added.length) {
+    best = withSets.plan;
+    await recordStep(ctx, { role: "director", model: "engine", action: "plan:sets", summary: `The plan had no set: the engine added ${withSets.added.join(", ")}${withSets.dropped.length ? ` and dropped the least-used prop(s) ${withSets.dropped.map((d) => `#${d}`).join(", ")} to make room` : ""}` });
+  }
   return best;
 }
 
@@ -136,6 +141,10 @@ export function coverageProblems(plan: Plan, minShots = 0): string[] {
   if (hero && shots.length >= 5 && !shots.some((s, i) => (sizes[i] === "insert" || sizes[i] === "close") && s.cast.includes(hero))) {
     out.push(`no insert of the key prop #${hero}: make one shot an "Insert" (a close detail of #${hero} filling most of the frame, with the hands that use it)`);
   }
+  const misplaced = misplacedShots(plan);
+  if (misplaced.length) out.push(`wrong set: ${misplaced.slice(0, 4).map((m) => `shot ${m.shot} is in #${m.set} but ${m.why}`).join("; ")}${misplaced.length > 4 ? ` (+${misplaced.length - 4} more)` : ""}: give each shot the set of the place it describes (add a set for a new place)`);
+  // every shot stands in a drawn place (re-shoot 2026-10-11: a plan with 8 props and no set gave 10 set-less shots)
+  if (!plan.cast.some((c) => c.kind === "set")) out.push(`the cast has no set: add one member of kind "set" per place (at most ${MAX_SETS}) and put the right set in every shot's cast; the cast holds at most ${MAX_CAST} members, so merge or drop minor props to make room`);
   if (shots.length >= 6) {
     const sets = new Set(shots.map((s) => s.scene.trim().toLowerCase()));
     const setIds = new Set(shots.flatMap((s) => s.cast.filter((id) => plan.cast.some((c) => c.id === id && c.kind === "set"))));
@@ -178,6 +187,87 @@ export function normalizePlan(plan: Plan, maxShots: number, referenceCount = 0):
     });
   }
   return { ...plan, cast, shots };
+}
+
+const OUTDOOR_WORDS = /\b(beach|sand|sandy|shore|seafront|seaside|waterfront|street|road|field|meadow|park|forest|woods|mountain|hillside|riverbank|pier|harbou?r|market square|rooftop)\b|bãi biển|bờ biển|cát|đường phố|cánh đồng|浜|海辺|砂浜|通り|野原|山道/iu;
+const INDOOR_WORDS = /\b(kitchen|bedroom|living room|classroom|room|caf[eé]|kissaten|shop|office|hall|indoors|inside|interior|at the table)\b|nhà bếp|phòng|trong nhà|台所|部屋|室内|店内|喫茶/iu;
+const words = (t: string) => t.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 4);
+
+/**
+ * Shots whose set contradicts their own words (re-shoot 2026-10-11, kite: shots 8-11 on the
+ * beach were given #kitchen): the description names another set but not its own, or describes
+ * an outdoor place while its set is an indoor one.
+ */
+export function misplacedShots(plan: Pick<Plan, "cast" | "shots">): Array<{ shot: number; set: string; why: string }> {
+  const sets = plan.cast.filter((c) => c.kind === "set");
+  if (sets.length < 1) return [];
+  const keys = new Map(sets.map((c) => [c.id, new Set([...words(c.name), ...words(c.id.replace(/-/g, " "))])] as const));
+  const indoor = (c: (typeof sets)[number]) => INDOOR_WORDS.test(`${c.name} ${c.id.replace(/-/g, " ")}`) || (INDOOR_WORDS.test(c.look.split(/[.;]/)[0]) && !OUTDOOR_WORDS.test(c.look.split(/[.;]/)[0]));
+  const out: Array<{ shot: number; set: string; why: string }> = [];
+  plan.shots.forEach((s, i) => {
+    const own = sets.find((c) => s.cast.includes(c.id));
+    if (!own) return;
+    // the first two sentences say where the shot is ("Afternoon light, warmer. Maya and Grandfather walk along the beach…")
+    const text = s.description.split(/(?<=[.!?。])\s*/u).slice(0, 2).join(" ") || s.description;
+    const said = new Set(words(text));
+    const names = (id: string) => [...(keys.get(id) ?? [])].some((w) => said.has(w));
+    const other = sets.find((c) => c.id !== own.id && names(c.id));
+    if (other && !names(own.id)) out.push({ shot: i + 1, set: own.id, why: `it describes #${other.id}` });
+    else if (indoor(own) && OUTDOOR_WORDS.test(text) && !INDOOR_WORDS.test(text)) out.push({ shot: i + 1, set: own.id, why: `it describes an outdoor place ("${text.match(OUTDOOR_WORDS)?.[0]}")` });
+  });
+  return out;
+}
+
+/** The plan's cast limit (schemas.ts) and how many sets the engine adds when a plan has none. */
+export const MAX_CAST = 8;
+export const MAX_SETS = 2;
+
+/** The place part of a scene heading: "Chiều Ba Mươi - Sân nhà" → "Sân nhà", "夏の昼・町家" → "町家". */
+export function scenePlace(scene: string): string {
+  const parts = scene.split(/\s+[-–—|:]\s+|[・／/|]/u).map((p) => p.trim()).filter(Boolean);
+  return (parts.at(-1) ?? scene).trim();
+}
+
+/**
+ * A plan with no set gets sets from the engine: one per place its scenes name (the
+ * most-used first, at most MAX_SETS), described by the scene and its first shot, so
+ * the Cast designs them from the kit like any set. Room in the cast comes from the
+ * props seen in the fewest shots (never the key prop). Every shot then stands in the
+ * set of its place, or of the nearest shot that has one. Returns the plan unchanged
+ * when it already has a set.
+ */
+export function ensureSets(plan: Plan): { plan: Plan; added: string[]; dropped: string[] } {
+  if (plan.cast.some((c) => c.kind === "set")) return { plan, added: [], dropped: [] };
+  const byPlace = new Map<string, number[]>();
+  plan.shots.forEach((s, i) => byPlace.set(scenePlace(s.scene), [...(byPlace.get(scenePlace(s.scene)) ?? []), i]));
+  const places = [...byPlace.entries()].sort((a, b) => b[1].length - a[1].length || a[1][0] - b[1][0]).slice(0, MAX_SETS);
+  const hero = heroProp(plan);
+  const uses = (id: string) => plan.shots.filter((s) => s.cast.includes(id)).length;
+  const spare = MAX_CAST - plan.cast.length;
+  const need = Math.max(0, places.length - spare);
+  const dropped = plan.cast
+    .filter((c) => c.kind === "prop" && c.id !== hero)
+    .sort((a, b) => uses(a.id) - uses(b.id) || plan.cast.indexOf(b) - plan.cast.indexOf(a))
+    .slice(0, need)
+    .map((c) => c.id);
+  const room = Math.min(places.length, spare + dropped.length);
+  const sets = places.slice(0, room).map(([place, idx], k) => ({
+    id: `set-${k + 1}`,
+    name: place.slice(0, 60),
+    kind: "set" as const,
+    look: `The place "${place}" where these shots happen: ${plan.shots[idx[0]].description}`.slice(0, 500),
+    colors: plan.palette.slice(0, 3).length ? plan.palette.slice(0, 3) : ["#8a6a4a"],
+  }));
+  if (!sets.length) return { plan, added: [], dropped: [] };
+  const setOfPlace = new Map(places.slice(0, room).map(([place], k) => [place, sets[k].id] as const));
+  const own = plan.shots.map((s) => setOfPlace.get(scenePlace(s.scene)));
+  const withSet = own.flatMap((x, j) => (x ? [j] : []));
+  const shots = plan.shots.map((s, i) => {
+    const near = own[i] ?? own[[...withSet].sort((a, b) => Math.abs(a - i) - Math.abs(b - i) || a - b)[0]];
+    return { ...s, cast: [...s.cast.filter((id) => !dropped.includes(id)), ...(near ? [near] : [])] };
+  });
+  const cast = [...plan.cast.filter((c) => !dropped.includes(c.id)), ...sets];
+  return { plan: { ...plan, cast, shots }, added: sets.map((x) => `#${x.id} (${x.name})`), dropped };
 }
 
 /** TSV cell: tabs/newlines/quotes cannot break the row format. */

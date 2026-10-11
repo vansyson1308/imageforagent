@@ -8,7 +8,7 @@ import sharp from "sharp";
 import { badPaints, castSheetFrame, extractJsonBlock, fixPaints, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
 import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalHair, naturalSkin, normalizeDollSpec, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
 import { measureFrame, readableSetProblem } from "@/lib/services/director/frameGates";
-import { setTimeFix } from "@/lib/services/director/fidelity";
+import { setTimeFix, setTimeVariant, timedSetId } from "@/lib/services/director/fidelity";
 import { buildSet, normalizeSetSpec, setSchema, type SetSpec } from "@/lib/services/director/setKit";
 
 export type KitSpec = { readonly kind: "doll"; readonly spec: DollSpec } | { readonly kind: "critter"; readonly spec: CritterSpec };
@@ -307,12 +307,14 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
   // set dressing: drawn items join their set; an item that never passed is reported, not dropped silently
   const dressNotes: string[] = [];
   const missingDress: string[] = [];
+  const dressingOf = new Map<string, Array<{ id: string; name: string }>>();
   for (const [setId, spec] of setSpecs) {
     const items = dressMembers.filter((d) => d.id.startsWith(`${setId.slice(0, 28)}-d`));
     if (!items.length) continue;
     const usable = items.filter((d) => accepted.has(d.id) || best.has(d.id));
     for (const d of items) (usable.includes(d) ? dressNotes : missingDress).push(`${setId}: ${d.name} (#${d.id}${accepted.has(d.id) ? "" : usable.includes(d) ? ", best attempt" : ""})`);
-    const lib = splitLibrary(buildSet(setId, spec, ctx.canvas, usable.map((d) => ({ id: d.id, name: d.name }))));
+    dressingOf.set(setId, usable.map((d) => ({ id: d.id, name: d.name })));
+    const lib = splitLibrary(buildSet(setId, spec, ctx.canvas, dressingOf.get(setId)));
     const symbol = lib.symbols.get(setId);
     if (symbol) accepted.set(setId, { symbol, extras: lib.extras, attempt: accepted.get(setId)?.attempt ?? 0, problems: [] });
   }
@@ -345,6 +347,22 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
       symbols.push(c.kind === "set" ? normalizeSet(symbol, c.colors[0] ?? "#20243a") : symbol);
     }
   }
+  // a kit set whose shots span day and night gets a variant lit for the other time; each shot places the one that fits (retimeSets)
+  const setTimes = new Map([...setSpecs].map(([id, sp]) => [id, sp.time as string] as const));
+  const timed: string[] = [];
+  for (const [setId, spec] of setSpecs) {
+    const t = setTimeVariant(plan, setId, spec.time);
+    if (!t || !(accepted.has(setId) || best.has(setId))) continue;
+    const vid = timedSetId(setId, t);
+    const lib = splitLibrary(buildSet(vid, { ...spec, time: t }, ctx.canvas, dressingOf.get(setId) ?? []));
+    const symbol = lib.symbols.get(vid);
+    if (!symbol) continue;
+    for (const [k, v] of lib.extras) if (!extras.has(k)) extras.set(k, v);
+    symbols.push(symbol);
+    setTimes.set(vid, t);
+    timed.push(`#${vid}`);
+  }
+  if (timed.length) await recordStep(ctx, { role: "cast", model: "engine", action: "set-times", summary: `Sets lit for both times of day their shots need: ${timed.join(", ")}` });
   let defs = [...extras.values(), ...symbols].join("\n");
   let sheet: Buffer;
   let placeholder = placeholders.length === plan.cast.length;
@@ -373,5 +391,5 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     imagePath: sheetPath,
     error: placeholder ? "cast library invalid after all repairs" : placeholders.length ? `placeholders used for ${placeholders.join(", ")}` : null,
   });
-  return { defs, symbols: symbolIds(defs), placeholder, kits, setTimes: new Map([...setSpecs].map(([id, s]) => [id, s.time] as const)) };
+  return { defs, symbols: symbolIds(defs), placeholder, kits, setTimes };
 }
