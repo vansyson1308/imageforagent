@@ -294,7 +294,7 @@ export async function executeRun(
       const st: ShotStats = { firstPassOk: false, repairs: 0, before: null, after: null, revisions: 0 };
       shotStats.set(frame.index, st);
       emit({ type: "status", message: `Artist is drawing shot ${frame.index}/${frames.length}…` });
-      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits });
+      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits, setTimes: library.setTimes });
       st.repairs += first.attempts - 1;
       st.firstPassOk = first.drawing !== null && first.attempts === 1;
       if (!first.drawing) {
@@ -316,7 +316,7 @@ export async function executeRun(
       for (let round = 1; round <= budget.maxCriticRounds; round++) {
         const c = best.critique;
         if (!c || c.score >= options.acceptScore || c.verdict === "accept") break;
-        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits });
+        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits, setTimes: library.setTimes });
         st.repairs += Math.max(0, rev.attempts - 1);
         if (!rev.drawing) break;
         const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round, context: planBrief });
@@ -349,6 +349,7 @@ export async function executeRun(
           neighbours: neighbours(frame.index),
           actingBrief: actingBrief(shot, library.kits),
           kits: library.kits,
+          setTimes: library.setTimes,
         });
         st.repairs += Math.max(0, fresh.attempts - 1);
         if (fresh.drawing) {
@@ -410,7 +411,8 @@ export async function executeRun(
 
 /** The drawing places one of the film's sets (a shot without a set reads as characters on a void). */
 function placesASet(svg: string, plan: { cast: readonly { id: string; kind: string }[] }): boolean {
-  return plan.cast.some((c) => c.kind === "set" && new RegExp(`href\\s*=\\s*["']#${c.id}["']`).test(svg));
+  // a set's day/night variant (#id--day, #id--night) counts as the set
+  return plan.cast.some((c) => c.kind === "set" && new RegExp(`href\\s*=\\s*["']#${c.id}(--(day|night))?["']`).test(svg));
 }
 
 /**

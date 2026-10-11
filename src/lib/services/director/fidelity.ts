@@ -39,6 +39,43 @@ export function setTimeFix(plan: Pick<Plan, "shots">, setId: string, time: strin
   return null;
 }
 
+/** A set lit for `lit` is wrong for a shot planned at `want` (dusk reads as night; day and golden hours read as day). */
+function timeMismatch(want: PlannedTime, lit: string | undefined): boolean {
+  if (!want || !lit) return false;
+  return want === "night" ? lit !== "night" && lit !== "dusk" : lit === "night";
+}
+
+/** The id of a set's variant lit for another time of day ("house-veranda--day"). */
+export const timedSetId = (setId: string, time: "day" | "night") => `${setId}--${time}`;
+
+/**
+ * The other time of day a kit set needs (re-shoot 2026-10-11, fūrin: the veranda was lit for
+ * night, its three daytime shots came out at night): the time of the shots that use the set
+ * but don't match its light, or null when every shot fits.
+ */
+export function setTimeVariant(plan: Pick<Plan, "shots">, setId: string, lit: string): "day" | "night" | null {
+  const odd = plan.shots.filter((s) => s.cast.includes(setId)).map((s) => shotTime(s)).filter((t) => timeMismatch(t, lit));
+  return odd.length ? (odd[0] as "day" | "night") : null;
+}
+
+/** The set symbol a shot places: the variant lit for the shot's own time when the base set is lit for the other. */
+export function setForShot(shot: Pick<ShotPlan, "scene" | "description">, setId: string, setTimes: ReadonlyMap<string, string>): string {
+  const want = shotTime(shot);
+  if (!want || !timeMismatch(want, setTimes.get(setId))) return setId;
+  const vid = timedSetId(setId, want);
+  return setTimes.has(vid) ? vid : setId;
+}
+
+/** A drawing with each set swapped for the variant lit for this shot's time (exact `#id` references only). */
+export function retimeSets(svg: string, shot: Pick<ShotPlan, "scene" | "description" | "cast">, setTimes: ReadonlyMap<string, string>): string {
+  let out = svg;
+  for (const id of shot.cast) {
+    const use = setForShot(shot, id, setTimes);
+    if (use !== id) out = out.replace(new RegExp(`((?:xlink:)?href\\s*=\\s*["'])#${id.replace(/[-]/g, "\\-")}(["'])`, "g"), `$1#${use}$2`);
+  }
+  return out;
+}
+
 export const FIDELITY_AXES = ["time", "place", "action"] as const;
 
 /** The axes Nano judged "wrong" (time of day, place, key action). */
@@ -62,7 +99,7 @@ export function enforceFidelity(c: Critique): Critique {
 /** Story context and measured facts the fidelity verdict is judged against. */
 export function fidelityBrief(plan: Pick<Plan, "title" | "logline">, shot: ShotPlan, setTimes: ReadonlyMap<string, string>): string {
   const planned = shotTime(shot);
-  const sets = shot.cast.filter((id) => setTimes.has(id)).map((id) => `#${id} is lit for ${setTimes.get(id)}`);
+  const sets = shot.cast.filter((id) => setTimes.has(id)).map((id) => `#${id} is lit for ${setTimes.get(setForShot(shot, id, setTimes))}`);
   return [
     `Story: "${plan.title}" — ${plan.logline}`,
     `Scene: ${shot.scene}.`,
