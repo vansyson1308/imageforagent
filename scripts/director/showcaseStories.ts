@@ -11,11 +11,26 @@ export interface ShowcaseStory {
   readonly language: "en" | "vi" | "ja";
   readonly style: string;
   readonly lines: readonly string[];
+  /**
+   * The film's places, named up front like the Hidamari series brief (re-shoot 2026-10-11:
+   * left to itself, each run invented different sets, e.g. no festival street for fūrin's
+   * three festival shots). Each place names the kit place it is drawn from and the times it is seen at.
+   */
+  readonly sets: readonly string[];
+}
+
+/** The SETS brief sent before the story: one set member per place, the right one in every shot. */
+export function setsBrief(s: Pick<ShowcaseStory, "sets">): string {
+  return [`SETS (make each one a cast member of kind "set" and give every shot the set of the place it shows):`, ...s.sets.map((x, i) => `${i + 1}. ${x}`)].join("\n");
 }
 
 export const SHOWCASE_V2: readonly ShowcaseStory[] = [
   {
     slug: "v2-kite",
+    sets: [
+      "Brighton seafront: the pier and its shingle beach by the sea (kit place: beach); morning wind, afternoon, golden dusk",
+      "Grandfather's kitchen with a wooden table and a window (kit place: kitchen); morning light",
+    ],
     language: "en",
     style: "storybook",
     lines: [
@@ -34,6 +49,11 @@ export const SHOWCASE_V2: readonly ShowcaseStory[] = [
   },
   {
     slug: "v2-banh-chung",
+    sets: [
+      "The courtyard of a Hanoi tube house: a tiled yard with low stools, a charcoal stove and a big pot (kit place: garden); afternoon, night, dawn",
+      "The family's front room with the ancestor altar (kit place: living-room); dawn",
+      "Hanoi's old quarter rooftops under New Year's Eve fireworks (kit place: village); midnight",
+    ],
     language: "vi",
     style: "storybook",
     lines: [
@@ -52,6 +72,11 @@ export const SHOWCASE_V2: readonly ShowcaseStory[] = [
   },
   {
     slug: "v2-furin",
+    sets: [
+      "The engawa veranda of grandma's Kyoto machiya with shoji and a small garden (kit place: veranda); summer day and night",
+      "The Gion festival street lined with lantern-lit stalls (kit place: market); dusk",
+      "Grandma's tatami room with a low table (kit place: tea-room); night",
+    ],
     language: "ja",
     style: "storybook",
     lines: [
