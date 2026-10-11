@@ -24,7 +24,7 @@ import path from "node:path";
 import { StudioClient, type SseEvent } from "./client";
 import { appendLedger, assertSpendUnder } from "./ledger";
 import sharp from "sharp";
-import { SHOWCASE_V2 } from "./showcaseStories";
+import { SHOWCASE_V2, setsBrief } from "./showcaseStories";
 import { checklistProblems, checklistTemplate, publishProblems, voiceProblems } from "@/lib/services/director/publishGate";
 import { loadPackage } from "./pilot";
 import { appendCredits, probe, readVoiceCredit } from "./credits";
@@ -63,7 +63,7 @@ export const SHOWCASE_STORIES = [
  * told at film length (11 narrated lines, 45–90 s; owner QC 2026-10-10).
  * Published as `v2-<key>` with version "v2"; the v1 films stay.
  */
-export const SHOWCASE_STORIES_V2 = SHOWCASE_V2.map((s) => ({ slug: s.slug, language: s.language, style: s.style, story: s.lines.join(s.language === "ja" ? "" : " "), narration: s.lines }));
+export const SHOWCASE_STORIES_V2 = SHOWCASE_V2.map((s) => ({ slug: s.slug, language: s.language, style: s.style, story: s.lines.join(s.language === "ja" ? "" : " "), brief: setsBrief(s), narration: s.lines }));
 
 const argv = process.argv.slice(2);
 const arg = (k: string, d = "") => {
@@ -129,7 +129,8 @@ async function main() {
         pid = await client.createProject(`Showcase · ${s.slug}`);
         console.log(`▶ ${s.slug} (${s.language}) project ${pid}${attempt ? " (retry)" : ""}`);
         const v2 = "narration" in s ? { ...narrationOf(s.slug, s.narration), research: arg("--research", "on") === "on" } : { maxShots, research: false };
-        runId = await client.direct(pid, { story: s.story, language: s.language, style: s.style, maxUsd, critic: true, ...v2 }, (e) => {
+        // the v2 tellings send their SETS brief before the story (the published story stays the lines alone)
+        runId = await client.direct(pid, { story: "brief" in s ? `${s.brief}\n\n${s.story}` : s.story, language: s.language, style: s.style, maxUsd, critic: true, ...v2 }, (e) => {
           appendFileSync(log, JSON.stringify(e) + "\n");
           if (e.type === "step") {
             const st = e.step as { role: string; action: string; shotIndex: number | null; score: number | null; costUsd: number; error: string | null };

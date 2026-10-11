@@ -4,6 +4,7 @@ import { coverageProblems, ensureSets, heroProp, MAX_CAST, misplacedShots, scene
 import { retimeSets, setForShot, setTimeVariant, shotTime, timedSetId } from "@/lib/services/director/fidelity";
 import { planSchema, type Plan } from "@/lib/services/director/schemas";
 import { buildSet, setSchema } from "@/lib/services/director/setKit";
+import { buildDoll, dollSchema, normalizeDollSpec } from "@/lib/services/director/dollKit";
 import { sanitizeSvg } from "@/lib/services/svgRenderer";
 
 /** The plans of the 2026-10-11 re-shoot runs (docs/hackathon/evidence/reshoot-2026-10-11/). */
@@ -109,5 +110,21 @@ describe("a shot given the wrong set goes back to Ultra (re-shoot 2026-10-11, ki
       const plan = typeof t.bible === "string" ? (JSON.parse(t.bible) as Plan) : t.bible;
       expect(misplacedShots(plan), f).toEqual([]);
     }
+  });
+});
+
+describe("a doll spec with colour names or missing colours still builds from the kit (re-shoot 2026-10-11, fūrin run 3: both dolls rejected → freehand blobs)", () => {
+  it("maps names and #rgb to #rrggbb, drops an unusable optional colour, fills a missing accent from the top", () => {
+    const r = normalizeDollSpec({ age: "child", skin: "#f1c9a5", hairStyle: "bob", hairColor: "black", top: "yukata", topColor: "#A9C8E6", innerColor: "white", apronColor: "none", shoeColor: "#333" });
+    const ok = dollSchema.safeParse(r.spec);
+    expect(ok.success).toBe(true);
+    expect(r.spec).toMatchObject({ hairColor: "#2b2530", innerColor: "#f6f2ea", shoeColor: "#333333", accent: "#a9c8e6", top: "kimono" });
+    expect(r.spec).not.toHaveProperty("apronColor");
+    expect(r.notes).toContain('apronColor "none" is not a colour: kit default');
+    expect(r.notes.some((n) => n.startsWith('topColor'))).toBe(false); // a change of case is not a change
+    if (ok.success) expect(buildDoll("yui", ok.data)).toContain('id="yui"');
+  });
+  it("still rejects a spec whose required colours are unusable (the Cast is asked again)", () => {
+    expect(dollSchema.safeParse(normalizeDollSpec({ age: "adult", skin: "#f1c9a5", hairStyle: "bob", hairColor: "#222222", top: "shirt", topColor: "sparkly" }).spec).success).toBe(false);
   });
 });

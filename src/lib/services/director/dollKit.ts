@@ -54,6 +54,23 @@ const DOLL_ALIASES: Record<string, Record<string, string>> = {
 };
 const DOLL_ACCESSORY_ALIASES: Record<string, (typeof ACCESSORIES)[number]> = { "tortoiseshell-glasses": "round-glasses", "round-spectacles": "round-glasses", "reading-glasses": "round-glasses", spectacles: "glasses", "non-la": "conical-hat", "nón-lá": "conical-hat", "conical": "conical-hat", cap: "hat", beanie: "hat", ribbon: "bow", "hair-bow": "bow", backpack: "bag", purse: "bag", basket: "bag", moustache: "mustache", bracelet: "bangle", walking: "cane", stick: "cane", "walking-stick": "cane", pinafore: "apron" };
 
+const COLOR_FIELDS = ["skin", "hairColor", "topColor", "bottomColor", "accent", "innerColor", "apronColor", "shoeColor"] as const;
+const OPTIONAL_COLORS: readonly string[] = ["bottomColor", "innerColor", "apronColor", "shoeColor"];
+/** Colour names a Cast reply uses instead of hex. */
+const COLOR_NAMES: Record<string, string> = {
+  white: "#f6f2ea", "off-white": "#f2ede3", ivory: "#f4efe1", cream: "#f1e6cc", beige: "#d9c6a3", tan: "#c8a27a", brown: "#7a5233", "dark-brown": "#4e3424", black: "#2b2530",
+  grey: "#8a8a8a", gray: "#8a8a8a", silver: "#c7c9cc", navy: "#2b3a5c", "navy-blue": "#2b3a5c", blue: "#4a78b5", "light-blue": "#a9c8e6", red: "#b94a3c", maroon: "#7a2e2e",
+  pink: "#e6a4b4", orange: "#e08a3c", yellow: "#e8c552", mustard: "#c9a23c", gold: "#c9a23c", green: "#5f8a52", sage: "#9aae8c", olive: "#7a7a3c", teal: "#3c8a85", purple: "#7a5a9a",
+};
+/** A colour as #rrggbb (from #rgb, #rrggbb or a common name), or null. */
+function toHex(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const t = v.trim().toLowerCase();
+  if (/^#[0-9a-f]{6}$/.test(t)) return t;
+  if (/^#[0-9a-f]{3}$/.test(t)) return `#${[...t.slice(1)].map((c) => c + c).join("")}`;
+  return COLOR_NAMES[t.replace(/[\s_]+/g, "-")] ?? null;
+}
+
 /**
  * A Cast doll spec, made usable (like sets, D44): an option outside the kit's
  * list is mapped to the kit's word for it, and accessories the kit has no word
@@ -73,6 +90,22 @@ export function normalizeDollSpec(raw: unknown): { spec: unknown; notes: string[
       if (mapped !== v) notes.push(`${field} "${spec[field]}" → "${mapped}"`);
       spec[field] = mapped;
     }
+  }
+  // colours (re-shoot 2026-10-11, fūrin run 3: "innerColor"/"apronColor" given as names or left out rejected both dolls → freehand blobs)
+  for (const field of COLOR_FIELDS) {
+    if (!(field in spec)) continue;
+    const c = toHex(spec[field]);
+    if (c) {
+      if (c !== String(spec[field]).trim().toLowerCase()) notes.push(`${field} "${String(spec[field])}" → ${c}`);
+      spec[field] = c;
+    } else if (OPTIONAL_COLORS.includes(field)) {
+      notes.push(`${field} "${String(spec[field])}" is not a colour: kit default`);
+      delete spec[field];
+    }
+  }
+  if (!toHex(spec.accent) && toHex(spec.topColor)) {
+    notes.push(`accent missing → the top's colour`);
+    spec.accent = toHex(spec.topColor);
   }
   if (Array.isArray(spec.accessories)) {
     const kept: string[] = [];
