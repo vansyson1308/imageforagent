@@ -85,6 +85,14 @@ export function unlockMatches(given: string, cfg: DemoConfig): boolean {
   return judge || operator;
 }
 
+/** The header automation sends with the operator passcode (constant-time compare; never logged). */
+export const OPERATOR_HEADER = "x-operator-passcode";
+
+/** True when the request carries the operator passcode (operator runs: showcase, pilot, bench). */
+export function isOperatorRequest(req: Request, cfg: DemoConfig = demoConfig()): boolean {
+  return !!cfg.operatorPasscode && passcodeMatches(req.headers.get(OPERATOR_HEADER) ?? "", cfg.operatorPasscode);
+}
+
 export function readCookie(header: string | null, name: string): string | null {
   if (!header) return null;
   for (const part of header.split(";")) {

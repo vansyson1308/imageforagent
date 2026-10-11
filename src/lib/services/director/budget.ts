@@ -41,6 +41,22 @@ export function budgetFromEnv(env: NodeJS.ProcessEnv = process.env): DirectorBud
   };
 }
 
+/**
+ * Operator runs (showcase, pilot, bench: requests carrying the operator passcode) may use a
+ * higher per-run token cap, DIRECTOR_MAX_TOKENS_PER_RUN_OPERATOR (owner decision O10,
+ * 2026-10-11: an 11-shot narrated film needs ~550-650k). Public and judge runs keep
+ * DIRECTOR_MAX_TOKENS_PER_RUN. The operator cap never lowers the public one.
+ */
+export function operatorTokenCap(env: NodeJS.ProcessEnv = process.env): number {
+  const pub = budgetFromEnv(env).maxTokens;
+  return Math.max(pub, Math.floor(num(env.DIRECTOR_MAX_TOKENS_PER_RUN_OPERATOR, pub)));
+}
+
+/** The ceiling of one run: the operator's token cap for an operator run, else the public ceiling unchanged. */
+export function runCeiling(ceiling: DirectorBudget, operator: boolean, env: NodeJS.ProcessEnv = process.env): DirectorBudget {
+  return operator ? { ...ceiling, maxTokens: Math.max(ceiling.maxTokens, operatorTokenCap(env)) } : ceiling;
+}
+
 export function clampBudget(ceiling: DirectorBudget, requested: Partial<DirectorBudget> = {}): DirectorBudget {
   const pick = (k: keyof DirectorBudget) => Math.min(ceiling[k], requested[k] ?? ceiling[k]);
   return {

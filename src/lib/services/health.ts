@@ -9,6 +9,7 @@ import { demoConfig } from "@/lib/services/demoMode";
 import { tokensToday } from "@/lib/services/demoGuard";
 import { ttsEngines } from "@/lib/services/tts";
 import { demoFloorPolicy } from "@/lib/services/director/demoPolicy";
+import { budgetFromEnv, operatorTokenCap } from "@/lib/services/director/budget";
 
 /**
  * Public health report (`GET /api/health`) for judges, the daily GitHub
@@ -36,6 +37,8 @@ export interface HealthReport {
   readonly checks: Record<string, HealthCheck>;
   readonly demo: { enabled: boolean; dailyTokenBudget: number; tokensToday: number; maxConcurrentRuns: number; retentionHours: number } | null;
   readonly catalog: { models: string[]; crew: Record<string, boolean> } | null;
+  /** Per-run token caps: public/judge runs and operator runs (showcase, pilot, bench; O10). */
+  readonly runCaps: { publicTokensPerRun: number; operatorTokensPerRun: number };
 }
 
 export interface HealthDeps {
@@ -118,6 +121,10 @@ export async function runHealthChecks(deps: HealthDeps): Promise<HealthReport> {
     });
   }
 
+  // per-run token caps (O10): public/judge runs and operator runs (showcase, pilot, bench)
+  const caps = { publicTokensPerRun: budgetFromEnv(env).maxTokens, operatorTokensPerRun: operatorTokenCap(env) };
+  checks.runCaps = { status: "ok", detail: `per-run token cap: public ${caps.publicTokensPerRun.toLocaleString("en")} · operator ${caps.operatorTokensPerRun.toLocaleString("en")}` };
+
   checks.tavily = env.TAVILY_API_KEY ? { status: "ok", detail: "key present (no call made)" } : { status: "off", detail: "no TAVILY_API_KEY: research is not enabled on this server" };
 
   const cfg = demoConfig(env);
@@ -149,6 +156,7 @@ export async function runHealthChecks(deps: HealthDeps): Promise<HealthReport> {
     checks,
     demo,
     catalog,
+    runCaps: caps,
   };
 }
 
