@@ -13,16 +13,20 @@ import type { Critique, Plan, ShotPlan } from "@/lib/services/director/schemas";
 
 export const NIGHT_WORDS = /\b(night|midnight|moonlit|moonlight|at dusk|evening|dark)\b|đêm|tối|trăng|夜|晩|月明|闇/i;
 /** Daytime words. Vietnamese "sáng" alone also means "bright", so only the unambiguous phrases count. */
-export const DAY_WORDS = /\b(morning|noon|midday|afternoon|sunny|sunlit|daylight|daytime|sunrise)\b|buổi sáng|sáng sớm|ban ngày|buổi trưa|buổi chiều|朝|昼|午後|日中/i;
+export const DAY_WORDS = /\b(day|morning|noon|midday|afternoon|sunny|sunlit|sunlight|sunshine|daylight|daytime|sunrise)\b|buổi sáng|sáng sớm|ban ngày|buổi trưa|buổi chiều|朝|昼|午後|日中/i;
+/** The plan's own mood word when it names a time (re-shoot 2026-10-11, fūrin run 4: "Summer day, bright sunlight…" with mood "day"). */
+const MOOD_TIME: Record<string, "day" | "night"> = { day: "day", daytime: "day", morning: "day", noon: "day", afternoon: "day", sunny: "day", night: "night", midnight: "night", evening: "night", nighttime: "night" };
 
 export type PlannedTime = "night" | "day" | null;
 
 /** The time of day a shot's own words ask for (null = not stated, or both stated). */
-export function shotTime(shot: Pick<ShotPlan, "scene" | "description">): PlannedTime {
+export function shotTime(shot: Pick<ShotPlan, "scene" | "description"> & { readonly mood?: string | null }): PlannedTime {
   const text = `${shot.scene} ${shot.description}`;
   const night = NIGHT_WORDS.test(text);
   const day = DAY_WORDS.test(text);
-  return night === day ? null : night ? "night" : "day";
+  if (night !== day) return night ? "night" : "day";
+  // the words don't decide: the plan's mood, when it names a time
+  return MOOD_TIME[(shot.mood ?? "").trim().toLowerCase()] ?? null;
 }
 
 /**

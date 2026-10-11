@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { coverageProblems, ensureSets, heroProp, MAX_CAST, misplacedShots, scenePlace } from "@/lib/services/director/plan";
-import { retimeSets, setForShot, setTimeVariant, shotTime, timedSetId } from "@/lib/services/director/fidelity";
+import { retimeSets, setForShot, setTimeFix, setTimeVariant, shotTime, timedSetId } from "@/lib/services/director/fidelity";
 import { planSchema, type Plan } from "@/lib/services/director/schemas";
 import { buildSet, setSchema } from "@/lib/services/director/setKit";
 import { buildDoll, dollSchema, normalizeDollSpec } from "@/lib/services/director/dollKit";
@@ -126,5 +126,29 @@ describe("a doll spec with colour names or missing colours still builds from the
   });
   it("still rejects a spec whose required colours are unusable (the Cast is asked again)", () => {
     expect(dollSchema.safeParse(normalizeDollSpec({ age: "adult", skin: "#f1c9a5", hairStyle: "bob", hairColor: "#222222", top: "shirt", topColor: "sparkly" }).spec).success).toBe(false);
+  });
+});
+
+describe("\"Summer day, bright sunlight\" is a daytime shot (re-shoot 2026-10-11, fūrin run 4: no day variant was built)", () => {
+  it("reads day/sunlight/sunshine, and falls back to the plan's mood", () => {
+    expect(shotTime({ scene: "Arrival", description: "Summer day, bright sunlight on the engawa veranda." })).toBe("day");
+    expect(shotTime({ scene: "Arrival", description: "Yui walks onto the veranda.", mood: "night" })).toBe("night");
+    expect(shotTime({ scene: "Arrival", description: "Yui walks onto the veranda.", mood: "playful" })).toBeNull();
+    // the words win over the mood
+    expect(shotTime({ scene: "夜", description: "Night on the porch.", mood: "day" })).toBe("night");
+  });
+
+  it("every veranda shot of run 4's plan lands on a set lit for its own time", () => {
+    const plan = planOf("furin-run4");
+    const id = "engawa-veranda";
+    const lit = setTimeFix(plan, id, "day")?.time ?? "day";
+    const other = setTimeVariant(plan, id, lit);
+    expect(other).not.toBeNull();
+    const times = new Map<string, string>([[id, lit], [timedSetId(id, other!), other!]]);
+    for (const s of plan.shots.filter((x) => x.cast.includes(id))) {
+      const want = shotTime(s);
+      if (want) expect(times.get(setForShot(s, id, times)), s.description.slice(0, 40)).toBe(want);
+    }
+    expect(plan.shots.slice(0, 3).every((s) => shotTime(s) === "day")).toBe(true);
   });
 });
