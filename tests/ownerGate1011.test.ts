@@ -7,7 +7,7 @@ import { buildDoll, dollSchema } from "@/lib/services/director/dollKit";
 import { actionNote, enforceFidelity, offPlanAxes } from "@/lib/services/director/fidelity";
 import { castUser, criticSystem } from "@/lib/services/director/prompts";
 import { planSchema, type Critique } from "@/lib/services/director/schemas";
-import { INSERT_PROP_AREA } from "@/lib/services/director/svgTools";
+import { INSERT_PROP_AREA, INSERT_PROP_MIN_AREA, INSERT_PROP_SPAN_H, INSERT_PROP_SPAN_W } from "@/lib/services/director/svgTools";
 
 /** Owner decisions 2026-10-11: the revised gate, the camera-move rule, readable hero props, a readable kneel. */
 const critique = (fidelity: Critique["fidelity"], score = 8): Critique => ({ score, verdict: "accept", issues: [], fixes: [], fidelity });
@@ -68,21 +68,37 @@ describe("hero props read (owner 2026-10-11: run 4's fūrin was a plain orange b
   const opts = (shotType: string, cast: string[]) => ({ castDefs: defs, symbols: ["hero", "home", "kid", "kite"], aspectRatio: "16:9", shot: { ...base.shots[0], shotType, cast, mode: "still" as const }, index: 1, canvas, fps: 12, characters: ["kid"], sets: ["home"], props: ["kite"], kits });
   const bg = '<use href="#home" x="0" y="0" width="1920" height="1080"/>';
 
-  it("an insert fills ≥ 25% of the frame with its object; a close-up with nobody in it too", async () => {
-    expect(INSERT_PROP_AREA).toBe(0.25);
-    // 360×360 kite: big for a medium shot, too small for an insert
+  // a fūrin: hook + string, a glass dome, a clapper, a long paper strip (slender: little area even when tall)
+  const FURIN = `<symbol id="furin" viewBox="0 0 300 700"><rect x="146" y="0" width="8" height="120" fill="#5a4630"/><path d="M60 230 Q60 110 150 110 Q240 110 240 230 Z" fill="#7fc4d8"/><path d="M80 220 Q85 140 150 128" stroke="#e8f6fb" stroke-width="10" fill="none"/><rect x="60" y="222" width="180" height="12" fill="#3f7f95"/><rect x="147" y="234" width="6" height="140" fill="#5a4630"/><circle cx="150" cy="250" r="12" fill="#c9a23c"/><rect x="105" y="370" width="90" height="320" rx="4" fill="#f2e3b0"/><path d="M120 420 L180 420 M120 470 L170 470 M120 520 L176 520" stroke="#3a2a1a" stroke-width="5"/></symbol>`;
+  const fopts = (shotType: string, cast: string[]) => ({ ...opts(shotType, cast), castDefs: defs + FURIN, symbols: ["hero", "home", "kid", "kite", "furin"], props: ["kite", "furin"] });
+  const furin = (h: number) => `<use href="#furin" x="${Math.round(960 - (h * 300) / 1400)}" y="${Math.round(540 - h / 2)}" width="${Math.round((h * 300) / 700)}" height="${h}"/>`;
+
+  it("QC of #30: a slender hanging prop reads when it spans the frame (700 px tall passes, 500 px fails), not only at 25% area", async () => {
+    expect([INSERT_PROP_AREA, INSERT_PROP_SPAN_H, INSERT_PROP_SPAN_W, INSERT_PROP_MIN_AREA]).toEqual([0.25, 0.6, 0.45, 0.02]);
+    const tall = await validateDrawing(`\`\`\`svg\n${bg}${furin(700)}\n\`\`\``, fopts("Close-up", ["furin", "home"]));
+    expect(tall.checks?.problems).toEqual([]);
+    expect(tall.checks?.facts.join(" ")).toMatch(/#furin carries this "Close-up": 6\d% of the frame height/);
+    await expect(validateDrawing(`\`\`\`svg\n${bg}${furin(500)}\n\`\`\``, fopts("Close-up", ["furin", "home"]))).rejects.toThrow(/is about #furin, but it spans only 4\d% of the frame height .*make it span about 65% of the frame height \(height ≈ 702\), centred, not cropped by any frame edge/);
+  });
+
+  it("a compact object passes on area alone (≥ 25%), and too small fails, in an insert", async () => {
     const small = `\`\`\`svg\n${bg}<use href="#kite" x="780" y="360" width="360" height="360"/>\n\`\`\``;
-    await expect(validateDrawing(small, opts("Insert", ["kite", "home"]))).rejects.toThrow(/needs at least 25\.00%/);
-    await expect(validateDrawing(small, opts("Close-up", ["kite", "home"]))).rejects.toThrow(/needs at least 25\.00%/);
+    await expect(validateDrawing(small, opts("Insert", ["kite", "home"]))).rejects.toThrow(/is about #kite, but it spans only/);
     const big = `\`\`\`svg\n${bg}<use href="#kite" x="360" y="-180" width="1200" height="1200"/>\n\`\`\``;
-    const ok = await validateDrawing(big, opts("Insert", ["kite", "home"]));
-    expect(ok.checks?.problems).toEqual([]);
+    expect((await validateDrawing(big, opts("Insert", ["kite", "home"]))).checks?.problems).toEqual([]);
+  });
+
+  it("the other props of an about-the-object shot still need medium-shot size (≥ 0.40%)", async () => {
+    const tinyKite = '<use href="#kite" x="100" y="100" width="40" height="40"/>';
+    await expect(validateDrawing(`\`\`\`svg\n${bg}${furin(700)}${tinyKite}\n\`\`\``, fopts("Insert", ["furin", "kite", "home"]))).rejects.toThrow(/#kite \(a key prop\) shows only [\d.]+% of the frame; it needs at least 0\.40% beside #furin/);
+    const okKite = '<use href="#kite" x="100" y="100" width="220" height="220"/>';
+    expect((await validateDrawing(`\`\`\`svg\n${bg}${furin(700)}${okKite}\n\`\`\``, fopts("Insert", ["furin", "kite", "home"]))).checks?.problems).toEqual([]);
   });
 
   it("a close-up of a character holding the prop keeps the close-up prop size (not 25%)", async () => {
     const svg = `\`\`\`svg\n${bg}<use href="#kid" x="560" y="40" width="800" height="1200"/><use href="#kite" x="1300" y="560" width="300" height="300"/>\n\`\`\``;
     const d = await validateDrawing(svg, { ...opts("Close-up", ["kid", "kite", "home"]), strict: false });
-    expect(d.checks?.problems.join()).not.toMatch(/25\.00%/);
+    expect(d.checks?.problems.join()).not.toMatch(/is about #kite/);
   });
 });
 

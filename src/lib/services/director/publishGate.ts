@@ -116,8 +116,9 @@ export function checklistTemplate(opts: { slug: string; projectId: string; runId
 
 /** True when the checklist carries the owner's and QC's by-eye approval past the critic's scores. */
 export function criticOverride(md: string): boolean {
-  const line = md.match(/^Critic override: (.+)$/m)?.[1] ?? "";
-  return /^APPROVED\b/.test(line) && /\bowner\b/i.test(line) && /\bQC\b/.test(line);
+  // real names for both (QC of #30): the template's "<name>" placeholders are refused
+  const line = md.match(/^Critic override: (.+)$/m)?.[1]?.trim() ?? "";
+  return /^APPROVED by owner (?!<)\S.* and QC (?!<)\S/.test(line);
 }
 
 /** What keeps a filled checklist from passing (empty = publish). */

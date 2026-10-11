@@ -8,5 +8,6 @@ How it will be reported:
 - **Headline: the v1 judge alone (`google/gemma-3-27b-it`)**, compared with v1's 5.49 like for like. The second judge (`moonshotai/Kimi-K3`, probed live, D49) is reported in its own column and its own paired table.
 - Every row records the server commit; the bench refuses to start on, or continue after a change to, any other commit (`--eval-commit`).
 - Critic uplift is judged by both judges on pre- vs post-revision snapshots of the same shot.
+- **Off-plan counts changed on 2026-10-11 (D69):** a run summary's `offPlan` now counts only shots with a wrong **time of day or place**; the critic's "action" verdict is a by-eye checklist note (`actionNotes`), no longer an off-plan shot, and no longer caps a score. Off-plan numbers from the 10-14 bench are therefore **not comparable** with earlier off-plan counts (v1, the 10-10 runs, re-shoot day 1 on 10-11) unless those are recounted on time/place only; any table that puts them side by side says so.
 
 Earlier partial runs are kept as evidence only, not results: [bench-v2-prefix-2026-10-10.jsonl](evidence/bench-v2-prefix-2026-10-10.jsonl) (before D50) and [bench-v2-day1-54403f5.jsonl](evidence/bench-v2-day1-54403f5.jsonl) (one prompt, before the ambient-key fix; stopped at the daily budget).

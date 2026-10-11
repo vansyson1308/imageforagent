@@ -350,13 +350,23 @@ export async function visibleArea(withUse: Buffer, without: Buffer): Promise<num
 }
 
 /**
+ * An insert (or a close-up with nobody in it) is about its object (owner 2026-10-11, QC of #30).
+ * Slender objects (a fūrin: a dome, a string, a paper strip) cover little area even at full
+ * height, so the object reads when it SPANS the frame: ≥ 60% of its height or ≥ 45% of its
+ * width, with at least 2% of the frame covered; or when it covers 25% of the frame outright.
+ */
+export const INSERT_PROP_AREA = 0.25;
+export const INSERT_PROP_SPAN_H = 0.6;
+export const INSERT_PROP_SPAN_W = 0.45;
+export const INSERT_PROP_MIN_AREA = 0.02;
+/** The height the Artist is told to give the object of an insert (share of the frame). */
+export const INSERT_PROP_TARGET_H = 0.65;
+
+/**
  * Minimum visible area of a planned prop, as a share of the frame, by shot
  * type (owner QC 2026-10-10: hero props story-sized). An insert of the prop
  * must be big; in a wide shot it still has to be findable.
  */
-/** An insert (or a close-up with nobody in it) is about its object: the object fills at least this share of the frame (owner 2026-10-11). */
-export const INSERT_PROP_AREA = 0.25;
-
 export function minPropArea(shotType: string): number {
   const s = shotType.toLowerCase();
   if (/insert|detail|chi tiết|extreme close|macro|インサート/.test(s)) return 0.04;

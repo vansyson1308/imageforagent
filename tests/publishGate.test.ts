@@ -102,9 +102,13 @@ describe("by-eye override of the critic (owner + QC), never of a measured gate",
     expect(criticOverride(md)).toBe(false);
   });
 
-  it("an override needs APPROVED with both the owner and QC named", () => {
-    expect(criticOverride(md.replace("Critic override: none", "Critic override: APPROVED by owner vansyson and QC lead"))).toBe(true);
-    expect(criticOverride(md.replace("Critic override: none", "Critic override: APPROVED by owner vansyson"))).toBe(false);
-    expect(criticOverride(md.replace("Critic override: none", "Critic override: approved, QC and owner"))).toBe(false);
+  it("an override needs APPROVED with both the owner and QC named (real names, not the template's placeholders)", () => {
+    const sign = (line: string) => criticOverride(md.replace("Critic override: none", `Critic override: ${line}`));
+    expect(sign("APPROVED by owner vansyson and QC lead")).toBe(true);
+    expect(sign("APPROVED by owner vansyson")).toBe(false);
+    expect(sign("approved, QC and owner")).toBe(false);
+    expect(sign("APPROVED by owner <name> and QC <name>")).toBe(false);
+    expect(sign("APPROVED by owner vansyson and QC <name>")).toBe(false);
+    expect(sign("APPROVED by owner <name> and QC lead")).toBe(false);
   });
 });
