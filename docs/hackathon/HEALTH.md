@@ -1,7 +1,7 @@
 # Hosted demo health (through judging, 2026-12-01 → 2026-12-15)
 
 - **Endpoint:** `GET https://studio-production-049c.up.railway.app/api/health` (public, no passcode). Returns `200` + `"ok": true` when every check passes, `503` otherwise.
-- **Checks:** `database` (SQLite query), `storage` (write + delete a probe file on the volume), `ffmpeg`, `tts` (local engines), `tokenFactory` (`GET /v1/models`: free, checks that the crew's Nemotron ids are still listed), `tavily` (key **presence** only, no paid call; `off` when not set), `demoBudget` (today's share of `DEMO_DAILY_TOKEN_BUDGET`), `passcode` (set or not, never the value). Plus `version`, `commit` (Railway's `RAILWAY_GIT_COMMIT_SHA`) and the public model catalog.
+- **Checks:** `database` (SQLite query), `storage` (write + delete a probe file on the volume), `ffmpeg`, `tts` (local engines), `tokenFactory` (`GET /v1/models`: free, checks that the crew's Nemotron ids are still listed), `tavily` (key **presence** only, no paid call; `off` when not set), `demoBudget` (today's share of `DEMO_DAILY_TOKEN_BUDGET`), `passcode` (set or not, never the value), `runCaps` (the per-run token caps for public/judge runs and for operator runs, also as the top-level `runCaps` object). Plus `version`, `commit` (Railway's `RAILWAY_GIT_COMMIT_SHA`) and the public model catalog.
 - Status `off` means an optional feature isn't configured. It doesn't fail the report.
 - **No secrets:** `tests/health.test.ts` asserts that the key, the passcode and the Tavily key never appear in the output.
 

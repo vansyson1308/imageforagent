@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { handleRoute, parseBody } from "@/lib/services/routeHelpers";
 import { enforceRateLimit } from "@/lib/services/rateLimit";
-import { demoConfig } from "@/lib/services/demoMode";
+import { demoConfig, isOperatorRequest } from "@/lib/services/demoMode";
+import { runCeiling } from "@/lib/services/director/budget";
 import { cleanupDemoProjects, dailyGate, requireDemoSession } from "@/lib/services/demoGuard";
 import { directorDeps } from "@/lib/services/director/deps";
 import { createRun, isRunLive } from "@/lib/services/director/loop";
@@ -93,7 +94,9 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
       gate = await dailyGate(cfg);
     }
     const floor = cfg.enabled ? await demoFloorPolicy() : null;
-    const runDeps = { ...deps, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }), ...(floor && { floorRedraw: { enabled: floor.enabled, reason: floor.reason } }) };
+    // operator runs (showcase, pilot, bench) may use the operator's per-run token cap (O10); judges keep the public one
+    const ceiling = runCeiling(deps.ceiling, isOperatorRequest(req, cfg));
+    const runDeps = { ...deps, ceiling, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }), ...(floor && { floorRedraw: { enabled: floor.enabled, reason: floor.reason } }) };
     const series = body.seriesId ? await loadSeries(body.seriesId, sid, cfg.enabled) : null;
     const { seriesId: _ignored, narrationShots, ...rest } = body;
     void _ignored;

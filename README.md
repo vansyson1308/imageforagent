@@ -419,6 +419,7 @@ Everything is optional except the database path:
 | `SPEND_ALERT_USD` | 15 | Live scripts (`director:smoke`, showcase, bench) refuse to start once the spend ledger passes this |
 | `TAVILY_API_KEY` / `TAVILY_BASE_URL` | — / `https://api.tavily.com` | Optional Tavily researcher: capped search + extract, with cited reference notes added to the Bible |
 | `DEMO_MODE` / `DEMO_PASSCODE` | `false` / — | Public demo: every page and API sits behind a passcode (signed HttpOnly cookie). `/showcase` and `/unlock` stay public |
+| `DIRECTOR_MAX_TOKENS_PER_RUN_OPERATOR` | = the public cap | Per-run token cap for operator runs (showcase, pilot, bench: requests carrying the operator passcode); never below `DIRECTOR_MAX_TOKENS_PER_RUN`. `/api/health` reports both caps |
 | `DEMO_MAX_PROJECTS_PER_SESSION` / `DEMO_DAILY_TOKEN_BUDGET` / `DEMO_MAX_CONCURRENT_RUNS` / `DEMO_RETENTION_HOURS` | 3 / 3000000 / 2 / 24 | Demo caps. Demo projects are deleted after the retention window |
 
 ## Architecture

@@ -34,7 +34,7 @@ const int = (v: string | undefined, d: number) => {
   return v && Number.isFinite(n) && n > 0 ? Math.floor(n) : d;
 };
 
-export function demoConfig(env: NodeJS.ProcessEnv = process.env): DemoConfig {
+export function demoConfig(env: Readonly<Record<string, string | undefined>> = process.env): DemoConfig {
   return {
     enabled: env.DEMO_MODE === "true",
     passcode: env.DEMO_PASSCODE ?? "",
@@ -83,6 +83,14 @@ export function unlockMatches(given: string, cfg: DemoConfig): boolean {
   const judge = passcodeMatches(given, cfg.passcode);
   const operator = cfg.operatorPasscode ? passcodeMatches(given, cfg.operatorPasscode) : false;
   return judge || operator;
+}
+
+/** The header automation sends with the operator passcode (constant-time compare; never logged). */
+export const OPERATOR_HEADER = "x-operator-passcode";
+
+/** True when the request carries the operator passcode (operator runs: showcase, pilot, bench). */
+export function isOperatorRequest(req: Request, cfg: DemoConfig = demoConfig()): boolean {
+  return !!cfg.operatorPasscode && passcodeMatches(req.headers.get(OPERATOR_HEADER) ?? "", cfg.operatorPasscode);
 }
 
 export function readCookie(header: string | null, name: string): string | null {

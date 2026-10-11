@@ -25,7 +25,7 @@ import { StudioClient, type SseEvent } from "./client";
 import { appendLedger, assertSpendUnder } from "./ledger";
 import sharp from "sharp";
 import { SHOWCASE_V2, setsBrief } from "./showcaseStories";
-import { checklistProblems, checklistTemplate, publishProblems, voiceProblems } from "@/lib/services/director/publishGate";
+import { checklistProblems, checklistTemplate, criticOverride, criticProblems, measuredProblems, voiceProblems } from "@/lib/services/director/publishGate";
 import { loadPackage } from "./pilot";
 import { appendCredits, probe, readVoiceCredit } from "./credits";
 import { contactSheet } from "./contactSheet";
@@ -157,14 +157,15 @@ async function main() {
       continue;
     }
     if (set === "v2") {
-      // v2: the automatic publish gate, then a by-eye candidate; nothing is published from here
-      const problems = [...publishProblems(trace.status, trace.summary), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0])];
+      // v2: the measured gates block; critic shortfalls go to the by-eye candidate (owner + QC may approve past them); nothing is published from here
+      const problems = [...measuredProblems(trace.status, trace.summary), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0])];
       if (problems.length) {
         console.log(`✘ ${s.slug}: ${problems.join("; ")}. Kept the trace as evidence and skipped publishing.`);
         continue;
       }
-      const dir = await writeCandidate(client, s.slug, pid, runId, trace);
-      console.log(`◐ ${s.slug}: passed the automatic gate. Look at every frame and fill ${dir}/checklist.md, then: --set v2 --publish ${s.slug}=${pid}`);
+      const critic = criticProblems(trace.summary);
+      const dir = await writeCandidate(client, s.slug, pid, runId, trace, critic);
+      console.log(`◐ ${s.slug}: passed the measured gates${critic.length ? ` (critic: ${critic.join("; ")})` : " and the critic"}. Look at every frame and fill ${dir}/checklist.md, then: --set v2 --publish ${s.slug}=${pid}`);
       continue;
     }
     await publish(client, { slug: s.slug, language: s.language, story: s.story }, pid, trace, base, set, index, indexPath);
@@ -194,13 +195,14 @@ function narrationOf(slug: string, lines: readonly string[]): { narration: reado
 type Trace = Record<string, unknown> & { costUsd: number; tokensIn: number; tokensOut: number; bible: { title: string; logline: string } | null; summary: Record<string, unknown>; models: Record<string, string>; provider: string; status: string; id?: string };
 
 /** The by-eye candidate: every frame (JPEG, 1280 wide) and a checklist prefilled with what the run measured. */
-async function writeCandidate(client: StudioClient, slug: string, pid: string, runId: string, trace: Trace): Promise<string> {
+async function writeCandidate(client: StudioClient, slug: string, pid: string, runId: string, trace: Trace, critic: readonly string[] = []): Promise<string> {
   const dir = `docs/hackathon/evidence/byeye/${slug}-${runId}`;
   mkdirSync(dir, { recursive: true });
   const project = await client.json<{ frames: Array<{ index: number; imageUrl: string | null; dialogue: string | null; shotType: string | null; description: string | null }> }>("GET", `/api/projects/${pid}`);
   const health = await client.json<{ commit: string }>("GET", "/api/health");
   const plan = trace.bible as Plan | null;
   const scores = (trace.summary.shotScores ?? {}) as Record<number, number | null>;
+  const actions = (trace.summary.actionNotes ?? {}) as Record<number, string>;
   const shots = [];
   for (const f of project.frames) {
     const name = `f${String(f.index).padStart(2, "0")}.jpg`;
@@ -210,10 +212,10 @@ async function writeCandidate(client: StudioClient, slug: string, pid: string, r
       index: f.index,
       beat: f.dialogue ?? p?.description ?? f.description ?? "",
       image: name,
-      measured: `${p?.shotType ?? f.shotType ?? "?"} · cast ${p?.cast.map((c) => `#${c}`).join(" ") ?? "?"} · critic ${scores[f.index] ?? "n/a"}/10 · plan: ${(p?.description ?? "").slice(0, 200)}`,
+      measured: `${p?.shotType ?? f.shotType ?? "?"} · cast ${p?.cast.map((c) => `#${c}`).join(" ") ?? "?"} · critic ${scores[f.index] ?? "n/a"}/10${actions[f.index] ? ` · critic's action note: ${actions[f.index]}` : ""} · plan: ${(p?.description ?? "").slice(0, 200)}`,
     });
   }
-  writeFileSync(`${dir}/checklist.md`, checklistTemplate({ slug, projectId: pid, runId, commit: health.commit.slice(0, 7), hero: plan ? heroProp(plan) : null, shots }));
+  writeFileSync(`${dir}/checklist.md`, checklistTemplate({ slug, projectId: pid, runId, commit: health.commit.slice(0, 7), hero: plan ? heroProp(plan) : null, shots, critic }));
   // the contact sheet: every shot on one image, for the owner's by-eye QC
   const tiles = shots.filter((sh) => existsSync(`${dir}/${sh.image}`)).map((sh) => ({ image: `${dir}/${sh.image}`, label: `${String(sh.index).padStart(2, "0")} · ${sh.measured.split(" · ")[0]} · critic ${scores[sh.index] ?? "n/a"}/10` }));
   writeFileSync(`${dir}/contact.jpg`, await contactSheet(tiles, { aspect: "16:9", title: `${slug} · ${plan?.title ?? ""} · run ${runId} · ${health.commit.slice(0, 7)}` }));
@@ -289,7 +291,15 @@ async function publishChecked(client: StudioClient, pairs: string, base: string,
     if (!dir) throw new Error(`--publish ${pair}: no by-eye candidate for that project in ${root}/`);
     const cand = JSON.parse(readFileSync(`${dir}/candidate.json`, "utf8")) as { runId: string };
     const trace = await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${cand.runId}`);
-    const problems = [...publishProblems(trace.status, trace.summary), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0]), ...checklistProblems(readFileSync(`${dir}/checklist.md`, "utf8"), Number(trace.summary.shots ?? 0))];
+    const md = readFileSync(`${dir}/checklist.md`, "utf8");
+    // measured gates always block; the critic's scores block unless the owner and QC approved the film by eye
+    const critic = criticProblems(trace.summary);
+    const problems = [
+      ...measuredProblems(trace.status, trace.summary),
+      ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0]),
+      ...checklistProblems(md, Number(trace.summary.shots ?? 0)),
+      ...(critic.length && !criticOverride(md) ? [`critic: ${critic.join("; ")} (needs "Critic override: APPROVED by owner … and QC …" in the checklist)`] : []),
+    ];
     if (problems.length) {
       console.log(`✘ ${slug}: not published. ${problems.join("; ")}`);
       continue;

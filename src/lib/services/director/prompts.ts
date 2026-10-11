@@ -180,16 +180,16 @@ export function castSystem(canvas: CanvasSize, style: string): string {
   ].join("\n");
 }
 
-export function castUser(plan: Plan, only?: readonly CastMember[]): string {
+export function castUser(plan: Plan, only?: readonly CastMember[], hero?: string | null): string {
   const members = only ?? plan.cast;
-  const lines = members.map((c: CastMember) => `- ${c.id} (${c.kind}, "${c.name}"): ${c.look} — colors ${c.colors.join(" ")}`);
+  const lines = members.map((c: CastMember) => `- ${c.id} (${c.kind}, "${c.name}"): ${c.look} — colors ${c.colors.join(" ")}${c.id === hero ? " — THE HERO OBJECT: seen close up in inserts, so draw it in detail (12+ shapes: parts, shaded body, rim light, highlight, pattern, what it hangs from or rests on), never a plain block" : ""}`);
   return [`Film: "${plan.title}". Palette: ${plan.palette.join(" ")}.`, only ? "Draw ONLY these cast members:" : "Cast & Set Bible:", quoteData("notes", lines.join("\n"), 5000)].join("\n");
 }
 
 /** Repair turn for the library: accepted symbols are kept; only the failing ones are redrawn. */
-export function castRepairUser(plan: Plan, redo: readonly CastMember[], kept: readonly string[], problems: readonly string[]): string {
+export function castRepairUser(plan: Plan, redo: readonly CastMember[], kept: readonly string[], problems: readonly string[], hero?: string | null): string {
   return [
-    castUser(plan, redo),
+    castUser(plan, redo, hero),
     kept.length ? `Already accepted and kept (do NOT redraw): ${kept.join(", ")}.` : "",
     `Your previous version of ${redo.map((c) => c.id).join(", ")} was rejected: ${problems.join("; ")}.`,
     "Return ONLY the corrections for those ids, in the same format: <symbol>s (plus their gradients) in the ```svg block; humans, animals and kit sets as kit values in the ```json block (dolls / critters / sets).",
@@ -272,7 +272,8 @@ export function criticSystem(mode: "vision" | "text"): string {
       : "You are the Visual Critic. Unless VISUAL OBSERVATIONS are given you work WITHOUT the image: judge the frame from its SVG source, the render statistics and the ENGINE CHECKS against the shot description. ENGINE CHECKS are measured on the render and authoritative: never lower the score for character size or brightness when they PASSED; when a check FAILED, score ≤ 6 and put its fix first. Judge what the checks cannot: does the frame show what the description says (named characters and props present, the action, the setting, the time of day), is the composition clear (rule of thirds, no awkward overlaps, no big empty areas), are foreground details and light sources there.",
     GUARD,
     'Output ONE JSON object: {"score": 0-10, "verdict": "accept"|"revise", "issues": [...], "fixes": [...], "fidelity": {"time": "ok"|"wrong"|"unclear", "place": "ok"|"wrong"|"unclear", "action": "ok"|"wrong"|"unclear", "note": "…"}}.',
-    "- fidelity: compare the render (VISUAL OBSERVATIONS, ENGINE CHECKS, mean brightness) with the PLAN and the STORY. time = the planned time of day (a night scene that renders bright/day, or a day scene that renders dark, is \"wrong\"; a story set on a festival night such as Đêm Ba Mươi is night). place = the planned setting (indoors vs outdoors, the named place). action = the shot's key action or key object is visible. \"wrong\" only when the render clearly contradicts the plan; \"unclear\" when you cannot tell. note: one short sentence naming the mismatch (empty when all ok). Any \"wrong\" means the frame is off-plan: score ≤ 6 and put the fix first.",
+    "- fidelity: compare the render (VISUAL OBSERVATIONS, ENGINE CHECKS, mean brightness) with the PLAN and the STORY. time = the planned time of day (a night scene that renders bright/day, or a day scene that renders dark, is \"wrong\"; a story set on a festival night such as Đêm Ba Mươi is night). place = the planned setting (indoors vs outdoors, the named place). action = the shot's key action or key object is visible. \"wrong\" only when the render clearly contradicts the plan; \"unclear\" when you cannot tell. note: one short sentence naming the mismatch (empty when all ok). A \"wrong\" time or place means the frame is off-plan: score ≤ 6 and put the fix first.",
+    "- CAMERA MOVES: a pan, dolly, tilt, zoom, crane or tracking move cannot be seen in a still frame. Never mark a shot \"wrong\" or lower its score because a camera move is not visible; judge only what a still can show (who, where, when, what they do, the key object).",
     "- score: 9–10 the frame clearly tells the shot, good composition; 7–8 good with minor issues; 4–6 subject unclear or important elements missing/overlapping; 0–3 blank, broken or wrong.",
     '- verdict "revise" only when a concrete fix would clearly improve the frame (score < 7).',
     "- fixes: short, concrete drawing instructions (\"move grandma to the left third\", \"add warm lamp glow behind the teapot\"). Max 4.",

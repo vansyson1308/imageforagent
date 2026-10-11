@@ -69,7 +69,8 @@ export class StudioClient {
    * and replayed steps are delivered once (deduplicated by step seq).
    */
   async direct(projectId: string, body: Record<string, unknown>, onEvent: (e: SseEvent) => void, maxReattach = 6): Promise<string> {
-    const res = await fetch(this.url(`/api/projects/${projectId}/director`), { method: "POST", headers: this.headers(), body: JSON.stringify(body) });
+    // the operator header lets an operator run use the operator's per-run token cap (O10); a judge passcode is ignored there
+    const res = await fetch(this.url(`/api/projects/${projectId}/director`), { method: "POST", headers: { ...this.headers(), ...(this.opts.passcode && { "x-operator-passcode": this.opts.passcode }) }, body: JSON.stringify(body) });
     if (!res.ok || !res.body) throw new Error(`director → ${res.status}: ${(await res.text()).slice(0, 500)}`);
     const runId = res.headers.get("x-director-run") ?? "";
     const seen = new Set<number>();

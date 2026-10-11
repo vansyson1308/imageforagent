@@ -3,7 +3,7 @@ import { saveBuffer } from "@/lib/services/storage";
 import { callJson, recordStep, ReplyInvalidError, type DirectorContext } from "@/lib/services/director/context";
 import { criticSystem, criticUser, lookSystem, lookUser } from "@/lib/services/director/prompts";
 import { critiqueSchema, lookSchema, type Critique, type Look, type ShotPlan } from "@/lib/services/director/schemas";
-import { enforceFidelity, fidelityFailures } from "@/lib/services/director/fidelity";
+import { actionNote, enforceFidelity, offPlanAxes } from "@/lib/services/director/fidelity";
 import { compositionStats, toJpegDataUri } from "@/lib/services/director/svgTools";
 import { snapshotPath } from "@/lib/services/director/cast";
 import type { Drawing } from "@/lib/services/director/artist";
@@ -62,7 +62,7 @@ export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan;
       "critique",
       1,
     );
-    // an off-plan frame (wrong time of day, place or key action) is never accepted
+    // an off-plan frame (wrong time of day or place) is never accepted; a wrong action is a checklist note
     const critique = enforceFidelity(judged);
     await noteScore(ctx, opts.index, critique, mode, imagePath);
     return { critique, mode, imagePath };
@@ -87,7 +87,7 @@ async function noteScore(ctx: DirectorContext, index: number, c: Critique, mode:
     action: "score",
     shotIndex: index,
     score: c.score,
-    summary: `${mode} critic ${c.score}/10 · ${c.verdict}${mode === "vision" ? ` (${ctx.models.vision} looked, ${ctx.models.fast} scored)` : ""}${fidelityFailures(c).length ? ` · OFF-PLAN ${fidelityFailures(c).join("+")}` : ""}${c.issues[0] ? ` · ${c.issues[0]}` : ""}`,
+    summary: `${mode} critic ${c.score}/10 · ${c.verdict}${mode === "vision" ? ` (${ctx.models.vision} looked, ${ctx.models.fast} scored)` : ""}${offPlanAxes(c).length ? ` · OFF-PLAN ${offPlanAxes(c).join("+")}` : ""}${actionNote(c) ? " · action note" : ""}${c.issues[0] ? ` · ${c.issues[0]}` : ""}`,
     output: JSON.stringify(c),
     imagePath,
   });

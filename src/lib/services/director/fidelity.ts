@@ -89,13 +89,32 @@ export function fidelityFailures(c: Critique | null | undefined): string[] {
 }
 
 /**
- * An off-plan frame is never accepted: any "wrong" axis caps the score at 6
- * (below the accept bar and the floor), forces "revise" and puts the mismatch
- * first in the issues the Artist gets back.
+ * The axes that make a frame off-plan (owner decision 2026-10-11): the time of day and the
+ * place. The "action" verdict is a note for the by-eye checklist, not a gate.
+ */
+export const BLOCKING_AXES = ["time", "place"] as const;
+
+/** The blocking axes Nano judged "wrong". */
+export function offPlanAxes(c: Critique | null | undefined): string[] {
+  return fidelityFailures(c).filter((a) => (BLOCKING_AXES as readonly string[]).includes(a));
+}
+
+/** The critic's note when it judged the key action "wrong" (shown on the by-eye checklist), else null. */
+export function actionNote(c: Critique | null | undefined): string | null {
+  return c?.fidelity?.action === "wrong" ? c.fidelity.note || "the key action or object does not read" : null;
+}
+
+/**
+ * An off-plan frame (wrong time of day or place) is never accepted: it caps the score at 6
+ * (below the accept bar and the floor), forces "revise" and puts the mismatch first in the
+ * issues the Artist gets back. A "wrong" action is passed on as the first issue, unscored.
  */
 export function enforceFidelity(c: Critique): Critique {
-  const wrong = fidelityFailures(c);
-  if (!wrong.length) return c;
+  const wrong = offPlanAxes(c);
+  if (!wrong.length) {
+    const note = actionNote(c);
+    return note && !c.issues.some((i) => i.includes(note)) ? { ...c, issues: [`Key action: ${note}`.slice(0, 240), ...c.issues].slice(0, 6) } : c;
+  }
   const what = `Off-plan ${wrong.join(" + ")}${c.fidelity?.note ? `: ${c.fidelity.note}` : ""}`.slice(0, 240);
   return { ...c, score: Math.min(c.score, 6), verdict: "revise", issues: [what, ...c.issues].slice(0, 6) };
 }

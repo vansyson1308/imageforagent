@@ -20,7 +20,7 @@ import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { commitShot, drawShot, type Drawing } from "@/lib/services/director/artist";
 import { critiqueShot, fixesText } from "@/lib/services/director/critic";
 import { shotText, shotVoice, type NarrationShot } from "@/lib/services/director/fixedNarration";
-import { fidelityBrief, fidelityFailures } from "@/lib/services/director/fidelity";
+import { actionNote, fidelityBrief, offPlanAxes } from "@/lib/services/director/fidelity";
 import { lintProject, runContinuity, runDialogue, runEditor } from "@/lib/services/director/editor";
 import type { Critique } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
@@ -136,8 +136,10 @@ interface ShotStats {
   belowFloor?: boolean;
   /** gate problems the FINAL version still has (accepted on the lenient last attempt) */
   gateFailures?: number;
-  /** off-plan axes (time/place/action) the FINAL version still has, per Nano's fidelity verdict */
+  /** off-plan axes (time/place) the FINAL version still has, per Nano's fidelity verdict */
   offPlan?: string[];
+  /** the critic's "action" note on the final version (a by-eye checklist item, not a gate) */
+  actionNote?: string | null;
   /** the final version places none of the shot's sets */
   setless?: boolean;
   firstPassOk: boolean;
@@ -368,7 +370,8 @@ export async function executeRun(
         }
         if ((best.critique?.score ?? 0) < FLOOR_SCORE) st.belowFloor = true;
       }
-      st.offPlan = fidelityFailures(best.critique);
+      st.offPlan = offPlanAxes(best.critique);
+      st.actionNote = actionNote(best.critique);
       st.setless = !placesASet(best.drawing.svg, plan);
       if (st.offPlan.length) await recordStep(ctx, { role: "critic", model: ctx.models.fast, action: "off-plan", shotIndex: frame.index, score: best.critique?.score ?? null, summary: `Shot ${frame.index} still off-plan after revisions (${st.offPlan.join(" + ")})`, error: best.critique?.fidelity?.note || null });
     };
@@ -470,6 +473,7 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     revisions: all.reduce((n, s) => n + s.revisions, 0),
     gateFailures: all.filter((s) => (s.gateFailures ?? 0) > 0).length,
     offPlan: [...stats.entries()].filter(([, s]) => s.offPlan?.length).map(([i]) => i).sort((a, b) => a - b),
+    actionNotes: Object.fromEntries([...stats.entries()].filter(([, s]) => s.actionNote).map(([i, s]) => [i, s.actionNote as string])),
     setless: [...stats.entries()].filter(([, s]) => s.setless).map(([i]) => i).sort((a, b) => a - b),
     shotScores: Object.fromEntries([...stats.entries()].sort(([a], [b]) => a - b).map(([i, s]) => [i, s.after])),
     belowFloor: [...stats.entries()].filter(([, s]) => s.belowFloor).map(([i]) => i).sort((a, b) => a - b),
