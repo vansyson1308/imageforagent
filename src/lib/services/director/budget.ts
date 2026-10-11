@@ -31,7 +31,7 @@ const num = (v: string | undefined, d: number) => {
 };
 
 /** Env caps (server-side ceiling): a request can lower them, never raise them. */
-export function budgetFromEnv(env: NodeJS.ProcessEnv = process.env): DirectorBudget {
+export function budgetFromEnv(env: Readonly<Record<string, string | undefined>> = process.env): DirectorBudget {
   return {
     ...DEFAULT_BUDGET,
     maxShots: Math.floor(num(env.DIRECTOR_MAX_SHOTS, DEFAULT_BUDGET.maxShots)),
@@ -47,13 +47,13 @@ export function budgetFromEnv(env: NodeJS.ProcessEnv = process.env): DirectorBud
  * 2026-10-11: an 11-shot narrated film needs ~550-650k). Public and judge runs keep
  * DIRECTOR_MAX_TOKENS_PER_RUN. The operator cap never lowers the public one.
  */
-export function operatorTokenCap(env: NodeJS.ProcessEnv = process.env): number {
+export function operatorTokenCap(env: Readonly<Record<string, string | undefined>> = process.env): number {
   const pub = budgetFromEnv(env).maxTokens;
   return Math.max(pub, Math.floor(num(env.DIRECTOR_MAX_TOKENS_PER_RUN_OPERATOR, pub)));
 }
 
 /** The ceiling of one run: the operator's token cap for an operator run, else the public ceiling unchanged. */
-export function runCeiling(ceiling: DirectorBudget, operator: boolean, env: NodeJS.ProcessEnv = process.env): DirectorBudget {
+export function runCeiling(ceiling: DirectorBudget, operator: boolean, env: Readonly<Record<string, string | undefined>> = process.env): DirectorBudget {
   return operator ? { ...ceiling, maxTokens: Math.max(ceiling.maxTokens, operatorTokenCap(env)) } : ceiling;
 }
 

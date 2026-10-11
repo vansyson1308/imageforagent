@@ -34,7 +34,7 @@ const int = (v: string | undefined, d: number) => {
   return v && Number.isFinite(n) && n > 0 ? Math.floor(n) : d;
 };
 
-export function demoConfig(env: NodeJS.ProcessEnv = process.env): DemoConfig {
+export function demoConfig(env: Readonly<Record<string, string | undefined>> = process.env): DemoConfig {
   return {
     enabled: env.DEMO_MODE === "true",
     passcode: env.DEMO_PASSCODE ?? "",

@@ -25,7 +25,7 @@ describe("operator per-run token cap", () => {
     const cfg = demoConfig(env);
     const pub = budgetFromEnv(env);
     expect(isOperatorRequest(req({ [OPERATOR_HEADER]: OPERATOR }), cfg)).toBe(true);
-    for (const h of [{}, { [OPERATOR_HEADER]: JUDGE }, { [OPERATOR_HEADER]: `${OPERATOR}x` }, { [OPERATOR_HEADER]: "" }]) expect(isOperatorRequest(req(h), cfg)).toBe(false);
+    for (const h of [{}, { [OPERATOR_HEADER]: JUDGE }, { [OPERATOR_HEADER]: `${OPERATOR}x` }, { [OPERATOR_HEADER]: "" }] as Record<string, string>[]) expect(isOperatorRequest(req(h), cfg)).toBe(false);
     // no operator passcode configured on the server: nobody is an operator
     expect(isOperatorRequest(req({ [OPERATOR_HEADER]: OPERATOR }), demoConfig({ ...env, DEMO_OPERATOR_PASSCODE: "" }))).toBe(false);
     expect(runCeiling(pub, true, env).maxTokens).toBe(800_000);

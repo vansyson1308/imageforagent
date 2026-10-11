@@ -354,6 +354,9 @@ export async function visibleArea(withUse: Buffer, without: Buffer): Promise<num
  * type (owner QC 2026-10-10: hero props story-sized). An insert of the prop
  * must be big; in a wide shot it still has to be findable.
  */
+/** An insert (or a close-up with nobody in it) is about its object: the object fills at least this share of the frame (owner 2026-10-11). */
+export const INSERT_PROP_AREA = 0.25;
+
 export function minPropArea(shotType: string): number {
   const s = shotType.toLowerCase();
   if (/insert|detail|chi tiết|extreme close|macro|インサート/.test(s)) return 0.04;

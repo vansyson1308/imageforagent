@@ -1,3 +1,4 @@
+import { shotSize } from "@/lib/services/director/plan";
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
@@ -11,7 +12,7 @@ import { actingLayer, attachHeldProps, speakerId } from "@/lib/services/director
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
 import { retimeSets, shotTime, timedSetId } from "@/lib/services/director/fidelity";
-import { applyPlacement, badPaints, coveredShare, minPropArea, visibleArea, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { applyPlacement, badPaints, coveredShare, INSERT_PROP_AREA, minPropArea, visibleArea, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, edgeCuts, emptyFrameProblem, EXIT_ENTRY_WORDS, figureLight, GATE, measureFrame, OVER_SHOULDER, type EdgeSide, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
@@ -256,7 +257,11 @@ async function qualityGates(
   }
   // The shot's props are in it and story-sized (owner QC 2026-10-10): measured as the pixels each one adds
   const propsInShot = opts.shot.cast.filter((id) => opts.props?.includes(id));
-  const minArea = minPropArea(opts.shot.shotType);
+  // an insert, or a close-up with nobody in it, is ABOUT its object: it fills ≥ 25% of the frame (owner 2026-10-11)
+  const size = shotSize(opts.shot.shotType);
+  const aboutTheProp = size === "insert" || (size === "close" && !opts.shot.cast.some((id) => opts.characters?.includes(id)));
+  const minArea = aboutTheProp ? INSERT_PROP_AREA : minPropArea(opts.shot.shotType);
+  const propAreas: Array<{ id: string; area: number; side: number }> = [];
   for (const id of propsInShot) {
     const stripped = withoutUses(svg, id);
     if (stripped === svg) {
@@ -265,8 +270,21 @@ async function qualityGates(
     }
     const area = await visibleArea(png, await renderArtwork(opts.castDefs, stripped, opts.aspectRatio, "1K"));
     const side = Math.round(Math.sqrt((minArea / 0.6) * opts.canvas.w * opts.canvas.h));
-    if (area < minArea) problems.push(`#${id} (a key prop) shows only ${(area * 100).toFixed(2)}% of the frame; a "${opts.shot.shotType}" needs at least ${(minArea * 100).toFixed(2)}% so the story object reads (use width/height ≈ ${side} or more, in front of the set, not hidden behind a character)`);
-    else facts.push(`#${id} visible, ${(area * 100).toFixed(2)}% of the frame`);
+    // in a shot about the object, the biggest of its props carries the shot; the others only need to be there
+    if (aboutTheProp && propsInShot.length > 1 && area < minArea) {
+      facts.push(`#${id} visible, ${(area * 100).toFixed(2)}% of the frame`);
+      propAreas.push({ id, area, side });
+      continue;
+    }
+    if (area < minArea) problems.push(`#${id} (a key prop) shows only ${(area * 100).toFixed(2)}% of the frame; a "${opts.shot.shotType}" ${aboutTheProp ? "about this object" : ""} needs at least ${(minArea * 100).toFixed(2)}% so the story object reads (use width/height ≈ ${side} or more, in front of the set, not hidden behind a character)`.replace(/ {2}/g, " "));
+    else {
+      facts.push(`#${id} visible, ${(area * 100).toFixed(2)}% of the frame`);
+      propAreas.push({ id, area, side });
+    }
+  }
+  if (aboutTheProp && propsInShot.length > 1 && !propAreas.some((p) => p.area >= minArea)) {
+    const big = [...propAreas].sort((a, b) => b.area - a.area)[0];
+    if (big) problems.push(`this "${opts.shot.shotType}" is about its object, but the biggest one, #${big.id}, shows only ${(big.area * 100).toFixed(2)}% of the frame; it needs at least ${(minArea * 100).toFixed(2)}% (use width/height ≈ ${big.side} or more, centred, in front of the set)`);
   }
   // Measured on the BACKGROUND (every character removed): flat blocks the set is made of
   let background = svg;

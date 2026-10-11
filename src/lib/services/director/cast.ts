@@ -1,3 +1,4 @@
+import { heroProp } from "@/lib/services/director/plan";
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
@@ -28,6 +29,9 @@ export interface CastLibrary {
 
 export const snapshotPath = (projectId: string, runId: string, name: string) => toPosix(`${projectId}/director/${runId}/${name}`);
 
+/** Shapes a hero prop needs (owner 2026-10-11: run 4's fūrin read as a plain orange block in its close-up). */
+export const HERO_PROP_SHAPES = 12;
+
 /**
  * Quality problems of ONE cast member's symbol (empty = accepted): present,
  * scalable, references resolve, sized for its kind (sets fill 16:9, characters
@@ -41,6 +45,8 @@ export async function symbolProblems(
   canvas: { w: number; h: number },
   aspectRatio: string,
   known: ReadonlySet<string> = new Set(),
+  /** the story's hero object (heroProp): seen in close-ups and inserts, so drawn in detail (owner 2026-10-11) */
+  hero = false,
 ): Promise<string[]> {
   const id = member.id;
   if (!symbol) return [`#${id} is missing: add <symbol id="${id}" viewBox="…">`];
@@ -56,8 +62,11 @@ export async function symbolProblems(
   const frameAspect = canvas.w / canvas.h;
   if (member.kind === "set" && Math.abs(aspect - frameAspect) > frameAspect * 0.12) problems.push(`#${id} is a set: its viewBox must be "0 0 ${canvas.w} ${canvas.h}" (got ${s.w}×${s.h}), otherwise it cannot fill the frame`);
   if (member.kind === "character" && (aspect < 0.5 || aspect > 0.85)) problems.push(`#${id} is a character: its viewBox must be "0 0 400 600" (got ${s.w}×${s.h})`);
-  const min = member.kind === "set" ? 15 : member.kind === "character" ? 12 : 5;
-  if (s.shapes < min) problems.push(`#${id} has only ${s.shapes} shapes; draw at least ${min} (${member.kind === "set" ? "sky, far, middle and near layers, light sources" : member.kind === "character" ? "hair, face with eyes/brows/mouth, clothes in 2-3 tones, arms, hands, legs, shoes" : "the object's parts and highlights"})`);
+  const min = member.kind === "set" ? 15 : member.kind === "character" ? 12 : hero ? HERO_PROP_SHAPES : 5;
+  if (s.shapes < min)
+    problems.push(
+      `#${id} has only ${s.shapes} shapes; draw at least ${min} (${member.kind === "set" ? "sky, far, middle and near layers, light sources" : member.kind === "character" ? "hair, face with eyes/brows/mouth, clothes in 2-3 tones, arms, hands, legs, shoes" : hero ? "it is the story's hero object, seen close up in inserts: its parts, a shaded body, rim light and highlight, texture or pattern lines, and what it hangs from or rests on" : "the object's parts and highlights"})`,
+    );
   if (member.kind === "character" && !problems.length) {
     const alone = await renderArtwork([...neededExtras(symbol, extras).values(), symbol].join("\n"), `<use href="#${id}" x="0" y="0" width="720" height="1080"/>`, aspectRatio, "1K").catch(() => null);
     if (alone) {
@@ -165,6 +174,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
   const accepted = new Map<string, Candidate>();
   const best = new Map<string, Candidate>();
   let pending: CastMember[] = [...plan.cast];
+  const hero = heroProp(plan);
   let problems: string[] = [];
   // the kit spec behind each kit-built symbol (the exact markup it produced)
   const kitBySymbol = new Map<string, { id: string; kit: KitSpec }>();
@@ -175,7 +185,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
   const allMembers = () => [...plan.cast, ...dressMembers];
   for (let attempt = 0; attempt <= ctx.budget.budget.maxRepairs && pending.length; attempt++) {
     throwIfCancelled(ctx);
-    const user = attempt === 0 ? castUser(plan) : castRepairUser(plan, pending, [...accepted.keys()], problems);
+    const user = attempt === 0 ? castUser(plan, undefined, hero) : castRepairUser(plan, pending, [...accepted.keys()], problems, hero);
     const out = await callModel(ctx, { role: "cast", action: attempt === 0 ? "defs" : "defs:repair", system, user, attempt, maxTokens: 16000, temperature: 0.5 });
     // Human characters come as doll specs (```json {"dolls": {...}}); the engine draws them
     const dolls = new Map<string, string>();
@@ -268,7 +278,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     const checkList = [...pending, ...dressMembers.filter((d) => !accepted.has(d.id) && !pending.some((p) => p.id === d.id))];
     for (const c of checkList) {
       const symbol = parsed.symbols.get(c.id);
-      const found = await symbolProblems(c, symbol, parsed.extras, ctx.canvas, aspectRatio, known);
+      const found = await symbolProblems(c, symbol, parsed.extras, ctx.canvas, aspectRatio, known, c.id === hero);
       // Animals go through the animal kit: a hand-drawn one is rejected (until the lenient last attempt)
       if (strict && symbol && !dolls.has(c.id) && c.kind === "character" && ANIMAL_WORDS.test(`${c.name} ${c.look}`)) {
         found.unshift(`#${c.id} is an animal: do not draw it, describe it for the animal kit under "critters" in the \`\`\`json block`);

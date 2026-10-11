@@ -359,10 +359,24 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
       out.push(`<ellipse cx="${n(kx + 10)}" cy="${n(fy - 6)}" rx="${n(legW * 0.95)}" ry="11" fill="${shoe}"/>`);
     }
   } else if (pose === "kneel") {
-    // seiza: legs folded under the hips, seen from the front as a wide base with two knees
+    // seiza, seen from the front (owner QC 2026-10-11, fūrin run 4 shot 9: the folded legs read as one blob):
+    // the soles peek out behind, two thighs split by a centre crease and shaded at the sides, knee caps in front
     const baseColor = long || spec.top === "dress" ? spec.topColor : skirted ? bottomColor : legColor;
+    const shade = mix(baseColor, "#1d1a26", 0.22);
+    const sole = long ? "#f4f1ea" : shoe;
+    for (const s of [-1, 1]) out.push(`<ellipse cx="${n(cx + s * hhw * 1.5)}" cy="${n(fy - 7)}" rx="${n(legW * 0.85)}" ry="${n(legW * 0.42)}" fill="${sole}" stroke="${mix(sole, "#1d1a26", 0.3)}" stroke-width="1.5"/>`);
     out.push(`<path d="M${n(cx - hhw * 1.6)} ${n(fy - 4)} Q${n(cx - hhw * 1.75)} ${n(hp + 4)} ${n(cx - hhw * 0.85)} ${n(hp - 10)} L${n(cx + hhw * 0.85)} ${n(hp - 10)} Q${n(cx + hhw * 1.75)} ${n(hp + 4)} ${n(cx + hhw * 1.6)} ${n(fy - 4)} Z" fill="${baseColor}"/>`);
-    for (const s of [-1, 1]) out.push(`<ellipse cx="${n(cx + s * hhw * 0.78)}" cy="${n(fy - 20)}" rx="${n(legW * 1.15)}" ry="${n(legW * 0.6)}" fill="${mix(baseColor, "#ffffff", 0.12)}"/>`);
+    for (const s of [-1, 1]) {
+      // the outer side of each thigh in shade, so the two legs read as two
+      out.push(`<path d="M${n(cx + s * hhw * 1.6)} ${n(fy - 4)} Q${n(cx + s * hhw * 1.75)} ${n(hp + 4)} ${n(cx + s * hhw * 0.85)} ${n(hp - 10)} Q${n(cx + s * hhw * 1.2)} ${n(hp + 10)} ${n(cx + s * hhw * 1.25)} ${n(fy - 4)} Z" fill="${shade}" fill-opacity="0.55"/>`);
+      out.push(`<ellipse cx="${n(cx + s * hhw * 0.62)}" cy="${n(fy - 16)}" rx="${n(legW * 0.95)}" ry="${n(legW * 0.55)}" fill="${mix(baseColor, "#ffffff", 0.16)}"/>`);
+    }
+    out.push(`<path d="M${n(cx)} ${n(hp + 6)} L${n(cx)} ${n(fy - 6)}" stroke="${shade}" stroke-width="3" stroke-linecap="round"/>`);
+    // a kimono or robe: its hem across the lap and the front overlap fold
+    if (long) {
+      out.push(`<path d="M${n(cx - hhw * 1.55)} ${n(fy - 8)} Q${n(cx)} ${n(fy + 2)} ${n(cx + hhw * 1.55)} ${n(fy - 8)}" fill="none" stroke="${shade}" stroke-width="3"/>`);
+      out.push(`<path d="M${n(cx + hhw * 0.35)} ${n(hp - 8)} Q${n(cx + hhw * 0.2)} ${n((hp + fy) / 2)} ${n(cx + hhw * 0.55)} ${n(fy - 8)}" fill="none" stroke="${shade}" stroke-width="2.5" stroke-opacity="0.7"/>`);
+    }
     if (spec.bottom === "shorts" && !long && spec.top !== "dress") out.push(`<path d="M${n(cx - hhw * 1.2)} ${n(hp + 34)} Q${n(cx - hhw * 1.3)} ${n(hp + 2)} ${n(cx - hhw * 0.85)} ${n(hp - 10)} L${n(cx + hhw * 0.85)} ${n(hp - 10)} Q${n(cx + hhw * 1.3)} ${n(hp + 2)} ${n(cx + hhw * 1.2)} ${n(hp + 34)} Z" fill="${bottomColor}"/>`);
   } else {
     for (const x of legX) {

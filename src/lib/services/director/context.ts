@@ -58,8 +58,10 @@ export interface RunSummary {
   readonly revisions: number;
   /** shots whose final version still fails a measured gate (kept on the lenient last attempt) */
   readonly gateFailures?: number;
-  /** shots whose final version Nano still judges off-plan (wrong time of day, place or key action) */
+  /** shots whose final version Nano still judges off-plan (wrong time of day or place) */
   readonly offPlan?: number[];
+  /** the critic's "wrong action" notes per shot: a by-eye checklist item, not a gate (owner decision 2026-10-11) */
+  readonly actionNotes?: Record<number, string>;
   /** shots whose final version places none of the film's sets */
   readonly setless?: number[];
   /** each shot's final critic score (null = not scored) */

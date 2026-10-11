@@ -2,34 +2,54 @@ import type { RunSummary } from "@/lib/services/director/context";
 import { publishVerdict, spokenLines } from "@/lib/services/director/pilotPolicy";
 
 /**
- * The showcase publish gate (owner QC 2026-10-10, sprint e). A film is
- * published only when (1) the run's own measurements pass: every shot drawn,
- * zero gate failures, zero off-plan shots, zero shots scored below 6, no shot
- * without a set, 45–90 s long; and (2) a person has looked at every shot and
- * ticked the by-eye checklist stored in evidence (crops, darkness, hero object
- * visible, story beat present). Pure: the showcase script does the I/O.
+ * The showcase publish gate (owner QC 2026-10-10, revised by the owner 2026-10-11).
+ * BLOCKING, measured: every shot drawn; zero gate failures (prop size D53, edge crop,
+ * night readability, empty frame and the other measured gates); no shot off-plan in its
+ * time of day or place; no shot without a set; 45–90 s long. CRITIC: the film's mean
+ * score ≥ 5.5 and no shot below 4. The critic's "action" verdict is not a gate: it goes to
+ * the by-eye checklist. Then a person ticks the checklist (crops, darkness, hero object,
+ * story beat, key action). A by-eye approval may override the critic's scores, never a
+ * measured gate. Pure: the showcase script does the I/O.
  */
 
 export const SHOWCASE_MIN_SEC = 45;
 export const SHOWCASE_MAX_SEC = 90;
-export const SHOWCASE_MIN_SCORE = 6;
+/** The film's mean critic score must reach this. */
+export const SHOWCASE_MIN_MEAN = 5.5;
+/** No shot may score below this. */
+export const SHOWCASE_MIN_SHOT = 4;
 
-/** What blocks publishing, from the run summary alone (empty = the automatic gate passes). */
-export function publishProblems(status: string, s: Partial<RunSummary>): string[] {
+/** Measured problems: no person can approve these away. */
+export function measuredProblems(status: string, s: Partial<RunSummary>): string[] {
   const out: string[] = [];
   if (status !== "done") out.push(`run status is "${status}"`);
   if ((s.rendered ?? 0) !== (s.shots ?? -1)) out.push(`${s.rendered ?? 0}/${s.shots ?? 0} shots rendered`);
   if ((s.gateFailures ?? 0) > 0) out.push(`${s.gateFailures} shot(s) still fail a measured gate`);
-  if (s.offPlan?.length) out.push(`off-plan shot(s): ${s.offPlan.join(", ")}`);
+  if (s.offPlan?.length) out.push(`wrong time of day or place in shot(s): ${s.offPlan.join(", ")}`);
   if (s.setless?.length) out.push(`shot(s) without a set: ${s.setless.join(", ")}`);
-  if (!s.shotScores) out.push("no per-shot critic scores in the summary (run the critic)");
-  else {
-    const low = Object.entries(s.shotScores).filter(([, v]) => v === null || v < SHOWCASE_MIN_SCORE);
-    if (low.length) out.push(`shot(s) scored below ${SHOWCASE_MIN_SCORE} or not scored: ${low.map(([i, v]) => `${i} (${v ?? "n/a"})`).join(", ")}`);
-  }
   const d = s.durationSec ?? 0;
   if (d < SHOWCASE_MIN_SEC || d > SHOWCASE_MAX_SEC) out.push(`film is ${d.toFixed(1)} s (a showcase film runs ${SHOWCASE_MIN_SEC}–${SHOWCASE_MAX_SEC} s)`);
   return out;
+}
+
+/** Critic-score problems: the owner and QC may approve a film past these by eye (never past a measured one). */
+export function criticProblems(s: Partial<RunSummary>): string[] {
+  if (!s.shotScores) return ["no per-shot critic scores in the summary (run the critic)"];
+  const entries = Object.entries(s.shotScores);
+  const out: string[] = [];
+  const unscored = entries.filter(([, v]) => v === null || v === undefined);
+  if (unscored.length) out.push(`shot(s) not scored: ${unscored.map(([i]) => i).join(", ")}`);
+  const scores = entries.map(([, v]) => v).filter((v): v is number => typeof v === "number");
+  const mean = scores.length ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+  if (mean < SHOWCASE_MIN_MEAN) out.push(`mean critic score ${mean.toFixed(2)} < ${SHOWCASE_MIN_MEAN}`);
+  const low = entries.filter(([, v]) => typeof v === "number" && v < SHOWCASE_MIN_SHOT);
+  if (low.length) out.push(`shot(s) scored below ${SHOWCASE_MIN_SHOT}: ${low.map(([i, v]) => `${i} (${v})`).join(", ")}`);
+  return out;
+}
+
+/** What blocks publishing, from the run summary alone (empty = the automatic gate passes). */
+export function publishProblems(status: string, s: Partial<RunSummary>): string[] {
+  return [...measuredProblems(status, s), ...criticProblems(s)];
 }
 
 /**
@@ -40,7 +60,7 @@ export function voiceProblems(steps: ReadonlyArray<{ role: string; action: strin
   return publishVerdict(spokenLines(steps), new Set()).blocking.map((l) => `shot ${l.shot} is spoken by ${l.voice}, a non-commercial voice: the line needs the owner's recording`);
 }
 
-export const BY_EYE_CHECKS = ["no character cropped", "readable (not too dark)", "hero object visible", "story beat present"] as const;
+export const BY_EYE_CHECKS = ["no character cropped", "readable (not too dark)", "hero object visible", "story beat present", "key action reads"] as const;
 
 export interface ChecklistShot {
   readonly index: number;
@@ -56,7 +76,7 @@ export interface ChecklistShot {
  * replaces each `[ ]` with `[x]` (pass) or `[!]` (fail) after looking at the
  * frame, and signs the verdict line. Unticked boxes block publishing.
  */
-export function checklistTemplate(opts: { slug: string; projectId: string; runId: string; commit: string; hero: string | null; shots: readonly ChecklistShot[] }): string {
+export function checklistTemplate(opts: { slug: string; projectId: string; runId: string; commit: string; hero: string | null; shots: readonly ChecklistShot[]; critic?: readonly string[] }): string {
   const head = [
     `# By-eye checklist · ${opts.slug}`,
     "",
@@ -64,6 +84,18 @@ export function checklistTemplate(opts: { slug: string; projectId: string; runId
     "",
     "Look at every frame at full size. Tick each box `[x]` when it holds, or mark it `[!]` and say why on the shot's note line. The film is published only when every box is `[x]` and the verdict is PASS.",
     "",
+    ...(opts.critic?.length
+      ? [
+          "## Critic scores (not a measured gate)",
+          "",
+          ...opts.critic.map((c) => `- ${c}`),
+          "",
+          "The owner and QC may approve the film past these by eye (owner decision 2026-10-11): replace `none` with `APPROVED by owner <name> and QC <name>`. A by-eye approval never overrides a measured gate.",
+          "",
+          "Critic override: none",
+          "",
+        ]
+      : []),
   ];
   const rows = opts.shots.flatMap((s) => [
     `## Shot ${s.index}`,
@@ -80,6 +112,12 @@ export function checklistTemplate(opts: { slug: string; projectId: string; runId
     "",
   ]);
   return [...head, ...rows, "## Verdict", "", "Reviewer: ", "", "Verdict: PENDING (write PASS or FAIL)", ""].join("\n");
+}
+
+/** True when the checklist carries the owner's and QC's by-eye approval past the critic's scores. */
+export function criticOverride(md: string): boolean {
+  const line = md.match(/^Critic override: (.+)$/m)?.[1] ?? "";
+  return /^APPROVED\b/.test(line) && /\bowner\b/i.test(line) && /\bQC\b/.test(line);
 }
 
 /** What keeps a filled checklist from passing (empty = publish). */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checklistProblems, checklistTemplate, publishProblems, SHOWCASE_MAX_SEC, SHOWCASE_MIN_SEC, voiceProblems } from "@/lib/services/director/publishGate";
+import { checklistProblems, checklistTemplate, criticOverride, criticProblems, measuredProblems, publishProblems, SHOWCASE_MAX_SEC, SHOWCASE_MIN_SEC, voiceProblems } from "@/lib/services/director/publishGate";
 import { SHOWCASE_V2, spokenSeconds } from "../scripts/director/showcaseStories";
 import { validateDrawing } from "@/lib/services/director/artist";
 import { demoPlan, DEMO_LIBRARY } from "@/lib/services/director/demoCrew";
@@ -12,22 +12,30 @@ import { planSchema } from "@/lib/services/director/schemas";
  */
 const good = { shots: 11, rendered: 11, gateFailures: 0, offPlan: [], setless: [], durationSec: 62.5, shotScores: Object.fromEntries(Array.from({ length: 11 }, (_, i) => [i + 1, 7 + (i % 3)])) };
 
-describe("automatic publish gate", () => {
+describe("automatic publish gate (owner decision 2026-10-11)", () => {
   it("passes a clean 11-shot film of 62 s", () => {
     expect(publishProblems("done", good)).toEqual([]);
   });
 
-  it("names every reason a film can't be published", () => {
-    const p = publishProblems("done", { ...good, rendered: 10, gateFailures: 1, offPlan: [3], setless: [5], durationSec: 38, shotScores: { ...good.shotScores, 4: 5.5, 6: null } });
-    expect(p.join(" | ")).toMatch(/10\/11 shots rendered/);
-    expect(p.join(" | ")).toMatch(/1 shot\(s\) still fail a measured gate/);
-    expect(p.join(" | ")).toMatch(/off-plan shot\(s\): 3/);
-    expect(p.join(" | ")).toMatch(/without a set: 5/);
-    expect(p.join(" | ")).toMatch(/below 6 or not scored: 4 \(5.5\), 6 \(n\/a\)/);
-    expect(p.join(" | ")).toMatch(/38.0 s \(a showcase film runs 45–90 s\)/);
-    expect(publishProblems("budget_exceeded", good)[0]).toMatch(/run status is "budget_exceeded"/);
-    expect(publishProblems("done", { ...good, durationSec: 95 }).join()).toMatch(/95.0 s/);
-    expect(publishProblems("done", { ...good, shotScores: undefined }).join()).toMatch(/no per-shot critic scores/);
+  it("measured: unrendered shots, any gate failure, wrong time or place, a shot without a set, length outside 45-90 s", () => {
+    const p = measuredProblems("done", { ...good, rendered: 10, gateFailures: 1, offPlan: [3], setless: [5], durationSec: 38 }).join(" | ");
+    expect(p).toMatch(/10\/11 shots rendered/);
+    expect(p).toMatch(/1 shot\(s\) still fail a measured gate/);
+    expect(p).toMatch(/wrong time of day or place in shot\(s\): 3/);
+    expect(p).toMatch(/without a set: 5/);
+    expect(p).toMatch(/38.0 s \(a showcase film runs 45–90 s\)/);
+    expect(measuredProblems("budget_exceeded", good)[0]).toMatch(/run status is "budget_exceeded"/);
+    expect(measuredProblems("done", { ...good, durationSec: 95 }).join()).toMatch(/95.0 s/);
+  });
+
+  it("critic: the film's mean ≥ 5.5 and no shot below 4 (no longer every shot ≥ 6)", () => {
+    const scores = (xs: number[]) => ({ ...good, shotScores: Object.fromEntries(xs.map((v, i) => [i + 1, v])) });
+    // run 4 of fūrin would have passed the critic part with these: mean 5.6, lowest 4
+    expect(criticProblems(scores([7, 5, 6, 9, 5, 4, 5, 4, 6, 5, 6]))).toEqual([]);
+    expect(criticProblems(scores([6, 6, 6, 3, 6, 6, 6, 6, 6, 6, 6]))).toEqual(["shot(s) scored below 4: 4 (3)"]);
+    expect(criticProblems(scores([5, 5, 5, 5, 5, 5, 6, 6, 6, 5, 5]))).toEqual(["mean critic score 5.27 < 5.5"]);
+    expect(criticProblems({ ...good, shotScores: { ...good.shotScores, 6: null } })).toEqual(["shot(s) not scored: 6"]);
+    expect(criticProblems({ ...good, shotScores: undefined })).toEqual(["no per-shot critic scores in the summary (run the critic)"]);
   });
 });
 
@@ -79,5 +87,24 @@ describe("no shot without a set", () => {
     const opts = { castDefs: DEMO_LIBRARY, symbols: ["hero", "home"], aspectRatio: "16:9", shot, index: 1, canvas: { w: 1920, h: 1080 }, fps: 12, characters: ["hero"], sets: ["home"] };
     const body = '<rect width="1920" height="1080" fill="#88aacc"/><path d="M0 800 L1920 780 L1920 1080 L0 1080 Z" fill="#557744"/><use href="#hero" x="760" y="300" width="400" height="600"/>';
     await expect(validateDrawing(`\`\`\`svg\n${body}\n\`\`\``, opts)).rejects.toThrow(/the shot's set #home is not placed: start the frame with <use href="#home" x="0" y="0" width="1920" height="1080"\/>/);
+  });
+});
+
+describe("by-eye override of the critic (owner + QC), never of a measured gate", () => {
+  const shots = [1].map((index) => ({ index, beat: "b", image: "f01.jpg", measured: "Close-up · critic 3/10 · critic's action note: tanzaku too small" }));
+  const md = checklistTemplate({ slug: "v2-furin", projectId: "p", runId: "r", commit: "c", hero: "furin", shots, critic: ["shot(s) scored below 4: 1 (3)"] });
+
+  it("lists the critic's shortfalls and a key-action box, and starts without an override", () => {
+    expect(md).toMatch(/## Critic scores \(not a measured gate\)/);
+    expect(md).toMatch(/- shot\(s\) scored below 4: 1 \(3\)/);
+    expect(md).toMatch(/- \[ \] key action reads/);
+    expect(md).toMatch(/critic's action note: tanzaku too small/);
+    expect(criticOverride(md)).toBe(false);
+  });
+
+  it("an override needs APPROVED with both the owner and QC named", () => {
+    expect(criticOverride(md.replace("Critic override: none", "Critic override: APPROVED by owner vansyson and QC lead"))).toBe(true);
+    expect(criticOverride(md.replace("Critic override: none", "Critic override: APPROVED by owner vansyson"))).toBe(false);
+    expect(criticOverride(md.replace("Critic override: none", "Critic override: approved, QC and owner"))).toBe(false);
   });
 });
