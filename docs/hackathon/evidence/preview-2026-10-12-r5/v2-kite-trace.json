@@ -1,0 +1,1208 @@
+{
+  "id": "cmv5ck21700012aphuliu0dto",
+  "projectId": "cmv5ck1qp00002aphjxa9lku5",
+  "story": "SETS (make each one a cast member of kind \"set\" and give every shot the set of the place it shows):\n1. Brighton seafront: the pier and its shingle beach by the sea (kit place: beach); morning wind, afternoon, golden dusk\n2. Grandfather's kitchen with a wooden table and a window (kit place: kitchen); morning light\n\nKEY OBJECT (the owner's notes — draw it exactly so): Maya's red diamond kite: a red sail on a cross of thin bamboo sticks, a tail of small bows, flown on a string. States in order: intact (smooth taut sail) → torn (a jagged hole with a flap of sail hanging down and the sky showing through it) → patched (a white cloth patch over the hole with visible stitches) → starred (the same patch with a big gold star painted on it).\n\nOn a windy autumn morning in Brighton, eight-year-old Maya flies her red kite above the pier. A gust slams it into the pier railings, and the red sail tears from corner to corner. Maya runs home along the seafront, the broken kite hugged to her chest. Her grandfather, who mended sails when he was young, looks up from his newspaper. At the kitchen table he lays the kite flat and threads a needle with sailcloth thread. Stitch by stitch, he shows Maya how a sailor's seam holds against the wind. Maya paints a small gold star over the patch, so the kite will remember. In the afternoon they walk back to the beach together, the kite under Grandfather's arm. Maya runs into the wind, and the kite climbs higher than ever over the waves. She hands the string to her grandfather, and he laughs like a boy. At golden dusk they walk home along the sand, the mended kite on Maya's shoulder.",
+  "language": "en",
+  "style": "storybook",
+  "status": "done",
+  "provider": "nemotron",
+  "models": {
+    "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+    "mid": "nvidia/nemotron-3-super-120b-a12b",
+    "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+    "vision": "openbmb/MiniCPM-V-4_5"
+  },
+  "config": {
+    "budget": {
+      "maxShots": 11,
+      "maxTokens": 800000,
+      "maxUsd": 0.3,
+      "maxRepairs": 3,
+      "maxCriticRounds": 2,
+      "maxWallMs": 840000
+    },
+    "profile": "crew",
+    "series": null,
+    "critic": true,
+    "research": "on",
+    "fps": 12,
+    "visionAvailable": true,
+    "modelNotes": [
+      "vision: no NVIDIA vision model in the catalog, so openbmb/MiniCPM-V-4_5 LOOKS at each render and Nemotron Nano still scores it (vision critic: openbmb/MiniCPM-V-4_5; Nemotron crew: Ultra/Super/Nano)."
+    ]
+  },
+  "bible": {
+    "title": "The Mended Kite",
+    "logline": "A torn kite, a sailor's seam, and a gold star — love repairs what wind breaks.",
+    "palette": [
+      "#E84A3E",
+      "#F5C542",
+      "#FFFFFF",
+      "#4A90D9",
+      "#F2D6A4",
+      "#8B5E3C",
+      "#A8C0E8"
+    ],
+    "cast": [
+      {
+        "id": "maya",
+        "name": "Maya",
+        "kind": "character",
+        "look": "Eight-year-old girl with short chestnut hair, wearing a yellow raincoat over a striped tee, blue jeans, red wellies. Signature detail: a small silver kite charm on her zipper.",
+        "colors": [
+          "#E84A3E",
+          "#F2D6A4",
+          "#4A90D9"
+        ],
+        "cites": [
+          6
+        ]
+      },
+      {
+        "id": "grandfather",
+        "name": "Grandfather",
+        "kind": "character",
+        "look": "Elderly man with white hair and beard, wearing a navy cardigan over a cream shirt, brown trousers, leather slippers. Signature detail: a brass thimble on a chain around his neck.",
+        "colors": [
+          "#8B5E3C",
+          "#A8C0E8",
+          "#F5C542"
+        ],
+        "cites": [
+          2,
+          5
+        ]
+      },
+      {
+        "id": "kite",
+        "name": "Maya's red diamond kite",
+        "kind": "prop",
+        "look": "Red diamond kite: red sail on thin bamboo cross, small bow tail, string. States: intact (smooth taut sail), torn (jagged hole corner to corner with flap hanging, sky visible), patched (white cloth patch with visible stitches), starred (same patch with big gold star painted).",
+        "colors": [
+          "#E84A3E",
+          "#FFFFFF",
+          "#F5C542"
+        ],
+        "cites": [
+          3,
+          4
+        ],
+        "anatomy": {
+          "category": [
+            "red diamond kite",
+            "diamond kite",
+            "red kite",
+            "flying kite",
+            "toy kite"
+          ],
+          "parts": [
+            {
+              "part": "sail",
+              "look": "red diamond-shaped fabric sail, taut and smooth, spans full width and height of frame, matte ripstop nylon with faint grid texture"
+            },
+            {
+              "part": "frame",
+              "look": "thin bamboo cross, two straight sticks lashed at center forming diamond outline, pale tan bamboo with visible nodes, each stick ~1/12 sail width thick"
+            },
+            {
+              "part": "tail",
+              "look": "chain of small fabric bows, each bow ~1/10 sail height, attached at bottom vertex, same red fabric, 5–7 bows trailing downward"
+            },
+            {
+              "part": "bridle",
+              "look": "short loop of heavier off-white twisted cord at frame crossing, where flying string ties on, sits at center of diamond"
+            }
+          ],
+          "notLike": [
+            "gift box with ribbon",
+            "picture frame",
+            "diamond road sign",
+            "child's drawing of a house",
+            "kite-shaped cookie"
+          ],
+          "states": [
+            {
+              "id": "intact",
+              "change": "smooth taut red sail on bamboo cross, small bow tail, bridle loop at center"
+            },
+            {
+              "id": "torn",
+              "change": "jagged hole from corner to corner, flap of red sail hanging down, pale sky showing through the gap"
+            },
+            {
+              "id": "patched",
+              "change": "white cloth patch over the hole with visible running stitches in pale thread, patch edges tucked under sail"
+            },
+            {
+              "id": "starred",
+              "change": "white patch with a big gold five-point star painted on it, star points nearly touch patch edges"
+            }
+          ]
+        },
+        "states": [
+          {
+            "id": "intact",
+            "look": "smooth taut red sail on bamboo cross, small bow tail, string taut"
+          },
+          {
+            "id": "torn",
+            "look": "jagged hole from corner to corner, flap of sail hanging down, sky showing through"
+          },
+          {
+            "id": "patched",
+            "look": "white cloth patch over the hole with visible stitches"
+          },
+          {
+            "id": "starred",
+            "look": "white patch with a big gold star painted on it"
+          }
+        ]
+      },
+      {
+        "id": "brighton-seafront",
+        "name": "Brighton seafront",
+        "kind": "set",
+        "look": "Brighton pier extending over shingle beach, wooden railings, sea horizon. Morning wind with gentle waves, afternoon bright, golden dusk glow.",
+        "colors": [
+          "#4A90D9",
+          "#F2D6A4",
+          "#A8C0E8",
+          "#8B5E3C"
+        ],
+        "cites": [
+          1,
+          6
+        ]
+      },
+      {
+        "id": "kitchen",
+        "name": "Grandfather's kitchen",
+        "kind": "set",
+        "look": "Cozy vintage kitchen with wooden table, window with lace curtains, morning light streaming in. Kettle, jars, newspaper on table.",
+        "colors": [
+          "#8B5E3C",
+          "#A8C0E8",
+          "#F2D6A4"
+        ],
+        "cites": [
+          2,
+          5
+        ]
+      }
+    ],
+    "shots": [
+      {
+        "scene": "Morning on the pier",
+        "shotType": "Wide shot",
+        "description": "Brighton seafront at morning wind: the pier stretches over shingle beach, sea horizon rippling. Eight-year-old Maya stands on the boards, arms up, flying her red diamond kite high on a taut string. Golden morning light catches the red sail.",
+        "mode": "motion",
+        "durationSec": 4,
+        "dialogue": "On a windy autumn morning in Brighton, eight-year-old Maya flies her red kite above the pier.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "maya",
+          "kite",
+          "brighton-seafront"
+        ],
+        "acting": [
+          {
+            "who": "maya",
+            "pose": "hold",
+            "expression": "smile"
+          }
+        ],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "intact"
+          }
+        ]
+      },
+      {
+        "scene": "Morning on the pier",
+        "shotType": "Close-up",
+        "description": "Low angle close-up on the kite as a sudden gust slams it sideways into the pier's wooden railings. The red sail snags and tears with a sharp rip from corner to corner, a jagged hole opening, a flap of red cloth hanging loose, pale sky showing through.",
+        "mode": "motion",
+        "durationSec": 3,
+        "dialogue": "A gust slams it into the pier railings, and the red sail tears from corner to corner.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "kite",
+          "brighton-seafront"
+        ],
+        "acting": [],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "torn"
+          }
+        ]
+      },
+      {
+        "scene": "Run home along the seafront",
+        "shotType": "Medium shot",
+        "description": "Maya runs along the shingle beach toward home, morning wind tugging her yellow raincoat. She hugs the broken kite tight to her chest, the torn sail flap bouncing against her. The pier railings recede behind her.",
+        "mode": "motion",
+        "durationSec": 4,
+        "dialogue": "Maya runs home along the seafront, the broken kite hugged to her chest.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "maya",
+          "kite",
+          "brighton-seafront"
+        ],
+        "acting": [
+          {
+            "who": "maya",
+            "pose": "walk",
+            "expression": "sad"
+          }
+        ],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "torn"
+          }
+        ]
+      },
+      {
+        "scene": "Grandfather's kitchen",
+        "shotType": "Medium shot",
+        "description": "Inside the cozy vintage kitchen, morning light streams through lace curtains onto the wooden table. Grandfather sits in his navy cardigan, newspaper half-folded, looking up over brass-rimmed glasses as Maya bursts in. The brass thimble on his chain catches the light.",
+        "mode": "still",
+        "durationSec": 3,
+        "dialogue": "Her grandfather, who mended sails when he was young, looks up from his newspaper.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "grandfather",
+          "kitchen"
+        ],
+        "acting": [
+          {
+            "who": "grandfather",
+            "pose": "look-right",
+            "expression": "surprised"
+          }
+        ],
+        "cites": []
+      },
+      {
+        "scene": "Grandfather's kitchen",
+        "shotType": "Close-up",
+        "description": "Insert shot: the kite laid flat on the wooden table, torn sail spread. Grandfather's hands thread a needle with white sailcloth thread. Morning light highlights the jagged hole and the spool of thread beside a jar.",
+        "mode": "still",
+        "durationSec": 3,
+        "dialogue": "At the kitchen table he lays the kite flat and threads a needle with sailcloth thread.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "grandfather",
+          "kite",
+          "kitchen"
+        ],
+        "acting": [
+          {
+            "who": "grandfather",
+            "pose": "hold",
+            "expression": "neutral"
+          }
+        ],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "patched"
+          }
+        ]
+      },
+      {
+        "scene": "Grandfather's kitchen",
+        "shotType": "Over-the-shoulder",
+        "description": "Over Grandfather's shoulder: he guides Maya's small fingers, showing the sailor's seam — tiny even stitches closing the hole. The white cloth patch grows across the tear, stitches visible. Maya watches, rapt.",
+        "mode": "still",
+        "durationSec": 4,
+        "dialogue": "Stitch by stitch, he shows Maya how a sailor's seam holds against the wind.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "grandfather",
+          "maya",
+          "kite",
+          "kitchen"
+        ],
+        "acting": [
+          {
+            "who": "grandfather",
+            "pose": "point",
+            "expression": "smile"
+          },
+          {
+            "who": "maya",
+            "pose": "look-left",
+            "expression": "surprised"
+          }
+        ],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "patched"
+          }
+        ]
+      },
+      {
+        "scene": "Grandfather's kitchen",
+        "shotType": "Close-up",
+        "description": "Extreme close-up on the patched kite: Maya's brush adds a bold gold star in the center of the white patch. The star shines against the red sail. Morning light still fills the window behind.",
+        "mode": "still",
+        "durationSec": 3,
+        "dialogue": "Maya paints a small gold star over the patch, so the kite will remember.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "maya",
+          "kite",
+          "kitchen"
+        ],
+        "acting": [
+          {
+            "who": "maya",
+            "pose": "hold",
+            "expression": "smile"
+          }
+        ],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "starred"
+          }
+        ]
+      },
+      {
+        "scene": "Afternoon return to the beach",
+        "shotType": "Wide shot",
+        "description": "Brighton seafront in bright afternoon: Maya and Grandfather walk side by side along the shingle beach toward the pier. Grandfather carries the mended kite under his arm, its starred patch visible. Sea sparkles, wind gentler.",
+        "mode": "motion",
+        "durationSec": 4,
+        "dialogue": "In the afternoon they walk back to the beach together, the kite under Grandfather's arm.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "maya",
+          "grandfather",
+          "kite",
+          "brighton-seafront"
+        ],
+        "acting": [
+          {
+            "who": "maya",
+            "pose": "walk",
+            "expression": "smile"
+          },
+          {
+            "who": "grandfather",
+            "pose": "walk",
+            "expression": "smile"
+          }
+        ],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "starred"
+          }
+        ]
+      },
+      {
+        "scene": "Afternoon flight",
+        "shotType": "Low angle",
+        "description": "Low angle on Maya as she sprints into the wind, unreeling string. The starred kite leaps upward, climbing higher than the pier railings, tail bows streaming. Grandfather watches from behind, cardigan fluttering.",
+        "mode": "motion",
+        "durationSec": 4,
+        "dialogue": "Maya runs into the wind, and the kite climbs higher than ever over the waves.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "maya",
+          "kite",
+          "grandfather",
+          "brighton-seafront"
+        ],
+        "acting": [
+          {
+            "who": "maya",
+            "pose": "walk",
+            "expression": "laugh"
+          },
+          {
+            "who": "grandfather",
+            "pose": "look-left",
+            "expression": "smile"
+          }
+        ],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "starred"
+          }
+        ]
+      },
+      {
+        "scene": "Afternoon flight",
+        "shotType": "Two-shot",
+        "description": "Medium two-shot: Maya turns, offering the string spool to Grandfather. He takes it, head thrown back, laughing like a boy — white beard bristling, eyes crinkled. The kite soars above them, string taut.",
+        "mode": "motion",
+        "durationSec": 4,
+        "dialogue": "She hands the string to her grandfather, and he laughs like a boy.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "maya",
+          "grandfather",
+          "kite",
+          "brighton-seafront"
+        ],
+        "acting": [
+          {
+            "who": "maya",
+            "pose": "hold",
+            "expression": "laugh"
+          },
+          {
+            "who": "grandfather",
+            "pose": "hold",
+            "expression": "laugh"
+          }
+        ],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "starred"
+          }
+        ]
+      },
+      {
+        "scene": "Golden dusk walk home",
+        "shotType": "Wide shot",
+        "description": "Golden dusk on Brighton seafront: long shadows stretch across wet sand. Maya and Grandfather walk home along the water's edge, the mended kite resting on Maya's shoulder, gold star catching the last light. Pier lights flicker on.",
+        "mode": "still",
+        "durationSec": 5,
+        "dialogue": "At golden dusk they walk home along the sand, the mended kite on Maya's shoulder.",
+        "speaker": null,
+        "transition": "fadeBlack",
+        "cast": [
+          "maya",
+          "grandfather",
+          "kite",
+          "brighton-seafront"
+        ],
+        "acting": [
+          {
+            "who": "maya",
+            "pose": "walk",
+            "expression": "smile"
+          },
+          {
+            "who": "grandfather",
+            "pose": "walk",
+            "expression": "smile"
+          }
+        ],
+        "cites": [],
+        "propStates": [
+          {
+            "prop": "kite",
+            "state": "starred"
+          }
+        ]
+      }
+    ],
+    "references": [
+      {
+        "note": "Brighton seafront pier and shingle beach at golden dusk",
+        "url": "https://windy.app/forecast2/spot/22870/Brighton+seafront",
+        "title": "Brighton seafront, England, The City of Brighton and Hove, Brighton Wind Forecast: wind speed & gusts — Windy.app",
+        "use": "set"
+      },
+      {
+        "note": "Grandfather's kitchen with wooden table and window, morning light",
+        "url": "https://windy.app/forecast2/spot/22870/Brighton+seafront",
+        "title": "Brighton seafront, England, The City of Brighton and Hove, Brighton Wind Forecast: wind speed & gusts — Windy.app",
+        "use": "set"
+      },
+      {
+        "note": "Red diamond kite: red sail on cross of thin bamboo sticks, tail of small bows, flown on a string",
+        "url": "https://windy.app/forecast2/spot/22870/Brighton+seafront",
+        "title": "Brighton seafront, England, The City of Brighton and Hove, Brighton Wind Forecast: wind speed & gusts — Windy.app",
+        "use": "props"
+      },
+      {
+        "note": "Kite damage progression: intact → torn (jagged hole with flap) → patched (white cloth patch with visible stitches) → starred (patch with gold star painted)",
+        "url": "https://windy.app/forecast2/spot/22870/Brighton+seafront",
+        "title": "Brighton seafront, England, The City of Brighton and Hove, Brighton Wind Forecast: wind speed & gusts — Windy.app",
+        "use": "costume"
+      },
+      {
+        "note": "Vintage kitchen window with wooden table, morning light",
+        "url": "https://weather.metoffice.gov.uk/forecast/gcpcj51es",
+        "title": "Brighton (Beach) (Brighton and Hove) weather - Met Office",
+        "use": "set"
+      },
+      {
+        "note": "Brighton pier waves crashing in strong wind (up to 50mph gusts)",
+        "url": "https://www.facebook.com/groups/343329786021733/posts/2736310893390265",
+        "title": "Dramatic waves at Brighton pier on a cloudy day",
+        "use": "set"
+      }
+    ]
+  },
+  "summary": {
+    "status": "done",
+    "shots": 11,
+    "rendered": 0,
+    "firstPassOk": 0,
+    "repairs": 0,
+    "criticBefore": null,
+    "criticAfter": null,
+    "revisions": 0,
+    "gateFailures": 0,
+    "offPlan": [],
+    "actionNotes": {},
+    "setless": [],
+    "shotScores": {},
+    "belowFloor": [],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 11,
+    "lintWarnings": 0,
+    "durationSec": 27.166667,
+    "wallMs": 38279,
+    "tokens": 21706,
+    "costUsd": 0.02989806,
+    "continuity": [],
+    "textCritic": false,
+    "research": {
+      "notes": 6,
+      "cited": 6,
+      "castCiting": 5,
+      "shotsCiting": 0,
+      "byUse": {
+        "set": 4,
+        "props": 1,
+        "costume": 1
+      }
+    },
+    "propRecognition": [
+      {
+        "symbol": "kite",
+        "prop": "kite",
+        "state": "intact",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 1
+      },
+      {
+        "symbol": "kite--starred",
+        "prop": "kite",
+        "state": "starred",
+        "ok": true,
+        "saw": "kite",
+        "redraws": 0
+      },
+      {
+        "symbol": "kite--torn",
+        "prop": "kite",
+        "state": "torn",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 0
+      },
+      {
+        "symbol": "kite--patched",
+        "prop": "kite",
+        "state": "patched",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 0
+      }
+    ],
+    "stopAfter": "cast",
+    "castSetTimes": {
+      "brighton-seafront": "golden",
+      "kitchen": "day"
+    },
+    "castFromRun": "cmv52ko2v00012aqwwxhnuzq6"
+  },
+  "tokensIn": 10531,
+  "tokensOut": 11175,
+  "costUsd": 0.02989806,
+  "error": null,
+  "startedAt": "2026-10-12T14:28:04.555Z",
+  "finishedAt": "2026-10-12T14:28:42.842Z",
+  "library": "<linearGradient id=\"kite-bambooGrad-a104\" x1=\"0%\" y1=\"0%\" x2=\"100%\" y2=\"0%\">\n    <stop offset=\"0%\" stop-color=\"#8B5E3C\"/>\n    <stop offset=\"100%\" stop-color=\"#F2D6A4\"/>\n  </linearGradient>\n<radialGradient id=\"maya-skin\" cx=\"0.38\" cy=\"0.32\" r=\"0.75\"><stop offset=\"0\" stop-color=\"#e4c0ae\"/><stop offset=\"1\" stop-color=\"#d9a88e\"/></radialGradient>\n<radialGradient id=\"grandfather-skin\" cx=\"0.38\" cy=\"0.32\" r=\"0.75\"><stop offset=\"0\" stop-color=\"#eed1be\"/><stop offset=\"1\" stop-color=\"#e8bfa5\"/></radialGradient>\n<linearGradient id=\"kite-bambooGrad\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#F2D6A4\"/><stop offset=\"1\" stop-color=\"#E8BFA5\"/></linearGradient>\n<radialGradient id=\"kite-highlight\" cx=\"0.3\" cy=\"0.3\" r=\"0.5\"><stop offset=\"0\" stop-color=\"#FFFFFF\" stop-opacity=\"0.4\"/><stop offset=\"1\" stop-color=\"#FFFFFF\" stop-opacity=\"0\"/></radialGradient>\n<linearGradient id=\"kite-sailGrad\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\"><stop offset=\"0\" stop-color=\"#E84A3E\"/><stop offset=\"1\" stop-color=\"#F5C542\"/></linearGradient>\n<linearGradient id=\"brighton-seafront-ground\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#afc5ea\"/><stop offset=\"1\" stop-color=\"#8fa2c5\"/></linearGradient>\n<linearGradient id=\"brighton-seafront-sea\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#abb4ad\"/><stop offset=\"1\" stop-color=\"#809cb0\"/></linearGradient>\n<linearGradient id=\"brighton-seafront-sky\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#e7a76a\"/><stop offset=\"1\" stop-color=\"#fbe0a6\"/></linearGradient>\n<radialGradient id=\"brighton-seafront-sunglow\"><stop offset=\"0\" stop-color=\"#ffe08a\" stop-opacity=\"0.55\"/><stop offset=\"1\" stop-color=\"#ffe08a\" stop-opacity=\"0\"/></radialGradient>\n<radialGradient id=\"brighton-seafront-vignette\" cx=\"0.5\" cy=\"0.5\" r=\"0.75\"><stop offset=\"0.6\" stop-color=\"#1d1a26\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#1d1a26\" stop-opacity=\"0.22\"/></radialGradient>\n<linearGradient id=\"kitchen-floor\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#d2ba91\"/><stop offset=\"1\" stop-color=\"#f4dbaf\"/></linearGradient>\n<linearGradient id=\"kitchen-stove-body-1267\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#bed0ee\"/><stop offset=\"1\" stop-color=\"#8c9fc1\"/></linearGradient>\n<radialGradient id=\"kitchen-vignette\" cx=\"0.5\" cy=\"0.5\" r=\"0.75\"><stop offset=\"0.6\" stop-color=\"#1d1a26\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#1d1a26\" stop-opacity=\"0.22\"/></radialGradient>\n<linearGradient id=\"kitchen-wainscot\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#958078\"/><stop offset=\"1\" stop-color=\"#704d37\"/></linearGradient>\n<linearGradient id=\"kitchen-wall\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#7e5639\"/><stop offset=\"0.55\" stop-color=\"#8B5E3C\"/><stop offset=\"1\" stop-color=\"#946b4c\"/></linearGradient>\n<linearGradient id=\"kitchen-win-346\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#7fb6e8\"/><stop offset=\"1\" stop-color=\"#d9ecf7\"/></linearGradient>\n<linearGradient id=\"kitchen-win-960\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#7fb6e8\"/><stop offset=\"1\" stop-color=\"#d9ecf7\"/></linearGradient>\n<symbol id=\"maya\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"181.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"208.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"226.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M152 234 Q126 291 128 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M248 234 Q274 291 272 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<circle cx=\"128\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"272\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M186.4 170.4 Q200 182.4 213.6 170.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandfather\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q278 245 276 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"276\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M276 346 L288 588\" stroke=\"#6b4a2b\" stroke-width=\"8\" stroke-linecap=\"round\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<path d=\"M192.5 133.1 Q200 139.7 207.5 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n\n</symbol>\n<symbol id=\"kite\" viewBox=\"0 0 400 400\">\n  <path d=\"M200 50 L350 200 L200 350 L50 200 Z\" fill=\"#E84A3E\"/>\n  <ellipse cx=\"150\" cy=\"150\" rx=\"30\" ry=\"20\" fill=\"#FFFFFF\" fill-opacity=\"0.3\"/>\n  <line x1=\"200\" y1=\"50\" x2=\"200\" y2=\"350\" stroke=\"#F2D6A4\" stroke-width=\"6\"/>\n  <line x1=\"50\" y1=\"200\" x2=\"350\" y2=\"200\" stroke=\"#F2D6A4\" stroke-width=\"6\"/>\n  <circle cx=\"200\" cy=\"200\" r=\"8\" fill=\"#FFFFFF\" stroke=\"#8B5E3C\" stroke-width=\"2\"/>\n  <line x1=\"200\" y1=\"350\" x2=\"200\" y2=\"400\" stroke=\"#8B5E3C\" stroke-width=\"2\"/>\n  <circle cx=\"200\" cy=\"360\" r=\"8\" fill=\"#E84A3E\"/>\n  <circle cx=\"200\" cy=\"370\" r=\"8\" fill=\"#E84A3E\"/>\n  <circle cx=\"200\" cy=\"380\" r=\"8\" fill=\"#E84A3E\"/>\n  <circle cx=\"200\" cy=\"390\" r=\"8\" fill=\"#E84A3E\"/>\n  <circle cx=\"200\" cy=\"400\" r=\"8\" fill=\"#E84A3E\"/>\n  <ellipse cx=\"200\" cy=\"200\" rx=\"12\" ry=\"4\" fill=\"#FFFFFF\" fill-opacity=\"0.2\"/>\n</symbol>\n<symbol id=\"brighton-seafront\" viewBox=\"0 0 1920 1080\">\n<rect width=\"1920\" height=\"601.6\" fill=\"url(#brighton-seafront-sky)\"/>\n<circle cx=\"1497.6\" cy=\"491.6\" r=\"260\" fill=\"url(#brighton-seafront-sunglow)\"/><circle cx=\"1497.6\" cy=\"491.6\" r=\"62\" fill=\"#ffe08a\"/>\n<g fill=\"#ffffff\" fill-opacity=\"0.85\"><ellipse cx=\"240.6\" cy=\"207.4\" rx=\"110\" ry=\"34\"/><ellipse cx=\"300.6\" cy=\"185.4\" rx=\"70\" ry=\"38\"/><ellipse cx=\"190.6\" cy=\"195.4\" rx=\"60\" ry=\"30\"/></g>\n<g fill=\"#ffffff\" fill-opacity=\"0.85\"><ellipse cx=\"589.8\" cy=\"184.1\" rx=\"110\" ry=\"34\"/><ellipse cx=\"649.8\" cy=\"162.1\" rx=\"70\" ry=\"38\"/><ellipse cx=\"539.8\" cy=\"172.1\" rx=\"60\" ry=\"30\"/></g>\n<g fill=\"#ffffff\" fill-opacity=\"0.85\"><ellipse cx=\"899.6\" cy=\"181.3\" rx=\"110\" ry=\"34\"/><ellipse cx=\"959.6\" cy=\"159.3\" rx=\"70\" ry=\"38\"/><ellipse cx=\"849.6\" cy=\"169.3\" rx=\"60\" ry=\"30\"/></g>\n<path d=\"M0 521.6 Q384 411.6 806.4 501.6 T1536 471.6 T1920 511.6 L1920 601.6 L0 601.6 Z\" fill=\"#b4c0ba\"/>\n<rect y=\"561.6\" width=\"1920\" height=\"267.6\" fill=\"url(#brighton-seafront-sea)\"/>\n<path d=\"M314.2 579.6 q40 -10 80 0 t80 0 t80 0 M1420.5 585.6 q40 -10 80 0 t80 0\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.3\" stroke-width=\"3\"/>\n<path d=\"M37 606 q40 -10 80 0 t80 0 t80 0 M1590.8 612 q40 -10 80 0 t80 0\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.3\" stroke-width=\"3\"/>\n<path d=\"M0.5 632.4 q40 -10 80 0 t80 0 t80 0 M1164.2 638.4 q40 -10 80 0 t80 0\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.3\" stroke-width=\"3\"/>\n<path d=\"M484.4 658.8 q40 -10 80 0 t80 0 t80 0 M1418.5 664.8 q40 -10 80 0 t80 0\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M610.5 685.2 q40 -10 80 0 t80 0 t80 0 M1479.6 691.2 q40 -10 80 0 t80 0\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M196.2 711.6 q40 -10 80 0 t80 0 t80 0 M1547.2 717.6 q40 -10 80 0 t80 0\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.5\" stroke-width=\"3\"/>\n<path d=\"M495.4 738 q40 -10 80 0 t80 0 t80 0 M1639 744 q40 -10 80 0 t80 0\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.5\" stroke-width=\"3\"/>\n<path d=\"M259.7 764.4 q40 -10 80 0 t80 0 t80 0 M1337 770.4 q40 -10 80 0 t80 0\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.5\" stroke-width=\"3\"/>\n<path d=\"M161.7 790.8 q40 -10 80 0 t80 0 t80 0 M1258.5 796.8 q40 -10 80 0 t80 0\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.6\" stroke-width=\"3\"/>\n<path d=\"M1420.8 561.6 L1574.4 561.6 L1728 799.2 L1267.2 799.2 Z\" fill=\"#ffe08a\" fill-opacity=\"0.25\"/>\n<path d=\"M0 799.2 Q672 773.2 1152 793.2 T1920 785.2 L1920 1080 L0 1080 Z\" fill=\"url(#brighton-seafront-ground)\"/>\n<circle cx=\"1632.6\" cy=\"922.3\" r=\"2.4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1598.7\" cy=\"823.6\" r=\"2.5\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"715.2\" cy=\"895.5\" r=\"3.3\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"475.1\" cy=\"925.7\" r=\"4.6\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"209.4\" cy=\"950.5\" r=\"4.4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"687.5\" cy=\"923.4\" r=\"2.8\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1900\" cy=\"821.1\" r=\"2.6\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"949.3\" cy=\"958.2\" r=\"4.5\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"384.5\" cy=\"985.8\" r=\"2.9\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"432.1\" cy=\"990.5\" r=\"3.6\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"207.3\" cy=\"884.2\" r=\"4.8\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"563.4\" cy=\"1003.3\" r=\"3.6\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1141.8\" cy=\"853.4\" r=\"4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1144.1\" cy=\"922.5\" r=\"4.8\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"784.8\" cy=\"964.1\" r=\"3.9\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1497.1\" cy=\"888.3\" r=\"4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"461.4\" cy=\"858.3\" r=\"4.4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"628.9\" cy=\"861.9\" r=\"4.3\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"890.5\" cy=\"908.2\" r=\"3.4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1253.6\" cy=\"907.1\" r=\"2.4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"631\" cy=\"1060.7\" r=\"3.5\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1043.4\" cy=\"979.2\" r=\"4.9\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"158.3\" cy=\"1048.2\" r=\"3\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"715.6\" cy=\"930.2\" r=\"4.8\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1726.9\" cy=\"1002.5\" r=\"4.4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1585.7\" cy=\"883.4\" r=\"3.9\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"568.8\" cy=\"832.3\" r=\"3.6\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"976.6\" cy=\"890\" r=\"3.2\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"702.9\" cy=\"847.7\" r=\"4.7\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"77.2\" cy=\"892.7\" r=\"3.8\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1254.5\" cy=\"984.1\" r=\"4.8\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1771\" cy=\"915.8\" r=\"4.8\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1656.5\" cy=\"942.4\" r=\"2.1\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1672.8\" cy=\"1000.3\" r=\"2.3\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"232\" cy=\"1022.4\" r=\"3.9\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1498.7\" cy=\"990.4\" r=\"4.4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1605.3\" cy=\"1030.2\" r=\"2.7\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1337.7\" cy=\"830.5\" r=\"3.5\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1857\" cy=\"956.7\" r=\"2.7\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1337.1\" cy=\"984.6\" r=\"4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1315.8\" cy=\"953.3\" r=\"2.5\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1879.7\" cy=\"952.6\" r=\"2.5\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"234.5\" cy=\"825.7\" r=\"4.2\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"644.2\" cy=\"1067.9\" r=\"3.8\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"1512.5\" cy=\"1027.1\" r=\"2.2\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<circle cx=\"103.6\" cy=\"1039.4\" r=\"3.4\" fill=\"#8c9fc1\" fill-opacity=\"0.5\"/>\n<rect x=\"-51.2\" y=\"739.2\" width=\"640\" height=\"22\" fill=\"#a88961\"/>\n<rect x=\"-41.2\" y=\"739.2\" width=\"16\" height=\"110\" fill=\"#77624c\"/><rect x=\"-41.2\" y=\"679.2\" width=\"12\" height=\"60\" fill=\"#77624c\"/>\n<rect x=\"58.8\" y=\"739.2\" width=\"16\" height=\"110\" fill=\"#77624c\"/><rect x=\"58.8\" y=\"679.2\" width=\"12\" height=\"60\" fill=\"#77624c\"/>\n<rect x=\"158.8\" y=\"739.2\" width=\"16\" height=\"110\" fill=\"#77624c\"/><rect x=\"158.8\" y=\"679.2\" width=\"12\" height=\"60\" fill=\"#77624c\"/>\n<rect x=\"258.8\" y=\"739.2\" width=\"16\" height=\"110\" fill=\"#77624c\"/><rect x=\"258.8\" y=\"679.2\" width=\"12\" height=\"60\" fill=\"#77624c\"/>\n<rect x=\"358.8\" y=\"739.2\" width=\"16\" height=\"110\" fill=\"#77624c\"/><rect x=\"358.8\" y=\"679.2\" width=\"12\" height=\"60\" fill=\"#77624c\"/>\n<rect x=\"458.8\" y=\"739.2\" width=\"16\" height=\"110\" fill=\"#77624c\"/><rect x=\"458.8\" y=\"679.2\" width=\"12\" height=\"60\" fill=\"#77624c\"/>\n<rect x=\"558.8\" y=\"739.2\" width=\"16\" height=\"110\" fill=\"#77624c\"/><rect x=\"558.8\" y=\"679.2\" width=\"12\" height=\"60\" fill=\"#77624c\"/>\n<path d=\"M-51.2 689.2 H588.8\" stroke=\"#a88961\" stroke-width=\"8\"/>\n<rect x=\"1491.2\" y=\"739.2\" width=\"320\" height=\"18\" rx=\"5\" fill=\"#a88961\"/><rect x=\"1491.2\" y=\"679.2\" width=\"320\" height=\"14\" rx=\"5\" fill=\"#a88961\"/>\n<rect x=\"1511.2\" y=\"679.2\" width=\"14\" height=\"130\" fill=\"#77624c\"/>\n<rect x=\"1776.2\" y=\"679.2\" width=\"14\" height=\"130\" fill=\"#77624c\"/>\n<path d=\"M519.9 682.6 L708.9 682.6 L683.7 720.4 L545.1 720.4 Z\" fill=\"#cdb48a\"/><path d=\"M614.4 682.6 V544\" stroke=\"#563bNaN\" stroke-width=\"5\"/><path d=\"M618.2 550.3 L696.3 670 L618.2 670 Z\" fill=\"#f7f1e1\"/>\n<path d=\"M1270.6 779.2 L1283.2 499.2 L1328 499.2 L1340.6 779.2 Z\" fill=\"#f7f1e1\"/>\n<path d=\"M1273.4 737.2 L1337.8 737.2 L1335.7 702.2 L1275.5 702.2 Z\" fill=\"#F2D6A4\"/>\n<path d=\"M1277.6 653.2 L1333.6 653.2 L1331.5 618.2 L1279.7 618.2 Z\" fill=\"#F2D6A4\"/>\n<path d=\"M1281.8 569.2 L1329.4 569.2 L1327.3 534.2 L1283.9 534.2 Z\" fill=\"#F2D6A4\"/>\n<rect x=\"1284.6\" y=\"464.2\" width=\"42\" height=\"35\" fill=\"#d7e6f2\"/><path d=\"M1277.6 464.2 L1305.6 436.2 L1333.6 464.2 Z\" fill=\"#b29e7e\"/>\n<path d=\"M806 759.2 v-60.5 l6.6 -8.8 l6.6 8.8 v60.5 Z\" fill=\"#f2e3cd\"/>\n<path d=\"M844.5 759.2 v-60.5 l6.6 -8.8 l6.6 8.8 v60.5 Z\" fill=\"#f2e3cd\"/>\n<path d=\"M883 759.2 v-60.5 l6.6 -8.8 l6.6 8.8 v60.5 Z\" fill=\"#f2e3cd\"/>\n<path d=\"M921.5 759.2 v-60.5 l6.6 -8.8 l6.6 8.8 v60.5 Z\" fill=\"#f2e3cd\"/>\n<path d=\"M960 759.2 v-60.5 l6.6 -8.8 l6.6 8.8 v60.5 Z\" fill=\"#f2e3cd\"/>\n<path d=\"M998.5 759.2 v-60.5 l6.6 -8.8 l6.6 8.8 v60.5 Z\" fill=\"#f2e3cd\"/>\n<path d=\"M1037 759.2 v-60.5 l6.6 -8.8 l6.6 8.8 v60.5 Z\" fill=\"#f2e3cd\"/>\n<path d=\"M1075.5 759.2 v-60.5 l6.6 -8.8 l6.6 8.8 v60.5 Z\" fill=\"#f2e3cd\"/>\n<path d=\"M1114 759.2 v-60.5 l6.6 -8.8 l6.6 8.8 v60.5 Z\" fill=\"#f2e3cd\"/>\n<path d=\"M800.5 715.2 h330 M800.5 740 h330\" stroke=\"#e6d1b2\" stroke-width=\"5.5\"/>\n<ellipse cx=\"-24.7\" cy=\"836.2\" rx=\"69.6\" ry=\"44.4\" fill=\"#939194\"/>\n<ellipse cx=\"55.8\" cy=\"836.2\" rx=\"72.5\" ry=\"34.8\" fill=\"#989392\"/>\n<ellipse cx=\"136.3\" cy=\"836.2\" rx=\"64.8\" ry=\"44.2\" fill=\"#9d9490\"/>\n<ellipse cx=\"216.8\" cy=\"836.2\" rx=\"61\" ry=\"40.3\" fill=\"#a1958d\"/>\n<rect width=\"1920\" height=\"1080\" fill=\"#ffb347\" fill-opacity=\"0.12\"/>\n<rect width=\"1920\" height=\"1080\" fill=\"url(#brighton-seafront-vignette)\"/>\n</symbol>\n<symbol id=\"kitchen\" viewBox=\"0 0 1920 1080\">\n<rect width=\"1920\" height=\"758\" fill=\"url(#kitchen-wall)\"/>\n<path d=\"M120 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M240 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M360 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M480 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M600 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M720 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M840 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M960 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1080 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1200 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1320 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1440 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1560 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1680 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1800 0 V468.7\" stroke=\"#6a4a35\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<rect y=\"468.7\" width=\"1920\" height=\"287.3\" fill=\"url(#kitchen-wainscot)\"/>\n<rect y=\"460.7\" width=\"1920\" height=\"14\" fill=\"#8a858a\"/>\n<path d=\"M80 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M160 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M240 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M320 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M400 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M480 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M560 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M640 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M720 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M800 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M880 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M960 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1040 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1120 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1200 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1280 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1360 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1440 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1520 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1600 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1680 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1760 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1840 474.7 V756\" stroke=\"#6a4a35\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<rect width=\"1920\" height=\"38\" fill=\"#777d8e\"/>\n<rect y=\"756\" width=\"1920\" height=\"324\" fill=\"url(#kitchen-floor)\"/>\n<rect y=\"756\" width=\"1920\" height=\"10\" fill=\"#a79478\"/>\n<path d=\"M420 756 L-600 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M510 756 L-340 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M600 756 L-80 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M690 756 L180 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M780 756 L440 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M870 756 L700 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M960 756 L960 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1050 756 L1220 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1140 756 L1480 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1230 756 L1740 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1320 756 L2000 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1410 756 L2260 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1500 756 L2520 1080\" stroke=\"#b29e7e\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<rect x=\"756\" y=\"85.5\" width=\"408\" height=\"328\" rx=\"6\" fill=\"#867f80\"/>\n<rect x=\"770\" y=\"99.5\" width=\"380\" height=\"300\" fill=\"url(#kitchen-win-960)\"/>\n<path d=\"M770 333.5 Q922 264.5 1036 324.5 T1150 309.5 V399.5 H770 Z\" fill=\"#9ab995\"/>\n<path d=\"M960 99.5 V399.5 M770 249.5 H1150\" stroke=\"#867f80\" stroke-width=\"10\"/>\n<rect x=\"746\" y=\"409.5\" width=\"428\" height=\"14\" rx=\"4\" fill=\"#90919c\"/>\n<path d=\"M770 399.5 L1150 399.5 L1380 1080 L840 1080 Z\" fill=\"#fff6dc\" fill-opacity=\"0.14\"/>\n<rect x=\"62.9\" y=\"613.5\" width=\"527\" height=\"40.3\" rx=\"9.3\" fill=\"#867f80\"/>\n<rect x=\"62.9\" y=\"647.6\" width=\"527\" height=\"12.4\" fill=\"#615c61\" fill-opacity=\"0.5\"/>\n<rect x=\"93.9\" y=\"650.7\" width=\"24.8\" height=\"195.3\" fill=\"#615c61\"/>\n<rect x=\"535.7\" y=\"650.7\" width=\"24.8\" height=\"195.3\" fill=\"#615c61\"/>\n<rect x=\"1523.9\" y=\"489.5\" width=\"21.7\" height=\"356.5\" fill=\"#615c61\"/>\n<rect x=\"1523.9\" y=\"675.5\" width=\"155\" height=\"24.8\" fill=\"#867f80\"/>\n<rect x=\"1657.2\" y=\"697.2\" width=\"21.7\" height=\"148.8\" fill=\"#615c61\"/>\n<rect x=\"1523.9\" y=\"505\" width=\"21.7\" height=\"9.3\" fill=\"#867f80\"/>\n<rect x=\"1523.9\" y=\"557.7\" width=\"21.7\" height=\"9.3\" fill=\"#867f80\"/>\n<rect x=\"1523.9\" y=\"610.4\" width=\"21.7\" height=\"9.3\" fill=\"#867f80\"/>\n<rect x=\"191.6\" y=\"102.8\" width=\"308\" height=\"248\" rx=\"6\" fill=\"#867f80\"/>\n<rect x=\"205.6\" y=\"116.8\" width=\"280\" height=\"220\" fill=\"url(#kitchen-win-346)\"/>\n<path d=\"M205.6 288.4 Q317.6 237.8 401.6 281.8 T485.6 270.8 V336.8 H205.6 Z\" fill=\"#9ab995\"/>\n<path d=\"M345.6 116.8 V336.8 M205.6 226.8 H485.6\" stroke=\"#867f80\" stroke-width=\"10\"/>\n<rect x=\"181.6\" y=\"346.8\" width=\"328\" height=\"14\" rx=\"4\" fill=\"#90919c\"/>\n<rect x=\"1464.4\" y=\"226.8\" width=\"220\" height=\"10\" fill=\"#867f80\"/>\n<rect x=\"1474.4\" y=\"172.7\" width=\"22\" height=\"54.1\" fill=\"#A8C0E8\"/>\n<rect x=\"1502.4\" y=\"160.3\" width=\"22\" height=\"66.5\" fill=\"#5b7aa6\"/>\n<rect x=\"1530.4\" y=\"172.2\" width=\"22\" height=\"54.6\" fill=\"#c9a24b\"/>\n<rect x=\"1558.4\" y=\"170.9\" width=\"22\" height=\"55.9\" fill=\"#8a5a7a\"/>\n<rect x=\"1586.4\" y=\"170.7\" width=\"22\" height=\"56.1\" fill=\"#6b8e4e\"/>\n<rect x=\"1614.4\" y=\"168.9\" width=\"22\" height=\"57.9\" fill=\"#A8C0E8\"/>\n<rect x=\"1642.4\" y=\"157\" width=\"22\" height=\"69.8\" fill=\"#5b7aa6\"/>\n<rect x=\"645.1\" y=\"334.5\" width=\"15.5\" height=\"511.5\" fill=\"#615c61\"/><path d=\"M559.8 334.5 L745.8 334.5 L708.6 226 L597 226 Z\" fill=\"#d4dadf\"/>\n<rect x=\"1019.2\" y=\"551.5\" width=\"496\" height=\"294.5\" rx=\"12.4\" fill=\"url(#kitchen-stove-body-1267)\"/>\n<rect x=\"1003.7\" y=\"536\" width=\"527\" height=\"27.9\" rx=\"6.2\" fill=\"#c5af9e\"/>\n<rect x=\"1034.7\" y=\"590.3\" width=\"220.1\" height=\"232.5\" rx=\"9.3\" fill=\"none\" stroke=\"#615c61\" stroke-opacity=\"0.45\" stroke-width=\"6.2\"/><circle cx=\"1228.5\" cy=\"706.5\" r=\"7.8\" fill=\"#615c61\"/>\n<rect x=\"1264.1\" y=\"590.3\" width=\"220.1\" height=\"232.5\" rx=\"9.3\" fill=\"none\" stroke=\"#615c61\" stroke-opacity=\"0.45\" stroke-width=\"6.2\"/><circle cx=\"1457.9\" cy=\"706.5\" r=\"7.8\" fill=\"#615c61\"/>\n<ellipse cx=\"1158.7\" cy=\"528.3\" rx=\"77.5\" ry=\"15.5\" fill=\"#2b2530\"/>\n<ellipse cx=\"1375.7\" cy=\"528.3\" rx=\"77.5\" ry=\"15.5\" fill=\"#2b2530\"/>\n<path d=\"M1112.2 514.3 h124 v-93 a62 31 0 0 0 -124 0 Z\" fill=\"#667087\"/>\n<path d=\"M1174.2 381 q21.7 -31 0 -62 q-21.7 -31 0 -62\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.5\" stroke-width=\"7.8\" stroke-linecap=\"round\"/>\n<rect width=\"1920\" height=\"1080\" fill=\"url(#kitchen-vignette)\"/>\n</symbol>\n<symbol id=\"kite--torn\" viewBox=\"0 0 400 400\"><clipPath id=\"kite--torn-hole\"><path clip-rule=\"evenodd\" d=\"M0 0 H400 V400 H0 Z M259.5 128.8 L271.5 145.9 L295.9 147.9 L284.3 168 L285.4 186.9 L265.2 183.7 L248.9 200.8 L241.7 179.9 L223.5 169.7 L240 155.6 L242.1 137.4 Z\"/></clipPath><g clip-path=\"url(#kite--torn-hole)\"><use href=\"#kite\" x=\"0\" y=\"0\" width=\"400\" height=\"400\"/></g><path d=\"M259.5 128.8 L271.5 145.9 L295.9 147.9 L284.3 168 L285.4 186.9 L265.2 183.7 L248.9 200.8 L241.7 179.9 L223.5 169.7 L240 155.6 L242.1 137.4 Z\" fill=\"none\" stroke=\"#802922\" stroke-width=\"2.1\" stroke-linejoin=\"round\"/><path d=\"M259.5 128.8 L259.5 123.1\" stroke=\"#802922\" stroke-width=\"1\" stroke-linecap=\"round\"/><path d=\"M295.9 147.9 L301.7 145.2\" stroke=\"#802922\" stroke-width=\"1\" stroke-linecap=\"round\"/><path d=\"M285.4 186.9 L289.6 190.5\" stroke=\"#802922\" stroke-width=\"1\" stroke-linecap=\"round\"/><path d=\"M248.9 200.8 L247.1 206.6\" stroke=\"#802922\" stroke-width=\"1\" stroke-linecap=\"round\"/><path d=\"M223.5 169.7 L217.7 170.5\" stroke=\"#802922\" stroke-width=\"1\" stroke-linecap=\"round\"/><path d=\"M242.1 137.4 L239.4 133.1\" stroke=\"#802922\" stroke-width=\"1\" stroke-linecap=\"round\"/><path d=\"M295.9 147.9 L285.4 186.9 L305.6 221 L311.6 180.8 Z\" fill=\"#000000\" fill-opacity=\"0.18\" transform=\"translate(2.4 3)\"/><path d=\"M295.9 147.9 L285.4 186.9 L305.6 221 L311.6 180.8 Z\" fill=\"#b53a30\" stroke=\"#802922\" stroke-width=\"1.8\" stroke-linejoin=\"round\"/><path d=\"M290.7 167.4 L305.6 221\" stroke=\"#ee776e\" stroke-width=\"1.2\"/></symbol>\n<symbol id=\"kite--patched\" viewBox=\"0 0 400 400\"><use href=\"#kite\" x=\"0\" y=\"0\" width=\"400\" height=\"400\"/><g transform=\"rotate(-7 259.5 164.5)\"><rect x=\"225.3\" y=\"131\" width=\"74.4\" height=\"74.4\" rx=\"3.7\" fill=\"#000000\" fill-opacity=\"0.16\"/><rect x=\"222.3\" y=\"127.3\" width=\"74.4\" height=\"74.4\" rx=\"3.7\" fill=\"#f7f2e6\" stroke=\"#d6ccb8\" stroke-width=\"1.5\"/><path d=\"M227.9 137.9 H291.1 M227.9 148.5 H291.1 M227.9 159.2 H291.1 M227.9 169.8 H291.1 M227.9 180.4 H291.1 M227.9 191.1 H291.1\" stroke=\"#e4dccb\" stroke-width=\"0.9\"/><rect x=\"229.8\" y=\"134.7\" width=\"59.5\" height=\"59.5\" fill=\"none\" stroke=\"#5b4636\" stroke-width=\"1.9\" stroke-dasharray=\"6 3.7\" stroke-linecap=\"round\"/><path d=\"M237.2 120.6 V134 M237.2 195 V208.4 M215.6 142.2 H229 M290 142.2 H303.4 M252.1 120.6 V134 M252.1 195 V208.4 M215.6 157 H229 M290 157 H303.4 M267 120.6 V134 M267 195 V208.4 M215.6 171.9 H229 M290 171.9 H303.4 M281.8 120.6 V134 M281.8 195 V208.4 M215.6 186.8 H229 M290 186.8 H303.4\" stroke=\"#5b4636\" stroke-width=\"1.7\" stroke-linecap=\"round\"/></g></symbol>\n<symbol id=\"kite--starred\" viewBox=\"0 0 400 400\">\n  \n  <path d=\"M200 50 L350 200 L200 350 L50 200 Z\" fill=\"url(#kite-sailGrad)\"/>\n  \n  <rect x=\"120\" y=\"120\" width=\"160\" height=\"160\" fill=\"#FFFFFF\" fill-opacity=\"0.9\"/>\n  \n  <polygon points=\"200,140 210,180 252,180 220,208 230,250 200,220 170,250 180,208 148,180 190,180\" fill=\"#F5C542\"/>\n  \n  <ellipse cx=\"150\" cy=\"150\" rx=\"80\" ry=\"50\" fill=\"url(#kite-highlight)\"/>\n  \n  <path d=\"M50 200 L350 200 M200 50 L200 350\" stroke=\"url(#kite-bambooGrad)\" stroke-width=\"12\" stroke-linecap=\"round\"/>\n  \n  <circle cx=\"200\" cy=\"200\" r=\"6\" fill=\"#8B5E3C\"/>\n  <circle cx=\"50\" cy=\"200\" r=\"4\" fill=\"#8B5E3C\"/>\n  <circle cx=\"350\" cy=\"200\" r=\"4\" fill=\"#8B5E3C\"/>\n  <circle cx=\"200\" cy=\"50\" r=\"4\" fill=\"#8B5E3C\"/>\n  <circle cx=\"200\" cy=\"350\" r=\"4\" fill=\"#8B5E3C\"/>\n  \n  <g fill=\"#E84A3E\">\n    <path d=\"M200 350 q20 -30 40 0 t40 0\" />\n    <path d=\"M240 380 q20 -30 40 0 t40 0\" />\n    <path d=\"M280 410 q20 -30 40 0 t40 0\" />\n    <path d=\"M320 440 q20 -30 40 0 t40 0\" />\n    <path d=\"M360 470 q20 -30 40 0 t40 0\" />\n  </g>\n  \n  <circle cx=\"200\" cy=\"200\" r=\"8\" fill=\"#FFFFFF\" stroke=\"#8B5E3C\" stroke-width=\"2\"/>\n</symbol>\n<symbol id=\"kite--intact\" viewBox=\"0 0 400 400\"><use href=\"#kite\" x=\"0\" y=\"0\" width=\"400\" height=\"400\"/></symbol>\n<symbol id=\"maya--hold-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--hold-smile-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"181.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"208.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"226.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--hold-smile-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<path d=\"M152 234 L144 270 L178 292\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M144 270 L178 292\" fill=\"none\" stroke=\"#c3ad88\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<path d=\"M248 234 L256 270 L222 292\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M256 270 L222 292\" fill=\"none\" stroke=\"#c3ad88\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<circle cx=\"178\" cy=\"296\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"222\" cy=\"296\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M182.4 170.4 Q200 189.6 217.6 170.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"maya--walk_a-sad\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--walk_a-sad-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\" transform=\"rotate(-16 200 386)\"/>\n<ellipse cx=\"258.6\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#427bb9\" transform=\"rotate(16 200 386)\"/>\n<ellipse cx=\"149.4\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M152 234 Q124 291 110 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M248 234 Q276 291 290 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--walk_a-sad-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<circle cx=\"110\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"290\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 113.6\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 113.6 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M186.4 176.8 Q200 164 213.6 176.8\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"maya--walk_b-sad\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--walk_b-sad-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\" transform=\"rotate(16 200 386)\"/>\n<ellipse cx=\"149.4\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#427bb9\" transform=\"rotate(-16 200 386)\"/>\n<ellipse cx=\"258.6\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M152 234 Q124 291 154 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M248 234 Q276 291 246 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--walk_b-sad-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<circle cx=\"154\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"246\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 113.6\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 113.6 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M186.4 176.8 Q200 164 213.6 176.8\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandfather--look-left-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather--look-left-neutral-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n<g transform=\"translate(-6.2 0)\">\n</g>\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q278 245 276 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather--look-left-neutral-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather--look-left-neutral-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-neutral-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-neutral-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-neutral-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-neutral-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-neutral-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-neutral-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"276\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M276 346 L288 588\" stroke=\"#6b4a2b\" stroke-width=\"8\" stroke-linecap=\"round\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n<g transform=\"translate(-6.2 0)\">\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<ellipse cx=\"213.2\" cy=\"118.2\" rx=\"6.6\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"171\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M164.4 105.4 Q171 101.4 177.6 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"162.2\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M163.9 116.4 l-4.4 -2.2 M163.9 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"202.6\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M196 105.4 Q202.6 101.4 209.2 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<path d=\"M209.7 116.4 l4.4 -2.2 M209.7 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"184.6\" cy=\"125.2\" rx=\"4\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<path d=\"M179.3 133.1 Q186.8 139.7 194.3 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n</g>\n</symbol>\n<symbol id=\"grandfather--hold-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather--hold-neutral-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather--hold-neutral-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather--hold-neutral-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-neutral-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-neutral-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-neutral-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-neutral-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-neutral-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-neutral-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<path d=\"M148 182 L140 218 L178 240\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M140 218 L178 240\" fill=\"none\" stroke=\"#899bbd\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<path d=\"M252 182 L260 218 L222 240\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M260 218 L222 240\" fill=\"none\" stroke=\"#899bbd\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<circle cx=\"178\" cy=\"244\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"222\" cy=\"244\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M222 238 L234 588\" stroke=\"#6b4a2b\" stroke-width=\"8\" stroke-linecap=\"round\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<path d=\"M192.5 133.1 Q200 139.7 207.5 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n\n</symbol>\n<symbol id=\"grandfather--point-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather--point-smile-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q318 176 374 196\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather--point-smile-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather--point-smile-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--point-smile-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--point-smile-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--point-smile-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--point-smile-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--point-smile-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--point-smile-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"374\" cy=\"200\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<path d=\"M190.3 133.1 Q200 143.7 209.7 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n\n</symbol>\n<symbol id=\"maya--look-left-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--look-left-neutral-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n<g transform=\"translate(-11.2 0)\">\n</g>\n<rect x=\"163.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"181.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"208.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"226.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M152 234 Q126 291 128 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M248 234 Q274 291 272 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--look-left-neutral-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<circle cx=\"128\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"272\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n<g transform=\"translate(-11.2 0)\">\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<ellipse cx=\"252.8\" cy=\"127.2\" rx=\"32\" ry=\"70.4\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"224\" cy=\"143.2\" rx=\"12\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"147.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"150\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M135.2 120 Q147.2 112.8 159.2 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"131.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"204.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"207.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M192.8 120 Q204.8 112.8 216.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"172\" cy=\"156\" rx=\"7.2\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M162.4 170.4 Q176 182.4 189.6 170.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n</g>\n</symbol>\n<symbol id=\"maya--walk_a-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--walk_a-smile-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\" transform=\"rotate(-16 200 386)\"/>\n<ellipse cx=\"258.6\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#427bb9\" transform=\"rotate(16 200 386)\"/>\n<ellipse cx=\"149.4\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M152 234 Q124 291 110 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M248 234 Q276 291 290 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--walk_a-smile-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<circle cx=\"110\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"290\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M182.4 170.4 Q200 189.6 217.6 170.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"maya--walk_b-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--walk_b-smile-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\" transform=\"rotate(16 200 386)\"/>\n<ellipse cx=\"149.4\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#427bb9\" transform=\"rotate(-16 200 386)\"/>\n<ellipse cx=\"258.6\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M152 234 Q124 291 154 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M248 234 Q276 291 246 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--walk_b-smile-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<circle cx=\"154\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"246\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M182.4 170.4 Q200 189.6 217.6 170.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandfather--walk_a-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather--walk_a-smile-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"188\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\" transform=\"rotate(-16 200 346)\"/>\n<ellipse cx=\"269.6\" cy=\"576.8\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"188\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#775238\" transform=\"rotate(16 200 346)\"/>\n<ellipse cx=\"138.4\" cy=\"576.8\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M148 182 Q120 245 106 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q280 245 294 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather--walk_a-smile-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather--walk_a-smile-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_a-smile-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_a-smile-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_a-smile-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_a-smile-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_a-smile-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_a-smile-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<circle cx=\"106\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"294\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M294 346 L306 588\" stroke=\"#6b4a2b\" stroke-width=\"8\" stroke-linecap=\"round\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<path d=\"M190.3 133.1 Q200 143.7 209.7 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n\n</symbol>\n<symbol id=\"grandfather--walk_b-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather--walk_b-smile-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"188\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\" transform=\"rotate(16 200 346)\"/>\n<ellipse cx=\"138.4\" cy=\"576.8\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"188\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#775238\" transform=\"rotate(-16 200 346)\"/>\n<ellipse cx=\"269.6\" cy=\"576.8\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M148 182 Q120 245 150 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q280 245 250 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather--walk_b-smile-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather--walk_b-smile-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_b-smile-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_b-smile-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_b-smile-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_b-smile-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_b-smile-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--walk_b-smile-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<circle cx=\"150\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"250\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M250 346 L262 588\" stroke=\"#6b4a2b\" stroke-width=\"8\" stroke-linecap=\"round\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<path d=\"M190.3 133.1 Q200 143.7 209.7 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n\n</symbol>\n<symbol id=\"maya--walk_a-laugh\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--walk_a-laugh-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\" transform=\"rotate(-16 200 386)\"/>\n<ellipse cx=\"258.6\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#427bb9\" transform=\"rotate(16 200 386)\"/>\n<ellipse cx=\"149.4\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M152 234 Q124 291 110 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M248 234 Q276 291 290 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--walk_a-laugh-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<circle cx=\"110\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"290\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<path d=\"M160.8 141.6 Q171.2 128.2 181.6 141.6\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M218.4 141.6 Q228.8 128.2 239.2 141.6\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M182.4 167.2 L217.6 167.2 Q200 194.4 182.4 167.2 Z\" fill=\"#7a2a22\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"maya--walk_b-laugh\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--walk_b-laugh-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\" transform=\"rotate(16 200 386)\"/>\n<ellipse cx=\"149.4\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#427bb9\" transform=\"rotate(-16 200 386)\"/>\n<ellipse cx=\"258.6\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M152 234 Q124 291 154 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M248 234 Q276 291 246 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--walk_b-laugh-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<circle cx=\"154\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"246\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<path d=\"M160.8 141.6 Q171.2 128.2 181.6 141.6\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M218.4 141.6 Q228.8 128.2 239.2 141.6\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M182.4 167.2 L217.6 167.2 Q200 194.4 182.4 167.2 Z\" fill=\"#7a2a22\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandfather--stand-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather--stand-smile-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q278 245 276 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather--stand-smile-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather--stand-smile-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--stand-smile-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--stand-smile-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--stand-smile-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--stand-smile-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--stand-smile-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--stand-smile-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"276\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M276 346 L288 588\" stroke=\"#6b4a2b\" stroke-width=\"8\" stroke-linecap=\"round\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<path d=\"M190.3 133.1 Q200 143.7 209.7 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n\n</symbol>\n<symbol id=\"grandfather--hold-laugh\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather--hold-laugh-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather--hold-laugh-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather--hold-laugh-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-laugh-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-laugh-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-laugh-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-laugh-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-laugh-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--hold-laugh-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<path d=\"M148 182 L140 218 L178 240\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M140 218 L178 240\" fill=\"none\" stroke=\"#899bbd\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<path d=\"M252 182 L260 218 L222 240\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M260 218 L222 240\" fill=\"none\" stroke=\"#899bbd\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<circle cx=\"178\" cy=\"244\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"222\" cy=\"244\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M222 238 L234 588\" stroke=\"#6b4a2b\" stroke-width=\"8\" stroke-linecap=\"round\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M178.4 117.3 Q184.2 113.1 189.9 117.3\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M210.1 117.3 Q215.8 113.1 221.6 117.3\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<path d=\"M190.3 131.4 L209.7 131.4 Q200 146.3 190.3 131.4 Z\" fill=\"#7a2a22\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n\n</symbol>\n<symbol id=\"grandfather--look-right-surprised\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather--look-right-surprised-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n<g transform=\"translate(6.2 0)\">\n</g>\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q278 245 276 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather--look-right-surprised-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather--look-right-surprised-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-right-surprised-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-right-surprised-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-right-surprised-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-right-surprised-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-right-surprised-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-right-surprised-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"276\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M276 346 L288 588\" stroke=\"#6b4a2b\" stroke-width=\"8\" stroke-linecap=\"round\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n<g transform=\"translate(6.2 0)\">\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<ellipse cx=\"186.8\" cy=\"118.2\" rx=\"6.6\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"197.4\" cy=\"117.3\" rx=\"5.7\" ry=\"8\" fill=\"#2a2233\"/>\n<circle cx=\"198.9\" cy=\"115.1\" r=\"2\" fill=\"#ffffff\"/>\n<path d=\"M190.8 101.4 Q197.4 97.5 204 101.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<path d=\"M190.3 116.4 l-4.4 -2.2 M190.3 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"229\" cy=\"117.3\" rx=\"5.7\" ry=\"8\" fill=\"#2a2233\"/>\n<circle cx=\"230.6\" cy=\"115.1\" r=\"2\" fill=\"#ffffff\"/>\n<path d=\"M222.4 101.4 Q229 97.5 235.6 101.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"237.8\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M236.1 116.4 l4.4 -2.2 M236.1 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.4\" cy=\"125.2\" rx=\"4\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<ellipse cx=\"213.2\" cy=\"134.9\" rx=\"4\" ry=\"5.3\" fill=\"#7a2a22\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n</g>\n</symbol>\n<symbol id=\"maya--look-left-surprised\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--look-left-surprised-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n<g transform=\"translate(-11.2 0)\">\n</g>\n<rect x=\"163.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"181.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"208.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"226.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M152 234 Q126 291 128 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M248 234 Q274 291 272 388\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--look-left-surprised-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<circle cx=\"128\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"272\" cy=\"392\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n<g transform=\"translate(-11.2 0)\">\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<ellipse cx=\"252.8\" cy=\"127.2\" rx=\"32\" ry=\"70.4\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"224\" cy=\"143.2\" rx=\"12\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"147.2\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"150\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M135.2 112.8 Q147.2 105.6 159.2 112.8\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"131.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"204.8\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"207.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M192.8 112.8 Q204.8 105.6 216.8 112.8\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"172\" cy=\"156\" rx=\"7.2\" ry=\"4\" fill=\"#bc9079\"/>\n<ellipse cx=\"176\" cy=\"173.6\" rx=\"7.2\" ry=\"9.6\" fill=\"#7a2a22\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n</g>\n</symbol>\n<symbol id=\"grandfather--look-left-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandfather--look-left-smile-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n<g transform=\"translate(-6.2 0)\">\n</g>\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#8b5e3c\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#8b5e3c\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q278 245 276 348\" fill=\"none\" stroke=\"#a8c0e8\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 260 378 L140 378 Q138 263 138 180 Z\" fill=\"#a8c0e8\"/>\n<rect x=\"206\" y=\"158\" width=\"90\" height=\"222\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandfather--look-left-smile-torso)\"/>\n<path d=\"M178 162 L222 162 L213 376 L187 376 Z\" fill=\"#f5c542\"/>\n<path d=\"M178 162 L196 186 L184 190 Z M222 162 L204 186 L216 190 Z\" fill=\"#e8bb40\"/>\n<path d=\"M178 162 L187 376 M222 162 L213 376\" stroke=\"#92a5c9\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n<rect x=\"140\" y=\"362\" width=\"120\" height=\"14\" rx=\"5\" fill=\"#92a5c9\" clip-path=\"url(#grandfather--look-left-smile-torso)\"/>\n<circle cx=\"179\" cy=\"200\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"179.5\" cy=\"249.3\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180\" cy=\"298.7\" r=\"4\" fill=\"#7d7677\"/>\n<circle cx=\"180.5\" cy=\"348\" r=\"4\" fill=\"#7d7677\"/>\n<path d=\"M151.6 176 L149.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-smile-torso)\"/>\n<path d=\"M167.8 176 L166.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-smile-torso)\"/>\n<path d=\"M183.9 176 L183.2 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-smile-torso)\"/>\n<path d=\"M216.1 176 L216.8 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-smile-torso)\"/>\n<path d=\"M232.2 176 L233.6 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-smile-torso)\"/>\n<path d=\"M248.4 176 L250.4 360\" stroke=\"#92a5c9\" stroke-opacity=\"0.35\" stroke-width=\"2.5\" clip-path=\"url(#grandfather--look-left-smile-torso)\"/>\n<path d=\"M176 163 Q200 188 224 163\" fill=\"#c9a38c\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<circle cx=\"276\" cy=\"352\" r=\"12.5\" fill=\"url(#grandfather-skin)\"/>\n<path d=\"M276 346 L288 588\" stroke=\"#6b4a2b\" stroke-width=\"8\" stroke-linecap=\"round\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#c9a38c\"/>\n<g transform=\"translate(-6.2 0)\">\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandfather-skin)\"/>\n<ellipse cx=\"213.2\" cy=\"118.2\" rx=\"6.6\" ry=\"9.7\" fill=\"#e8bfa5\"/>\n<ellipse cx=\"171\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M164.4 105.4 Q171 101.4 177.6 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"162.2\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M163.9 116.4 l-4.4 -2.2 M163.9 119.9 l-4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"202.6\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M196 105.4 Q202.6 101.4 209.2 105.4\" fill=\"none\" stroke=\"#8a8a8a\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<path d=\"M209.7 116.4 l4.4 -2.2 M209.7 119.9 l4.4 1.3\" stroke=\"#c9a38c\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"184.6\" cy=\"125.2\" rx=\"4\" ry=\"2.2\" fill=\"#c9a38c\"/>\n<path d=\"M177.1 133.1 Q186.8 143.7 196.5 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"160.4\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n<ellipse cx=\"239.6\" cy=\"103.2\" rx=\"6.2\" ry=\"13.2\" fill=\"#ffffff\"/>\n</g>\n</symbol>\n<symbol id=\"maya--hold-laugh\" viewBox=\"0 0 400 600\">\n<clipPath id=\"maya--hold-laugh-torso\"><path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"85\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"181.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<rect x=\"208.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#4a90d9\"/>\n<ellipse cx=\"226.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#e84a3e\"/>\n<path d=\"M142 232 Q142 216 162 214 L238 214 Q258 216 258 232 Q258 309 256 418 L144 418 Q142 309 142 232 Z\" fill=\"#f2d6a4\"/>\n<rect x=\"206\" y=\"210\" width=\"86\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#maya--hold-laugh-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#ffffff\" stroke-width=\"5\"/>\n<path d=\"M174 214 L200 268 L226 214\" fill=\"none\" stroke=\"#a99673\" stroke-width=\"6\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#bc9079\"/>\n<path d=\"M152 234 L144 270 L178 292\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M144 270 L178 292\" fill=\"none\" stroke=\"#c3ad88\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<path d=\"M248 234 L256 270 L222 292\" fill=\"none\" stroke=\"#f2d6a4\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M256 270 L222 292\" fill=\"none\" stroke=\"#c3ad88\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<circle cx=\"178\" cy=\"296\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<circle cx=\"222\" cy=\"296\" r=\"14.5\" fill=\"url(#maya-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#bc9079\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#d9a88e\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#maya-skin)\"/>\n<path d=\"M160.8 141.6 Q171.2 128.2 181.6 141.6\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M218.4 141.6 Q228.8 128.2 239.2 141.6\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#8b5e3c\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#bc9079\"/>\n<path d=\"M182.4 167.2 L217.6 167.2 Q200 194.4 182.4 167.2 Z\" fill=\"#7a2a22\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#8b5e3c\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>",
+  "kits": "{\"maya\":{\"kind\":\"doll\",\"spec\":{\"age\":\"child\",\"build\":\"average\",\"skin\":\"#d9a88e\",\"hairStyle\":\"short\",\"hairColor\":\"#8b5e3c\",\"top\":\"jacket\",\"topColor\":\"#f2d6a4\",\"bottom\":\"pants\",\"bottomColor\":\"#4a90d9\",\"accent\":\"#ffffff\",\"accessories\":[],\"figure\":\"storybook\",\"shoeColor\":\"#e84a3e\"}},\"grandfather\":{\"kind\":\"doll\",\"spec\":{\"age\":\"elder\",\"build\":\"average\",\"skin\":\"#e8bfa5\",\"hairStyle\":\"bald\",\"hairColor\":\"#ffffff\",\"top\":\"cardigan\",\"topColor\":\"#a8c0e8\",\"bottom\":\"pants\",\"bottomColor\":\"#8b5e3c\",\"accent\":\"#f5c542\",\"accessories\":[\"cane\"],\"figure\":\"adult\",\"innerColor\":\"#f5c542\",\"shoeColor\":\"#8b5e3c\"}}}",
+  "voices": null,
+  "seriesId": null,
+  "steps": [
+    {
+      "id": "cmv5ck21t00022aphaanblmpp",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 0,
+      "shotIndex": null,
+      "role": "system",
+      "model": "catalog",
+      "action": "models",
+      "promptHash": null,
+      "outputSummary": "vision: no NVIDIA vision model in the catalog, so openbmb/MiniCPM-V-4_5 LOOKS at each render and Nemotron Nano still scores it (vision critic: openbmb/MiniCPM-V-4_5; Nemotron crew: Ultra/Super/Nano).",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:04.577Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ck22100032aphuamdv81h",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 1,
+      "shotIndex": null,
+      "role": "system",
+      "model": "policy",
+      "action": "stop-rule",
+      "promptHash": null,
+      "outputSummary": "Floor redraw off for this run (DEMO_FLOOR_REDRAW=off on this server)",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:04.585Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ck2lx00042aphsw0yvx95",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 2,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "queries",
+      "promptHash": "d8a01b3743f60b56",
+      "outputSummary": "queries",
+      "output": "{\n  \"queries\": [\n    \"Brighton pier seafront morning wind\",\n    \"vintage kitchen wooden table window\",\n    \"red kite with bamboo frame and tail bows\"\n  ]\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 707,
+      "tokensIn": 544,
+      "tokensOut": 44,
+      "costUsd": 0.0000432,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:05.301Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ck3na00052aphzuemjvja",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 3,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "tavily/search",
+      "action": "search",
+      "promptHash": null,
+      "outputSummary": "“Brighton pier seafront morning wind” → 3 results",
+      "output": "[{\"title\":\"Brighton seafront, England, The City of Brighton and Hove, Brighton Wind Forecast: wind speed & gusts — Windy.app\",\"url\":\"https://windy.app/forecast2/spot/22870/Brighton+seafront\"},{\"title\":\"Brighton (Beach) (Brighton and Hove) weather - Met Office\",\"url\":\"https://weather.metoffice.gov.uk/forecast/gcpcj51es\"},{\"title\":\"Dramatic waves at Brighton pier on a cloudy day\",\"url\":\"https://www.facebook.com/groups/343329786021733/posts/2736310893390265\"}]",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 1329,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:06.646Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ck4ux00062aphaz8oxmax",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 4,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "tavily/search",
+      "action": "search",
+      "promptHash": null,
+      "outputSummary": "“vintage kitchen wooden table window” → 3 results",
+      "output": "[{\"title\":\"8.700+ Vintage Kitchen Window fotos de stock, imagens e fotos royalty-free - iStock\",\"url\":\"https://www.istockphoto.com/photos/vintage-kitchen-window\"},{\"title\":\"Vintage Window Table - Etsy Philippines\",\"url\":\"https://www.etsy.com/market/vintage_window_table\"},{\"title\":\"Vintage Kitchen Table with Original Window | Tiny kitchen table, Small table in front of window, Tiny breakfast table\",\"url\":\"https://www.pinterest.com/pin/vintage-kitchen-table-with-original-window--268667933994823623\"}]",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 1563,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:08.217Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ck4wg00072aphbh8sb4ry",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 5,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "tavily/extract",
+      "action": "extract",
+      "promptHash": null,
+      "outputSummary": "Extracted 1500 chars from https://www.istockphoto.com/photos/vintage-kitchen-window",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 44,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:08.272Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ck6ho00082aphi6moauv6",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 6,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "notes",
+      "promptHash": "7529bce310ab5780",
+      "outputSummary": "notes",
+      "output": "{\n  \"notes\": [\n    {\n      \"note\": \"Brighton seafront pier and shingle beach at golden dusk\",\n      \"source\": 1,\n      \"use\": \"set\"\n    },\n    {\n      \"note\": \"Grandfather's kitchen with wooden table and window, morning light\",\n      \"source\": 1,\n      \"use\": \"set\"\n    },\n    {\n      \"note\": \"Red diamond kite: red sail on cross of thin bamboo sticks, tail of small bows, flown on a string\",\n      \"source\": 1,\n      \"use\": \"props\"\n    },\n    {\n      \"note\": \"Kite damage progression: intact → torn (jagged hole with flap) → patched (white cloth patch with visible stitches) → starred (patch with gold star painted)\",\n      \"source\": 1,\n      \"use\": \"costume\"\n    },\n    {\n      \"note\": \"Vintage kitchen window with wooden table, morning light\",\n      \"source\": 2,\n      \"use\": \"set\"\n    },\n    {\n      \"note\": \"Brighton pier waves crashing in strong wind (up to 50mph gusts)\",\n      \"source\": 3,\n      \"use\": \"set\"\n    }\n  ]\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 2052,
+      "tokensIn": 2097,
+      "tokensOut": 269,
+      "costUsd": 0.00019038,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:10.332Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ck6i200092aphatgfdfsq",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 7,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "references",
+      "promptHash": null,
+      "outputSummary": "Researcher found 6 reference note(s) from 3 source(s)",
+      "output": "[{\"note\":\"Brighton seafront pier and shingle beach at golden dusk\",\"url\":\"https://windy.app/forecast2/spot/22870/Brighton+seafront\",\"title\":\"Brighton seafront, England, The City of Brighton and Hove, Brighton Wind Forecast: wind speed & gusts — Windy.app\",\"use\":\"set\"},{\"note\":\"Grandfather's kitchen with wooden table and window, morning light\",\"url\":\"https://windy.app/forecast2/spot/22870/Brighton+seafront\",\"title\":\"Brighton seafront, England, The City of Brighton and Hove, Brighton Wind Forecast: wind speed & gusts — Windy.app\",\"use\":\"set\"},{\"note\":\"Red diamond kite: red sail on cross of thin bamboo sticks, tail of small bows, flown on a string\",\"url\":\"https://windy.app/forecast2/spot/22870/Brighton+seafront\",\"title\":\"Brighton seafront, England, The City of Brighton and Hove, Brighton Wind Forecast: wind speed & gusts — Windy.app\",\"use\":\"props\"},{\"note\":\"Kite damage progression: intact → torn (jagged hole with flap) → patched (white cloth patch with visible stitches) → starred (patch with gold star painted)\",\"url\":\"https://windy.app/forecast2/spot/22870/Brighton+seafront\",\"title\":\"Brighton seafront, England, The City of Brighton and Hove, Brighton Wind Forecast: wind speed & gusts — Windy.app\",\"use\":\"costume\"},{\"note\":\"Vintage kitchen window with wooden table, morning light\",\"url\":\"https://weather.metoffice.gov.uk/forecast/gcpcj51es\",\"title\":\"Brighton (Beach) (Brighton and Hove) weather - Met Office\",\"use\":\"set\"},{\"note\":\"Brighton pier waves crashing in strong wind (up to 50mph gusts)\",\"url\":\"https://www.facebook.com/groups/343329786021733/posts/2736310893390265\",\"title\":\"Dramatic waves at Brighton pier on a cloudy day\",\"use\":\"set\"}]",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:10.346Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ckf40000a2aphiqrel2om",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 8,
+      "shotIndex": null,
+      "role": "director",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "action": "plan",
+      "promptHash": "2dac01f00a550295",
+      "outputSummary": "plan",
+      "output": "{\n  \"title\": \"The Mended Kite\",\n  \"logline\": \"A torn kite, a sailor's seam, and a gold star — love repairs what wind breaks.\",\n  \"palette\": [\"#E84A3E\", \"#F5C542\", \"#FFFFFF\", \"#4A90D9\", \"#F2D6A4\", \"#8B5E3C\", \"#A8C0E8\"],\n  \"cast\": [\n    {\n      \"id\": \"maya\",\n      \"name\": \"Maya\",\n      \"kind\": \"character\",\n      \"look\": \"Eight-year-old girl with short chestnut hair, wearing a yellow raincoat over a striped tee, blue jeans, red wellies. Signature detail: a small silver kite charm on her zipper.\",\n      \"colors\": [\"#F5C542\", \"#E84A3E\", \"#4A90D9\", \"#8B5E3C\"],\n      \"cites\": [3, 4]\n    },\n    {\n      \"id\": \"grandfather\",\n      \"name\": \"Grandfather\",\n      \"kind\": \"character\",\n      \"look\": \"Elderly man with white hair and beard, wearing a navy cardigan over a cream shirt, brown trousers, leather slippers. Signature detail: a brass thimble on a chain around his neck.\",\n      \"colors\": [\"#4A90D9\", \"#F2D6A4\", \"#8B5E3C\", \"#FFFFFF\"],\n      \"cites\": [3, 4]\n    },\n    {\n      \"id\": \"kite\",\n      \"name\": \"Maya's red diamond kite\",\n      \"kind\": \"prop\",\n      \"look\": \"Red diamond kite: red sail on thin bamboo cross, small bow tail, string. States: intact (smooth taut sail), torn (jagged hole corner to corner with flap hanging, sky visible), patched (white cloth patch with visible stitches), starred (white patch with big gold star painted).\",\n      \"colors\": [\"#E84A3E\", \"#FFFFFF\", \"#F5C542\", \"#8B5E3C\"],\n      \"states\": [\n        { \"id\": \"intact\", \"look\": \"Smooth taut red sail on bamboo cross, small bow tail, string taut\" },\n        { \"id\": \"torn\", \"look\": \"Jagged hole from corner to corner, flap of sail hanging down, sky showing through\" },\n        { \"id\": \"patched\", \"look\": \"White cloth patch over the hole with visible stitches\" },\n        { \"id\": \"starred\", \"look\": \"White patch with a big gold star painted on it\" }\n      ],\n      \"airborne\": true,\n      \"anatomy\": {\n        \"category\": [\"kite\", \"toy\"],\n        \"parts\": [\n          { \"part\": \"sail\", \"look\": \"Red diamond-shaped sail on thin bamboo cross spars\" },\n          { \"part\": \"tail\", \"look\": \"Small fabric bows tied along a tail string\" },\n          { \"part\": \"string\", \"look\": \"Thin white flying line wound on a wooden spool\" }\n        ]\n      ,\n        \"notLike\": [\"no plastic parts\", \"no neon colors\"]\n      ,\n        \"states\": [\n          { \"id\": \"intact\", \"change\": \"smooth taut sail, no damage\" },\n          { \"id\": \"torn\", \"change\": \"jagged hole corner to corner, flap hanging, sky visible\" },\n          { \"id\": \"patched\", \"change\": \"white cloth patch with visible stitches over hole\" },\n          { \"id\": \"starred\", \"change\": \"gold star painted on the white patch\" }\n        ]\n      }\n      },\n      {\n        \"id\": \"brighton-seafront\",\n        \"name\": \"Brighton seafront\",\n        \"kind\": \"set\",\n        \"look\": \"Brighton pier extending over shingle beach, wooden railings, sea horizon. Morning wind with gentle waves, afternoon bright, golden dusk glow.\",\n        \"colors\": [\"#A8C0E8\", \"#4A90D9\", \"#F2D6A4\", \"#F5C542\", \"#E84A3E\"],\n        \"cites\": [1, 6]\n      },\n      {\n        \"id\": \"kitchen\",\n        \"name\": \"Grandfather's kitchen\",\n        \"kind\": \"set\",\n        \"look\": \"Cozy vintage kitchen with wooden table, window with lace curtains, morning light streaming in. Kettle, jars, newspaper on table.\",\n        \"colors\": [\"#F2D6A4\", \"#8B5E3C\", \"#FFFFFF\", \"#A8C0E8\"],\n        \"cites\": [2, 5]\n      }\n  ],\n  \"shots\": [\n    {\n      \"scene\": \"Morning on the pier\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Brighton seafront at morning wind: the pier stretches over shingle beach, sea horizon rippling. Eight-year-old Maya stands on the boards, arms up, flying her red diamond kite high on a taut string. Golden morning light catches the red sail.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"On a windy autumn morning in Brighton, eight-year-old Maya flies her red kite above the pier.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"maya\", \"kite\", \"brighton-seafront\"],\n      \"propStates\": [{\"prop\": \"kite\", \"state\": \"intact\"}],\n      \"acting\": [{\"who\": \"maya\", \"pose\": \"hold\", \"expression\": \"smile\"}]\n      },\n      {\n        \"scene\": \"Morning on the pier\",\n        \"shotType\": \"Close-up\",\n        \"description\": \"Low angle close-up on the kite as a sudden gust slams it sideways into the pier's wooden railings. The red sail snags and tears with a sharp rip from corner to corner, a jagged hole opening, a flap of red cloth hanging loose, pale sky showing through.\",\n        \"mode\": \"motion\",\n        \"durationSec\": 3,\n        \"dialogue\": \"A gust slams it into the pier railings, and the red sail tears from corner to corner.\",\n        \"speaker\": null,\n        \"transition\": \"cut\",\n        \"cast\": [\"kite\", \"brighton-seafront\"],\n        \"propStates\": [{\"prop\": \"kite\", \"state\": \"torn\"}],\n        \"acting\": []\n      },\n      {\n        \"scene\": \"Run home along the seafront\",\n        \"shotType\": \"Medium shot\",\n        \"description\": \"Maya runs along the shingle beach toward home, morning wind tugging her yellow raincoat. She hugs the broken kite tight to her chest, the torn sail flap bouncing against her. The pier railings recede behind her.\",\n        \"mode\": \"motion\",\n        \"durationSec\": 4,\n        \"dialogue\": \"Maya runs home along the seafront, the broken kite hugged to her chest.\",\n        \"speaker\": null,\n        \"transition\": \"cut\",\n        \"cast\": [\"maya\", \"kite\", \"brighton-seafront\"],\n        \"propStates\": [{\"prop\": \"kite\", \"state\": \"torn\"}],\n        \"acting\": [{\"who\": \"maya\", \"pose\": \"walk\", \"expression\": \"sad\"}]\n      },\n      {\n        \"scene\": \"Grandfather's kitchen\",\n        \"shotType\": \"Medium shot\",\n        \"description\": \"Inside the cozy vintage kitchen, morning light streams through lace curtains onto the wooden table. Grandfather sits in his navy cardigan, newspaper half-folded, looking up over brass-rimmed glasses as Maya bursts in. The brass thimble on his chain catches the light.\",\n        \"mode\": \"still\",\n        \"durationSec\": 3,\n        \"dialogue\": \"Her grandfather, who mended sails when he was young, looks up from his newspaper.\",\n        \"speaker\": null,\n        \"transition\": \"cut\",\n        \"cast\": [\"grandfather\", \"kitchen\"],\n        \"propStates\": [],\n        \"acting\": [{\"who\": \"grandfather\", \"pose\": \"look-right\", \"expression\": \"surprised\"}]\n      },\n      {\n        \"scene\": \"Grandfather's kitchen\",\n        \"shotType\": \"Close-up\",\n        \"description\": \"Insert shot: the kite laid flat on the wooden table, torn sail spread. Grandfather's hands thread a needle with white sailcloth thread. Morning light highlights the jagged hole and the spool of thread beside a jar.\",\n        \"mode\": \"still\",\n        \"durationSec\": 3,\n        \"dialogue\": \"At the kitchen table he lays the kite flat and threads a needle with sailcloth thread.\",\n        \"speaker\": null,\n        \"transition\": \"cut\",\n        \"cast\": [\"grandfather\", \"kite\", \"kitchen\"],\n        \"propStates\": [{\"prop\": \"kite\", \"state\": \"patched\"}],\n        \"acting\": [{\"who\": \"grandfather\", \"pose\": \"hold\", \"expression\": \"neutral\"}]\n      },\n      {\n        \"scene\": \"Grandfather's kitchen\",\n        \"shotType\": \"Over-the-shoulder\",\n        \"description\": \"Over Grandfather's shoulder: he guides Maya's small fingers, showing the sailor's seam — tiny even stitches closing the hole. The white cloth patch grows across the tear, stitches visible. Maya watches, rapt.\",\n        \"mode\": \"still\",\n        \"durationSec\": 4,\n        \"dialogue\": \"Stitch by stitch, he shows Maya how a sailor's seam holds against the wind.\",\n        \"speaker\": null,\n        \"transition\": \"cut\",\n        \"cast\": [\"grandfather\", \"maya\", \"kite\", \"kitchen\"],\n        \"propStates\": [{\"prop\": \"kite\", \"state\": \"patched\"}],\n        \"acting\": [{\"who\": \"grandfather\", \"pose\": \"point\", \"expression\": \"smile\"}, {\"who\": \"maya\", \"pose\": \"look-left\", \"expression\": \"surprised\"}]\n      },\n      {\n        \"scene\": \"Grandfather's kitchen\",\n        \"shotType\": \"Close-up\",\n        \"description\": \"Extreme close-up on the patched kite: Maya's brush adds a bold gold star in the center of the white patch. The star shines against the red sail. Morning light still fills the window behind.\",\n        \"mode\": \"still\",\n        \"durationSec\": 3,\n        \"dialogue\": \"Maya paints a small gold star over the patch, so the kite will remember.\",\n        \"speaker\": null,\n        \"transition\": \"dissolve\",\n        \"cast\": [\"maya\", \"kite\", \"kitchen\"],\n        \"propStates\": [{\"prop\": \"kite\", \"state\": \"starred\"}],\n        \"acting\": [{\"who\": \"maya\", \"pose\": \"hold\", \"expression\": \"smile\"}]\n      },\n      {\n        \"scene\": \"Afternoon return to the beach\",\n        \"shotType\": \"Wide shot\",\n        \"description\": \"Brighton seafront in bright afternoon: Maya and Grandfather walk side by side along the shingle beach toward the pier. Grandfather carries the mended kite under his arm, its starred patch visible. Sea sparkles, wind gentler.\",\n        \"mode\": \"motion\",\n        \"durationSec\": 4,\n        \"dialogue\": \"In the afternoon they walk back to the beach together, the kite under Grandfather's arm.\",\n        \"speaker\": null,\n        \"transition\": \"cut\",\n        \"cast\": [\"maya\", \"grandfather\", \"kite\", \"brighton-seafront\"],\n        \"propStates\": [{\"prop\": \"kite\", \"state\": \"starred\"}],\n        \"acting\": [{\"who\": \"maya\", \"pose\": \"walk\", \"expression\": \"smile\"}, {\"who\": \"grandfather\", \"pose\": \"walk\", \"expression\": \"smile\"}]\n      },\n      {\n        \"scene\": \"Afternoon flight\",\n        \"shotType\": \"Low angle\",\n        \"description\": \"Low angle on Maya as she sprints into the wind, unreeling string. The starred kite leaps upward, climbing higher than the pier railings, tail bows streaming. Grandfather watches from behind, cardigan fluttering.\",\n        \"mode\": \"motion\",\n        \"durationSec\": 4,\n        \"dialogue\": \"Maya runs into the wind, and the kite climbs higher than ever over the waves.\",\n        \"speaker\": null,\n        \"transition\": \"cut\",\n        \"cast\": [\"maya\", \"kite\", \"grandfather\", \"brighton-seafront\"],\n        \"propStates\": [{\"prop\": \"kite\", \"state\": \"starred\"}],\n        \"acting\": [{\"who\": \"maya\", \"pose\": \"walk\", \"expression\": \"laugh\"}, {\"who\": \"grandfather\", \"pose\": \"look-left\", \"expression\": \"smile\"}]\n      },\n      {\n        \"scene\": \"Afternoon flight\",\n        \"shotType\": \"Two-shot\",\n        \"description\": \"Medium two-shot: Maya turns, offering the string spool to Grandfather. He takes it, head thrown back, laughing like a boy — white beard bristling, eyes crinkled. The kite soars above them, string taut.\",\n        \"mode\": \"motion\",\n        \"durationSec\": 4,\n        \"dialogue\": \"She hands the string to her grandfather, and he laughs like a boy.\",\n        \"speaker\": null,\n        \"transition\": \"dissolve\",\n        \"cast\": [\"maya\", \"grandfather\", \"kite\", \"brighton-seafront\"],\n        \"propStates\": [{\"prop\": \"kite\", \"state\": \"starred\"}],\n        \"acting\": [{\"who\": \"maya\", \"pose\": \"hold\", \"expression\": \"laugh\"}, {\"who\": \"grandfather\", \"pose\": \"hold\", \"expression\": \"laugh\"}]\n      },\n      {\n        \"scene\": \"Golden dusk walk home\",\n        \"shotType\": \"Wide shot\",\n        \"description\": \"Golden dusk on Brighton seafront: long shadows stretch across wet sand. Maya and Grandfather walk home along the water's edge, the mended kite resting on Maya's shoulder, gold star catching the last light. Pier lights flicker on.\",\n        \"mode\": \"still\",\n        \"durationSec\": 5,\n        \"dialogue\": \"At golden dusk they walk home along the sand, the mended kite on Maya's shoulder.\",\n        \"speaker\": null,\n        \"transition\": \"fadeBlack\",\n        \"cast\": [\"maya\", \"grandfather\", \"kite\", \"brighton-seafront\"],\n        \"propStates\": [{\"prop\": \"kite\", \"state\": \"starred\"}],\n        \"acting\": [{\"who\": \"maya\", \"pose\": \"walk\", \"expression\": \"smile\"}, {\"who\": \"grandfather\", \"pose\": \"walk\", \"expression\": \"smile\"}]\n      }\n  ]\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 11148,
+      "tokensIn": 2750,
+      "tokensOut": 4030,
+      "costUsd": 0.011322,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:21.504Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ckf4o000b2aphsv36lezw",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 9,
+      "shotIndex": null,
+      "role": "director",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "action": "plan:coverage",
+      "promptHash": null,
+      "outputSummary": "Coverage check failed (1)",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": "wrong set: shot 10 is in #brighton-seafront but it describes #kitchen: give each shot the set of the place it describes (add a set for a new place)",
+      "createdAt": "2026-10-12T14:28:21.528Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ckso3000c2aph1u8gi3on",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 10,
+      "shotIndex": null,
+      "role": "director",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "action": "plan:retry",
+      "promptHash": "dcbc2c084845bc3b",
+      "outputSummary": "plan:retry",
+      "output": "{\n  \"title\": \"The Mended Kite\",\n  \"logline\": \"A girl's torn kite is stitched with love and flies higher than ever.\",\n  \"palette\": [\n    \"#E84A3E\",\n    \"#F5C542\",\n    \"#FFFFFF\",\n    \"#4A90D9\",\n    \"#F2D6A4\",\n    \"#8B5E3C\",\n    \"#A8C0E8\"\n  ],\n  \"cast\": [\n    {\n      \"id\": \"maya\",\n      \"name\": \"Maya\",\n      \"kind\": \"character\",\n      \"look\": \"Eight-year-old girl with short chestnut hair, yellow raincoat over striped tee, blue jeans, red wellies, small silver kite charm on zipper.\",\n      \"colors\": [\n        \"#E84A3E\",\n        \"#F5C542\",\n        \"#4A90D9\",\n        \"#FFFFFF\",\n        \"#8B5E3C\"\n      ],\n      \"cites\": []\n    },\n    {\n      \"id\": \"grandfather\",\n      \"name\": \"Grandfather\",\n      \"kind\": \"character\",\n      \"look\": \"Elderly man with white hair and beard, navy cardigan over cream shirt, brown trousers, leather slippers, brass thimble on chain around neck.\",\n      \"colors\": [\n        \"#4A90D9\",\n        \"#F2D6A4\",\n        \"#8B5E3C\",\n        \"#F5C542\"\n      ],\n      \"cites\": []\n    },\n    {\n      \"id\": \"kite\",\n      \"name\": \"Maya's red diamond kite\",\n      \"kind\": \"prop\",\n      \"look\": \"Red diamond kite: red sail on thin bamboo cross, small bow tail, string. States: intact (smooth taut sail), torn (jagged hole corner to corner with flap hanging), patched (white cloth patch with visible stitches), starred (white patch with big gold star painted).\",\n      \"colors\": [\n        \"#E84A3E\",\n        \"#FFFFFF\",\n        \"#F5C542\"\n      ],\n      \"cites\": [\n        3,\n        4\n      ],\n      \"states\": [\n        {\n          \"id\": \"intact\",\n          \"look\": \"Smooth taut red sail on bamboo cross, small bow tail, string taut.\"\n        },\n        {\n          \"id\": \"torn\",\n          \"look\": \"Jagged hole from corner to corner, flap of sail hanging down, sky showing through.\"\n        },\n        {\n          \"id\": \"patched\",\n          \"look\": \"White cloth patch over the hole with visible stitches.\"\n        },\n        {\n          \"id\": \"starred\",\n          \"look\": \"White patch with a big gold star painted on it.\"\n        }\n      ]\n    },\n    {\n      \"id\": \"brighton-seafront\",\n      \"name\": \"Brighton seafront\",\n      \"kind\": \"set\",\n      \"look\": \"Brighton pier extending over shingle beach, wooden railings, sea horizon. Morning wind with gentle waves, afternoon bright, golden dusk glow.\",\n      \"colors\": [\n        \"#4A90D9\",\n        \"#A8C0E8\",\n        \"#F2D6A4\",\n        \"#8B5E3C\"\n      ],\n      \"cites\": [\n        1,\n        6\n      ]\n    },\n    {\n      \"id\": \"kitchen\",\n      \"name\": \"Grandfather's kitchen\",\n      \"kind\": \"set\",\n      \"look\": \"Cozy vintage kitchen with wooden table, window with lace curtains, morning light streaming in. Kettle, jars, newspaper on table.\",\n      \"colors\": [\n        \"#F2D6A4\",\n        \"#8B5E3C\",\n        \"#FFFFFF\",\n        \"#A8C0E8\"\n      ],\n      \"cites\": [\n        2,\n        5\n      ]\n    }\n  ],\n  \"shots\": [\n    {\n      \"scene\": \"Morning on the pier\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Wide view of Brighton seafront at windy autumn morning; Maya stands on the shingle beach holding the string of her red kite soaring above the pier, gentle waves roll in.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"On a windy autumn morning in Brighton, eight-year-old Maya flies her red kite above the pier.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\n        \"maya\",\n        \"kite\",\n        \"brighton-seafront\"\n      ],\n      \"mood\": \"dawn\",\n      \"acting\": [\n        {\n          \"who\": \"maya\",\n          \"pose\": \"hold\",\n          \"expression\": \"smile\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Morning on the pier\",\n      \"shotType\": \"Medium shot\",\n      \"description\": \"Medium framing on the kite as a sudden gust slams it into the wooden railings; the red sail tears from corner to corner, a jagged hole with a flap hanging down.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 3,\n      \"dialogue\": \"A gust slams it into the pier railings, and the red sail tears from corner to corner.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\n        \"maya\",\n        \"kite\",\n        \"brighton-seafront\"\n      ],\n      \"mood\": \"wind\",\n      \"acting\": [\n        {\n          \"who\": \"maya\",\n          \"pose\": \"look-right\",\n          \"expression\": \"surprised\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Morning on the pier\",\n      \"shotType\": \"Low angle\",\n      \"description\": \"Low angle follows Maya running along the seafront toward home, the broken kite hugged tightly to her chest, wind tugging her raincoat.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Maya runs home along the seafront, the broken kite hugged to her chest.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\n        \"maya\",\n        \"kite\",\n        \"brighton-seafront\"\n      ],\n      \"mood\": \"wind\",\n      \"acting\": [\n        {\n          \"who\": \"maya\",\n          \"pose\": \"walk\",\n          \"expression\": \"sad\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Kitchen morning\",\n      \"shotType\": \"Medium shot\",\n      \"description\": \"Medium shot inside the cozy kitchen; Grandfather sits at the wooden table, newspaper lowered, looking up as Maya enters through the doorway, morning light streaming through lace curtains.\",\n      \"mode\": \"still\",\n      \"durationSec\": 3,\n      \"dialogue\": \"Her grandfather, who mended sails when he was young, looks up from his newspaper.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\n        \"grandfather\",\n        \"kitchen\"\n      ],\n      \"mood\": \"day\",\n      \"acting\": [\n        {\n          \"who\": \"grandfather\",\n          \"pose\": \"look-left\",\n          \"expression\": \"neutral\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Kitchen morning\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Close-up on the kitchen table: Grandfather lays the torn kite flat, threads a needle with sailcloth thread, the white patch ready beside it.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"At the kitchen table he lays the kite flat and threads a needle with sailcloth thread.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\n        \"grandfather\",\n        \"kite\",\n        \"kitchen\"\n      ],\n      \"mood\": \"tender\",\n      \"acting\": [\n        {\n          \"who\": \"grandfather\",\n          \"pose\": \"hold\",\n          \"expression\": \"neutral\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Kitchen morning\",\n      \"shotType\": \"Medium shot\",\n      \"description\": \"Two-shot over the table: Grandfather points at the seam he stitches, Maya watches closely, the kite now shows a white cloth patch with visible stitches.\",\n      \"mode\": \"still\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Stitch by stitch, he shows Maya how a sailor's seam holds against the wind.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\n        \"grandfather\",\n        \"maya\",\n        \"kite\",\n        \"kitchen\"\n      ],\n      \"mood\": \"tender\",\n      \"acting\": [\n        {\n          \"who\": \"grandfather\",\n          \"pose\": \"point\",\n          \"expression\": \"smile\"\n        },\n        {\n          \"who\": \"maya\",\n          \"pose\": \"look-left\",\n          \"expression\": \"smile\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Kitchen morning\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Close-up of Maya's hand brushing a small gold star onto the white patch; the star gleams, marking the mended kite.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 3,\n      \"dialogue\": \"Maya paints a small gold star over the patch, so the kite will remember.\",\n      \"speaker\": null,\n      \"transition\": \"dissolve\",\n      \"cast\": [\n        \"maya\",\n        \"kite\",\n        \"kitchen\"\n      ],\n      \"mood\": \"wonder\",\n      \"acting\": [\n        {\n          \"who\": \"maya\",\n          \"pose\": \"hold\",\n          \"expression\": \"smile\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Afternoon on the beach\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Wide shot of the brighton seafront in afternoon light; Maya and Grandfather walk side by side along the sand, the starred kite tucked under Grandfather's arm.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"In the afternoon they walk back to the beach together, the kite under Grandfather's arm.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\n        \"maya\",\n        \"grandfather\",\n        \"kite\",\n        \"brighton-seafront\"\n      ],\n      \"mood\": \"day\",\n      \"acting\": [\n        {\n          \"who\": \"maya\",\n          \"pose\": \"walk\",\n          \"expression\": \"smile\"\n        },\n        {\n          \"who\": \"grandfather\",\n          \"pose\": \"walk\",\n          \"expression\": \"smile\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Afternoon on the beach\",\n      \"shotType\": \"Low angle\",\n      \"description\": \"Low angle as Maya runs into the wind, the starred kite lifts on its string, climbing higher than ever above the rolling waves.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Maya runs into the wind, and the kite climbs higher than ever over the waves.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\n        \"maya\",\n        \"kite\",\n        \"brighton-seafront\"\n      ],\n      \"mood\": \"playful\",\n      \"acting\": [\n        {\n          \"who\": \"maya\",\n          \"pose\": \"walk\",\n          \"expression\": \"laugh\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Afternoon on the beach\",\n      \"shotType\": \"Medium shot\",\n      \"description\": \"Medium two-shot on the sand: Maya hands the kite string to Grandfather, who holds it and laughs like a boy, the kite soaring above them.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 3,\n      \"dialogue\": \"She hands the string to her grandfather, and he laughs like a boy.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\n        \"maya\",\n        \"grandfather\",\n        \"kite\",\n        \"brighton-seafront\"\n      ],\n      \"mood\": \"triumph\",\n      \"acting\": [\n        {\n          \"who\": \"maya\",\n          \"pose\": \"hold\",\n          \"expression\": \"smile\"\n        },\n        {\n          \"who\": \"grandfather\",\n          \"pose\": \"hold\",\n          \"expression\": \"laugh\"\n        }\n      ]\n    },\n    {\n      \"scene\": \"Golden dusk walk home\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Wide establishing shot at golden dusk: Maya and Grandfather stroll home along the shingle beach, the mended starred kite resting on Maya's shoulder, the sea glowing amber.\",\n      \"mode\": \"still\",\n      \"durationSec\": 5,\n      \"dialogue\": \"At golden dusk they walk home along the sand, the mended kite on Maya's shoulder.\",\n      \"speaker\": null,\n      \"transition\": \"fadeBlack\",\n      \"cast\": [\n        \"maya\",\n        \"kite\",\n        \"brighton-seafront\"\n      ],\n      \"mood\": \"lullaby\",\n      \"acting\": [\n        {\n          \"who\": \"maya\",\n          \"pose\": \"walk\",\n          \"expression\": \"smile\"\n        }\n      ]\n    }\n  ]\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 17536,
+      "tokensIn": 2810,
+      "tokensOut": 6620,
+      "costUsd": 0.017574,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:39.075Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cksoh000d2aphbgpy6mob",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 11,
+      "shotIndex": null,
+      "role": "director",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "action": "plan:coverage",
+      "promptHash": null,
+      "outputSummary": "Retry not better (1 problem(s)); kept the first plan",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:39.089Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cksoo000e2aph00kop3f4",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 12,
+      "shotIndex": null,
+      "role": "director",
+      "model": "engine",
+      "action": "plan:anatomy",
+      "promptHash": null,
+      "outputSummary": "#kite anatomy carried with the cast: red diamond kite / diamond kite / red kite / flying kite / toy kite — sail, frame, tail, bridle · states: intact → torn → patched → starred",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:39.096Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cksot000f2aphzgkppdxl",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 13,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "engine",
+      "action": "bible-use",
+      "promptHash": null,
+      "outputSummary": "The Bible cites 6 of 6 research notes (5 cast designs, 0 shots)",
+      "output": "{\"notes\":6,\"cited\":6,\"castCiting\":5,\"shotsCiting\":0,\"byUse\":{\"set\":4,\"props\":1,\"costume\":1}}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:39.101Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cksrs000r2aphdxw1ru0c",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 14,
+      "shotIndex": null,
+      "role": "cast",
+      "model": "preview",
+      "action": "cast-from-run",
+      "promptHash": null,
+      "outputSummary": "Reused the approved cast of run cmv52ko2v00012aqwwxhnuzq6, with engine edits (no Cast call): #maya 61c72bcbb12f · #grandfather 9a2d02dbc3e9 · #kite fc34c57b116c · #kite--intact 193fbea379ba · #kite--torn 2e52e121e981 · #kite--patched c47c749f99e4 · #kite--starred 94cf223f4c4d · #brighton-seafront 063c6f4d20cc · #kitchen a00ce17c2147",
+      "output": "{\"sourceRunId\":\"cmv52ko2v00012aqwwxhnuzq6\",\"hashes\":[{\"id\":\"maya\",\"sha\":\"61c72bcbb12f\"},{\"id\":\"grandfather\",\"sha\":\"9a2d02dbc3e9\"},{\"id\":\"kite\",\"sha\":\"fc34c57b116c\"},{\"id\":\"kite--intact\",\"sha\":\"193fbea379ba\"},{\"id\":\"kite--torn\",\"sha\":\"2e52e121e981\"},{\"id\":\"kite--patched\",\"sha\":\"c47c749f99e4\"},{\"id\":\"kite--starred\",\"sha\":\"94cf223f4c4d\"},{\"id\":\"brighton-seafront\",\"sha\":\"063c6f4d20cc\"},{\"id\":\"kitchen\",\"sha\":\"a00ce17c2147\"}],\"edits\":{\"report\":[\"#kite--torn = tear of #kite at (259.5, 164.5) r 29.8\",\"#kite--patched = patch of #kite at (259.5, 164.5) r 29.8\"],\"changed\":[\"kite--torn\",\"kite--patched\"],\"removed\":[]}}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:39.208Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cksrz000s2aph00whi8fj",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 15,
+      "shotIndex": null,
+      "role": "cast",
+      "model": "engine",
+      "action": "cast-edits",
+      "promptHash": null,
+      "outputSummary": "Engine edits on the approved cast (D77): #kite--torn = tear of #kite at (259.5, 164.5) r 29.8 · #kite--patched = patch of #kite at (259.5, 164.5) r 29.8",
+      "output": "{\"report\":[\"#kite--torn = tear of #kite at (259.5, 164.5) r 29.8\",\"#kite--patched = patch of #kite at (259.5, 164.5) r 29.8\"],\"changed\":[\"kite--torn\",\"kite--patched\"],\"removed\":[]}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:39.215Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cksse000t2aphbdtawwb6",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 16,
+      "shotIndex": null,
+      "role": "cast",
+      "model": "engine",
+      "action": "acting-variants",
+      "promptHash": null,
+      "outputSummary": "Posed 4 variant(s) from the kit: grandfather look-right/surprised, maya look-left/surprised, grandfather look-left/smile, maya hold/laugh",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:39.230Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ckssl000u2aph2rrvnq22",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 17,
+      "shotIndex": null,
+      "role": "critic",
+      "model": "preview",
+      "action": "recognize:carried",
+      "promptHash": null,
+      "outputSummary": "Recognition carried over from the approved preview: #kite recognised (\"red kite\") · #kite--starred recognised (\"kite\")",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:39.237Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cktbq000v2aphjjvmyeec",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 18,
+      "shotIndex": null,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "recognize",
+      "promptHash": "06ac2ff3e5447aea",
+      "outputSummary": "recognize",
+      "output": "{\"name\": \"red kite\", \"description\": \"a red diamond-shaped kite with a white star-shaped hole and a red tail, on a plain background.\"}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 659,
+      "tokensIn": 403,
+      "tokensOut": 34,
+      "costUsd": 0.0003234,
+      "imagePath": "cmv5ck1qp00002aphjxa9lku5/director/cmv5ck21700012aphuliu0dto/recognize-kite--torn-0.jpg",
+      "error": null,
+      "createdAt": "2026-10-12T14:28:39.926Z",
+      "imageUrl": "/api/files/cmv5ck1qp00002aphjxa9lku5/director/cmv5ck21700012aphuliu0dto/recognize-kite--torn-0.jpg"
+    },
+    {
+      "id": "cmv5cktvy000w2aphak7j71i5",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 19,
+      "shotIndex": null,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "recognize:check",
+      "promptHash": "a409566f445033cf",
+      "outputSummary": "recognize:check",
+      "output": "{\n  \"category\": true,\n  \"parts\": [\n    \"sail\",\n    \"frame\",\n    \"tail\",\n    \"bridle\"\n  ],\n  \"lookalike\": false,\n  \"stateChange\": true,\n  \"reason\": \"They named a category and described a torn state with a hole and flap.\"\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 713,
+      "tokensIn": 763,
+      "tokensOut": 69,
+      "costUsd": 0.00006234,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:40.654Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cktwe000x2aphz6y7e2ay",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 20,
+      "shotIndex": null,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5 → nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "recognize:verdict",
+      "promptHash": null,
+      "outputSummary": "#kite--torn (torn) alone, named \"red kite\": recognised as Maya's red diamond kite — category named; state change named. They named a category and described a torn state with a hole and flap.",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": "cmv5ck1qp00002aphjxa9lku5/director/cmv5ck21700012aphuliu0dto/recognize-kite--torn-0.jpg",
+      "error": null,
+      "createdAt": "2026-10-12T14:28:40.670Z",
+      "imageUrl": "/api/files/cmv5ck1qp00002aphjxa9lku5/director/cmv5ck21700012aphuliu0dto/recognize-kite--torn-0.jpg"
+    },
+    {
+      "id": "cmv5ckuf1000y2aphpq9iq635",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 21,
+      "shotIndex": null,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5",
+      "action": "recognize",
+      "promptHash": "06ac2ff3e5447aea",
+      "outputSummary": "recognize",
+      "output": "{\"name\": \"red kite\", \"description\": \"a red diamond-shaped kite with a white patch and a red tail, on a plain background.\"}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 644,
+      "tokensIn": 403,
+      "tokensOut": 32,
+      "costUsd": 0.0003186,
+      "imagePath": "cmv5ck1qp00002aphjxa9lku5/director/cmv5ck21700012aphuliu0dto/recognize-kite--patched-0.jpg",
+      "error": null,
+      "createdAt": "2026-10-12T14:28:41.341Z",
+      "imageUrl": "/api/files/cmv5ck1qp00002aphjxa9lku5/director/cmv5ck21700012aphuliu0dto/recognize-kite--patched-0.jpg"
+    },
+    {
+      "id": "cmv5ckvjh000z2aphg391gv1q",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 22,
+      "shotIndex": null,
+      "role": "critic",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "recognize:check",
+      "promptHash": "1225b3f30fd93901",
+      "outputSummary": "recognize:check",
+      "output": "{\n  \"category\": true,\n  \"parts\": [\n    \"sail\",\n    \"frame\",\n    \"tail\",\n    \"bridle\"\n  ],\n  \"lookalike\": false,\n  \"stateChange\": true,\n  \"reason\": \"They identified a red kite with a white patch, matching the planned object's category and visible patched state.\"\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 1441,
+      "tokensIn": 761,
+      "tokensOut": 77,
+      "costUsd": 0.00006414,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:42.797Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ckvjx00102aphwg8zgx42",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 23,
+      "shotIndex": null,
+      "role": "critic",
+      "model": "openbmb/MiniCPM-V-4_5 → nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "recognize:verdict",
+      "promptHash": null,
+      "outputSummary": "#kite--patched (patched) alone, named \"red kite\": recognised as Maya's red diamond kite — category named; state change named. They identified a red kite with a white patch, matching the planned object's category and visible patched state.",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": "cmv5ck1qp00002aphjxa9lku5/director/cmv5ck21700012aphuliu0dto/recognize-kite--patched-0.jpg",
+      "error": null,
+      "createdAt": "2026-10-12T14:28:42.813Z",
+      "imageUrl": "/api/files/cmv5ck1qp00002aphjxa9lku5/director/cmv5ck21700012aphuliu0dto/recognize-kite--patched-0.jpg"
+    },
+    {
+      "id": "cmv5ckvkd00112aphmwbacl7c",
+      "runId": "cmv5ck21700012aphuliu0dto",
+      "seq": 24,
+      "shotIndex": null,
+      "role": "system",
+      "model": "engine",
+      "action": "stop-after-cast",
+      "promptHash": null,
+      "outputSummary": "Cast-only preview: stopped after the library and the recognition gate (no shots drawn)",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:42.829Z",
+      "imageUrl": null
+    }
+  ],
+  "live": false
+}

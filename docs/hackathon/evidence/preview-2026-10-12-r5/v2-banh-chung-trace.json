@@ -1,0 +1,999 @@
+{
+  "id": "cmv5ckxxt00132aphiklvzwwj",
+  "projectId": "cmv5ckxw100122aphset8w1mm",
+  "story": "SETS (make each one a cast member of kind \"set\" and give every shot the set of the place it shows):\n1. The courtyard of a Hanoi tube house: a tiled yard with low stools, a charcoal stove and a big pot (kit place: garden); afternoon, night, dawn\n2. The family's front room with the ancestor altar (kit place: living-room); dawn\n3. Hanoi's old quarter rooftops under New Year's Eve fireworks (kit place: village); midnight\n\nKEY OBJECT (the owner's notes — draw it exactly so): Bánh chưng: a flat SQUARE parcel wrapped in glossy green dong leaves with visible leaf texture (veins), tied with two pairs of thin pale bamboo strings each way (four strings crossing in a grid, NOT a ribbon, NO bow), a darker green leaf fold at the corners. ONE look only (owner 2026-10-12, D77): the wrapped parcel; the cooking is told by the pot and the fire in the courtyard sets, and the altar by the front room.\n\nChiều Ba Mươi Tết, bé An cùng bà gói bánh chưng trong sân nhà ở phố cổ Hà Nội. Bà trải lá dong xanh lên mâm, đong gạo nếp trắng, nhân đậu xanh và thịt. An học bà gấp lá thật vuông và buộc lạt tre thật chặt. Chiếc bánh đầu tiên An tự gói, bà khen vuông vắn như bánh của người lớn. Đêm xuống, nồi bánh sôi lục bục trên bếp lửa hồng giữa sân. Hai bà cháu ngồi canh nồi bánh, bà kể chuyện Lang Liêu dâng bánh cho vua Hùng. Bà chỉ chiếc bánh vuông như mặt đất, An tròn mắt lắng nghe. Đêm giao thừa, pháo hoa nở rực trên những mái ngói phố cổ. An ngủ gục trên vai bà, tay vẫn nắm sợi lạt tre. Sáng mùng Một, An mở mắt và chạy ra phòng khách. Trên bàn thờ là chiếc bánh chưng vuông vức đầu tiên do chính tay An gói.",
+  "language": "vi",
+  "style": "storybook",
+  "status": "done",
+  "provider": "nemotron",
+  "models": {
+    "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+    "mid": "nvidia/nemotron-3-super-120b-a12b",
+    "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+    "vision": "openbmb/MiniCPM-V-4_5"
+  },
+  "config": {
+    "budget": {
+      "maxShots": 11,
+      "maxTokens": 800000,
+      "maxUsd": 0.3,
+      "maxRepairs": 3,
+      "maxCriticRounds": 2,
+      "maxWallMs": 840000
+    },
+    "profile": "crew",
+    "series": null,
+    "critic": true,
+    "research": "on",
+    "fps": 12,
+    "visionAvailable": true,
+    "modelNotes": [
+      "vision: no NVIDIA vision model in the catalog, so openbmb/MiniCPM-V-4_5 LOOKS at each render and Nemotron Nano still scores it (vision critic: openbmb/MiniCPM-V-4_5; Nemotron crew: Ultra/Super/Nano)."
+    ]
+  },
+  "bible": {
+    "title": "Bánh Chưng Tết",
+    "logline": "Chiều Ba Mươi Tết, bé An học gói bánh chưng từ bà, đêm canh nồi nghe chuyện cổ, sáng mùng Một thức dậy thấy bánh mình gói đặt trên bàn thờ.",
+    "palette": [
+      "#F5E6C8",
+      "#D4A843",
+      "#8B5E3C",
+      "#4A7C59",
+      "#C8553D",
+      "#E8D4B9",
+      "#6B8E5A",
+      "#3D3D3D"
+    ],
+    "cast": [
+      {
+        "id": "courtyard",
+        "name": "Sân nhà phố cổ",
+        "kind": "set",
+        "look": "Narrow tube house courtyard with tiled floor, low wooden stools, a charcoal stove with a big iron pot, brick walls, open sky",
+        "colors": [
+          "#F5E6C8",
+          "#8B5E3C",
+          "#C8553D",
+          "#3D3D3D"
+        ],
+        "cites": [
+          1
+        ]
+      },
+      {
+        "id": "front-room",
+        "name": "Phòng khách bàn thờ",
+        "kind": "set",
+        "look": "Family front room with ancestor altar centered on main wall, brass incense burner, candle holders, fresh flowers, framed photograph, wooden floor",
+        "colors": [
+          "#F5E6C8",
+          "#D4A843",
+          "#4A7C59",
+          "#3D3D3D"
+        ],
+        "cites": [
+          2
+        ]
+      },
+      {
+        "id": "rooftops",
+        "name": "Mái ngói phố cổ",
+        "kind": "set",
+        "look": "Hanoi old quarter rooftops with terracotta tiles, narrow alleys, night sky illuminated by fireworks",
+        "colors": [
+          "#C8553D",
+          "#D4A843",
+          "#3D3D3D",
+          "#E8D4B9"
+        ],
+        "cites": [
+          3
+        ]
+      },
+      {
+        "id": "an",
+        "name": "Bé An",
+        "kind": "character",
+        "look": "Small child, round face, short black hair, wearing a simple áo bà ba in soft beige, bare feet",
+        "colors": [
+          "#E8D4B9",
+          "#8B5E3C"
+        ],
+        "cites": []
+      },
+      {
+        "id": "grandma",
+        "name": "Bà",
+        "kind": "character",
+        "look": "Elderly woman, gentle smile, silver hair in a bun, wearing a dark áo dài with subtle floral pattern, hands wrinkled",
+        "colors": [
+          "#4A7C59",
+          "#8B5E3C"
+        ],
+        "cites": []
+      },
+      {
+        "id": "banh-chung",
+        "name": "Bánh chưng",
+        "kind": "prop",
+        "look": "Flat square parcel wrapped in glossy green dong leaves with visible veins, tied with four thin pale bamboo strings in a grid, darker green leaf folds at corners",
+        "colors": [
+          "#6B8E5A",
+          "#4A7C59",
+          "#D4A843"
+        ],
+        "cites": [
+          4,
+          5,
+          6
+        ],
+        "anatomy": {
+          "category": [
+            "square leaf-wrapped parcel",
+            "green leaf packet",
+            "tied leaf bundle",
+            "square rice cake parcel",
+            "leaf-wrapped cake"
+          ],
+          "parts": [
+            {
+              "part": "parcel body",
+              "look": "flat square block about as thick as a thumb, wrapped tight in whole leaves, edges sharp and corners folded to points"
+            },
+            {
+              "part": "dong leaves",
+              "look": "glossy bright green leaf sheets covering all faces, clear vein lines running lengthwise, darker green triangular folds tucked at each corner"
+            },
+            {
+              "part": "bamboo strings",
+              "look": "four thin pale bamboo strips, two running left–right and two front–back, crossing in a neat grid on top and bottom, no bow or knot visible"
+            },
+            {
+              "part": "corner folds",
+              "look": "darker green leaf tips folded into sharp triangles at the four corners, tucked under the grid strings"
+            }
+          ],
+          "notLike": [
+            "gift box with ribbon",
+            "picture frame",
+            "candle holder",
+            "spatula",
+            "sandwich wrapper"
+          ],
+          "states": []
+        }
+      }
+    ],
+    "shots": [
+      {
+        "scene": "Chiều Ba Mươi Tết - Sân nhà",
+        "shotType": "Wide shot",
+        "description": "Afternoon golden light fills the narrow tube house courtyard. Grandma sits on a low stool beside the charcoal stove, An kneels nearby on the tiled floor, both facing a woven tray. The big iron pot sits unlit on the stove. Brick walls frame the open sky above.",
+        "mode": "still",
+        "durationSec": 4,
+        "dialogue": "Chiều Ba Mươi Tết, bé An cùng bà gói bánh chưng trong sân nhà ở phố cổ Hà Nội.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "courtyard",
+          "grandma",
+          "an"
+        ],
+        "cites": [
+          2
+        ],
+        "mood": "playful",
+        "acting": [
+          {
+            "who": "grandma",
+            "pose": "sit",
+            "expression": "smile"
+          },
+          {
+            "who": "an",
+            "pose": "kneel",
+            "expression": "neutral"
+          }
+        ]
+      },
+      {
+        "scene": "Chiều Ba Mươi Tết - Sân nhà",
+        "shotType": "Medium shot",
+        "description": "Afternoon light slants across the courtyard. Grandma's hands spread glossy green dong leaves on the tray, then spoon white glutinous rice, green mung bean paste, and seasoned pork into the center. The charcoal stove glows faintly behind her.",
+        "mode": "motion",
+        "durationSec": 4,
+        "dialogue": "Bà trải lá dong xanh lên mâm, đong gạo nếp trắng, nhân đậu xanh và thịt.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "courtyard",
+          "grandma"
+        ],
+        "cites": [
+          2
+        ],
+        "mood": "playful",
+        "acting": [
+          {
+            "who": "grandma",
+            "pose": "hold",
+            "expression": "neutral"
+          }
+        ]
+      },
+      {
+        "scene": "Chiều Ba Mươi Tết - Sân nhà",
+        "shotType": "Close-up",
+        "description": "Afternoon sun catches An's round face as she watches intently. Her small hands mimic Grandma's, folding the leaf edges into sharp right angles, then pulling pale bamboo strings tight in a neat grid. Grandma's wrinkled fingers guide hers from the side.",
+        "mode": "motion",
+        "durationSec": 4,
+        "dialogue": "An học bà gấp lá thật vuông và buộc lạt tre thật chặt.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "courtyard",
+          "an",
+          "grandma"
+        ],
+        "cites": [
+          2
+        ],
+        "mood": "tender",
+        "acting": [
+          {
+            "who": "an",
+            "pose": "hold",
+            "expression": "neutral"
+          },
+          {
+            "who": "grandma",
+            "pose": "point",
+            "expression": "smile"
+          }
+        ]
+      },
+      {
+        "scene": "Chiều Ba Mươi Tết - Sân nhà",
+        "shotType": "Close-up",
+        "description": "Insert shot: the finished square parcel rests on the tray, its glossy green dong leaves showing clear veins, four pale bamboo strings crossing in a precise grid, darker green folds tucked at each corner. Grandma's hand enters frame, thumb tracing the perfect edge.",
+        "mode": "still",
+        "durationSec": 3,
+        "dialogue": "Chiếc bánh đầu tiên An tự gói, bà khen vuông vắn như bánh của người lớn.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "courtyard",
+          "banh-chung",
+          "grandma"
+        ],
+        "cites": [
+          1,
+          2
+        ],
+        "mood": "triumph",
+        "acting": [
+          {
+            "who": "grandma",
+            "pose": "point",
+            "expression": "smile"
+          }
+        ]
+      },
+      {
+        "scene": "Đêm canh nồi - Sân nhà",
+        "shotType": "Wide shot",
+        "description": "Night has fallen, lantern glow and firelight paint the courtyard amber. The big iron pot bubbles vigorously on the charcoal stove, steam rising in soft plumes. Grandma and An sit on low stools on opposite sides, the pot between them, brick walls dark against the sky.",
+        "mode": "motion",
+        "durationSec": 5,
+        "dialogue": "Đêm xuống, nồi bánh sôi lục bục trên bếp lửa hồng giữa sân.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "courtyard",
+          "grandma",
+          "an"
+        ],
+        "cites": [
+          2,
+          5
+        ],
+        "mood": "night",
+        "acting": [
+          {
+            "who": "grandma",
+            "pose": "sit",
+            "expression": "neutral"
+          },
+          {
+            "who": "an",
+            "pose": "sit",
+            "expression": "neutral"
+          }
+        ]
+      },
+      {
+        "scene": "Đêm canh nồi - Sân nhà",
+        "shotType": "Medium shot",
+        "description": "Firelight flickers on two faces in over-the-shoulder framing: Grandma leans forward, one hand gesturing toward the simmering pot as she speaks; An sits chin on hands, eyes wide, listening. The pot's steam catches the glow between them.",
+        "mode": "motion",
+        "durationSec": 5,
+        "dialogue": "Hai bà cháu ngồi canh nồi bánh, bà kể chuyện Lang Liêu dâng bánh cho vua Hùng.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "courtyard",
+          "grandma",
+          "an"
+        ],
+        "cites": [
+          5
+        ],
+        "mood": "wonder",
+        "acting": [
+          {
+            "who": "grandma",
+            "pose": "point",
+            "expression": "smile"
+          },
+          {
+            "who": "an",
+            "pose": "sit",
+            "expression": "surprised"
+          }
+        ]
+      },
+      {
+        "scene": "Đêm canh nồi - Sân nhà",
+        "shotType": "Close-up",
+        "description": "Firelight close on An's face: round eyes reflecting the dancing flames, mouth slightly open. Grandma's finger points to the square parcel resting on the tray nearby — its green leaf veins sharp in the glow — as she compares its shape to the earth.",
+        "mode": "still",
+        "durationSec": 4,
+        "dialogue": "Bà chỉ chiếc bánh vuông như mặt đất, An tròn mắt lắng nghe.",
+        "speaker": null,
+        "transition": "cut",
+        "cast": [
+          "courtyard",
+          "an",
+          "grandma",
+          "banh-chung"
+        ],
+        "cites": [
+          1,
+          5
+        ],
+        "mood": "wonder",
+        "acting": [
+          {
+            "who": "an",
+            "pose": "look-right",
+            "expression": "surprised"
+          },
+          {
+            "who": "grandma",
+            "pose": "point",
+            "expression": "neutral"
+          }
+        ]
+      },
+      {
+        "scene": "Đêm giao thừa - Mái ngói",
+        "shotType": "Wide shot",
+        "description": "Midnight deep blue over Hanoi's old quarter. Terracotta rooftiles stretch into narrow alleys, silhouettes sharp against fireworks blooming — red, gold, green — their light painting the tiles and the upturned faces below. Smoke drifts on the cold air.",
+        "mode": "motion",
+        "durationSec": 4,
+        "dialogue": "Đêm giao thừa, pháo hoa nở rực trên những mái ngói phố cổ.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "rooftops"
+        ],
+        "cites": [
+          6
+        ],
+        "mood": "festival",
+        "acting": []
+      },
+      {
+        "scene": "Đêm muộn - Sân nhà",
+        "shotType": "Close-up",
+        "description": "Late night, lantern glow dim. An sleeps curled on Grandma's lap in the courtyard, cheek pressed to the dark áo dài. One small hand still clasps a pale bamboo string from the parcel beside them. Grandma's chin rests on An's head, eyes closed.",
+        "mode": "still",
+        "durationSec": 4,
+        "dialogue": "An ngủ gục trên vai bà, tay vẫn nắm sợi lạt tre.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "courtyard",
+          "an",
+          "grandma",
+          "banh-chung"
+        ],
+        "cites": [
+          2
+        ],
+        "mood": "lullaby",
+        "acting": [
+          {
+            "who": "an",
+            "pose": "hug",
+            "expression": "sleepy"
+          },
+          {
+            "who": "grandma",
+            "pose": "hug",
+            "expression": "sleepy"
+          }
+        ]
+      },
+      {
+        "scene": "Sáng mùng Một - Phòng khách",
+        "shotType": "Medium shot",
+        "description": "Dawn light spills through the front room doorway onto wooden floor. An bursts in barefoot, áo bà ba fluttering, round face bright. The ancestor altar dominates the far wall: brass incense burner, twin candles, fresh flowers, a framed photograph. She runs toward it.",
+        "mode": "motion",
+        "durationSec": 3,
+        "dialogue": "Sáng mùng Một, An mở mắt và chạy ra phòng khách.",
+        "speaker": null,
+        "transition": "dissolve",
+        "cast": [
+          "front-room",
+          "an"
+        ],
+        "cites": [
+          3,
+          4
+        ],
+        "mood": "dawn",
+        "acting": [
+          {
+            "who": "an",
+            "pose": "walk",
+            "expression": "surprised"
+          }
+        ]
+      },
+      {
+        "scene": "Sáng mùng Một - Phòng khách",
+        "shotType": "Close-up",
+        "description": "Dawn light gilds the altar table. The square parcel sits centered on a red cloth: glossy green dong leaves, veins clear, four pale bamboo strings in a perfect grid, darker folds at corners. Incense curls upward. The framed photograph watches above.",
+        "mode": "still",
+        "durationSec": 4,
+        "dialogue": "Trên bàn thờ là chiếc bánh chưng vuông vức đầu tiên do chính tay An gói.",
+        "speaker": null,
+        "transition": "fadeBlack",
+        "cast": [
+          "front-room",
+          "banh-chung"
+        ],
+        "cites": [
+          1,
+          3,
+          4
+        ],
+        "mood": "tender",
+        "acting": []
+      }
+    ],
+    "references": [
+      {
+        "note": "Square parcel wrapped in glossy green dong leaves with visible leaf texture (veins), tied with four thin pale bamboo strings crossing in a grid (no ribbon or bow), darker green leaf fold at corners",
+        "url": "https://en.wikipedia.org/wiki/House_(TV_series)",
+        "title": "House (TV series) - Wikipedia",
+        "use": "costume"
+      },
+      {
+        "note": "Tiled courtyard of a Hanoi tube house with low stools, charcoal stove, and big pot (kit place: garden)",
+        "url": "https://en.wikipedia.org/wiki/House_(TV_series)",
+        "title": "House (TV series) - Wikipedia",
+        "use": "set"
+      },
+      {
+        "note": "Family front room featuring an ancestor altar (kit place: living-room)",
+        "url": "https://en.wikipedia.org/wiki/House_(TV_series)",
+        "title": "House (TV series) - Wikipedia",
+        "use": "set"
+      },
+      {
+        "note": "Ancestor altar: raised table in prominent spot, brass incense burner, two candle holders, fresh flower vase, photograph of deceased",
+        "url": "https://www.vietnamtourism.com/en/ancestor-worship-in-vietnam-altars-rituals-and-what-travelers-should-know",
+        "title": "Ancestor worship in Vietnam: altars, rituals and what travelers should know | Vietnam Tourism",
+        "use": "set"
+      },
+      {
+        "note": "Fire in courtyard sets cooking scene; pot simmering bánh chưng during night",
+        "url": "https://en.wikipedia.org/wiki/House_(TV_series)",
+        "title": "House (TV series) - Wikipedia",
+        "use": "set"
+      },
+      {
+        "note": "Rooftops of Hanoi's old quarter under New Year's Eve fireworks (kit place: village)",
+        "url": "https://en.wikipedia.org/wiki/House_(TV_series)",
+        "title": "House (TV series) - Wikipedia",
+        "use": "set"
+      }
+    ]
+  },
+  "summary": {
+    "status": "done",
+    "shots": 11,
+    "rendered": 0,
+    "firstPassOk": 0,
+    "repairs": 0,
+    "criticBefore": null,
+    "criticAfter": null,
+    "revisions": 0,
+    "gateFailures": 0,
+    "offPlan": [],
+    "actionNotes": {},
+    "setless": [],
+    "shotScores": {},
+    "belowFloor": [],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 11,
+    "lintWarnings": 0,
+    "durationSec": 28.833333,
+    "wallMs": 54036,
+    "tokens": 24431,
+    "costUsd": 0.04210338,
+    "continuity": [],
+    "textCritic": false,
+    "research": {
+      "notes": 6,
+      "cited": 6,
+      "castCiting": 4,
+      "shotsCiting": 11,
+      "byUse": {
+        "costume": 1,
+        "set": 5
+      }
+    },
+    "propRecognition": [
+      {
+        "symbol": "banh-chung",
+        "prop": "banh-chung",
+        "state": "wrapped",
+        "ok": false,
+        "saw": "green grid pattern",
+        "redraws": 4
+      }
+    ],
+    "stopAfter": "cast",
+    "castSetTimes": {
+      "courtyard": "night",
+      "front-room": "day",
+      "rooftops": "night",
+      "courtyard--day": "day"
+    },
+    "castFromRun": "cmv52ro87002k2aqw3t51xa0y"
+  },
+  "tokensIn": 8022,
+  "tokensOut": 16409,
+  "costUsd": 0.04210338,
+  "error": null,
+  "startedAt": "2026-10-12T14:28:45.905Z",
+  "finishedAt": "2026-10-12T14:29:39.948Z",
+  "library": "<linearGradient id=\"banh-chung--cooked-leafGrad\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n  <stop offset=\"0\" stop-color=\"#4A7C59\"/>\n  <stop offset=\"1\" stop-color=\"#6B8E5A\"/>\n</linearGradient>\n<linearGradient id=\"banh-chung-leafGrad-a107\" x1=\"0\" y1=\"0\" x2=\"200\" y2=\"200\"><stop offset=\"0\" stop-color=\"#6B8E5A\"/><stop offset=\"1\" stop-color=\"#4A7C59\"/></linearGradient>\n<linearGradient id=\"banh-chung-leafGrad\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n  <stop offset=\"0\" stop-color=\"#6B8E5A\"/>\n  <stop offset=\"1\" stop-color=\"#5A7A4F\"/>\n</linearGradient>\n<linearGradient id=\"courtyard-ground\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#383b47\"/><stop offset=\"1\" stop-color=\"#252734\"/></linearGradient>\n<linearGradient id=\"courtyard-midground\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#8f909b\"/><stop offset=\"1\" stop-color=\"#ccc4b6\"/></linearGradient>\n<radialGradient id=\"courtyard-moonglow\"><stop offset=\"0\" stop-color=\"#f6f1d8\" stop-opacity=\"0.3\"/><stop offset=\"1\" stop-color=\"#f6f1d8\" stop-opacity=\"0\"/></radialGradient>\n<linearGradient id=\"courtyard-sky\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#0b1330\"/><stop offset=\"1\" stop-color=\"#283a6e\"/></linearGradient>\n<linearGradient id=\"courtyard-stove-body-1651\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#a8866d\"/><stop offset=\"1\" stop-color=\"#755038\"/></linearGradient>\n<radialGradient id=\"courtyard-vignette\" cx=\"0.5\" cy=\"0.5\" r=\"0.75\"><stop offset=\"0.6\" stop-color=\"#1d1a26\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#1d1a26\" stop-opacity=\"0.45\"/></radialGradient>\n<linearGradient id=\"front-room-floor\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#436d51\"/><stop offset=\"1\" stop-color=\"#608c6d\"/></linearGradient>\n<linearGradient id=\"front-room-paint-1574\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#9fc5e8\"/><stop offset=\"0.6\" stop-color=\"#f6e3c0\"/><stop offset=\"1\" stop-color=\"#7fa36b\"/></linearGradient>\n<radialGradient id=\"front-room-vignette\" cx=\"0.5\" cy=\"0.5\" r=\"0.75\"><stop offset=\"0.6\" stop-color=\"#1d1a26\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#1d1a26\" stop-opacity=\"0.22\"/></radialGradient>\n<linearGradient id=\"front-room-wainscot\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#e9d099\"/><stop offset=\"1\" stop-color=\"#bfb3a0\"/></linearGradient>\n<linearGradient id=\"front-room-wall\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#dbceb5\"/><stop offset=\"0.55\" stop-color=\"#F5E6C8\"/><stop offset=\"1\" stop-color=\"#f6e8cc\"/></linearGradient>\n<linearGradient id=\"front-room-win-960\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#7fb6e8\"/><stop offset=\"1\" stop-color=\"#d9ecf7\"/></linearGradient>\n<radialGradient id=\"rooftops-glow-house-614\"><stop offset=\"0\" stop-color=\"#ffc870\" stop-opacity=\"0.75\"/><stop offset=\"1\" stop-color=\"#ffc870\" stop-opacity=\"0\"/></radialGradient>\n<radialGradient id=\"rooftops-glow-lantern-269\"><stop offset=\"0\" stop-color=\"#ffc870\" stop-opacity=\"0.75\"/><stop offset=\"1\" stop-color=\"#ffc870\" stop-opacity=\"0\"/></radialGradient>\n<radialGradient id=\"rooftops-glow-streetlamp-960\"><stop offset=\"0\" stop-color=\"#ffc870\" stop-opacity=\"0.75\"/><stop offset=\"1\" stop-color=\"#ffc870\" stop-opacity=\"0\"/></radialGradient>\n<linearGradient id=\"rooftops-ground\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#5f4c47\"/><stop offset=\"1\" stop-color=\"#483634\"/></linearGradient>\n<linearGradient id=\"rooftops-midground\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#333c56\"/><stop offset=\"1\" stop-color=\"#393c47\"/></linearGradient>\n<radialGradient id=\"rooftops-moonglow\"><stop offset=\"0\" stop-color=\"#f6f1d8\" stop-opacity=\"0.3\"/><stop offset=\"1\" stop-color=\"#f6f1d8\" stop-opacity=\"0\"/></radialGradient>\n<linearGradient id=\"rooftops-sky\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#0b1330\"/><stop offset=\"1\" stop-color=\"#283a6e\"/></linearGradient>\n<radialGradient id=\"rooftops-vignette\" cx=\"0.5\" cy=\"0.5\" r=\"0.75\"><stop offset=\"0.6\" stop-color=\"#1d1a26\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#1d1a26\" stop-opacity=\"0.45\"/></radialGradient>\n<radialGradient id=\"an-skin\" cx=\"0.38\" cy=\"0.32\" r=\"0.75\"><stop offset=\"0\" stop-color=\"#eee0cd\"/><stop offset=\"1\" stop-color=\"#e8d4b9\"/></radialGradient>\n<radialGradient id=\"grandma-skin\" cx=\"0.38\" cy=\"0.32\" r=\"0.75\"><stop offset=\"0\" stop-color=\"#e0c078\"/><stop offset=\"1\" stop-color=\"#d4a843\"/></radialGradient>\n<linearGradient id=\"courtyard--day-ground\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#4d4d4d\"/><stop offset=\"1\" stop-color=\"#373739\"/></linearGradient>\n<linearGradient id=\"courtyard--day-midground\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#e7e9e0\"/><stop offset=\"1\" stop-color=\"#efe7d1\"/></linearGradient>\n<linearGradient id=\"courtyard--day-sky\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#7fb6e8\"/><stop offset=\"1\" stop-color=\"#d9ecf7\"/></linearGradient>\n<linearGradient id=\"courtyard--day-stove-body-1651\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\"><stop offset=\"0\" stop-color=\"#a8866d\"/><stop offset=\"1\" stop-color=\"#755038\"/></linearGradient>\n<radialGradient id=\"courtyard--day-sunglow\"><stop offset=\"0\" stop-color=\"#fff4c9\" stop-opacity=\"0.55\"/><stop offset=\"1\" stop-color=\"#fff4c9\" stop-opacity=\"0\"/></radialGradient>\n<radialGradient id=\"courtyard--day-vignette\" cx=\"0.5\" cy=\"0.5\" r=\"0.75\"><stop offset=\"0.6\" stop-color=\"#1d1a26\" stop-opacity=\"0\"/><stop offset=\"1\" stop-color=\"#1d1a26\" stop-opacity=\"0.22\"/></radialGradient>\n<symbol id=\"courtyard\" viewBox=\"0 0 1920 1080\">\n<rect width=\"1920\" height=\"601.6\" fill=\"url(#courtyard-sky)\"/>\n<circle cx=\"1536\" cy=\"183.6\" r=\"200\" fill=\"url(#courtyard-moonglow)\"/><circle cx=\"1536\" cy=\"183.6\" r=\"54\" fill=\"#f6f1d8\"/>\n<circle cx=\"187.2\" cy=\"75.4\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"1724.8\" cy=\"319.3\" r=\"1.9\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1597\" cy=\"241.9\" r=\"2.8\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"1068.1\" cy=\"154.2\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1247.7\" cy=\"446.2\" r=\"3.2\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"512.7\" cy=\"316.7\" r=\"2.1\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"75.3\" cy=\"405.2\" r=\"3.5\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"1090.2\" cy=\"310.6\" r=\"2.7\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"1687.9\" cy=\"144\" r=\"1.8\" fill=\"#ffffff\" fill-opacity=\"1\"/>\n<circle cx=\"895.9\" cy=\"256.8\" r=\"1.9\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"1403.2\" cy=\"286.8\" r=\"2\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"22\" cy=\"289.3\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"267.8\" cy=\"12.2\" r=\"2\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"66.6\" cy=\"394.9\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"914.5\" cy=\"387.6\" r=\"1.7\" fill=\"#ffffff\" fill-opacity=\"1\"/>\n<circle cx=\"728\" cy=\"228.7\" r=\"2.3\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"1538.3\" cy=\"256.2\" r=\"1.8\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"1372.2\" cy=\"298.5\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"621\" cy=\"227.3\" r=\"2.7\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"1314.5\" cy=\"320\" r=\"1.5\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"692.1\" cy=\"8\" r=\"3.1\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"1847.5\" cy=\"269.9\" r=\"3.2\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"387.2\" cy=\"319.1\" r=\"2.3\" fill=\"#ffffff\" fill-opacity=\"1\"/>\n<circle cx=\"1199.2\" cy=\"12.2\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"928.9\" cy=\"412.1\" r=\"3.4\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1474.9\" cy=\"94.4\" r=\"3.4\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1845.3\" cy=\"125.3\" r=\"2\" fill=\"#ffffff\" fill-opacity=\"0.5\"/>\n<circle cx=\"1563.9\" cy=\"408.6\" r=\"2.8\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"742.1\" cy=\"166.8\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"1512.1\" cy=\"56\" r=\"2.1\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"243.8\" cy=\"183.8\" r=\"2\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"1069.2\" cy=\"342.3\" r=\"1.9\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"1729.7\" cy=\"175\" r=\"2.5\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1136.1\" cy=\"311.6\" r=\"1.8\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"925.3\" cy=\"396.2\" r=\"2.6\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"549.2\" cy=\"92.2\" r=\"2.8\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"390.4\" cy=\"381\" r=\"2.3\" fill=\"#ffffff\" fill-opacity=\"0.5\"/>\n<circle cx=\"750.5\" cy=\"342.5\" r=\"2\" fill=\"#ffffff\" fill-opacity=\"1\"/>\n<circle cx=\"1144.4\" cy=\"332.2\" r=\"3.5\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"1675.5\" cy=\"88.7\" r=\"2.6\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<g fill=\"#3a4a7a\" fill-opacity=\"0.6\"><ellipse cx=\"223.8\" cy=\"154.7\" rx=\"110\" ry=\"34\"/><ellipse cx=\"283.8\" cy=\"132.7\" rx=\"70\" ry=\"38\"/><ellipse cx=\"173.8\" cy=\"142.7\" rx=\"60\" ry=\"30\"/></g>\n<g fill=\"#3a4a7a\" fill-opacity=\"0.6\"><ellipse cx=\"500.3\" cy=\"232.7\" rx=\"110\" ry=\"34\"/><ellipse cx=\"560.3\" cy=\"210.7\" rx=\"70\" ry=\"38\"/><ellipse cx=\"450.3\" cy=\"220.7\" rx=\"60\" ry=\"30\"/></g>\n<g fill=\"#3a4a7a\" fill-opacity=\"0.6\"><ellipse cx=\"858.2\" cy=\"134.1\" rx=\"110\" ry=\"34\"/><ellipse cx=\"918.2\" cy=\"112.1\" rx=\"70\" ry=\"38\"/><ellipse cx=\"808.2\" cy=\"122.1\" rx=\"60\" ry=\"30\"/></g>\n<path d=\"M0 521.6 Q384 411.6 806.4 501.6 T1536 471.6 T1920 511.6 L1920 601.6 L0 601.6 Z\" fill=\"#7a7f92\"/>\n<rect y=\"551.6\" width=\"1920\" height=\"297.6\" fill=\"url(#courtyard-midground)\"/>\n<circle cx=\"144.9\" cy=\"678.8\" r=\"77.3\" fill=\"#4b6770\"/>\n<circle cx=\"416.9\" cy=\"664.1\" r=\"71.4\" fill=\"#4b6770\"/>\n<circle cx=\"704.3\" cy=\"654.9\" r=\"75.7\" fill=\"#4b6770\"/>\n<circle cx=\"954.7\" cy=\"664.9\" r=\"87\" fill=\"#4b6770\"/>\n<circle cx=\"1243.3\" cy=\"673.4\" r=\"74.5\" fill=\"#4b6770\"/>\n<circle cx=\"1509.3\" cy=\"677\" r=\"72.1\" fill=\"#4b6770\"/>\n<circle cx=\"1781.7\" cy=\"663.8\" r=\"84\" fill=\"#4b6770\"/>\n<path d=\"M0 799.2 Q672 773.2 1152 793.2 T1920 785.2 L1920 1080 L0 1080 Z\" fill=\"url(#courtyard-ground)\"/>\n<path d=\"M748.5 999.5 l-6 -18 M748.5 999.5 l4 -22 M748.5 999.5 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1325.5 895.3 l-6 -18 M1325.5 895.3 l4 -22 M1325.5 895.3 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1689.9 879.9 l-6 -18 M1689.9 879.9 l4 -22 M1689.9 879.9 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M353.9 903.4 l-6 -18 M353.9 903.4 l4 -22 M353.9 903.4 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M575.4 884.4 l-6 -18 M575.4 884.4 l4 -22 M575.4 884.4 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M465.2 1052 l-6 -18 M465.2 1052 l4 -22 M465.2 1052 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M334.1 848.8 l-6 -18 M334.1 848.8 l4 -22 M334.1 848.8 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M195.3 1059.6 l-6 -18 M195.3 1059.6 l4 -22 M195.3 1059.6 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1084.4 957.2 l-6 -18 M1084.4 957.2 l4 -22 M1084.4 957.2 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M311.9 1056.1 l-6 -18 M311.9 1056.1 l4 -22 M311.9 1056.1 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M907.8 833.8 l-6 -18 M907.8 833.8 l4 -22 M907.8 833.8 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M921.7 1002 l-6 -18 M921.7 1002 l4 -22 M921.7 1002 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M992.6 845.5 l-6 -18 M992.6 845.5 l4 -22 M992.6 845.5 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1095.2 973.3 l-6 -18 M1095.2 973.3 l4 -22 M1095.2 973.3 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M262.7 1063.7 l-6 -18 M262.7 1063.7 l4 -22 M262.7 1063.7 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M758.9 932.2 l-6 -18 M758.9 932.2 l4 -22 M758.9 932.2 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M673.1 1000.6 l-6 -18 M673.1 1000.6 l4 -22 M673.1 1000.6 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M5.6 979 l-6 -18 M5.6 979 l4 -22 M5.6 979 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1422.2 916 l-6 -18 M1422.2 916 l4 -22 M1422.2 916 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1554.6 889 l-6 -18 M1554.6 889 l4 -22 M1554.6 889 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M416.1 1047.1 l-6 -18 M416.1 1047.1 l4 -22 M416.1 1047.1 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M670.9 991.9 l-6 -18 M670.9 991.9 l4 -22 M670.9 991.9 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1108.2 973.4 l-6 -18 M1108.2 973.4 l4 -22 M1108.2 973.4 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1373.1 957.8 l-6 -18 M1373.1 957.8 l4 -22 M1373.1 957.8 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1122.9 906.9 l-6 -18 M1122.9 906.9 l4 -22 M1122.9 906.9 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M347.9 993.3 l-6 -18 M347.9 993.3 l4 -22 M347.9 993.3 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M187.6 870.6 l-6 -18 M187.6 870.6 l4 -22 M187.6 870.6 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1442.1 924.5 l-6 -18 M1442.1 924.5 l4 -22 M1442.1 924.5 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1182.9 1016.2 l-6 -18 M1182.9 1016.2 l4 -22 M1182.9 1016.2 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M498.4 941.1 l-6 -18 M498.4 941.1 l4 -22 M498.4 941.1 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1608.4 1020.1 l-6 -18 M1608.4 1020.1 l4 -22 M1608.4 1020.1 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M470.4 882.6 l-6 -18 M470.4 882.6 l4 -22 M470.4 882.6 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1189.7 990.9 l-6 -18 M1189.7 990.9 l4 -22 M1189.7 990.9 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1271.6 949.3 l-6 -18 M1271.6 949.3 l4 -22 M1271.6 949.3 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1883.9 1051 l-6 -18 M1883.9 1051 l4 -22 M1883.9 1051 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1708.7 946 l-6 -18 M1708.7 946 l4 -22 M1708.7 946 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M628.9 921.6 l-6 -18 M628.9 921.6 l4 -22 M628.9 921.6 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1425.8 944 l-6 -18 M1425.8 944 l4 -22 M1425.8 944 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1413.1 889.4 l-6 -18 M1413.1 889.4 l4 -22 M1413.1 889.4 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M786.4 1067.2 l-6 -18 M786.4 1067.2 l4 -22 M786.4 1067.2 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1452.1 879.4 l-6 -18 M1452.1 879.4 l4 -22 M1452.1 879.4 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M538.2 882.6 l-6 -18 M538.2 882.6 l4 -22 M538.2 882.6 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1894.4 1012.8 l-6 -18 M1894.4 1012.8 l4 -22 M1894.4 1012.8 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1242.4 912.8 l-6 -18 M1242.4 912.8 l4 -22 M1242.4 912.8 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M973.1 1069.1 l-6 -18 M973.1 1069.1 l4 -22 M973.1 1069.1 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1074.4 845.3 l-6 -18 M1074.4 845.3 l4 -22 M1074.4 845.3 l10 -14\" stroke=\"#242532\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"268.8\" cy=\"805.2\" rx=\"46\" ry=\"10\" fill=\"#593f2e\"/><rect x=\"262.8\" y=\"619.2\" width=\"12\" height=\"186\" fill=\"#8b8f96\"/>\n<ellipse cx=\"268.8\" cy=\"739.2\" rx=\"34\" ry=\"8\" fill=\"none\" stroke=\"#8b8f96\" stroke-width=\"5\"/>\n<rect x=\"216.8\" y=\"597.2\" width=\"104\" height=\"26\" rx=\"13\" fill=\"#834830\"/><rect x=\"220.8\" y=\"617.2\" width=\"96\" height=\"8\" rx=\"4\" fill=\"#593f2e\"/>\n<rect x=\"1491.2\" y=\"619.2\" width=\"320\" height=\"190\" rx=\"8\" fill=\"url(#courtyard-stove-body-1651)\"/>\n<rect x=\"1481.2\" y=\"609.2\" width=\"340\" height=\"18\" rx=\"4\" fill=\"#faf3e4\"/>\n<rect x=\"1501.2\" y=\"644.2\" width=\"142\" height=\"150\" rx=\"6\" fill=\"none\" stroke=\"#593f2e\" stroke-opacity=\"0.45\" stroke-width=\"4\"/><circle cx=\"1626.2\" cy=\"719.2\" r=\"5\" fill=\"#593f2e\"/>\n<rect x=\"1649.2\" y=\"644.2\" width=\"142\" height=\"150\" rx=\"6\" fill=\"none\" stroke=\"#593f2e\" stroke-opacity=\"0.45\" stroke-width=\"4\"/><circle cx=\"1774.2\" cy=\"719.2\" r=\"5\" fill=\"#593f2e\"/>\n<ellipse cx=\"1581.2\" cy=\"604.2\" rx=\"50\" ry=\"10\" fill=\"#2b2530\"/>\n<ellipse cx=\"1721.2\" cy=\"604.2\" rx=\"50\" ry=\"10\" fill=\"#2b2530\"/>\n<path d=\"M1551.2 595.2 h80 v-60 a40 20 0 0 0 -80 0 Z\" fill=\"#5a4842\"/>\n<path d=\"M1591.2 509.2 q14 -20 0 -40 q-14 -20 0 -40\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.5\" stroke-width=\"5\" stroke-linecap=\"round\"/>\n<path d=\"M586.4 723.2 L642.4 723.2 L635.4 779.2 L593.4 779.2 Z\" fill=\"#965835\"/>\n<path d=\"M614.4 723.2 Q588.7 700.3 549.1 677.5\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q590.9 682.2 553.4 641.3\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q605.6 675.6 582.9 628\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q621.4 676.9 614.4 630.6\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q636.4 678 644.3 632.8\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q646.6 689.3 664.8 655.4\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q653.4 700.8 678.4 678.4\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<rect width=\"1920\" height=\"1080\" fill=\"#0b1330\" fill-opacity=\"0.38\"/>\n<rect width=\"1920\" height=\"1080\" fill=\"url(#courtyard-vignette)\"/>\n</symbol>\n<symbol id=\"front-room\" viewBox=\"0 0 1920 1080\">\n<rect width=\"1920\" height=\"758\" fill=\"url(#front-room-wall)\"/>\n<path d=\"M120 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M240 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M360 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M480 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M600 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M720 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M840 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M960 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1080 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1200 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1320 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1440 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1560 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1680 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<path d=\"M1800 0 V468.7\" stroke=\"#b4a997\" stroke-opacity=\"0.25\" stroke-width=\"4\"/>\n<rect y=\"468.7\" width=\"1920\" height=\"287.3\" fill=\"url(#front-room-wainscot)\"/>\n<rect y=\"460.7\" width=\"1920\" height=\"14\" fill=\"#a07937\"/>\n<path d=\"M80 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M160 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M240 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M320 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M400 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M480 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M560 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M640 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M720 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M800 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M880 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M960 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1040 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1120 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1200 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1280 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1360 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1440 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1520 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1600 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1680 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1760 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<path d=\"M1840 474.7 V756\" stroke=\"#b4a997\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<rect width=\"1920\" height=\"38\" fill=\"#8f6f33\"/>\n<rect y=\"756\" width=\"1920\" height=\"324\" fill=\"url(#front-room-floor)\"/>\n<rect y=\"756\" width=\"1920\" height=\"10\" fill=\"#3a5a47\"/>\n<path d=\"M420 756 L-600 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M510 756 L-340 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M600 756 L-80 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M690 756 L180 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M780 756 L440 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M870 756 L700 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M960 756 L960 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1050 756 L1220 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1140 756 L1480 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1230 756 L1740 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1320 756 L2000 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1410 756 L2260 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<path d=\"M1500 756 L2520 1080\" stroke=\"#3d5f4a\" stroke-opacity=\"0.4\" stroke-width=\"3\"/>\n<rect x=\"756\" y=\"85.5\" width=\"408\" height=\"328\" rx=\"6\" fill=\"#9a7436\"/>\n<rect x=\"770\" y=\"99.5\" width=\"380\" height=\"300\" fill=\"url(#front-room-win-960)\"/>\n<path d=\"M770 333.5 Q922 264.5 1036 324.5 T1150 309.5 V399.5 H770 Z\" fill=\"#9ab995\"/>\n<path d=\"M960 99.5 V399.5 M770 249.5 H1150\" stroke=\"#9a7436\" stroke-width=\"10\"/>\n<rect x=\"746\" y=\"409.5\" width=\"428\" height=\"14\" rx=\"4\" fill=\"#aa8239\"/>\n<path d=\"M770 399.5 L1150 399.5 L1380 1080 L840 1080 Z\" fill=\"#fff6dc\" fill-opacity=\"0.14\"/>\n<rect x=\"235.6\" y=\"226.8\" width=\"220\" height=\"10\" fill=\"#9a7436\"/>\n<rect x=\"245.6\" y=\"156.8\" width=\"22\" height=\"70\" fill=\"#D4A843\"/>\n<rect x=\"273.6\" y=\"167\" width=\"22\" height=\"59.8\" fill=\"#5b7aa6\"/>\n<rect x=\"301.6\" y=\"169.6\" width=\"22\" height=\"57.2\" fill=\"#c9a24b\"/>\n<rect x=\"329.6\" y=\"158.6\" width=\"22\" height=\"68.2\" fill=\"#8a5a7a\"/>\n<rect x=\"357.6\" y=\"154.8\" width=\"22\" height=\"72\" fill=\"#6b8e4e\"/>\n<rect x=\"385.6\" y=\"160.9\" width=\"22\" height=\"65.9\" fill=\"#D4A843\"/>\n<rect x=\"413.6\" y=\"154.1\" width=\"22\" height=\"72.7\" fill=\"#5b7aa6\"/>\n<path d=\"M264.4 722 L388.4 722 L372.9 846 L279.9 846 Z\" fill=\"#ba7d38\"/>\n<path d=\"M326.4 722 Q251.7 658.9 146.1 595.8\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"14\" stroke-linecap=\"round\"/>\n<path d=\"M326.4 722 Q283.7 643.9 210.1 565.8\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"14\" stroke-linecap=\"round\"/>\n<path d=\"M326.4 722 Q312.3 632.6 267.2 543.2\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"14\" stroke-linecap=\"round\"/>\n<path d=\"M326.4 722 Q341.9 614.2 326.4 506.4\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"14\" stroke-linecap=\"round\"/>\n<path d=\"M326.4 722 Q377.3 615.2 397.2 508.4\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"14\" stroke-linecap=\"round\"/>\n<path d=\"M326.4 722 Q404.6 637.8 451.7 553.7\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"14\" stroke-linecap=\"round\"/>\n<path d=\"M326.4 722 Q434.8 657 512.2 591.9\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"14\" stroke-linecap=\"round\"/>\n<rect x=\"1464.4\" y=\"146.8\" width=\"220\" height=\"160\" fill=\"#9a7436\"/><rect x=\"1478.4\" y=\"160.8\" width=\"192\" height=\"132\" fill=\"url(#front-room-paint-1574)\"/><path d=\"M1478.4 266.8 Q1544.4 196.8 1594.4 236.8 T1670.4 226.8 L1670.4 292.8 L1478.4 292.8 Z\" fill=\"#6b8e4e\"/>\n<rect x=\"1585.9\" y=\"334.5\" width=\"15.5\" height=\"511.5\" fill=\"#6e5530\"/><path d=\"M1500.6 334.5 L1686.6 334.5 L1649.4 226 L1537.8 226 Z\" fill=\"#eace8d\"/>\n<rect width=\"1920\" height=\"1080\" fill=\"url(#front-room-vignette)\"/>\n</symbol>\n<symbol id=\"rooftops\" viewBox=\"0 0 1920 1080\">\n<rect width=\"1920\" height=\"601.6\" fill=\"url(#rooftops-sky)\"/>\n<circle cx=\"1536\" cy=\"183.6\" r=\"200\" fill=\"url(#rooftops-moonglow)\"/><circle cx=\"1536\" cy=\"183.6\" r=\"54\" fill=\"#f6f1d8\"/>\n<circle cx=\"1261.1\" cy=\"107.5\" r=\"3.1\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"1032.1\" cy=\"286.9\" r=\"1.8\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"739.4\" cy=\"436.1\" r=\"1.6\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"1417.5\" cy=\"423.1\" r=\"2\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"1126.9\" cy=\"347.5\" r=\"2.3\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"696.8\" cy=\"318.3\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1463.3\" cy=\"228.2\" r=\"3.1\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1745.3\" cy=\"227.9\" r=\"3.2\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"514.2\" cy=\"231.5\" r=\"1.6\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"825.5\" cy=\"136.7\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1325.4\" cy=\"374.4\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"1569.2\" cy=\"270\" r=\"2.9\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"220.5\" cy=\"312.4\" r=\"2.4\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"521.8\" cy=\"125.2\" r=\"1.6\" fill=\"#ffffff\" fill-opacity=\"1\"/>\n<circle cx=\"1609.9\" cy=\"218.3\" r=\"2.9\" fill=\"#ffffff\" fill-opacity=\"1\"/>\n<circle cx=\"314.3\" cy=\"168.9\" r=\"3.4\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"337.3\" cy=\"218.8\" r=\"2.9\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"71.6\" cy=\"281\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"1769.1\" cy=\"89.8\" r=\"1.6\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1791.1\" cy=\"283.9\" r=\"2.1\" fill=\"#ffffff\" fill-opacity=\"1\"/>\n<circle cx=\"269.2\" cy=\"351.1\" r=\"3\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"958.1\" cy=\"303.7\" r=\"2.1\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"398.9\" cy=\"375.8\" r=\"1.9\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"75.3\" cy=\"248.5\" r=\"1.9\" fill=\"#ffffff\" fill-opacity=\"0.5\"/>\n<circle cx=\"682.3\" cy=\"21.8\" r=\"1.7\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"1876.5\" cy=\"301.3\" r=\"2.2\" fill=\"#ffffff\" fill-opacity=\"0.7\"/>\n<circle cx=\"303.4\" cy=\"254.3\" r=\"2\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"47.3\" cy=\"341.5\" r=\"1.8\" fill=\"#ffffff\" fill-opacity=\"0.5\"/>\n<circle cx=\"145.9\" cy=\"432.7\" r=\"3.2\" fill=\"#ffffff\" fill-opacity=\"1\"/>\n<circle cx=\"356.7\" cy=\"247\" r=\"2.6\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"510.7\" cy=\"306.4\" r=\"2.7\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"602.8\" cy=\"46.5\" r=\"3.5\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"1910.9\" cy=\"448.1\" r=\"2.6\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"1608.1\" cy=\"191.3\" r=\"2.2\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"921.4\" cy=\"189.2\" r=\"2.6\" fill=\"#ffffff\" fill-opacity=\"1\"/>\n<circle cx=\"1829.8\" cy=\"29.3\" r=\"2\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"1336.5\" cy=\"48.6\" r=\"2.3\" fill=\"#ffffff\" fill-opacity=\"0.9\"/>\n<circle cx=\"800.5\" cy=\"75.6\" r=\"1.6\" fill=\"#ffffff\" fill-opacity=\"0.8\"/>\n<circle cx=\"1157.7\" cy=\"51.8\" r=\"2.2\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<circle cx=\"672.4\" cy=\"433.3\" r=\"2.1\" fill=\"#ffffff\" fill-opacity=\"0.6\"/>\n<g fill=\"#3a4a7a\" fill-opacity=\"0.6\"><ellipse cx=\"219.9\" cy=\"126.2\" rx=\"110\" ry=\"34\"/><ellipse cx=\"279.9\" cy=\"104.2\" rx=\"70\" ry=\"38\"/><ellipse cx=\"169.9\" cy=\"114.2\" rx=\"60\" ry=\"30\"/></g>\n<g fill=\"#3a4a7a\" fill-opacity=\"0.6\"><ellipse cx=\"577.7\" cy=\"172.7\" rx=\"110\" ry=\"34\"/><ellipse cx=\"637.7\" cy=\"150.7\" rx=\"70\" ry=\"38\"/><ellipse cx=\"527.7\" cy=\"160.7\" rx=\"60\" ry=\"30\"/></g>\n<g fill=\"#3a4a7a\" fill-opacity=\"0.6\"><ellipse cx=\"855.8\" cy=\"134.9\" rx=\"110\" ry=\"34\"/><ellipse cx=\"915.8\" cy=\"112.9\" rx=\"70\" ry=\"38\"/><ellipse cx=\"805.8\" cy=\"122.9\" rx=\"60\" ry=\"30\"/></g>\n<path d=\"M0 561.6 L230.4 301.6 L480 441.6 L806.4 221.6 L1152 421.6 L1497.6 261.6 L1920 471.6 L1920 601.6 L0 601.6 Z\" fill=\"#303b5a\"/>\n<path d=\"M736.4 311.6 L806.4 221.6 L886.4 321.6 Z M1437.6 336.6 L1497.6 261.6 L1563.6 341.6 Z\" fill=\"#f7f9fc\" fill-opacity=\"0.5\"/>\n<rect y=\"551.6\" width=\"1920\" height=\"297.6\" fill=\"url(#rooftops-midground)\"/>\n<rect x=\"-40\" y=\"498.4\" width=\"283.4\" height=\"300.8\" fill=\"#704658\"/><path d=\"M-52 498.4 L101.7 428.4 L255.4 498.4 Z\" fill=\"#5d3c44\"/>\n<rect x=\"0\" y=\"538.4\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"120\" y=\"538.4\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"0\" y=\"628.4\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"120\" y=\"628.4\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"255.4\" y=\"524.7\" width=\"283.4\" height=\"274.5\" fill=\"#7e8193\"/><path d=\"M243.4 524.7 L397.1 454.7 L550.8 524.7 Z\" fill=\"#66636b\"/>\n<rect x=\"295.4\" y=\"564.7\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"415.4\" y=\"564.7\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"295.4\" y=\"654.7\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"415.4\" y=\"654.7\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"550.8\" y=\"565.4\" width=\"283.4\" height=\"233.8\" fill=\"#706973\"/><path d=\"M538.8 565.4 L692.5 495.4 L846.2 565.4 Z\" fill=\"#5d5356\"/>\n<rect x=\"590.8\" y=\"605.4\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"710.8\" y=\"605.4\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"590.8\" y=\"695.4\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"710.8\" y=\"695.4\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"846.2\" y=\"497.7\" width=\"283.4\" height=\"301.5\" fill=\"#67799b\"/><path d=\"M834.2 497.7 L987.8 427.7 L1141.5 497.7 Z\" fill=\"#575d70\"/>\n<rect x=\"886.2\" y=\"537.7\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"1006.2\" y=\"537.7\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"886.2\" y=\"627.7\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"1006.2\" y=\"627.7\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"1141.5\" y=\"500.3\" width=\"283.4\" height=\"298.9\" fill=\"#704658\"/><path d=\"M1129.5 500.3 L1283.2 430.3 L1436.9 500.3 Z\" fill=\"#5d3c44\"/>\n<rect x=\"1181.5\" y=\"540.3\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"1301.5\" y=\"540.3\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"1181.5\" y=\"630.3\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"1301.5\" y=\"630.3\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"1436.9\" y=\"492.2\" width=\"283.4\" height=\"307\" fill=\"#7e8193\"/><path d=\"M1424.9 492.2 L1578.6 422.2 L1732.3 492.2 Z\" fill=\"#66636b\"/>\n<rect x=\"1476.9\" y=\"532.2\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"1596.9\" y=\"532.2\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"1476.9\" y=\"622.2\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"1596.9\" y=\"622.2\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"1732.3\" y=\"489.4\" width=\"283.4\" height=\"309.8\" fill=\"#706973\"/><path d=\"M1720.3 489.4 L1874 419.4 L2027.7 489.4 Z\" fill=\"#5d5356\"/>\n<rect x=\"1772.3\" y=\"529.4\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"1892.3\" y=\"529.4\" width=\"54\" height=\"54\" fill=\"#ffcf6e\"/>\n<rect x=\"1772.3\" y=\"619.4\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<rect x=\"1892.3\" y=\"619.4\" width=\"54\" height=\"54\" fill=\"#2b3150\"/>\n<path d=\"M0 799.2 Q672 773.2 1152 793.2 T1920 785.2 L1920 1080 L0 1080 Z\" fill=\"url(#rooftops-ground)\"/>\n<path d=\"M1513.8 998.4 l-6 -18 M1513.8 998.4 l4 -22 M1513.8 998.4 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1267.3 866 l-6 -18 M1267.3 866 l4 -22 M1267.3 866 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1278 840.5 l-6 -18 M1278 840.5 l4 -22 M1278 840.5 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1884 1017.5 l-6 -18 M1884 1017.5 l4 -22 M1884 1017.5 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M287.2 876.6 l-6 -18 M287.2 876.6 l4 -22 M287.2 876.6 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M431 936.7 l-6 -18 M431 936.7 l4 -22 M431 936.7 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1902.2 968.5 l-6 -18 M1902.2 968.5 l4 -22 M1902.2 968.5 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M583.3 988.1 l-6 -18 M583.3 988.1 l4 -22 M583.3 988.1 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M773.9 1034.6 l-6 -18 M773.9 1034.6 l4 -22 M773.9 1034.6 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M287.4 990.8 l-6 -18 M287.4 990.8 l4 -22 M287.4 990.8 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1625.2 820.6 l-6 -18 M1625.2 820.6 l4 -22 M1625.2 820.6 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M432.3 864.9 l-6 -18 M432.3 864.9 l4 -22 M432.3 864.9 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1320 924.5 l-6 -18 M1320 924.5 l4 -22 M1320 924.5 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M471.8 1003.3 l-6 -18 M471.8 1003.3 l4 -22 M471.8 1003.3 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M206.1 941.7 l-6 -18 M206.1 941.7 l4 -22 M206.1 941.7 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1654.6 1041 l-6 -18 M1654.6 1041 l4 -22 M1654.6 1041 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1369.8 877.8 l-6 -18 M1369.8 877.8 l4 -22 M1369.8 877.8 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M501.8 828.9 l-6 -18 M501.8 828.9 l4 -22 M501.8 828.9 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1536.4 958.9 l-6 -18 M1536.4 958.9 l4 -22 M1536.4 958.9 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1853.4 824.9 l-6 -18 M1853.4 824.9 l4 -22 M1853.4 824.9 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M693.4 928.7 l-6 -18 M693.4 928.7 l4 -22 M693.4 928.7 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1186.7 962.4 l-6 -18 M1186.7 962.4 l4 -22 M1186.7 962.4 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M24.8 894.4 l-6 -18 M24.8 894.4 l4 -22 M24.8 894.4 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1689.3 828.4 l-6 -18 M1689.3 828.4 l4 -22 M1689.3 828.4 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M708.6 831.4 l-6 -18 M708.6 831.4 l4 -22 M708.6 831.4 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1660.5 1010.8 l-6 -18 M1660.5 1010.8 l4 -22 M1660.5 1010.8 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1887.6 1044.5 l-6 -18 M1887.6 1044.5 l4 -22 M1887.6 1044.5 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1585.8 1018.8 l-6 -18 M1585.8 1018.8 l4 -22 M1585.8 1018.8 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1692.7 929.4 l-6 -18 M1692.7 929.4 l4 -22 M1692.7 929.4 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M143.3 853 l-6 -18 M143.3 853 l4 -22 M143.3 853 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1784.1 1055 l-6 -18 M1784.1 1055 l4 -22 M1784.1 1055 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M241.9 1008.1 l-6 -18 M241.9 1008.1 l4 -22 M241.9 1008.1 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M655 901.3 l-6 -18 M655 901.3 l4 -22 M655 901.3 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1857 1061.8 l-6 -18 M1857 1061.8 l4 -22 M1857 1061.8 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1308.9 893.8 l-6 -18 M1308.9 893.8 l4 -22 M1308.9 893.8 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M448.1 983.9 l-6 -18 M448.1 983.9 l4 -22 M448.1 983.9 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M488.4 826.5 l-6 -18 M488.4 826.5 l4 -22 M488.4 826.5 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1744.6 876.9 l-6 -18 M1744.6 876.9 l4 -22 M1744.6 876.9 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1328.2 996.2 l-6 -18 M1328.2 996.2 l4 -22 M1328.2 996.2 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M83.8 925.5 l-6 -18 M83.8 925.5 l4 -22 M83.8 925.5 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M636.6 858.7 l-6 -18 M636.6 858.7 l4 -22 M636.6 858.7 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1539.5 1012.5 l-6 -18 M1539.5 1012.5 l4 -22 M1539.5 1012.5 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M530.5 887.8 l-6 -18 M530.5 887.8 l4 -22 M530.5 887.8 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M807.3 918.6 l-6 -18 M807.3 918.6 l4 -22 M807.3 918.6 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1377.4 1054.2 l-6 -18 M1377.4 1054.2 l4 -22 M1377.4 1054.2 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M494.5 1038.1 l-6 -18 M494.5 1038.1 l4 -22 M494.5 1038.1 l10 -14\" stroke=\"#413232\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M268.8 479.2 v40\" stroke=\"#6b3c2e\" stroke-width=\"4\"/><ellipse cx=\"268.8\" cy=\"559.2\" rx=\"42\" ry=\"56\" fill=\"#ffcf6e\"/><path d=\"M226.8 559.2 h84 M230.8 534.2 h76 M230.8 584.2 h76\" stroke=\"#6b3c2e\" stroke-opacity=\"0.35\" stroke-width=\"3\"/>\n<circle cx=\"268.8\" cy=\"559.2\" r=\"190\" fill=\"url(#rooftops-glow-lantern-269)\"/>\n<path d=\"M1371.2 809.2 v-110 l12 -16 l12 16 v110 Z\" fill=\"#7f7f84\"/>\n<path d=\"M1441.2 809.2 v-110 l12 -16 l12 16 v110 Z\" fill=\"#7f7f84\"/>\n<path d=\"M1511.2 809.2 v-110 l12 -16 l12 16 v110 Z\" fill=\"#7f7f84\"/>\n<path d=\"M1581.2 809.2 v-110 l12 -16 l12 16 v110 Z\" fill=\"#7f7f84\"/>\n<path d=\"M1651.2 809.2 v-110 l12 -16 l12 16 v110 Z\" fill=\"#7f7f84\"/>\n<path d=\"M1721.2 809.2 v-110 l12 -16 l12 16 v110 Z\" fill=\"#7f7f84\"/>\n<path d=\"M1791.2 809.2 v-110 l12 -16 l12 16 v110 Z\" fill=\"#7f7f84\"/>\n<path d=\"M1861.2 809.2 v-110 l12 -16 l12 16 v110 Z\" fill=\"#7f7f84\"/>\n<path d=\"M1931.2 809.2 v-110 l12 -16 l12 16 v110 Z\" fill=\"#7f7f84\"/>\n<path d=\"M1361.2 729.2 h600 M1361.2 774.2 h600\" stroke=\"#bab4a6\" stroke-width=\"10\"/>\n<rect x=\"509.4\" y=\"625.2\" width=\"210\" height=\"154\" fill=\"#765c5f\"/><path d=\"M488.4 628.7 L614.4 541.2 L740.4 628.7 Z\" fill=\"#964633\"/>\n<rect x=\"551.4\" y=\"660.2\" width=\"39.2\" height=\"39.2\" fill=\"#ffcf6e\" stroke=\"#9e7461\" stroke-width=\"3.5\"/>\n<rect x=\"649.4\" y=\"660.2\" width=\"39.2\" height=\"39.2\" fill=\"#ffcf6e\" stroke=\"#9e7461\" stroke-width=\"3.5\"/>\n<rect x=\"596.9\" y=\"709.2\" width=\"35\" height=\"70\" fill=\"#81402f\"/>\n<circle cx=\"614.4\" cy=\"681.2\" r=\"119\" fill=\"url(#rooftops-glow-house-614)\"/>\n<path d=\"M1293 779.2 L1298.6 625.2 L1312.6 625.2 L1318.2 779.2 Z\" fill=\"#45342d\"/>\n<circle cx=\"1371\" cy=\"555.1\" r=\"73.9\" fill=\"#364f39\"/>\n<circle cx=\"1365.4\" cy=\"599.7\" r=\"69.9\" fill=\"#9cb69a\"/>\n<circle cx=\"1304.1\" cy=\"548.9\" r=\"75.1\" fill=\"#364f39\"/>\n<circle cx=\"1270.1\" cy=\"586\" r=\"72.9\" fill=\"#9cb69a\"/>\n<circle cx=\"1312.7\" cy=\"584.2\" r=\"49.6\" fill=\"#364f39\"/>\n<circle cx=\"1251.1\" cy=\"586.6\" r=\"69.1\" fill=\"#9cb69a\"/>\n<rect x=\"956.2\" y=\"528.2\" width=\"7.7\" height=\"231\" fill=\"#2b2f3a\"/><path d=\"M943.5 528.2 h33 l-6.6 -22 h-19.8 Z\" fill=\"#ffd27f\"/>\n<circle cx=\"960\" cy=\"533.7\" r=\"126.5\" fill=\"url(#rooftops-glow-streetlamp-960)\"/>\n<rect x=\"-88\" y=\"778.7\" width=\"368\" height=\"20.7\" rx=\"5.8\" fill=\"#954f33\"/><rect x=\"-88\" y=\"709.7\" width=\"368\" height=\"16.1\" rx=\"5.8\" fill=\"#954f33\"/>\n<rect x=\"-65\" y=\"709.7\" width=\"16.1\" height=\"149.5\" fill=\"#6b3c2e\"/>\n<rect x=\"239.8\" y=\"709.7\" width=\"16.1\" height=\"149.5\" fill=\"#6b3c2e\"/>\n<use href=\"#rooftops-d1\" x=\"331.2\" y=\"560\" width=\"259.2\" height=\"259.2\"/>\n<use href=\"#rooftops-d2\" x=\"478.8\" y=\"40\" width=\"194.4\" height=\"194.4\"/>\n<use href=\"#rooftops-d3\" x=\"484.2\" y=\"108\" width=\"183.6\" height=\"183.6\"/>\n<use href=\"#rooftops-d4\" x=\"1329.6\" y=\"560\" width=\"259.2\" height=\"259.2\"/>\n<rect width=\"1920\" height=\"1080\" fill=\"#0b1330\" fill-opacity=\"0.38\"/>\n<rect width=\"1920\" height=\"1080\" fill=\"url(#rooftops-vignette)\"/>\n</symbol>\n<symbol id=\"an\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"158.6\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"176.6\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"213.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"231.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M139.2 234 Q113.2 291 115.2 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 234 Q286.8 291 284.8 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<circle cx=\"115.2\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"284.8\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<path d=\"M186.4 170.4 Q200 182.4 213.6 170.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandma\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q278 245 276 348\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"158\" width=\"97.5\" height=\"390\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma-torso)\"/>\n<path d=\"M184 210 L174 546 M216 210 L226 546\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"276\" cy=\"352\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M192.5 133.1 Q200 139.7 207.5 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M153 118 Q154 58 200 58 Q246 58 247 118 Q224.2 93.5 202.2 90 Q173.6 94.4 153 118 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 72 Q195.6 62 213.2 70\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"56\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>\n<symbol id=\"banh-chung\" viewBox=\"0 0 400 400\">\n  <rect x=\"70\" y=\"70\" width=\"260\" height=\"260\" fill=\"#6B8E5A\"/>\n  <rect x=\"70\" y=\"150\" width=\"260\" height=\"8\" fill=\"#D4A843\"/>\n  <rect x=\"70\" y=\"250\" width=\"260\" height=\"8\" fill=\"#D4A843\"/>\n  <rect x=\"150\" y=\"70\" width=\"8\" height=\"260\" fill=\"#D4A843\"/>\n  <rect x=\"250\" y=\"70\" width=\"8\" height=\"260\" fill=\"#D4A843\"/>\n  <polygon points=\"70,70 90,70 70,90\" fill=\"#4A7C59\"/>\n  <polygon points=\"330,70 310,70 330,90\" fill=\"#4A7C59\"/>\n  <polygon points=\"70,330 90,330 70,310\" fill=\"#4A7C59\"/>\n  <polygon points=\"330,330 310,330 330,310\" fill=\"#4A7C59\"/>\n  <path d=\"M150 70 Q180 130 150 190 Q120 250 150 310\" stroke=\"#4A7C59\" stroke-width=\"4\" fill=\"none\"/>\n  <path d=\"M200 70 Q230 130 200 190 Q170 250 200 310\" stroke=\"#4A7C59\" stroke-width=\"4\" fill=\"none\"/>\n  <path d=\"M250 70 Q280 130 250 190 Q220 250 250 310\" stroke=\"#4A7C59\" stroke-width=\"4\" fill=\"none\"/>\n  <ellipse cx=\"130\" cy=\"130\" rx=\"30\" ry=\"15\" fill=\"#FFFFFF\" fill-opacity=\"0.3\"/>\n</symbol>\n<symbol id=\"rooftops-d1\" viewBox=\"0 0 400 400\">\n  <rect x=\"0\" y=\"200\" width=\"400\" height=\"200\" fill=\"#E8D4B9\"/>\n  <rect x=\"50\" y=\"250\" width=\"100\" height=\"100\" fill=\"#C8553D\"/>\n  <rect x=\"150\" y=\"250\" width=\"100\" height=\"100\" fill=\"#D4A843\"/>\n  <rect x=\"250\" y=\"250\" width=\"100\" height=\"100\" fill=\"#C8553D\"/>\n  <rect x=\"50\" y=\"250\" width=\"100\" height=\"10\" fill=\"#3D3D3D\" fill-opacity=\"0.5\"/>\n  <rect x=\"150\" y=\"250\" width=\"100\" height=\"10\" fill=\"#3D3D3D\" fill-opacity=\"0.5\"/>\n</symbol>\n<symbol id=\"rooftops-d2\" viewBox=\"0 0 400 400\">\n  <ellipse cx=\"200\" cy=\"300\" rx=\"80\" ry=\"100\" fill=\"#C8553D\"/>\n  <rect x=\"120\" y=\"200\" width=\"160\" height=\"20\" fill=\"#D4A843\"/>\n  <rect x=\"120\" y=\"380\" width=\"160\" height=\"20\" fill=\"#D4A843\"/>\n  <line x1=\"200\" y1=\"200\" x2=\"200\" y2=\"150\" stroke=\"#3D3D3D\" stroke-width=\"8\"/>\n  <ellipse cx=\"180\" cy=\"260\" rx=\"20\" ry=\"10\" fill=\"#E8D4B9\" fill-opacity=\"0.7\"/>\n</symbol>\n<symbol id=\"rooftops-d3\" viewBox=\"0 0 400 400\"><rect x=\"80\" y=\"140\" width=\"240\" height=\"260\" rx=\"40\" fill=\"#C8553D\"/><circle cx=\"200\" cy=\"120\" r=\"70\" fill=\"#D4A843\"/></symbol>\n<symbol id=\"rooftops-d4\" viewBox=\"0 0 400 400\">\n  <rect x=\"0\" y=\"200\" width=\"400\" height=\"200\" fill=\"#E8D4B9\"/>\n  <rect x=\"50\" y=\"250\" width=\"300\" height=\"30\" fill=\"#C8553D\"/>\n  <rect x=\"50\" y=\"300\" width=\"300\" height=\"30\" fill=\"#D4A843\"/>\n  <rect x=\"50\" y=\"350\" width=\"300\" height=\"30\" fill=\"#C8553D\"/>\n  <rect x=\"50\" y=\"250\" width=\"300\" height=\"5\" fill=\"#E8D4B9\" fill-opacity=\"0.6\"/>\n  <rect x=\"50\" y=\"300\" width=\"300\" height=\"5\" fill=\"#E8D4B9\" fill-opacity=\"0.6\"/>\n</symbol>\n<symbol id=\"courtyard--day\" viewBox=\"0 0 1920 1080\">\n<rect width=\"1920\" height=\"601.6\" fill=\"url(#courtyard--day-sky)\"/>\n<circle cx=\"1382.4\" cy=\"172.8\" r=\"260\" fill=\"url(#courtyard--day-sunglow)\"/><circle cx=\"1382.4\" cy=\"172.8\" r=\"62\" fill=\"#fff4c9\"/>\n<g fill=\"#ffffff\" fill-opacity=\"0.85\"><ellipse cx=\"206.7\" cy=\"184.5\" rx=\"110\" ry=\"34\"/><ellipse cx=\"266.7\" cy=\"162.5\" rx=\"70\" ry=\"38\"/><ellipse cx=\"156.7\" cy=\"172.5\" rx=\"60\" ry=\"30\"/></g>\n<g fill=\"#ffffff\" fill-opacity=\"0.85\"><ellipse cx=\"519.7\" cy=\"156.3\" rx=\"110\" ry=\"34\"/><ellipse cx=\"579.7\" cy=\"134.3\" rx=\"70\" ry=\"38\"/><ellipse cx=\"469.7\" cy=\"144.3\" rx=\"60\" ry=\"30\"/></g>\n<g fill=\"#ffffff\" fill-opacity=\"0.85\"><ellipse cx=\"860\" cy=\"208\" rx=\"110\" ry=\"34\"/><ellipse cx=\"920\" cy=\"186\" rx=\"70\" ry=\"38\"/><ellipse cx=\"810\" cy=\"196\" rx=\"60\" ry=\"30\"/></g>\n<path d=\"M0 521.6 Q384 411.6 806.4 501.6 T1536 471.6 T1920 511.6 L1920 601.6 L0 601.6 Z\" fill=\"#e4eae4\"/>\n<rect y=\"551.6\" width=\"1920\" height=\"297.6\" fill=\"url(#courtyard--day-midground)\"/>\n<circle cx=\"124.3\" cy=\"647.9\" r=\"71.3\" fill=\"#94b59b\"/>\n<circle cx=\"394.2\" cy=\"658.1\" r=\"77.9\" fill=\"#94b59b\"/>\n<circle cx=\"689.4\" cy=\"674.9\" r=\"96.7\" fill=\"#94b59b\"/>\n<circle cx=\"954.5\" cy=\"643.8\" r=\"88.8\" fill=\"#94b59b\"/>\n<circle cx=\"1251.4\" cy=\"662.6\" r=\"84\" fill=\"#94b59b\"/>\n<circle cx=\"1517.6\" cy=\"656.8\" r=\"72.8\" fill=\"#94b59b\"/>\n<circle cx=\"1764.7\" cy=\"653.3\" r=\"85.5\" fill=\"#94b59b\"/>\n<path d=\"M0 799.2 Q672 773.2 1152 793.2 T1920 785.2 L1920 1080 L0 1080 Z\" fill=\"url(#courtyard--day-ground)\"/>\n<path d=\"M958.4 912.5 l-6 -18 M958.4 912.5 l4 -22 M958.4 912.5 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1641.3 951.5 l-6 -18 M1641.3 951.5 l4 -22 M1641.3 951.5 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M16.3 1028.4 l-6 -18 M16.3 1028.4 l4 -22 M16.3 1028.4 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1222.5 994.3 l-6 -18 M1222.5 994.3 l4 -22 M1222.5 994.3 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1223.6 984 l-6 -18 M1223.6 984 l4 -22 M1223.6 984 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1035.1 899.8 l-6 -18 M1035.1 899.8 l4 -22 M1035.1 899.8 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1524.2 851.8 l-6 -18 M1524.2 851.8 l4 -22 M1524.2 851.8 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M199.1 829.7 l-6 -18 M199.1 829.7 l4 -22 M199.1 829.7 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1335.4 909.7 l-6 -18 M1335.4 909.7 l4 -22 M1335.4 909.7 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M680 957.2 l-6 -18 M680 957.2 l4 -22 M680 957.2 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1016.5 849.9 l-6 -18 M1016.5 849.9 l4 -22 M1016.5 849.9 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M284.2 963.2 l-6 -18 M284.2 963.2 l4 -22 M284.2 963.2 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M74.5 1034 l-6 -18 M74.5 1034 l4 -22 M74.5 1034 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1258.3 840.9 l-6 -18 M1258.3 840.9 l4 -22 M1258.3 840.9 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M940 926.2 l-6 -18 M940 926.2 l4 -22 M940 926.2 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1914.9 1057.9 l-6 -18 M1914.9 1057.9 l4 -22 M1914.9 1057.9 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1789.7 830.2 l-6 -18 M1789.7 830.2 l4 -22 M1789.7 830.2 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1598.7 1000.4 l-6 -18 M1598.7 1000.4 l4 -22 M1598.7 1000.4 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M305.2 851.4 l-6 -18 M305.2 851.4 l4 -22 M305.2 851.4 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M662 1061.9 l-6 -18 M662 1061.9 l4 -22 M662 1061.9 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1662.1 905.6 l-6 -18 M1662.1 905.6 l4 -22 M1662.1 905.6 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M280.8 900.8 l-6 -18 M280.8 900.8 l4 -22 M280.8 900.8 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M421.2 1054.1 l-6 -18 M421.2 1054.1 l4 -22 M421.2 1054.1 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M884.4 874.3 l-6 -18 M884.4 874.3 l4 -22 M884.4 874.3 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1653.4 866.5 l-6 -18 M1653.4 866.5 l4 -22 M1653.4 866.5 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1030.8 819.6 l-6 -18 M1030.8 819.6 l4 -22 M1030.8 819.6 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1562.2 910.9 l-6 -18 M1562.2 910.9 l4 -22 M1562.2 910.9 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M598.5 1001.1 l-6 -18 M598.5 1001.1 l4 -22 M598.5 1001.1 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M194.7 1005 l-6 -18 M194.7 1005 l4 -22 M194.7 1005 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M329 1030 l-6 -18 M329 1030 l4 -22 M329 1030 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1157.5 845.7 l-6 -18 M1157.5 845.7 l4 -22 M1157.5 845.7 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1670.6 832.3 l-6 -18 M1670.6 832.3 l4 -22 M1670.6 832.3 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M416.2 903.9 l-6 -18 M416.2 903.9 l4 -22 M416.2 903.9 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M811.9 886.7 l-6 -18 M811.9 886.7 l4 -22 M811.9 886.7 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M463 977.9 l-6 -18 M463 977.9 l4 -22 M463 977.9 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1388.7 1010.9 l-6 -18 M1388.7 1010.9 l4 -22 M1388.7 1010.9 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M127.8 905.7 l-6 -18 M127.8 905.7 l4 -22 M127.8 905.7 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M811.7 919 l-6 -18 M811.7 919 l4 -22 M811.7 919 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1744.7 824.6 l-6 -18 M1744.7 824.6 l4 -22 M1744.7 824.6 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M502.8 986 l-6 -18 M502.8 986 l4 -22 M502.8 986 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M966.6 986.1 l-6 -18 M966.6 986.1 l4 -22 M966.6 986.1 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M669 833.3 l-6 -18 M669 833.3 l4 -22 M669 833.3 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1645 841.2 l-6 -18 M1645 841.2 l4 -22 M1645 841.2 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1087.4 895.2 l-6 -18 M1087.4 895.2 l4 -22 M1087.4 895.2 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1374.5 877.1 l-6 -18 M1374.5 877.1 l4 -22 M1374.5 877.1 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M1206.1 978 l-6 -18 M1206.1 978 l4 -22 M1206.1 978 l10 -14\" stroke=\"#333336\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"268.8\" cy=\"805.2\" rx=\"46\" ry=\"10\" fill=\"#593f2e\"/><rect x=\"262.8\" y=\"619.2\" width=\"12\" height=\"186\" fill=\"#8b8f96\"/>\n<ellipse cx=\"268.8\" cy=\"739.2\" rx=\"34\" ry=\"8\" fill=\"none\" stroke=\"#8b8f96\" stroke-width=\"5\"/>\n<rect x=\"216.8\" y=\"597.2\" width=\"104\" height=\"26\" rx=\"13\" fill=\"#834830\"/><rect x=\"220.8\" y=\"617.2\" width=\"96\" height=\"8\" rx=\"4\" fill=\"#593f2e\"/>\n<rect x=\"1491.2\" y=\"619.2\" width=\"320\" height=\"190\" rx=\"8\" fill=\"url(#courtyard--day-stove-body-1651)\"/>\n<rect x=\"1481.2\" y=\"609.2\" width=\"340\" height=\"18\" rx=\"4\" fill=\"#faf3e4\"/>\n<rect x=\"1501.2\" y=\"644.2\" width=\"142\" height=\"150\" rx=\"6\" fill=\"none\" stroke=\"#593f2e\" stroke-opacity=\"0.45\" stroke-width=\"4\"/><circle cx=\"1626.2\" cy=\"719.2\" r=\"5\" fill=\"#593f2e\"/>\n<rect x=\"1649.2\" y=\"644.2\" width=\"142\" height=\"150\" rx=\"6\" fill=\"none\" stroke=\"#593f2e\" stroke-opacity=\"0.45\" stroke-width=\"4\"/><circle cx=\"1774.2\" cy=\"719.2\" r=\"5\" fill=\"#593f2e\"/>\n<ellipse cx=\"1581.2\" cy=\"604.2\" rx=\"50\" ry=\"10\" fill=\"#2b2530\"/>\n<ellipse cx=\"1721.2\" cy=\"604.2\" rx=\"50\" ry=\"10\" fill=\"#2b2530\"/>\n<path d=\"M1551.2 595.2 h80 v-60 a40 20 0 0 0 -80 0 Z\" fill=\"#5a4842\"/>\n<path d=\"M1591.2 509.2 q14 -20 0 -40 q-14 -20 0 -40\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.5\" stroke-width=\"5\" stroke-linecap=\"round\"/>\n<path d=\"M586.4 723.2 L642.4 723.2 L635.4 779.2 L593.4 779.2 Z\" fill=\"#965835\"/>\n<path d=\"M614.4 723.2 Q587.8 699.7 547.2 676.1\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q594.7 687.4 561 651.5\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q605.8 676.1 583.2 629\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q621.4 683.6 614.4 644\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q634.3 684.2 640.3 645.2\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q644.9 691.6 661.5 659.9\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<path d=\"M614.4 723.2 Q657.7 697.8 687 672.4\" fill=\"none\" stroke=\"#5a8d60\" stroke-width=\"6.3\" stroke-linecap=\"round\"/>\n<rect width=\"1920\" height=\"1080\" fill=\"url(#courtyard--day-vignette)\"/>\n</symbol>\n<symbol id=\"an--sit-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--sit-neutral-torso\"><path d=\"M129.2 314.3 Q129.2 298.3 149.2 296.3 L250.8 296.3 Q270.8 298.3 270.8 314.3 Q288.8 391.3 267 494.3 L133 494.3 Q111.2 391.3 129.2 314.3 Z\"/></clipPath>\n<ellipse cx=\"242.7\" cy=\"594\" rx=\"164.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"117.7\" y=\"493.7\" width=\"182.9\" height=\"18\" rx=\"7\" fill=\"#9a6a43\"/>\n<rect x=\"122.9\" y=\"507.7\" width=\"14\" height=\"82.3\" rx=\"5\" fill=\"#7a5233\"/>\n<rect x=\"279.6\" y=\"507.7\" width=\"14\" height=\"82.3\" rx=\"5\" fill=\"#7a5233\"/>\n<path d=\"M183.9 475.3 L289.6 486.3\" fill=\"none\" stroke=\"#c3b39f\" stroke-width=\"38\" stroke-linecap=\"round\"/>\n<path d=\"M289.6 486.3 L285.6 576\" fill=\"none\" stroke=\"#c3b39f\" stroke-width=\"28\" stroke-linecap=\"round\"/>\n<ellipse cx=\"299.6\" cy=\"586\" rx=\"26.6\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M203.9 481.3 L299.6 498.3\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"38\" stroke-linecap=\"round\"/>\n<path d=\"M299.6 498.3 L295.6 576\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"28\" stroke-linecap=\"round\"/>\n<ellipse cx=\"309.6\" cy=\"586\" rx=\"26.6\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M139.2 316.3 Q117.2 396.3 218.3 476.3\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 316.3 Q282.8 396.3 258 476.3\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 314.3 Q129.2 298.3 149.2 296.3 L250.8 296.3 Q270.8 298.3 270.8 314.3 Q288.8 391.3 267 494.3 L133 494.3 Q111.2 391.3 129.2 314.3 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"292.3\" width=\"115\" height=\"204\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--sit-neutral-torso)\"/>\n<path d=\"M200 298.3 L200 490.3\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 297.3 Q200 322.3 224 297.3\" fill=\"#c9b49c\"/>\n<circle cx=\"218.3\" cy=\"480.3\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"258\" cy=\"480.3\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"278.3\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"223.9\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"223.9\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"214.3\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"223.9\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"219.9\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 202.3 Q171.2 195.1 183.2 202.3\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"247.9\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"223.9\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"219.9\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 202.3 Q228.8 195.1 240.8 202.3\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"247.9\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"238.3\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<path d=\"M186.4 252.7 Q200 264.7 213.6 252.7\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 220.3 Q118 124.3 200 124.3 Q282 124.3 283 220.3 Q244 180.7 204 174.3 Q152 182.3 117 220.3 Z\" fill=\"#000000\"/>\n<path d=\"M160 138.3 Q192 128.3 224 136.3\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandma--sit-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma--sit-smile-torso\"><path d=\"M138 279.1 Q138 263.1 158 261.1 L242 261.1 Q262 263.1 262 279.1 Q262 362.1 267.5 471.1 L132.5 471.1 Q138 362.1 138 279.1 Z\"/></clipPath>\n<ellipse cx=\"237.8\" cy=\"594\" rx=\"145.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"127.1\" y=\"468.3\" width=\"162.6\" height=\"18\" rx=\"7\" fill=\"#9a6a43\"/>\n<rect x=\"130.9\" y=\"482.3\" width=\"14\" height=\"107.7\" rx=\"5\" fill=\"#7a5233\"/>\n<rect x=\"268.7\" y=\"482.3\" width=\"14\" height=\"107.7\" rx=\"5\" fill=\"#7a5233\"/>\n<path d=\"M184.6 452.1 L278.7 461.1\" fill=\"none\" stroke=\"#426a50\" stroke-width=\"34\" stroke-linecap=\"round\"/>\n<path d=\"M278.7 461.1 L274.7 576\" fill=\"none\" stroke=\"#426a50\" stroke-width=\"24\" stroke-linecap=\"round\"/>\n<ellipse cx=\"288.7\" cy=\"586\" rx=\"22.8\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M204.6 458.1 L288.7 473.1\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"34\" stroke-linecap=\"round\"/>\n<path d=\"M288.7 473.1 L284.7 576\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"24\" stroke-linecap=\"round\"/>\n<ellipse cx=\"298.7\" cy=\"586\" rx=\"22.8\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M148 281.1 Q126 367.1 216.2 453.1\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 281.1 Q274 367.1 251.3 453.1\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 279.1 Q138 263.1 158 261.1 L242 261.1 Q262 263.1 262 279.1 Q262 362.1 267.5 471.1 L132.5 471.1 Q138 362.1 138 279.1 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"257.1\" width=\"97.5\" height=\"216\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma--sit-smile-torso)\"/>\n<path d=\"M184 309.1 L174 471.1 M216 309.1 L226 471.1\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<circle cx=\"216.2\" cy=\"457.1\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"251.3\" cy=\"457.1\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"246.3\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"216.4\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"216.4\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"211.1\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"216.4\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 204.5 Q184.2 200.6 190.8 204.5\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"229.6\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M177.1 215.5 l-4.4 -2.2 M177.1 219 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"216.4\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 204.5 Q215.8 200.6 222.4 204.5\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"229.6\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M222.9 215.5 l4.4 -2.2 M222.9 219 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"224.3\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M190.3 232.2 Q200 242.8 209.7 232.2\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M153 217.1 Q154 157.1 200 157.1 Q246 157.1 247 217.1 Q224.2 192.6 202.2 189.1 Q173.6 193.5 153 217.1 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 171.1 Q195.6 161.1 213.2 169.1\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"155.1\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>\n<symbol id=\"grandma--hold-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma--hold-smile-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"158\" width=\"97.5\" height=\"390\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma--hold-smile-torso)\"/>\n<path d=\"M184 210 L174 546 M216 210 L226 546\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<path d=\"M148 182 L140 218 L178 240\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M140 218 L178 240\" fill=\"none\" stroke=\"#40664e\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<path d=\"M252 182 L260 218 L222 240\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M260 218 L222 240\" fill=\"none\" stroke=\"#40664e\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<circle cx=\"178\" cy=\"244\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"222\" cy=\"244\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M190.3 133.1 Q200 143.7 209.7 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M153 118 Q154 58 200 58 Q246 58 247 118 Q224.2 93.5 202.2 90 Q173.6 94.4 153 118 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 72 Q195.6 62 213.2 70\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"56\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>\n<symbol id=\"an--look-right-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--look-right-neutral-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n<g transform=\"translate(11.2 0)\">\n</g>\n<rect x=\"158.6\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"176.6\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"213.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"231.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M139.2 234 Q113.2 291 115.2 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 234 Q286.8 291 284.8 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--look-right-neutral-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<circle cx=\"115.2\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"284.8\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n<g transform=\"translate(11.2 0)\">\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"147.2\" cy=\"127.2\" rx=\"32\" ry=\"70.4\" fill=\"#000000\"/>\n<ellipse cx=\"176\" cy=\"143.2\" rx=\"12\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"195.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"198\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M183.2 120 Q195.2 112.8 207.2 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"252.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"255.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M240.8 120 Q252.8 112.8 264.8 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"268.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228\" cy=\"156\" rx=\"7.2\" ry=\"4\" fill=\"#c9b49c\"/>\n<path d=\"M210.4 170.4 Q224 182.4 237.6 170.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n</g>\n</symbol>\n<symbol id=\"an--hold-surprised\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--hold-surprised-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"158.6\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"176.6\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"213.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"231.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--hold-surprised-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<path d=\"M139.2 234 L131.2 270 L178 292\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M131.2 270 L178 292\" fill=\"none\" stroke=\"#bbab99\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<path d=\"M260.8 234 L268.8 270 L222 292\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M268.8 270 L222 292\" fill=\"none\" stroke=\"#bbab99\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<circle cx=\"178\" cy=\"296\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"222\" cy=\"296\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 112.8 Q171.2 105.6 183.2 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 112.8 Q228.8 105.6 240.8 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<ellipse cx=\"200\" cy=\"173.6\" rx=\"7.2\" ry=\"9.6\" fill=\"#7a2a22\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandma--point-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma--point-smile-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q318 176 374 196\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"158\" width=\"97.5\" height=\"390\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma--point-smile-torso)\"/>\n<path d=\"M184 210 L174 546 M216 210 L226 546\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"374\" cy=\"200\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M190.3 133.1 Q200 143.7 209.7 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M153 118 Q154 58 200 58 Q246 58 247 118 Q224.2 93.5 202.2 90 Q173.6 94.4 153 118 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 72 Q195.6 62 213.2 70\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"56\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>\n<symbol id=\"an--hold-smile\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--hold-smile-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"158.6\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"176.6\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"213.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"231.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--hold-smile-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<path d=\"M139.2 234 L131.2 270 L178 292\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M131.2 270 L178 292\" fill=\"none\" stroke=\"#bbab99\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<path d=\"M260.8 234 L268.8 270 L222 292\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M268.8 270 L222 292\" fill=\"none\" stroke=\"#bbab99\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<circle cx=\"178\" cy=\"296\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"222\" cy=\"296\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"15.2\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<path d=\"M182.4 170.4 Q200 189.6 217.6 170.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandma--wave-laugh\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma--wave-laugh-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q332 160 314 103.2\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"158\" width=\"97.5\" height=\"390\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma--wave-laugh-torso)\"/>\n<path d=\"M184 210 L174 546 M216 210 L226 546\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"314\" cy=\"107.2\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<path d=\"M178.4 117.3 Q184.2 113.1 189.9 117.3\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M210.1 117.3 Q215.8 113.1 221.6 117.3\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"8.4\" fill=\"#ff8a80\" fill-opacity=\"0.55\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M190.3 131.4 L209.7 131.4 Q200 146.3 190.3 131.4 Z\" fill=\"#7a2a22\"/>\n<path d=\"M153 118 Q154 58 200 58 Q246 58 247 118 Q224.2 93.5 202.2 90 Q173.6 94.4 153 118 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 72 Q195.6 62 213.2 70\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"56\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>\n<symbol id=\"grandma--sit-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma--sit-neutral-torso\"><path d=\"M138 279.1 Q138 263.1 158 261.1 L242 261.1 Q262 263.1 262 279.1 Q262 362.1 267.5 471.1 L132.5 471.1 Q138 362.1 138 279.1 Z\"/></clipPath>\n<ellipse cx=\"237.8\" cy=\"594\" rx=\"145.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"127.1\" y=\"468.3\" width=\"162.6\" height=\"18\" rx=\"7\" fill=\"#9a6a43\"/>\n<rect x=\"130.9\" y=\"482.3\" width=\"14\" height=\"107.7\" rx=\"5\" fill=\"#7a5233\"/>\n<rect x=\"268.7\" y=\"482.3\" width=\"14\" height=\"107.7\" rx=\"5\" fill=\"#7a5233\"/>\n<path d=\"M184.6 452.1 L278.7 461.1\" fill=\"none\" stroke=\"#426a50\" stroke-width=\"34\" stroke-linecap=\"round\"/>\n<path d=\"M278.7 461.1 L274.7 576\" fill=\"none\" stroke=\"#426a50\" stroke-width=\"24\" stroke-linecap=\"round\"/>\n<ellipse cx=\"288.7\" cy=\"586\" rx=\"22.8\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M204.6 458.1 L288.7 473.1\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"34\" stroke-linecap=\"round\"/>\n<path d=\"M288.7 473.1 L284.7 576\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"24\" stroke-linecap=\"round\"/>\n<ellipse cx=\"298.7\" cy=\"586\" rx=\"22.8\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M148 281.1 Q126 367.1 216.2 453.1\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 281.1 Q274 367.1 251.3 453.1\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 279.1 Q138 263.1 158 261.1 L242 261.1 Q262 263.1 262 279.1 Q262 362.1 267.5 471.1 L132.5 471.1 Q138 362.1 138 279.1 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"257.1\" width=\"97.5\" height=\"216\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma--sit-neutral-torso)\"/>\n<path d=\"M184 309.1 L174 471.1 M216 309.1 L226 471.1\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<circle cx=\"216.2\" cy=\"457.1\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"251.3\" cy=\"457.1\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"246.3\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"216.4\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"216.4\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"211.1\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"216.4\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 204.5 Q184.2 200.6 190.8 204.5\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"229.6\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M177.1 215.5 l-4.4 -2.2 M177.1 219 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"216.4\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 204.5 Q215.8 200.6 222.4 204.5\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"229.6\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M222.9 215.5 l4.4 -2.2 M222.9 219 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"224.3\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M192.5 232.2 Q200 238.8 207.5 232.2\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M153 217.1 Q154 157.1 200 157.1 Q246 157.1 247 217.1 Q224.2 192.6 202.2 189.1 Q173.6 193.5 153 217.1 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 171.1 Q195.6 161.1 213.2 169.1\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"155.1\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>\n<symbol id=\"an--look-left-surprised\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--look-left-surprised-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n<g transform=\"translate(-11.2 0)\">\n</g>\n<rect x=\"158.6\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"176.6\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"213.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"231.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M139.2 234 Q113.2 291 115.2 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 234 Q286.8 291 284.8 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--look-left-surprised-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<circle cx=\"115.2\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"284.8\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n<g transform=\"translate(-11.2 0)\">\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"252.8\" cy=\"127.2\" rx=\"32\" ry=\"70.4\" fill=\"#000000\"/>\n<ellipse cx=\"224\" cy=\"143.2\" rx=\"12\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"147.2\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"150\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M135.2 112.8 Q147.2 105.6 159.2 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"131.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"204.8\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"207.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M192.8 112.8 Q204.8 105.6 216.8 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"172\" cy=\"156\" rx=\"7.2\" ry=\"4\" fill=\"#c9b49c\"/>\n<ellipse cx=\"176\" cy=\"173.6\" rx=\"7.2\" ry=\"9.6\" fill=\"#7a2a22\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n</g>\n</symbol>\n<symbol id=\"an--look-right-surprised\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--look-right-surprised-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n<g transform=\"translate(11.2 0)\">\n</g>\n<rect x=\"158.6\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"176.6\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"213.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"231.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M139.2 234 Q113.2 291 115.2 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 234 Q286.8 291 284.8 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--look-right-surprised-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<circle cx=\"115.2\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"284.8\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n<g transform=\"translate(11.2 0)\">\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"147.2\" cy=\"127.2\" rx=\"32\" ry=\"70.4\" fill=\"#000000\"/>\n<ellipse cx=\"176\" cy=\"143.2\" rx=\"12\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"195.2\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"198\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M183.2 112.8 Q195.2 105.6 207.2 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<ellipse cx=\"252.8\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"255.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M240.8 112.8 Q252.8 105.6 264.8 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"268.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228\" cy=\"156\" rx=\"7.2\" ry=\"4\" fill=\"#c9b49c\"/>\n<ellipse cx=\"224\" cy=\"173.6\" rx=\"7.2\" ry=\"9.6\" fill=\"#7a2a22\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n</g>\n</symbol>\n<symbol id=\"an--hug-sleepy\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--hug-sleepy-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"158.6\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"176.6\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"213.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"231.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M139.2 234 Q89.2 268 71.2 258\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 234 Q310.8 268 328.8 258\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--hug-sleepy-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<circle cx=\"71.2\" cy=\"262\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"328.8\" cy=\"262\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<path d=\"M160.8 141.6 Q171.2 148.3 181.6 141.6\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M218.4 141.6 Q228.8 148.3 239.2 141.6\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<path d=\"M190.9 172.8 L209.1 172.8\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandma--hug-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma--hug-neutral-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M148 182 Q98 216 80 206\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q302 216 320 206\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"158\" width=\"97.5\" height=\"390\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma--hug-neutral-torso)\"/>\n<path d=\"M184 210 L174 546 M216 210 L226 546\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<circle cx=\"80\" cy=\"210\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"320\" cy=\"210\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M192.5 133.1 Q200 139.7 207.5 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M153 118 Q154 58 200 58 Q246 58 247 118 Q224.2 93.5 202.2 90 Q173.6 94.4 153 118 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 72 Q195.6 62 213.2 70\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"56\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>\n<symbol id=\"an--walk_a-surprised\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--walk_a-surprised-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\" transform=\"rotate(-16 200 386)\"/>\n<ellipse cx=\"258.6\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#c3b39f\" transform=\"rotate(16 200 386)\"/>\n<ellipse cx=\"149.4\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M139.2 234 Q111.2 291 97.2 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 234 Q288.8 291 302.8 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--walk_a-surprised-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<circle cx=\"97.2\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"302.8\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 112.8 Q171.2 105.6 183.2 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 112.8 Q228.8 105.6 240.8 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<ellipse cx=\"200\" cy=\"173.6\" rx=\"7.2\" ry=\"9.6\" fill=\"#7a2a22\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"an--walk_b-surprised\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--walk_b-surprised-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\" transform=\"rotate(16 200 386)\"/>\n<ellipse cx=\"149.4\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"186\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#c3b39f\" transform=\"rotate(-16 200 386)\"/>\n<ellipse cx=\"258.6\" cy=\"578.3\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M139.2 234 Q111.2 291 141.2 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 234 Q288.8 291 258.8 388\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--walk_b-surprised-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<circle cx=\"141.2\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"258.8\" cy=\"392\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 112.8 Q171.2 105.6 183.2 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 112.8 Q228.8 105.6 240.8 112.8\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<ellipse cx=\"200\" cy=\"173.6\" rx=\"7.2\" ry=\"9.6\" fill=\"#7a2a22\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"an--kneel-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--kneel-neutral-torso\"><path d=\"M129.2 353.5 Q129.2 337.5 149.2 335.5 L250.8 335.5 Q270.8 337.5 270.8 353.5 Q288.8 430.5 267 527.5 L133 527.5 Q111.2 430.5 129.2 353.5 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"128.1\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<ellipse cx=\"108.5\" cy=\"585\" rx=\"23.8\" ry=\"11.8\" fill=\"#2b2530\" stroke=\"#27222d\" stroke-width=\"1.5\"/>\n<ellipse cx=\"291.5\" cy=\"585\" rx=\"23.8\" ry=\"11.8\" fill=\"#2b2530\" stroke=\"#27222d\" stroke-width=\"1.5\"/>\n<path d=\"M102.4 588 Q93.3 521.5 148.2 507.5 L251.9 507.5 Q306.8 521.5 297.6 588 Z\" fill=\"#e8d4b9\"/>\n<path d=\"M102.4 588 Q93.3 521.5 148.2 507.5 Q126.8 527.5 123.8 588 Z\" fill=\"#bbab99\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"162.2\" cy=\"576\" rx=\"26.6\" ry=\"15.4\" fill=\"#ecdbc4\"/>\n<path d=\"M297.6 588 Q306.8 521.5 251.9 507.5 Q273.2 527.5 276.3 588 Z\" fill=\"#bbab99\" fill-opacity=\"0.55\"/>\n<ellipse cx=\"237.8\" cy=\"576\" rx=\"26.6\" ry=\"15.4\" fill=\"#ecdbc4\"/>\n<path d=\"M200 523.5 L200 586\" stroke=\"#bbab99\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M139.2 355.5 Q117.2 449.5 156.1 543.5\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 355.5 Q282.8 449.5 243.9 543.5\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 353.5 Q129.2 337.5 149.2 335.5 L250.8 335.5 Q270.8 337.5 270.8 353.5 Q288.8 430.5 267 527.5 L133 527.5 Q111.2 430.5 129.2 353.5 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"331.5\" width=\"115\" height=\"198\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--kneel-neutral-torso)\"/>\n<path d=\"M200 337.5 L200 523.5\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 336.5 Q200 361.5 224 336.5\" fill=\"#c9b49c\"/>\n<circle cx=\"156.1\" cy=\"547.5\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"243.9\" cy=\"547.5\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"317.5\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"263.1\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"263.1\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"253.5\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"263.1\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"259.1\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 241.5 Q171.2 234.3 183.2 241.5\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"287.1\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"263.1\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"259.1\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 241.5 Q228.8 234.3 240.8 241.5\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"287.1\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"277.5\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<path d=\"M186.4 291.9 Q200 303.9 213.6 291.9\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 259.5 Q118 163.5 200 163.5 Q282 163.5 283 259.5 Q244 219.9 204 213.5 Q152 221.5 117 259.5 Z\" fill=\"#000000\"/>\n<path d=\"M160 177.5 Q192 167.5 224 175.5\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandma--hold-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma--hold-neutral-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"158\" width=\"97.5\" height=\"390\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma--hold-neutral-torso)\"/>\n<path d=\"M184 210 L174 546 M216 210 L226 546\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<path d=\"M148 182 L140 218 L178 240\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M140 218 L178 240\" fill=\"none\" stroke=\"#40664e\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<path d=\"M252 182 L260 218 L222 240\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M260 218 L222 240\" fill=\"none\" stroke=\"#40664e\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<circle cx=\"178\" cy=\"244\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"222\" cy=\"244\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M192.5 133.1 Q200 139.7 207.5 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M153 118 Q154 58 200 58 Q246 58 247 118 Q224.2 93.5 202.2 90 Q173.6 94.4 153 118 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 72 Q195.6 62 213.2 70\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"56\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>\n<symbol id=\"an--hold-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--hold-neutral-torso\"><path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"103.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"158.6\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"176.6\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<rect x=\"213.5\" y=\"386\" width=\"28\" height=\"198\" rx=\"14\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"231.5\" cy=\"586\" rx=\"25.2\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M129.2 232 Q129.2 216 149.2 214 L250.8 214 Q270.8 216 270.8 232 Q288.8 309 267 418 L133 418 Q111.2 309 129.2 232 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"210\" width=\"115\" height=\"210\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--hold-neutral-torso)\"/>\n<path d=\"M200 216 L200 414\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 215 Q200 240 224 215\" fill=\"#c9b49c\"/>\n<path d=\"M139.2 234 L131.2 270 L178 292\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M131.2 270 L178 292\" fill=\"none\" stroke=\"#bbab99\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<path d=\"M260.8 234 L268.8 270 L222 292\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n<path d=\"M268.8 270 L222 292\" fill=\"none\" stroke=\"#bbab99\" stroke-width=\"2.5\" stroke-opacity=\"0.5\"/>\n<circle cx=\"178\" cy=\"296\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"222\" cy=\"296\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"196\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"141.6\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"132\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 120 Q171.2 112.8 183.2 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"141.6\" rx=\"8\" ry=\"11.2\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"137.6\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 120 Q228.8 112.8 240.8 120\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"165.6\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"156\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<path d=\"M186.4 170.4 Q200 182.4 213.6 170.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"4.8\" stroke-linecap=\"round\"/>\n<path d=\"M117 138 Q118 42 200 42 Q282 42 283 138 Q244 98.4 204 92 Q152 100 117 138 Z\" fill=\"#000000\"/>\n<path d=\"M160 56 Q192 46 224 54\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"an--sit-surprised\" viewBox=\"0 0 400 600\">\n<clipPath id=\"an--sit-surprised-torso\"><path d=\"M129.2 314.3 Q129.2 298.3 149.2 296.3 L250.8 296.3 Q270.8 298.3 270.8 314.3 Q288.8 391.3 267 494.3 L133 494.3 Q111.2 391.3 129.2 314.3 Z\"/></clipPath>\n<ellipse cx=\"242.7\" cy=\"594\" rx=\"164.7\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"117.7\" y=\"493.7\" width=\"182.9\" height=\"18\" rx=\"7\" fill=\"#9a6a43\"/>\n<rect x=\"122.9\" y=\"507.7\" width=\"14\" height=\"82.3\" rx=\"5\" fill=\"#7a5233\"/>\n<rect x=\"279.6\" y=\"507.7\" width=\"14\" height=\"82.3\" rx=\"5\" fill=\"#7a5233\"/>\n<path d=\"M183.9 475.3 L289.6 486.3\" fill=\"none\" stroke=\"#c3b39f\" stroke-width=\"38\" stroke-linecap=\"round\"/>\n<path d=\"M289.6 486.3 L285.6 576\" fill=\"none\" stroke=\"#c3b39f\" stroke-width=\"28\" stroke-linecap=\"round\"/>\n<ellipse cx=\"299.6\" cy=\"586\" rx=\"26.6\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M203.9 481.3 L299.6 498.3\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"38\" stroke-linecap=\"round\"/>\n<path d=\"M299.6 498.3 L295.6 576\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"28\" stroke-linecap=\"round\"/>\n<ellipse cx=\"309.6\" cy=\"586\" rx=\"26.6\" ry=\"11\" fill=\"#2b2530\"/>\n<path d=\"M139.2 316.3 Q117.2 396.3 218.3 476.3\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M260.8 316.3 Q282.8 396.3 258 476.3\" fill=\"none\" stroke=\"#e8d4b9\" stroke-width=\"22\" stroke-linecap=\"round\"/>\n<path d=\"M129.2 314.3 Q129.2 298.3 149.2 296.3 L250.8 296.3 Q270.8 298.3 270.8 314.3 Q288.8 391.3 267 494.3 L133 494.3 Q111.2 391.3 129.2 314.3 Z\" fill=\"#e8d4b9\"/>\n<rect x=\"206\" y=\"292.3\" width=\"115\" height=\"204\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#an--sit-surprised-torso)\"/>\n<path d=\"M200 298.3 L200 490.3\" stroke=\"#8b5e3c\" stroke-width=\"5\"/>\n<path d=\"M176 297.3 Q200 322.3 224 297.3\" fill=\"#c9b49c\"/>\n<circle cx=\"218.3\" cy=\"480.3\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<circle cx=\"258\" cy=\"480.3\" r=\"14.5\" fill=\"url(#an-skin)\"/>\n<rect x=\"180.8\" y=\"278.3\" width=\"38.4\" height=\"28\" fill=\"#c9b49c\"/>\n\n<ellipse cx=\"123.2\" cy=\"223.9\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<ellipse cx=\"276.8\" cy=\"223.9\" rx=\"12.8\" ry=\"17.6\" fill=\"#e8d4b9\"/>\n<circle cx=\"200\" cy=\"214.3\" r=\"80\" fill=\"url(#an-skin)\"/>\n<ellipse cx=\"171.2\" cy=\"223.9\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"174\" cy=\"219.9\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M159.2 195.1 Q171.2 187.9 183.2 195.1\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"155.2\" cy=\"247.9\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"228.8\" cy=\"223.9\" rx=\"10.4\" ry=\"14.6\" fill=\"#2a2233\"/>\n<circle cx=\"231.6\" cy=\"219.9\" r=\"3.6\" fill=\"#ffffff\"/>\n<path d=\"M216.8 195.1 Q228.8 187.9 240.8 195.1\" fill=\"none\" stroke=\"#000000\" stroke-width=\"5.6\" stroke-linecap=\"round\"/>\n<circle cx=\"244.8\" cy=\"247.9\" r=\"12.8\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<ellipse cx=\"200\" cy=\"238.3\" rx=\"5.6\" ry=\"4\" fill=\"#c9b49c\"/>\n<ellipse cx=\"200\" cy=\"255.9\" rx=\"7.2\" ry=\"9.6\" fill=\"#7a2a22\"/>\n<path d=\"M117 220.3 Q118 124.3 200 124.3 Q282 124.3 283 220.3 Q244 180.7 204 174.3 Q152 182.3 117 220.3 Z\" fill=\"#000000\"/>\n<path d=\"M160 138.3 Q192 128.3 224 136.3\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n\n</symbol>\n<symbol id=\"grandma--point-neutral\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma--point-neutral-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M148 182 Q122 245 124 348\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q318 176 374 196\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"158\" width=\"97.5\" height=\"390\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma--point-neutral-torso)\"/>\n<path d=\"M184 210 L174 546 M216 210 L226 546\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<circle cx=\"124\" cy=\"352\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"374\" cy=\"200\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<ellipse cx=\"184.2\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"215.8\" cy=\"117.3\" rx=\"4.4\" ry=\"3.5\" fill=\"#2a2233\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M192.5 133.1 Q200 139.7 207.5 133.1\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M153 118 Q154 58 200 58 Q246 58 247 118 Q224.2 93.5 202.2 90 Q173.6 94.4 153 118 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 72 Q195.6 62 213.2 70\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"56\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>\n<symbol id=\"grandma--hug-sleepy\" viewBox=\"0 0 400 600\">\n<clipPath id=\"grandma--hug-sleepy-torso\"><path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\"/></clipPath>\n<ellipse cx=\"200\" cy=\"594\" rx=\"91.8\" ry=\"8\" fill=\"#1d2233\" fill-opacity=\"0.22\"/>\n\n\n<rect x=\"163.7\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"179.7\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<rect x=\"212.3\" y=\"346\" width=\"24\" height=\"238\" rx=\"12\" fill=\"#d4a843\"/>\n<ellipse cx=\"228.3\" cy=\"586\" rx=\"21.6\" ry=\"11\" fill=\"#3d3d3d\"/>\n<path d=\"M148 182 Q98 216 80 206\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M252 182 Q302 216 320 206\" fill=\"none\" stroke=\"#4a7c59\" stroke-width=\"19\" stroke-linecap=\"round\"/>\n<path d=\"M138 180 Q138 164 158 162 L242 162 Q262 164 262 180 Q262 263 267.5 546 L132.5 546 Q138 263 138 180 Z\" fill=\"#4a7c59\"/>\n<rect x=\"206\" y=\"158\" width=\"97.5\" height=\"390\" fill=\"#1d1a26\" fill-opacity=\"0.13\" clip-path=\"url(#grandma--hug-sleepy-torso)\"/>\n<path d=\"M184 210 L174 546 M216 210 L226 546\" stroke=\"#8b5e3c\" stroke-width=\"4\"/>\n<circle cx=\"80\" cy=\"210\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<circle cx=\"320\" cy=\"210\" r=\"12.5\" fill=\"url(#grandma-skin)\"/>\n<rect x=\"189.4\" y=\"147.2\" width=\"21.1\" height=\"24.8\" fill=\"#b8903b\"/>\n\n<ellipse cx=\"157.8\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<ellipse cx=\"242.2\" cy=\"117.3\" rx=\"7\" ry=\"9.7\" fill=\"#d4a843\"/>\n<circle cx=\"200\" cy=\"112\" r=\"44\" fill=\"url(#grandma-skin)\"/>\n<path d=\"M178.4 117.3 Q184.2 119.4 189.9 117.3\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M177.6 105.4 Q184.2 101.4 190.8 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"175.4\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M177.1 116.4 l-4.4 -2.2 M177.1 119.9 l-4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<path d=\"M210.1 117.3 Q215.8 119.4 221.6 117.3\" fill=\"none\" stroke=\"#2a2233\" stroke-width=\"2.6\" stroke-linecap=\"round\"/>\n<path d=\"M209.2 105.4 Q215.8 101.4 222.4 105.4\" fill=\"none\" stroke=\"#c0c0c0\" stroke-width=\"3.1\" stroke-linecap=\"round\"/>\n<circle cx=\"224.6\" cy=\"130.5\" r=\"7\" fill=\"#ff8a80\" fill-opacity=\"0.4\"/>\n<path d=\"M222.9 116.4 l4.4 -2.2 M222.9 119.9 l4.4 1.3\" stroke=\"#b8903b\" stroke-width=\"3\" stroke-linecap=\"round\"/>\n<ellipse cx=\"200\" cy=\"125.2\" rx=\"3.1\" ry=\"2.2\" fill=\"#b8903b\"/>\n<path d=\"M195 134.4 L205 134.4\" fill=\"none\" stroke=\"#8a3a2a\" stroke-width=\"2.2\" stroke-linecap=\"round\"/>\n<path d=\"M153 118 Q154 58 200 58 Q246 58 247 118 Q224.2 93.5 202.2 90 Q173.6 94.4 153 118 Z\" fill=\"#c0c0c0\"/>\n<path d=\"M178 72 Q195.6 62 213.2 70\" fill=\"none\" stroke=\"#ffffff\" stroke-opacity=\"0.25\" stroke-width=\"6\" stroke-linecap=\"round\"/>\n<circle cx=\"200\" cy=\"56\" r=\"15.8\" fill=\"#c0c0c0\"/>\n\n</symbol>",
+  "kits": "{\"an\":{\"kind\":\"doll\",\"spec\":{\"age\":\"child\",\"build\":\"round\",\"skin\":\"#e8d4b9\",\"hairStyle\":\"short\",\"hairColor\":\"#000000\",\"top\":\"shirt\",\"topColor\":\"#e8d4b9\",\"bottom\":\"none\",\"accent\":\"#8b5e3c\",\"accessories\":[],\"figure\":\"storybook\"}},\"grandma\":{\"kind\":\"doll\",\"spec\":{\"age\":\"elder\",\"build\":\"average\",\"skin\":\"#d4a843\",\"hairStyle\":\"bun\",\"hairColor\":\"#c0c0c0\",\"top\":\"aodai\",\"topColor\":\"#4a7c59\",\"bottom\":\"pants\",\"bottomColor\":\"#8b5e3c\",\"accent\":\"#8b5e3c\",\"accessories\":[],\"figure\":\"adult\",\"shoeColor\":\"#3d3d3d\"}}}",
+  "voices": null,
+  "seriesId": null,
+  "steps": [
+    {
+      "id": "cmv5ckxy800142aph5tgiqe3s",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 0,
+      "shotIndex": null,
+      "role": "system",
+      "model": "catalog",
+      "action": "models",
+      "promptHash": null,
+      "outputSummary": "vision: no NVIDIA vision model in the catalog, so openbmb/MiniCPM-V-4_5 LOOKS at each render and Nemotron Nano still scores it (vision critic: openbmb/MiniCPM-V-4_5; Nemotron crew: Ultra/Super/Nano).",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:45.920Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ckxyf00152aph10pg7vkg",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 1,
+      "shotIndex": null,
+      "role": "system",
+      "model": "policy",
+      "action": "stop-rule",
+      "promptHash": null,
+      "outputSummary": "Floor redraw off for this run (DEMO_FLOOR_REDRAW=off on this server)",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:45.927Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ckyfv00162aph1xhqweia",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 2,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "queries",
+      "promptHash": "6d2ad7213655f57e",
+      "outputSummary": "queries",
+      "output": "{\n  \"queries\": [\n    \"Hanoi tube house courtyard interior\",\n    \"Vietnamese ancestor altar layout\",\n    \"Hanoi Old Quarter rooftops fireworks\"\n  ]\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 621,
+      "tokensIn": 627,
+      "tokensOut": 42,
+      "costUsd": 0.0000477,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:46.555Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5ckz9q00172aphn5a1qht4",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 3,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "tavily/search",
+      "action": "search",
+      "promptHash": null,
+      "outputSummary": "“Hanoi tube house courtyard interior” → 3 results",
+      "output": "[{\"title\":\"House (TV series) - Wikipedia\",\"url\":\"https://en.wikipedia.org/wiki/House_(TV_series)\"},{\"title\":\"Homepage | house.gov\",\"url\":\"http://www.house.gov\"},{\"title\":\"House - North Carolina General Assembly\",\"url\":\"https://www.ncleg.gov/house\"}]",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 1060,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:47.630Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cl00y00182aphc1st7slr",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 4,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "tavily/search",
+      "action": "search",
+      "promptHash": null,
+      "outputSummary": "“Vietnamese ancestor altar layout” → 3 results",
+      "output": "[{\"title\":\"Ancestor worship in Vietnam: altars, rituals and what travelers should know | Vietnam Tourism\",\"url\":\"https://www.vietnamtourism.com/en/ancestor-worship-in-vietnam-altars-rituals-and-what-travelers-should-know\"},{\"title\":\"Suggestions for Decorating the Ancestral Altar for Tết | FAHASA\",\"url\":\"https://fahasasg.com.vn/en/goi-y-cach-trang-tri-ban-tho-ngay-tet\"},{\"title\":\"For young Vietnamese in Australia, ancestor worshipping is a fading ancient custom — and some experts are worried - ABC News\",\"url\":\"https://www.abc.net.au/news/2022-03-07/vietnamese-ancestor-worship-altars-fading-custom-australia/100795004\"}]",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 972,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:48.610Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cl03600192aph3h2a9wvu",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 5,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "tavily/extract",
+      "action": "extract",
+      "promptHash": null,
+      "outputSummary": "Extracted 1500 chars from https://www.vietnamtourism.com/en/ancestor-worship-in-vietnam-altars-rituals-and-what-travelers-should-know",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 73,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:48.690Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cl35p001a2aphi6a8pzr0",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 6,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "notes",
+      "promptHash": "df1ba776871def90",
+      "outputSummary": "notes",
+      "output": "{\n  \"notes\": [\n    {\n      \"note\": \"Square parcel wrapped in glossy green dong leaves with visible leaf texture (veins), tied with four thin pale bamboo strings crossing in a grid (no ribbon or bow), darker green leaf fold at corners\",\n      \"source\": 1,\n      \"use\": \"costume\"\n    },\n    {\n      \"note\": \"Tiled courtyard of a Hanoi tube house with low stools, charcoal stove, and big pot (kit place: garden)\",\n      \"source\": 1,\n      \"use\": \"set\"\n    },\n    {\n      \"note\": \"Family front room featuring an ancestor altar (kit place: living-room)\",\n      \"source\": 1,\n      \"use\": \"set\"\n    },\n    {\n      \"note\": \"Ancestor altar: raised table in prominent spot, brass incense burner, two candle holders, fresh flower vase, photograph of deceased\",\n      \"source\": 4,\n      \"use\": \"set\"\n    },\n    {\n      \"note\": \"Fire in courtyard sets cooking scene; pot simmering bánh chưng during night\",\n      \"source\": 1,\n      \"use\": \"set\"\n    },\n    {\n      \"note\": \"Rooftops of Hanoi's old quarter under New Year's Eve fireworks (kit place: village)\",\n      \"source\": 1,\n      \"use\": \"set\"\n    }\n  ]\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 3973,
+      "tokensIn": 1890,
+      "tokensOut": 297,
+      "costUsd": 0.00018468,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:52.669Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cl365001b2aphjwazrwsh",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 7,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+      "action": "references",
+      "promptHash": null,
+      "outputSummary": "Researcher found 6 reference note(s) from 2 source(s)",
+      "output": "[{\"note\":\"Square parcel wrapped in glossy green dong leaves with visible leaf texture (veins), tied with four thin pale bamboo strings crossing in a grid (no ribbon or bow), darker green leaf fold at corners\",\"url\":\"https://en.wikipedia.org/wiki/House_(TV_series)\",\"title\":\"House (TV series) - Wikipedia\",\"use\":\"costume\"},{\"note\":\"Tiled courtyard of a Hanoi tube house with low stools, charcoal stove, and big pot (kit place: garden)\",\"url\":\"https://en.wikipedia.org/wiki/House_(TV_series)\",\"title\":\"House (TV series) - Wikipedia\",\"use\":\"set\"},{\"note\":\"Family front room featuring an ancestor altar (kit place: living-room)\",\"url\":\"https://en.wikipedia.org/wiki/House_(TV_series)\",\"title\":\"House (TV series) - Wikipedia\",\"use\":\"set\"},{\"note\":\"Ancestor altar: raised table in prominent spot, brass incense burner, two candle holders, fresh flower vase, photograph of deceased\",\"url\":\"https://www.vietnamtourism.com/en/ancestor-worship-in-vietnam-altars-rituals-and-what-travelers-should-know\",\"title\":\"Ancestor worship in Vietnam: altars, rituals and what travelers should know | Vietnam Tourism\",\"use\":\"set\"},{\"note\":\"Fire in courtyard sets cooking scene; pot simmering bánh chưng during night\",\"url\":\"https://en.wikipedia.org/wiki/House_(TV_series)\",\"title\":\"House (TV series) - Wikipedia\",\"use\":\"set\"},{\"note\":\"Rooftops of Hanoi's old quarter under New Year's Eve fireworks (kit place: village)\",\"url\":\"https://en.wikipedia.org/wiki/House_(TV_series)\",\"title\":\"House (TV series) - Wikipedia\",\"use\":\"set\"}]",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:28:52.685Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5clt57001c2aphbsvmklkg",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 8,
+      "shotIndex": null,
+      "role": "director",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "action": "plan",
+      "promptHash": "0af388083247e389",
+      "outputSummary": "plan",
+      "output": "{\n  \"title\": \"Bánh Chưng Tết: Truyền Thống Gia Trưởng\",\n  \"logline\": \"Chiếc bánh vuông đầu tiên của bé An mang đậm tình bà cháu và hương vị Tết phố cổ.\",\n  \"palette\": [\"#F5E6C8\", \"#D4A843\", \"#8B5E3C\", \"#4A7C59\", \"#C8553D\", \"#E8D4B9\", \"#6B8E5A\", \"#3D3D3D\"],\n  \"cast\": [\n    {\n      \"id\": \"courtyard\",\n      \"name\": \"Sân nhà phố cổ\",\n      \"kind\": \"set\",\n      \"look\": \"Narrow tube house courtyard with tiled floor, low wooden stools, a charcoal stove with a big iron pot, brick walls, open sky\",\n      \"colors\": [\"#F5E6C8\", \"#8B5E3C\", \"#3D3D3D\"],\n      \"cites\": [2]\n    },\n    {\n      \"id\": \"front-room\",\n      \"name\": \"Phòng khách bàn thờ\",\n      \"kind\": \"set\",\n      \"look\": \"Family front room with ancestor altar centered on main wall, brass incense burner, two candle holders, fresh flower vase, framed photograph, wooden floor\",\n      \"colors\": [\"#F5E6C8\", \"#D4A843\", \"#4A7C59\"],\n      \"cites\": [3, 4]\n    },\n    {\n      \"id\": \"rooftops\",\n      \"name\": \"Mái ngói phố cổ\",\n      \"kind\": \"set\",\n      \"look\": \"Hanoi old quarter rooftops with terracotta tiles, narrow alleys, night sky illuminated by fireworks\",\n      \"colors\": [\"#8B5E3C\", \"#C8553D\", \"#3D3D3D\"],\n      \"cites\": [6]\n    },\n    {\n      \"id\": \"an\",\n      \"name\": \"Bé An\",\n      \"kind\": \"character\",\n      \"look\": \"Small child, round face, short black hair, wearing a simple áo bà ba in soft beige, bare feet\",\n      \"colors\": [\"#F5E6C8\", \"#E8D4B9\", \"#3D3D3D\"],\n      \"cites\": []\n    },\n    {\n      \"id\": \"grandma\",\n      \"name\": \"Bà\",\n      \"kind\": \"character\",\n      \"look\": \"Elderly woman, gentle smile, silver hair in a bun, wearing a dark áo dài with subtle floral pattern, hands wrinkled\",\n      \"colors\": [\"#D4A843\", \"#8B5E3C\", \"#3D3D3D\"],\n      \"cites\": []\n    },\n    {\n      \"id\": \"banh-chung\",\n      \"name\": \"Bánh chưng\",\n      \"kind\": \"prop\",\n      \"look\": \"Flat square parcel wrapped in glossy green dong leaves with visible veins, tied with four thin pale bamboo strings in a grid, darker green leaf folds at corners\",\n      \"colors\": [\"#4A7C59\", \"#6B8E5A\", \"#D4A843\"],\n      \"cites\": [1]\n    }\n  ],\n  \"shots\": [\n    {\n      \"scene\": \"Courtyard afternoon – wrapping\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Chiều Ba Mươi Tết, sân nhà phố cổ nắng nhẹ. Bé An và bà ngồi trên mâm gấp bánh chưng, lá dong xanh bồng bềnh trên tay.\",\n      \"mode\": \"still\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Chiều Ba Mươi Tết, bé An cùng bà gói bánh chưng trong sân nhà ở phố cổ Hà Nội.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"an\", \"grandma\", \"banh-chung\"],\n      \"cites\": [1, 2],\n      \"mood\": \"day\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"sit\", \"expression\": \"neutral\" },\n        { \"who\": \"grandma\", \"pose\": \"sit\", \"expression\": \"smile\" }\n      ]\n    },\n    {\n      \"scene\": \"Courtyard afternoon – wrapping\",\n      \"shotType\": \"Medium shot\",\n      \"description\": \"Cận cảnh bà trải lá dong lên mâm, sau đó đong gạo nếp trắng, nhân đậu xanh và thịt vào giữa. An ngồi bên cạnh nhìn chăm chăm.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 3,\n      \"dialogue\": \"Bà trải lá dong xanh lên mâm, đong gạo nếp trắng, nhân đậu xanh và thịt.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"grandma\", \"an\", \"banh-chung\"],\n      \"cites\": [1, 2],\n      \"mood\": \"day\",\n      \"acting\": [\n        { \"who\": \"grandma\", \"pose\": \"hold\", \"expression\": \"smile\" },\n        { \"who\": \"an\", \"pose\": \"look-right\", \"expression\": \"neutral\" }\n      ]\n    },\n    {\n      \"scene\": \"Courtyard afternoon – wrapping\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Cận tay bé An học gấp lá dong thành hình vuông, ngón tay nhỏ khéo léo buộc lạt tre chéo nhau thành lưới.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 3,\n      \"dialogue\": \"An học bà gấp lá thật vuông và buộc lạt tre thật chặt.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"an\", \"banh-chung\"],\n      \"cites\": [1],\n      \"mood\": \"playful\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"hold\", \"expression\": \"surprised\" }\n      ]\n    },\n    {\n      \"scene\": \"Courtyard afternoon – wrapping\",\n      \"shotType\": \"Two-shot\",\n      \"description\": \"Hai bà cháu ngồi đối diện, An cầm chiếc bánh đầu tiên vừa gói xong, bà mỉm cười chỉ vào chiếc bánh vuông vức.\",\n      \"mode\": \"still\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Chiếc bánh đầu tiên An tự gói, bà khen vuông vắn như bánh của người lớn.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"an\", \"grandma\", \"banh-chung\"],\n      \"cites\": [1, 2],\n      \"mood\": \"playful\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"hold\", \"expression\": \"smile\" },\n        { \"who\": \"grandma\", \"pose\": \"point\", \"expression\": \"smile\" }\n      ]\n    },\n    {\n      \"scene\": \"Courtyard night – cooking\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Đêm xuống, sân nhà tối mịt, chỉ có bếp lửa hồng rực rỡ, nồi sôi bục bạch hơi nước bay lên. Hai bà cháu ngồi canh chờ.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Đêm xuống, nồi bánh sôi lục bục trên bếp lửa hồng giữa sân.\",\n      \"speaker\": null,\n      \"transition\": \"dissolve\",\n      \"cast\": [\"courtyard\", \"an\", \"grandma\"],\n      \"cites\": [2, 5],\n      \"mood\": \"tender\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"sit\", \"expression\": \"sleepy\" },\n        { \"who\": \"grandma\", \"pose\": \"sit\", \"expression\": \"neutral\" }\n      ]\n    },\n    {\n      \"scene\": \"Courtyard night – cooking\",\n      \"shotType\": \"Two-shot\",\n      \"description\": \"Hai bà cháu ngồi bên nồi, bà kể chuyện Lang Liêu dâng bánh cho vua Hùng, An tròn mắt nghe.\",\n      \"mode\": \"still\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Hai bà cháu ngồi canh nồi bánh, bà kể chuyện Lang Liêu dâng bánh cho vua Hùng.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"an\", \"grandma\"],\n      \"cites\": [2],\n      \"mood\": \"tender\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"look-left\", \"expression\": \"surprised\" },\n        { \"who\": \"grandma\", \"pose\": \"point\", \"expression\": \"smile\" }\n      ]\n    },\n    {\n      \"scene\": \"Courtyard night – cooking\",\n      \"shotType\": \"Over-the-shoulder\",\n      \"description\": \"Góc nhìn từ vai An: bà chỉ chiếc bánh vuông như mặt đất, An tròn mắt lắng nghe say sưa.\",\n      \"mode\": \"still\",\n      \"durationSec\": 3,\n      \"dialogue\": \"Bà chỉ chiếc bánh vuông như mặt đất, An tròn mắt lắng nghe.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"an\", \"grandma\", \"banh-chung\"],\n      \"cites\": [1, 2],\n      \"mood\": \"tender\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"look-right\", \"expression\": \"surprised\" },\n        { \"who\": \"grandma\", \"pose\": \"point\", \"expression\": \"smile\" }\n      ]\n    },\n    {\n      \"scene\": \"Rooftops midnight – fireworks\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Đêm giao thừa, pháo hoa nở rực rỡ trên nền trời phố cổ, những mái ngói đen kịt được soi sáng bởi ánh sáng lung linh.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Đêm giao thừa, pháo hoa nở rực trên những mái ngói phố cổ.\",\n      \"speaker\": null,\n      \"transition\": \"dissolve\",\n      \"cast\": [\"rooftops\"],\n      \"cites\": [6],\n      \"mood\": \"festival\",\n      \"acting\": []\n    },\n    {\n      \"scene\": \"Rooftops night – sleep\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Cận cảnh An ngủ gục trên vai bà, tay nhỏ vẫn nắm chặt sợi lạt tre của chiếc bánh, pháo hoa xa xôi phản chiếu trong mắt nhắm.\",\n      \"mode\": \"still\",\n      \"durationSec\": 3,\n      \"dialogue\": \"An ngủ gục trên vai bà, tay vẫn nắm sợi lạt tre.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"rooftops\", \"an\", \"grandma\", \"banh-chung\"],\n      \"cites\": [1, 6],\n      \"mood\": \"lullaby\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"kneel\", \"expression\": \"sleepy\" },\n        { \"who\": \"grandma\", \"pose\": \"hug\", \"expression\": \"smile\" }\n      ]\n    },\n    {\n      \"scene\": \"Courtyard dawn – discovery\",\n      \"shotType\": \"Medium shot\",\n      \"description\": \"Sáng mùng Một, ánh bình minh lóe loét. An bật dậy, bước chân nhẹ nhàng chạy qua sân sang vào phòng khách.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 3,\n      \"dialogue\": \"Sáng mùng Một, An mở mắt và chạy ra phòng khách.\",\n      \"speaker\": null,\n      \"transition\": \"dissolve\",\n      \"cast\": [\"courtyard\", \"an\"],\n      \"cites\": [2],\n      \"mood\": \"dawn\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"walk\", \"expression\": \"surprised\" }\n      ]\n    },\n    {\n      \"scene\": \"Front-room dawn – altar\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Cận cảnh bàn thờ tổ tiên trong phòng khách, chiếc bánh chưng vuông vức đầu tiên do An gói đặt ngay giữa, nến 흔들, hương khói bay.\",\n      \"mode\": \"still\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Trên bàn thờ là chiếc bánh chưng vuông vức đầu tiên do chính tay An gói.\",\n      \"speaker\": null,\n      \"transition\": \"fadeBlack\",\n      \"cast\": [\"front-room\", \"banh-chung\"],\n      \"cites\": [1, 3, 4],\n      \"mood\": \"wonder\",\n      \"acting\": []\n    }\n  ]\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 33651,
+      "tokensIn": 2723,
+      "tokensOut": 11758,
+      "costUsd": 0.029853,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:26.347Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5clt5l001d2aph7aoujy74",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 9,
+      "shotIndex": null,
+      "role": "director",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "action": "plan:coverage",
+      "promptHash": null,
+      "outputSummary": "Coverage check failed (1)",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": "wrong set: shot 10 is in #courtyard but it describes #front-room: give each shot the set of the place it describes (add a set for a new place)",
+      "createdAt": "2026-10-12T14:29:26.361Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cm3hj001e2aph8sq4ka75",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 10,
+      "shotIndex": null,
+      "role": "director",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "action": "plan:retry",
+      "promptHash": "f672201f26803c35",
+      "outputSummary": "plan:retry",
+      "output": "{\n  \"title\": \"Bánh Chưng Tết\",\n  \"logline\": \"Chiều Ba Mươi Tết, bé An học gói bánh chưng từ bà, đêm canh nồi nghe chuyện cổ, sáng mùng Một thức dậy thấy bánh mình gói đặt trên bàn thờ.\",\n  \"palette\": [\"#F5E6C8\", \"#D4A843\", \"#8B5E3C\", \"#4A7C59\", \"#C8553D\", \"#E8D4B9\", \"#6B8E5A\", \"#3D3D3D\"],\n  \"cast\": [\n    {\n      \"id\": \"courtyard\",\n      \"name\": \"Sân nhà phố cổ\",\n      \"kind\": \"set\",\n      \"look\": \"Narrow tube house courtyard with tiled floor, low wooden stools, a charcoal stove with a big iron pot, brick walls, open sky\",\n      \"colors\": [\"#F5E6C8\", \"#8B5E3C\", \"#3D3D3D\", \"#D4A843\"],\n      \"cites\": [2]\n    },\n    {\n      \"id\": \"front-room\",\n      \"name\": \"Phòng khách bàn thờ\",\n      \"kind\": \"set\",\n      \"look\": \"Family front room with ancestor altar centered on main wall, brass incense burner, two candle holders, fresh flower vase, photograph of deceased, wooden floor\",\n      \"colors\": [\"#F5E6C8\", \"#D4A843\", \"#8B5E3C\", \"#4A7C59\", \"#3D3D3D\"],\n      \"cites\": [3, 4]\n    },\n    {\n      \"id\": \"rooftops\",\n      \"name\": \"Mái ngói phố cổ\",\n      \"kind\": \"set\",\n      \"look\": \"Hanoi old quarter rooftops with terracotta tiles, narrow alleys, night sky illuminated by fireworks\",\n      \"colors\": [\"#8B5E3C\", \"#C8553D\", \"#3D3D3D\", \"#D4A843\"],\n      \"cites\": [6]\n    },\n    {\n      \"id\": \"an\",\n      \"name\": \"Bé An\",\n      \"kind\": \"character\",\n      \"look\": \"Small child, round face, short black hair, wearing a simple áo bà ba in soft beige, bare feet\",\n      \"colors\": [\"#F5E6C8\", \"#E8D4B9\", \"#3D3D3D\"],\n      \"cites\": []\n    },\n    {\n      \"id\": \"grandma\",\n      \"name\": \"Bà\",\n      \"kind\": \"character\",\n      \"look\": \"Elderly woman, gentle smile, silver hair in a bun, wearing a dark áo dài with subtle floral pattern, hands wrinkled\",\n      \"colors\": [\"#8B5E3C\", \"#E8D4B9\", \"#3D3D3D\", \"#4A7C59\"],\n      \"cites\": []\n    },\n    {\n      \"id\": \"banh-chung\",\n      \"name\": \"Bánh chưng\",\n      \"kind\": \"prop\",\n      \"look\": \"Flat square parcel wrapped in glossy green dong leaves with visible veins, tied with four thin pale bamboo strings crossing in a grid, darker green leaf folds at corners\",\n      \"colors\": [\"#4A7C59\", \"#6B8E5A\", \"#8B5E3C\", \"#3D3D3D\"],\n      \"cites\": [1]\n    }\n  ],\n  \"shots\": [\n    {\n      \"scene\": \"Chiều Ba Mươi Tết - Sân nhà\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Afternoon golden light fills the narrow tube house courtyard. Grandma sits on a low stool beside the charcoal stove, An kneels nearby on the tiled floor, both facing a woven tray. The big iron pot sits unlit on the stove. Brick walls frame the open sky above.\",\n      \"mode\": \"still\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Chiều Ba Mươi Tết, bé An cùng bà gói bánh chưng trong sân nhà ở phố cổ Hà Nội.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"grandma\", \"an\"],\n      \"cites\": [2],\n      \"mood\": \"playful\",\n      \"acting\": [\n        { \"who\": \"grandma\", \"pose\": \"sit\", \"expression\": \"smile\" },\n        { \"who\": \"an\", \"pose\": \"kneel\", \"expression\": \"neutral\" }\n      ]\n    },\n    {\n      \"scene\": \"Chiều Ba Mươi Tết - Sân nhà\",\n      \"shotType\": \"Medium shot\",\n      \"description\": \"Afternoon light slants across the courtyard. Grandma's hands spread glossy green dong leaves on the tray, then spoon white glutinous rice, green mung bean paste, and seasoned pork into the center. The charcoal stove glows faintly behind her.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Bà trải lá dong xanh lên mâm, đong gạo nếp trắng, nhân đậu xanh và thịt.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"grandma\"],\n      \"cites\": [2],\n      \"mood\": \"playful\",\n      \"acting\": [\n        { \"who\": \"grandma\", \"pose\": \"hold\", \"expression\": \"neutral\" }\n      ]\n    },\n    {\n      \"scene\": \"Chiều Ba Mươi Tết - Sân nhà\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Afternoon sun catches An's round face as she watches intently. Her small hands mimic Grandma's, folding the leaf edges into sharp right angles, then pulling pale bamboo strings tight in a neat grid. Grandma's wrinkled fingers guide hers from the side.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"An học bà gấp lá thật vuông và buộc lạt tre thật chặt.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"an\", \"grandma\"],\n      \"cites\": [2],\n      \"mood\": \"tender\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"hold\", \"expression\": \"neutral\" },\n        { \"who\": \"grandma\", \"pose\": \"point\", \"expression\": \"smile\" }\n      ]\n    },\n    {\n      \"scene\": \"Chiều Ba Mươi Tết - Sân nhà\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Insert shot: the finished square parcel rests on the tray, its glossy green dong leaves showing clear veins, four pale bamboo strings crossing in a precise grid, darker green folds tucked at each corner. Grandma's hand enters frame, thumb tracing the perfect edge.\",\n      \"mode\": \"still\",\n      \"durationSec\": 3,\n      \"dialogue\": \"Chiếc bánh đầu tiên An tự gói, bà khen vuông vắn như bánh của người lớn.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"banh-chung\", \"grandma\"],\n      \"cites\": [1, 2],\n      \"mood\": \"triumph\",\n      \"acting\": [\n        { \"who\": \"grandma\", \"pose\": \"point\", \"expression\": \"smile\" }\n      ]\n    },\n    {\n      \"scene\": \"Đêm canh nồi - Sân nhà\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Night has fallen, lantern glow and firelight paint the courtyard amber. The big iron pot bubbles vigorously on the charcoal stove, steam rising in soft plumes. Grandma and An sit on low stools on opposite sides, the pot between them, brick walls dark against the sky.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 5,\n      \"dialogue\": \"Đêm xuống, nồi bánh sôi lục bục trên bếp lửa hồng giữa sân.\",\n      \"speaker\": null,\n      \"transition\": \"dissolve\",\n      \"cast\": [\"courtyard\", \"grandma\", \"an\"],\n      \"cites\": [2, 5],\n      \"mood\": \"night\",\n      \"acting\": [\n        { \"who\": \"grandma\", \"pose\": \"sit\", \"expression\": \"neutral\" },\n        { \"who\": \"an\", \"pose\": \"sit\", \"expression\": \"neutral\" }\n      ]\n    },\n    {\n      \"scene\": \"Đêm canh nồi - Sân nhà\",\n      \"shotType\": \"Medium shot\",\n      \"description\": \"Firelight flickers on two faces in over-the-shoulder framing: Grandma leans forward, one hand gesturing toward the simmering pot as she speaks; An sits chin on hands, eyes wide, listening. The pot's steam catches the glow between them.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 5,\n      \"dialogue\": \"Hai bà cháu ngồi canh nồi bánh, bà kể chuyện Lang Liêu dâng bánh cho vua Hùng.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"grandma\", \"an\"],\n      \"cites\": [5],\n      \"mood\": \"wonder\",\n      \"acting\": [\n        { \"who\": \"grandma\", \"pose\": \"point\", \"expression\": \"smile\" },\n        { \"who\": \"an\", \"pose\": \"sit\", \"expression\": \"surprised\" }\n      ]\n    },\n    {\n      \"scene\": \"Đêm canh nồi - Sân nhà\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Firelight close on An's face: round eyes reflecting the dancing flames, mouth slightly open. Grandma's finger points to the square parcel resting on the tray nearby — its green leaf veins sharp in the glow — as she compares its shape to the earth.\",\n      \"mode\": \"still\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Bà chỉ chiếc bánh vuông như mặt đất, An tròn mắt lắng nghe.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"courtyard\", \"an\", \"grandma\", \"banh-chung\"],\n      \"cites\": [1, 5],\n      \"mood\": \"wonder\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"look-right\", \"expression\": \"surprised\" },\n        { \"who\": \"grandma\", \"pose\": \"point\", \"expression\": \"neutral\" }\n      ]\n    },\n    {\n      \"scene\": \"Đêm giao thừa - Mái ngói\",\n      \"shotType\": \"Wide shot\",\n      \"description\": \"Midnight deep blue over Hanoi's old quarter. Terracotta rooftiles stretch into narrow alleys, silhouettes sharp against fireworks blooming — red, gold, green — their light painting the tiles and the upturned faces below. Smoke drifts on the cold air.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Đêm giao thừa, pháo hoa nở rực trên những mái ngói phố cổ.\",\n      \"speaker\": null,\n      \"transition\": \"dissolve\",\n      \"cast\": [\"rooftops\"],\n      \"cites\": [6],\n      \"mood\": \"festival\",\n      \"acting\": []\n    },\n    {\n      \"scene\": \"Đêm muộn - Sân nhà\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Late night, lantern glow dim. An sleeps curled on Grandma's lap in the courtyard, cheek pressed to the dark áo dài. One small hand still clasps a pale bamboo string from the parcel beside them. Grandma's chin rests on An's head, eyes closed.\",\n      \"mode\": \"still\",\n      \"durationSec\": 4,\n      \"dialogue\": \"An ngủ gục trên vai bà, tay vẫn nắm sợi lạt tre.\",\n      \"speaker\": null,\n      \"transition\": \"dissolve\",\n      \"cast\": [\"courtyard\", \"an\", \"grandma\", \"banh-chung\"],\n      \"cites\": [2],\n      \"mood\": \"lullaby\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"hug\", \"expression\": \"sleepy\" },\n        { \"who\": \"grandma\", \"pose\": \"hug\", \"expression\": \"sleepy\" }\n      ]\n    },\n    {\n      \"scene\": \"Sáng mùng Một - Phòng khách\",\n      \"shotType\": \"Medium shot\",\n      \"description\": \"Dawn light spills through the front room doorway onto wooden floor. An bursts in barefoot, áo bà ba fluttering, round face bright. The ancestor altar dominates the far wall: brass incense burner, twin candles, fresh flowers, a framed photograph. She runs toward it.\",\n      \"mode\": \"motion\",\n      \"durationSec\": 3,\n      \"dialogue\": \"Sáng mùng Một, An mở mắt và chạy ra phòng khách.\",\n      \"speaker\": null,\n      \"transition\": \"cut\",\n      \"cast\": [\"front-room\", \"an\"],\n      \"cites\": [3, 4],\n      \"mood\": \"dawn\",\n      \"acting\": [\n        { \"who\": \"an\", \"pose\": \"walk\", \"expression\": \"surprised\" }\n      ]\n    },\n    {\n      \"scene\": \"Sáng mùng Một - Phòng khách\",\n      \"shotType\": \"Close-up\",\n      \"description\": \"Dawn light gilds the altar table. The square parcel sits centered on a red cloth: glossy green dong leaves, veins clear, four pale bamboo strings in a perfect grid, darker folds at corners. Incense curls upward. The framed photograph watches above.\",\n      \"mode\": \"still\",\n      \"durationSec\": 4,\n      \"dialogue\": \"Trên bàn thờ là chiếc bánh chưng vuông vức đầu tiên do chính tay An gói.\",\n      \"speaker\": null,\n      \"transition\": \"fadeBlack\",\n      \"cast\": [\"front-room\", \"banh-chung\"],\n      \"cites\": [1, 3, 4],\n      \"mood\": \"tender\",\n      \"acting\": []\n    }\n  ]\n}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 13380,
+      "tokensIn": 2782,
+      "tokensOut": 4312,
+      "costUsd": 0.012018,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:39.751Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cm3i4001f2aph7870n23n",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 11,
+      "shotIndex": null,
+      "role": "director",
+      "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+      "action": "plan:coverage",
+      "promptHash": null,
+      "outputSummary": "Coverage fixed: 1 → 0 problem(s)",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:39.772Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cm3ic001g2aphjc2gfo7w",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 12,
+      "shotIndex": null,
+      "role": "director",
+      "model": "engine",
+      "action": "plan:anatomy",
+      "promptHash": null,
+      "outputSummary": "#banh-chung anatomy carried with the cast: square leaf-wrapped parcel / green leaf packet / tied leaf bundle / square rice cake parcel / leaf-wrapped cake — parcel body, dong leaves, bamboo strings, corner folds",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:39.780Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cm3io001h2aph9gyw0svz",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 13,
+      "shotIndex": null,
+      "role": "researcher",
+      "model": "engine",
+      "action": "bible-use",
+      "promptHash": null,
+      "outputSummary": "The Bible cites 6 of 6 research notes (4 cast designs, 11 shots)",
+      "output": "{\"notes\":6,\"cited\":6,\"castCiting\":4,\"shotsCiting\":11,\"byUse\":{\"costume\":1,\"set\":5}}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:39.792Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cm3la001t2aphbu89it17",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 14,
+      "shotIndex": null,
+      "role": "cast",
+      "model": "preview",
+      "action": "cast-from-run",
+      "promptHash": null,
+      "outputSummary": "Reused the approved cast of run cmv52ro87002k2aqw3t51xa0y, with engine edits (no Cast call): #courtyard 3660353f0d7f · #courtyard--day 78c9c3b87f1b · #front-room 1fbcf94fcfd2 · #rooftops ccf925b80135 · #an 632ea62db3b5 · #grandma 500522cb3a5a · #banh-chung 82007704a615",
+      "output": "{\"sourceRunId\":\"cmv52ro87002k2aqw3t51xa0y\",\"hashes\":[{\"id\":\"courtyard\",\"sha\":\"3660353f0d7f\"},{\"id\":\"courtyard--day\",\"sha\":\"78c9c3b87f1b\"},{\"id\":\"front-room\",\"sha\":\"1fbcf94fcfd2\"},{\"id\":\"rooftops\",\"sha\":\"ccf925b80135\"},{\"id\":\"an\",\"sha\":\"632ea62db3b5\"},{\"id\":\"grandma\",\"sha\":\"500522cb3a5a\"},{\"id\":\"banh-chung\",\"sha\":\"82007704a615\"}],\"edits\":{\"report\":[\"#banh-chung: one look only (removed #banh-chung--cooking, #banh-chung--cooked, #banh-chung--wrapped)\"],\"changed\":[],\"removed\":[\"banh-chung--cooking\",\"banh-chung--cooked\",\"banh-chung--wrapped\"]}}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:39.886Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cm3lf001u2aph5qadelsm",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 15,
+      "shotIndex": null,
+      "role": "cast",
+      "model": "engine",
+      "action": "cast-edits",
+      "promptHash": null,
+      "outputSummary": "Engine edits on the approved cast (D77): #banh-chung: one look only (removed #banh-chung--cooking, #banh-chung--cooked, #banh-chung--wrapped)",
+      "output": "{\"report\":[\"#banh-chung: one look only (removed #banh-chung--cooking, #banh-chung--cooked, #banh-chung--wrapped)\"],\"changed\":[],\"removed\":[\"banh-chung--cooking\",\"banh-chung--cooked\",\"banh-chung--wrapped\"]}",
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:39.891Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cm3m9001v2aphlr80zkw1",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 16,
+      "shotIndex": null,
+      "role": "cast",
+      "model": "engine",
+      "action": "acting-variants",
+      "promptHash": null,
+      "outputSummary": "Posed 6 variant(s) from the kit: an kneel/neutral, grandma hold/neutral, an hold/neutral, an sit/surprised, grandma point/neutral, grandma hug/sleepy",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:39.921Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cm3mh001w2aph02008y5f",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 17,
+      "shotIndex": null,
+      "role": "critic",
+      "model": "preview",
+      "action": "recognize:carried",
+      "promptHash": null,
+      "outputSummary": "Recognition carried over from the approved preview: #banh-chung NOT recognised (\"green grid pattern\")",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:39.929Z",
+      "imageUrl": null
+    },
+    {
+      "id": "cmv5cm3mt001x2aphiolsdaqi",
+      "runId": "cmv5ckxxt00132aphiklvzwwj",
+      "seq": 18,
+      "shotIndex": null,
+      "role": "system",
+      "model": "engine",
+      "action": "stop-after-cast",
+      "promptHash": null,
+      "outputSummary": "Cast-only preview: stopped after the library and the recognition gate (no shots drawn)",
+      "output": null,
+      "critiqueScore": null,
+      "attempt": 0,
+      "latencyMs": 0,
+      "tokensIn": 0,
+      "tokensOut": 0,
+      "costUsd": 0,
+      "imagePath": null,
+      "error": null,
+      "createdAt": "2026-10-12T14:29:39.941Z",
+      "imageUrl": null
+    }
+  ],
+  "live": false
+}
