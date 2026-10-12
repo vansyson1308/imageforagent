@@ -45,6 +45,8 @@ const directorRequestSchema = z.object({
   aspectRatio: z.enum(["16:9", "9:16"]).optional(),
   /** "adult" = adult proportions for every human doll (a channel that forbids chibi) */
   figure: z.enum(["storybook", "adult"]).optional(),
+  /** "cast" = an operator's cast-only preview (plan + library + recognition gate, no shots; owner 2026-10-12) */
+  stopAfter: z.literal("cast").optional(),
   narrationShots: z
     .array(
       z.object({
@@ -73,6 +75,7 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     const cfg = demoConfig();
     const sid = requireDemoSession(req, cfg);
     const body = await parseBody(req, directorRequestSchema);
+    if (body.stopAfter && cfg.enabled && !isOperatorRequest(req, cfg)) throw new AppError("UNAUTHORIZED", "A cast-only preview is an operator tool.");
     const project = await prisma.project.findUnique({ where: { id } });
     if (!project) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
     if (cfg.enabled && project.demoSession !== sid) throw new AppError("UNAUTHORIZED", "This demo project belongs to another session.");

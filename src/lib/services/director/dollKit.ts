@@ -258,6 +258,8 @@ export interface FaceAnchors {
   readonly step: number;
   /** where the hands meet in the `hold` pose (viewBox units): a held prop goes here */
   readonly hands: { readonly x: number; readonly y: number };
+  /** the right (raised, pointing or free) hand in this pose: where a kite string starts (owner 2026-10-12, C) */
+  readonly hand: { readonly x: number; readonly y: number };
 }
 
 /**
@@ -284,6 +286,60 @@ function poseGeometry(f: Frame, pose: DrawPose) {
     faceDy: bow ? f.headR * 0.3 : 0,
     downcast: bow,
   };
+}
+
+/**
+ * One arm of a doll in a pose: shoulder (x0, y0), control point (mx, my) and hand (x1, y1), in
+ * viewBox units. Shared by the drawing and the face anchors, so the engine knows where a hand is
+ * (a held prop's grip, a kite string's start).
+ */
+function armGeometry(f: Frame, g: ReturnType<typeof poseGeometry>, pose: DrawPose, s: -1 | 1) {
+  const { cx, headR: R, shw, hhw } = f;
+  const { sy, hy, hp } = g;
+  const swing = pose === "walk_a" ? 1 : pose === "walk_b" ? -1 : 0;
+  const x0 = cx + s * (shw - 10);
+  const y0 = sy + 12;
+  let x1 = cx + s * (shw + 14);
+  let y1 = hp - 8;
+  let mx = cx + s * (shw + 16);
+  let my = (y0 + y1) / 2 - 20;
+  if (swing) {
+    x1 = cx + s * (shw + 10) + s * swing * 22;
+    mx = cx + s * (shw + 18);
+  } else if (pose === "wave" && s === 1) {
+    x1 = cx + shw + 52;
+    y1 = hy - R * 0.2;
+    mx = cx + shw + 70;
+    my = sy - 10;
+  } else if (pose === "point" && s === 1) {
+    x1 = cx + shw + 112;
+    y1 = sy + 26;
+    mx = cx + shw + 56;
+    my = sy + 6;
+  } else if (pose === "hold" || pose === "bow") {
+    x1 = cx + s * 22;
+    y1 = pose === "bow" ? hp - 30 : sy + 70;
+    mx = cx + s * (shw + 4);
+    my = sy + 50;
+  } else if (pose === "hug") {
+    x1 = cx + s * (shw + 58);
+    y1 = sy + 36;
+    mx = cx + s * (shw + 40);
+    my = sy + 46;
+  } else if (pose === "sit") {
+    // hands rest on the thighs
+    x1 = cx + hhw * (s === -1 ? 0.3 : 0.95);
+    y1 = hp - 2;
+    mx = cx + s * (shw + 12);
+    my = (y0 + y1) / 2;
+  } else if (pose === "kneel") {
+    // hands on the knees
+    x1 = cx + s * hhw * 0.72;
+    y1 = hp + 26;
+    mx = cx + s * (shw + 12);
+    my = (y0 + y1) / 2;
+  }
+  return { x0, y0, x1, y1, mx, my };
 }
 
 /** One human character as a <symbol> (+ its gradient and clip path), ids prefixed by `id`. */
@@ -404,50 +460,8 @@ export function buildDoll(id: string, spec: DollSpec, opts: ActingOptions = {}):
   // arms that come in front of the body (hold, bow) are drawn after the torso, so the forearms reach the hands
   const armsInFront = pose === "hold" || pose === "bow";
   const sleeves: string[] = [];
-  const swing = pose === "walk_a" ? 1 : pose === "walk_b" ? -1 : 0;
-  for (const s of [-1, 1]) {
-    const x0 = cx + s * (shw - 10);
-    const y0 = sy + 12;
-    let x1 = cx + s * (shw + 14);
-    let y1 = hp - 8;
-    let mx = cx + s * (shw + 16);
-    let my = (y0 + y1) / 2 - 20;
-    if (swing) {
-      x1 = cx + s * (shw + 10) + s * swing * 22;
-      mx = cx + s * (shw + 18);
-    } else if (pose === "wave" && s === 1) {
-      x1 = cx + shw + 52;
-      y1 = hy - R * 0.2;
-      mx = cx + shw + 70;
-      my = sy - 10;
-    } else if (pose === "point" && s === 1) {
-      x1 = cx + shw + 112;
-      y1 = sy + 26;
-      mx = cx + shw + 56;
-      my = sy + 6;
-    } else if (pose === "hold" || pose === "bow") {
-      x1 = cx + s * 22;
-      y1 = pose === "bow" ? hp - 30 : sy + 70;
-      mx = cx + s * (shw + 4);
-      my = sy + 50;
-    } else if (pose === "hug") {
-      x1 = cx + s * (shw + 58);
-      y1 = sy + 36;
-      mx = cx + s * (shw + 40);
-      my = sy + 46;
-    } else if (pose === "sit") {
-      // hands rest on the thighs
-      x1 = cx + hhw * (s === -1 ? 0.3 : 0.95);
-      y1 = hp - 2;
-      mx = cx + s * (shw + 12);
-      my = (y0 + y1) / 2;
-    } else if (pose === "kneel") {
-      // hands on the knees
-      x1 = cx + s * hhw * 0.72;
-      y1 = hp + 26;
-      mx = cx + s * (shw + 12);
-      my = (y0 + y1) / 2;
-    }
+  for (const s of [-1, 1] as const) {
+    const { x0, y0, x1, y1, mx, my } = armGeometry(f, g, pose, s);
     const arm = armsInFront ? sleeves : out;
     if (armsInFront) {
       // upper arm down the side to the elbow, then the forearm straight to the hands (owner QC 2026-10-10: no looping sleeve)
@@ -612,7 +626,8 @@ export function dollFace(spec: DollSpec, pose: DrawPose = "stand", expr: Express
   const g = faceGeometry(spec, f.headR, f.cx + p.headDx + p.faceDx, p.hy + p.faceDy, expr);
   const L = f.footY - 8 - (f.hipY - 10);
   // the hold pose brings both hands to (cx ± 22, sy + 70); hand circles are drawn 4 lower
-  return { eyes: g.eyes, mouth: g.mouth, skin: spec.skin, eyesClosed: g.eyesClosed || p.downcast, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180), hands: { x: f.cx, y: p.sy + 74 } };
+  const right = armGeometry(f, p, pose, 1);
+  return { eyes: g.eyes, mouth: g.mouth, skin: spec.skin, eyesClosed: g.eyesClosed || p.downcast, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180), hands: { x: f.cx, y: p.sy + 74 }, hand: { x: right.x1, y: right.y1 + 4 } };
 }
 
 // ---------- Critters: upright storybook animals from the same kind of spec ----------
@@ -825,5 +840,5 @@ export function critterFace(spec: CritterSpec, pose: DrawPose = "stand", expr: E
   const g = { ...g0, eyesClosed: g0.eyesClosed || downcast };
   const bry = Math.min(592 - 40 - by, R * 1.25);
   const L = Math.max(10, 592 - 10 - (by + bry * 0.4));
-  return { eyes: g.eyes, mouth: g.mouth, skin: spec.fur, eyesClosed: g.eyesClosed, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180), hands: { x: 200, y: by - bry * 0.1 + 4 } };
+  return { eyes: g.eyes, mouth: g.mouth, skin: spec.fur, eyesClosed: g.eyesClosed, step: 2 * L * Math.sin((WALK_SWING_DEG * Math.PI) / 180), hands: { x: 200, y: by - bry * 0.1 + 4 }, hand: { x: 200, y: by - bry * 0.1 + 4 } };
 }

@@ -10,6 +10,7 @@ import { recordStep, throwIfCancelled, type DirectorContext, type DirectorEvent,
 import { decideResearch, measureResearchUse, researchMode, runResearch, type ResearchUse } from "@/lib/services/director/research";
 import { runPlan, writeScript } from "@/lib/services/director/plan";
 import { runCast, type CastLibrary } from "@/lib/services/director/cast";
+import { recognizeHeroProps, type Recognition } from "@/lib/services/director/recognize";
 import { mergeLibraries, persistRunCast, type SeriesData } from "@/lib/services/director/series";
 import { actingBrief, neededVariants, variantDefs } from "@/lib/services/director/acting";
 import { variantId } from "@/lib/services/director/dollKit";
@@ -62,6 +63,8 @@ export interface DirectorRequest {
   readonly aspectRatio?: "16:9" | "9:16";
   /** "adult": every human doll gets adult proportions (a channel that forbids chibi); default storybook */
   readonly figure?: "storybook" | "adult";
+  /** "cast": stop after the cast library and the hero-prop recognition gate (a cheap preview of the props and sets, no shots) */
+  readonly stopAfter?: "cast";
 }
 
 export interface DirectorDeps {
@@ -199,6 +202,7 @@ export async function executeRun(
   let error: string | null = null;
   let continuity: string[] = [];
   let researchUse: ResearchUse | null = null;
+  let propRecognition: Recognition[] = [];
   try {
     await prisma.project.update({ where: { id: req.projectId }, data: { aspectRatio, resolution: "1K", playbackSpeed: 3 } });
     for (const n of deps.modelNotes) await recordStep(ctx, { role: "system", model: "catalog", action: "models", summary: n });
@@ -262,11 +266,13 @@ export async function executeRun(
     // 3 · Script (same path as a human TSV import)
     let frames = await writeScript(ctx, plan);
 
-    // 4 · Dialogue first, so each shot is timed to hold its line
-    emit({ type: "status", message: "Recording dialogue (local TTS)…" });
-    const voices = await runDialogue(ctx, plan, frames, req.series?.voices ?? {}, fixedVoices ?? undefined);
-    frames = voices.frames;
-    await persistRunCast(runId, { voices: voices.map });
+    // 4 · Dialogue first, so each shot is timed to hold its line (a cast-only preview draws no shot: no voices)
+    if (req.stopAfter !== "cast") {
+      emit({ type: "status", message: "Recording dialogue (local TTS)…" });
+      const voices = await runDialogue(ctx, plan, frames, req.series?.voices ?? {}, fixedVoices ?? undefined);
+      frames = voices.frames;
+      await persistRunCast(runId, { voices: voices.map });
+    }
 
     // 5 · Cast & set library (Super)
     emit({ type: "status", message: "Artist is designing the cast…" });
@@ -282,7 +288,15 @@ export async function executeRun(
         await recordStep(ctx, { role: "cast", model: "engine", action: "acting-variants", summary: `Posed ${v.length} variant(s) from the kit: ${v.map((x) => `${x.who} ${x.pose}/${x.expression}`).join(", ")}` });
       }
     }
+    // A · the story's key object must be recognisable on its own, every state (owner 2026-10-12)
+    const recognized = await recognizeHeroProps(ctx, plan, library, aspectRatio);
+    library = recognized.library;
+    propRecognition = recognized.results;
     await persistRunCast(runId, { library: library.defs, kits: library.kits });
+    if (req.stopAfter === "cast") {
+      await recordStep(ctx, { role: "system", model: "engine", action: "stop-after-cast", summary: "Cast-only preview: stopped after the library and the recognition gate (no shots drawn)" });
+      throw new StopAfterCast();
+    }
     const patterns = new Map<number, string>();
     // accepted paintings' thumbnails: the near-duplicate gate compares each shot with its neighbours
     const thumbs = new Map<number, Buffer>();
@@ -386,7 +400,9 @@ export async function executeRun(
     // 8 · Original score bed from the engine's own synth (WP4.6), ducked under dialogue by the film mix
     await scoreFilm(ctx, plan);
   } catch (e) {
-    if (signal.aborted && signal.reason instanceof BudgetExceededError) {
+    if (e instanceof StopAfterCast) {
+      // the preview is complete: status stays "done"
+    } else if (signal.aborted && signal.reason instanceof BudgetExceededError) {
       // the wall-time watchdog (runHub) aborted a call that was stuck
       status = "budget_exceeded";
       error = signal.reason.message;
@@ -402,7 +418,7 @@ export async function executeRun(
     }
   }
 
-  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic, ctx.visionAvailable && options.critic && ctx.models.vision ? `${ctx.models.vision} looks · ${ctx.models.fast} scores` : null)), ...(researchUse && { research: researchUse }) };
+  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic, ctx.visionAvailable && options.critic && ctx.models.vision ? `${ctx.models.vision} looks · ${ctx.models.fast} scores` : null)), ...(researchUse && { research: researchUse }), ...(propRecognition.length && { propRecognition }), ...(req.stopAfter && { stopAfter: req.stopAfter }) };
   await prisma.directorRun.update({
     where: { id: runId },
     data: { status, error, summary: JSON.stringify(summary), finishedAt: new Date(), tokensIn: tracker.tokensIn, tokensOut: tracker.tokensOut, costUsd: tracker.costUsd },
@@ -411,6 +427,9 @@ export async function executeRun(
   emit({ type: "done", status, summary });
   return summary;
 }
+
+/** Control flow for a cast-only preview (not an error). */
+class StopAfterCast extends Error {}
 
 /** The drawing places one of the film's sets (a shot without a set reads as characters on a void). */
 function placesASet(svg: string, plan: { cast: readonly { id: string; kind: string }[] }): boolean {

@@ -61,7 +61,12 @@ describe("prop gate: the key prop is in the shot and story-sized", () => {
     const kid = '<use href="#kid" x="700" y="260" width="520" height="780"/>';
     const bg = '<use href="#home" x="0" y="0" width="1920" height="1080"/>';
     await expect(validateDrawing(`\`\`\`svg\n${bg}${kid}\n\`\`\``, opts("Medium shot", ["kid", "kite", "home"]))).rejects.toThrow(/#kite \(a key prop of this shot\) is not placed/);
-    await expect(validateDrawing(`\`\`\`svg\n${bg}${kid}<use href="#kite" x="300" y="700" width="40" height="40"/>\n\`\`\``, opts("Medium shot", ["kid", "kite", "home"]))).rejects.toThrow(/#kite \(a key prop\) shows only [\d.]+% of the frame; a "Medium shot" needs at least 0\.40%/);
+    // inside a transformed group the engine can't rescale it: the gate sends it back to the Artist
+    await expect(validateDrawing(`\`\`\`svg\n${bg}${kid}<g transform="translate(0 0)"><use href="#kite" x="300" y="700" width="40" height="40"/></g>\n\`\`\``, opts("Medium shot", ["kid", "kite", "home"]))).rejects.toThrow(/#kite \(a key prop\) shows only [\d.]+% of the frame; a "Medium shot" needs at least 0\.40%/);
+    // placed plainly, the engine scales it about its centre before any repair turn (owner 2026-10-12, D)
+    const scaled = await validateDrawing(`\`\`\`svg\n${bg}${kid}<use href="#kite" x="300" y="700" width="40" height="40"/>\n\`\`\``, opts("Medium shot", ["kid", "kite", "home"]));
+    expect(scaled.checks?.problems).toEqual([]);
+    expect(scaled.checks?.facts.join(" ")).toMatch(/fixed by the engine: #kite scaled [\d.]+× about its centre: 40×40 → \d+×\d+/);
     const ok = await validateDrawing(`\`\`\`svg\n${bg}${kid}<use href="#kite" x="300" y="560" width="220" height="220"/>\n\`\`\``, opts("Medium shot", ["kid", "kite", "home"]));
     expect(ok.checks?.problems).toEqual([]);
   });
