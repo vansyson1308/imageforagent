@@ -80,7 +80,7 @@ const NOT_A_CHANGE = new Set(["the", "and", "with", "its", "now", "same", "still
  *   share a word with that state's change that the base anatomy does not already have.
  * Without an anatomy (a cast from before round 3) Nano's category alone decides.
  */
-export function propVerdict(anatomy: Anatomy | null | undefined, check: PropCheck, opts: { saw?: ObjectName; state?: { id: string; change: string; drawn: boolean } | null } = {}): { ok: boolean; why: string } {
+export function propVerdict(anatomy: Anatomy | null | undefined, check: PropCheck, opts: { saw?: ObjectName; state?: { id: string; change: string; drawn: boolean } | null } = {}): { ok: boolean; identity: boolean; why: string } {
   const names = new Set((anatomy?.parts ?? []).map((p) => p.part.trim().toLowerCase()));
   const seen = [...new Set(check.parts.map((p) => p.trim().toLowerCase()))].filter((p) => names.has(p));
   const need = Math.ceil((names.size * 2) / 3);
@@ -89,7 +89,10 @@ export function propVerdict(anatomy: Anatomy | null | undefined, check: PropChec
   const verified = !anatomy || !opts.saw;
   const categoryHeard = verified || anatomy!.category.some((c) => words.has(headNoun(c)));
   const lookalikeHeard = !verified && anatomy!.notLike.some((c) => nameWords.has(headNoun(c)));
-  const lookalike = check.lookalike || lookalikeHeard;
+  // the viewer's NAME holds a category head noun ("kite") and no look-alike's: Nano's look-alike flag is overruled
+  // (round-4 kite: "kite" was flagged a look-alike)
+  const nameHasCategory = !verified && anatomy!.category.some((c) => nameWords.has(headNoun(c)));
+  const lookalike = (check.lookalike && !nameHasCategory) || lookalikeHeard;
   const category = check.category && categoryHeard;
   const byParts = names.size > 0 && seen.length >= need;
   const identity = !lookalike && (category || byParts);
@@ -108,7 +111,7 @@ export function propVerdict(anatomy: Anatomy | null | undefined, check: PropChec
   ]
     .filter(Boolean)
     .join("; ");
-  return { ok: identity && state, why };
+  return { ok: identity && state, identity, why };
 }
 
 /** A state symbol that only places the base drawing (the Cast never drew the state, or it rendered blank). */
@@ -154,6 +157,11 @@ export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, libra
     // a later state must show its change; the first state is the object itself
     const stateChecked = !!t.state && t.symbol !== prop.id;
     let fresh = true;
+    // the best drawing seen so far: a redraw can be worse than the one before it (round-4 kite: the 4th torn
+    // redraw lost the kite itself), so a miss keeps the best-rated drawing, not the last (2 = recognised, 1 = the
+    // object is recognised but not its state, 0 = not even the object)
+    let best: { rank: number; symbol: string; saw: ObjectName } | null = null;
+    let lastRank = -1;
     for (let k = 0; ; k++) {
       if (fresh) {
         const png = await renderAlone(defs, t.symbol, aspectRatio, ctx.canvas);
@@ -166,6 +174,8 @@ export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, libra
           const change = prop.anatomy?.states.find((x) => x.id === t.state?.id)?.change ?? t.state?.look ?? "";
           const verdict = propVerdict(prop.anatomy, check, { saw, state: stateChecked && t.state ? { id: t.state.id, change, drawn: !isBaseStandIn(defs, t.symbol, prop.id) } : null });
           ok = verdict.ok;
+          lastRank = verdict.ok ? 2 : verdict.identity ? 1 : 0;
+          if (!best || lastRank > best.rank) best = { rank: lastRank, symbol: splitLibrary(defs).symbols.get(t.symbol) ?? "", saw };
           await recordStep(ctx, {
             role: "critic",
             model: `${ctx.models.vision} → ${ctx.models.fast}`,
@@ -206,6 +216,11 @@ export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, libra
           await recordStep(ctx, { role: "cast", model: out.model, action: "defs:recognize:invalid", attempt: k, summary: r === 0 ? `Redraw of #${t.symbol} rejected; retried once with the problem (not counted as a look)` : `Redraw of #${t.symbol} rejected twice; the previous drawing stays`, error: rejected });
         }
       }
+    }
+    if (ok === false && best && best.symbol && best.rank > lastRank) {
+      defs = replaceSymbol(defs, t.symbol, best.symbol, splitLibrary(defs).extras, 99);
+      saw = best.saw;
+      await recordStep(ctx, { role: "cast", model: "engine", action: "recognize:kept-best", summary: `#${t.symbol}: kept the best drawing of the round (the viewer saw "${best.saw.name}"), not the last redraw`, error: "still not recognised" });
     }
     results.push({ symbol: t.symbol, prop: prop.id, state: t.state?.id ?? null, ok, saw: saw.name, redraws });
   }

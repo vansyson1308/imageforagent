@@ -1,0 +1,42 @@
+{
+  "runId": "cmv52ko2v00012aqwwxhnuzq6",
+  "projectId": "cmv52kntu00002aqwudmf30z6",
+  "hashes": [
+    {
+      "id": "maya",
+      "sha": "61c72bcbb12f"
+    },
+    {
+      "id": "grandfather",
+      "sha": "9a2d02dbc3e9"
+    },
+    {
+      "id": "kite",
+      "sha": "fc34c57b116c"
+    },
+    {
+      "id": "kite--intact",
+      "sha": "193fbea379ba"
+    },
+    {
+      "id": "kite--torn",
+      "sha": "fdff49f29991"
+    },
+    {
+      "id": "kite--patched",
+      "sha": "08314ca32740"
+    },
+    {
+      "id": "kite--starred",
+      "sha": "94cf223f4c4d"
+    },
+    {
+      "id": "brighton-seafront",
+      "sha": "063c6f4d20cc"
+    },
+    {
+      "id": "kitchen",
+      "sha": "a00ce17c2147"
+    }
+  ]
+}
