@@ -512,13 +512,13 @@ describe("Round 3 · recognised by visible features (owner 2026-10-12): category
     expect(propVerdict(a, check({ category: true }), { saw: saw("glass wind chime") }).ok).toBe(true);
     // 3 of 4 parts (≥ 2/3) without the name: passes; 2 of 4 does not
     expect(propVerdict(a, check({ parts: ["glass bell", "clapper", "Paper strip"] })).ok).toBe(true);
-    expect(propVerdict(a, check({ parts: ["glass bell", "clapper"] }))).toEqual({ ok: false, why: "2/4 parts seen (need 3)" });
+    expect(propVerdict(a, check({ parts: ["glass bell", "clapper"] }))).toMatchObject({ ok: false, why: "2/4 parts seen (need 3)" });
     // parts Nano invents (not in the anatomy) don't count
     expect(propVerdict(a, check({ parts: ["glass bell", "ribbon", "bow"] })).ok).toBe(false);
     // a generic look-alike fails whatever else was said ("gift box", "spatula")
-    expect(propVerdict(a, check({ category: true, parts: ["glass bell", "clapper", "string"], lookalike: true }))).toEqual({ ok: false, why: "named a look-alike" });
+    expect(propVerdict(a, check({ category: true, parts: ["glass bell", "clapper", "string"], lookalike: true }))).toMatchObject({ ok: false, why: "named a look-alike" });
     // a later state passes only when it was drawn and its visible change is named
-    expect(propVerdict(a, check({ category: true, stateChange: false }), { saw: saw("wind chime"), state: ringing() })).toEqual({ ok: false, why: "category named; state change NOT named" });
+    expect(propVerdict(a, check({ category: true, stateChange: false }), { saw: saw("wind chime"), state: ringing() })).toMatchObject({ ok: false, identity: true, why: "category named; state change NOT named" });
     expect(propVerdict(a, check({ category: true, stateChange: true }), { saw: saw("wind chime", "the paper strip is lifted sideways by the wind"), state: ringing() }).ok).toBe(true);
     // a cast from before round 3 (no anatomy): Nano's category alone decides
     expect(propVerdict(undefined, check({ category: true })).ok).toBe(true);
@@ -540,7 +540,7 @@ describe("Round 3 · recognised by visible features (owner 2026-10-12): category
     const k = kite.bible.cast.find((c) => c.id === "kite")!;
     const patched = { id: "patched", change: k.anatomy!.states.find((x) => x.id === "patched")!.change };
     const plainKite = { name: "kite", description: "A red diamond kite with a white string" };
-    expect(propVerdict(k.anatomy, check({ category: true, stateChange: true }), { saw: plainKite, state: { ...patched, drawn: false } })).toEqual({ ok: false, why: "category named; state NOT drawn (the base drawing stands in)" });
+    expect(propVerdict(k.anatomy, check({ category: true, stateChange: true }), { saw: plainKite, state: { ...patched, drawn: false } })).toMatchObject({ ok: false, identity: true, why: "category named; state NOT drawn (the base drawing stands in)" });
     // and even drawn, a description that names no change word (colour and shape words don't count) fails
     expect(propVerdict(k.anatomy, check({ category: true, stateChange: true }), { saw: plainKite, state: { ...patched, drawn: true } }).ok).toBe(false);
     expect(propVerdict(k.anatomy, check({ category: true, stateChange: true }), { saw: { name: "kite", description: "a red kite with a white cloth patch sewn on with stitches" }, state: { ...patched, drawn: true } }).ok).toBe(true);
@@ -679,4 +679,28 @@ describe("Round 3 · the key object fills its own viewBox; a flying object's str
     expect(brief.match(/IT FLIES: do NOT draw its flying string/g)?.length).toBe(2);
     expect(brief).toMatch(/its main body filling 60–90% of the viewBox/);
   });
+});
+
+describe("Round 4 · a miss keeps the best drawing of the round, not the last; a name with the category overrules Nano's look-alike flag", () => {
+  it("Nano flags “kite” a look-alike: overruled (the viewer's name holds a category head noun and no look-alike's)", async () => {
+    const { propVerdict } = await import("@/lib/services/director/recognize");
+    const kite = { category: ["red diamond kite", "toy kite"], parts: [{ part: "sail", look: "red diamond" }, { part: "frame", look: "cross" }, { part: "tail", look: "bows" }], notLike: ["gift box with ribbon", "picture frame", "kite-shaped cookie"], states: [] };
+    expect(propVerdict(kite, check({ category: true, lookalike: true }), { saw: { name: "kite", description: "a diamond-shaped kite with orange wings" } }).ok).toBe(true);
+    expect(propVerdict(kite, check({ category: true, lookalike: true }), { saw: { name: "picture frame", description: "a red diamond frame, like a kite" } }).ok).toBe(false);
+    expect(propVerdict(kite, check({ category: true }), { saw: { name: "kite-shaped cookie", description: "a cookie" } }).ok).toBe(false);
+  });
+
+  it("the ringing state is read as the object (not its change) first, then the redraws get worse: the first drawing is kept", async () => {
+    const log: string[] = [];
+    const worse = RINGING.replace("</symbol>", '<circle cx="380" cy="20" r="6" fill="#123456"/></symbol>');
+    const sightings = ["a glass wind chime", "a glass wind chime", ...Array(8).fill("abstract shape")];
+    const checks = (user: string) => (/No state is checked/.test(user) ? check({ category: true }) : /named it: "a glass wind chime"/.test(user) ? check({ category: true, stateChange: false }) : check({ category: false }));
+    const { runId, projectId, summary } = await castOnly(anatomyCrew(sightings, checks, log, Array(4).fill(worse)));
+    expect(summary.propRecognition?.[1]).toMatchObject({ symbol: "furin--ringing", ok: false, saw: "a glass wind chime", redraws: MAX_REDRAWS });
+    const defs = (await prisma.project.findUniqueOrThrow({ where: { id: projectId } })).artworkDefs ?? "";
+    const { splitLibrary } = await import("@/lib/services/director/svgTools");
+    expect(splitLibrary(defs).symbols.get("furin--ringing")).not.toContain("#123456");
+    const steps = await prisma.directorStep.findMany({ where: { runId }, orderBy: { seq: "asc" } });
+    expect(steps.find((s) => s.action === "recognize:kept-best")?.outputSummary).toMatch(/#furin--ringing: kept the best drawing of the round \(the viewer saw "a glass wind chime"\)/);
+  }, 120_000);
 });
