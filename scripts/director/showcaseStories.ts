@@ -17,11 +17,16 @@ export interface ShowcaseStory {
    * three festival shots). Each place names the kit place it is drawn from and the times it is seen at.
    */
   readonly sets: readonly string[];
+  /**
+   * The owner's by-eye targets for the key object (round 3, 2026-10-12): what it must visibly be, and
+   * what each of its states must visibly show. Sent with the sets; Ultra's anatomy follows it.
+   */
+  readonly keyObject: string;
 }
 
 /** The SETS brief sent before the story: one set member per place, the right one in every shot. */
-export function setsBrief(s: Pick<ShowcaseStory, "sets">): string {
-  return [`SETS (make each one a cast member of kind "set" and give every shot the set of the place it shows):`, ...s.sets.map((x, i) => `${i + 1}. ${x}`)].join("\n");
+export function setsBrief(s: Pick<ShowcaseStory, "sets" | "keyObject">): string {
+  return [`SETS (make each one a cast member of kind "set" and give every shot the set of the place it shows):`, ...s.sets.map((x, i) => `${i + 1}. ${x}`), "", `KEY OBJECT (the owner's notes — draw it exactly so): ${s.keyObject}`].join("\n");
 }
 
 export const SHOWCASE_V2: readonly ShowcaseStory[] = [
@@ -31,6 +36,8 @@ export const SHOWCASE_V2: readonly ShowcaseStory[] = [
       "Brighton seafront: the pier and its shingle beach by the sea (kit place: beach); morning wind, afternoon, golden dusk",
       "Grandfather's kitchen with a wooden table and a window (kit place: kitchen); morning light",
     ],
+    keyObject:
+      "Maya's red diamond kite: a red sail on a cross of thin bamboo sticks, a tail of small bows, flown on a string. States in order: intact (smooth taut sail) → torn (a jagged hole with a flap of sail hanging down and the sky showing through it) → patched (a white cloth patch over the hole with visible stitches) → starred (the same patch with a big gold star painted on it).",
     language: "en",
     style: "storybook",
     lines: [
@@ -54,6 +61,8 @@ export const SHOWCASE_V2: readonly ShowcaseStory[] = [
       "The family's front room with the ancestor altar (kit place: living-room); dawn",
       "Hanoi's old quarter rooftops under New Year's Eve fireworks (kit place: village); midnight",
     ],
+    keyObject:
+      "Bánh chưng: a flat SQUARE parcel wrapped in glossy green dong leaves with visible leaf texture (veins), tied with two pairs of thin pale bamboo strings each way (four strings crossing in a grid, NOT a ribbon, NO bow), a darker green leaf fold at the corners. States in order: wrapped (fresh bright green leaves, crisp strings) → cooking (the parcel in a big pot of boiling water, steam rising) → cooked (leaves darkened to deep olive and glossy, strings swollen, set on a plate on the altar).",
     language: "vi",
     style: "storybook",
     lines: [
@@ -74,9 +83,11 @@ export const SHOWCASE_V2: readonly ShowcaseStory[] = [
     slug: "v2-furin",
     sets: [
       "The engawa veranda of grandma's Kyoto machiya with shoji and a small garden (kit place: veranda); summer day and night",
-      "The Gion festival street lined with lantern-lit stalls (kit place: market); dusk",
+      "The Gion festival street lined with lantern-lit stalls, paved with grey stone (kit place: market); dusk",
       "Grandma's tatami room with a low table (kit place: tea-room); night",
     ],
+    keyObject:
+      "The Edo fūrin (glass wind chime): a small TRANSPARENT glass bell, open at the bottom, with a white highlight on the glass and a painted pattern; a clapper hanging inside the bell; a short string from the top of the bell to the eaves; a long paper strip (tanzaku) hanging below on a thread. NOT brass, NOT rods. States in order: still (the bell and strip hanging straight down, the strip plain) → ringing (the bell tilted, the paper strip — now the blue wish strip — lifted sideways by the wind, small motion lines).",
     language: "ja",
     style: "storybook",
     lines: [

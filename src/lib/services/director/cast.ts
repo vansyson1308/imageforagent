@@ -4,7 +4,7 @@ import { AppError } from "@/lib/services/apiError";
 import { renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
 import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
-import { castRepairUser, castSystem, castUser } from "@/lib/services/director/prompts";
+import { castRepairUser, castSystem, castUser, HERO_SHAPES } from "@/lib/services/director/prompts";
 import sharp from "sharp";
 import { badPaints, castSheetFrame, extractJsonBlock, fixPaints, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
 import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalHair, naturalSkin, normalizeDollSpec, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
@@ -30,7 +30,7 @@ export interface CastLibrary {
 export const snapshotPath = (projectId: string, runId: string, name: string) => toPosix(`${projectId}/director/${runId}/${name}`);
 
 /** Shapes a hero prop needs (owner 2026-10-11: run 4's fūrin read as a plain orange block in its close-up). */
-export const HERO_PROP_SHAPES = 12;
+export const HERO_PROP_SHAPES = HERO_SHAPES;
 
 /**
  * Quality problems of ONE cast member's symbol (empty = accepted): present,
@@ -161,6 +161,52 @@ export async function salvageLibrary(symbols: readonly string[], extras: Readonl
   const used = new Map<string, string>();
   for (const sym of kept) for (const [k, v] of neededExtras(sym, extras)) used.set(k, v);
   return { defs: [...used.values(), body].join("\n"), broken };
+}
+
+/** The plain background an object is shown on, alone. */
+export const RECOGNIZE_BACKGROUND = "#f4f1ea";
+
+/** One symbol alone, centred on a plain square: what the viewer sees. */
+export async function renderAlone(defs: string, symbol: string, aspectRatio: string, canvas: { w: number; h: number }): Promise<Buffer> {
+  const side = Math.round(Math.min(canvas.w, canvas.h) * 0.86);
+  const x = Math.round((canvas.w - side) / 2);
+  const y = Math.round((canvas.h - side) / 2);
+  const png = await renderArtwork(defs, `<rect width="${canvas.w}" height="${canvas.h}" fill="${RECOGNIZE_BACKGROUND}"/><use href="#${symbol}" x="${x}" y="${y}" width="${side}" height="${side}"/>`, aspectRatio, "1K");
+  const meta = await sharp(png).metadata();
+  const W = meta.width ?? 1024;
+  const H = meta.height ?? 576;
+  const s = Math.min(W, H);
+  return sharp(png).extract({ left: Math.round((W - s) / 2), top: Math.round((H - s) / 2), width: s, height: s }).png().toBuffer();
+}
+
+/**
+ * Every state symbol of every stateful prop exists and shows something when rendered ALONE (preview
+ * 2026-10-12, bánh chưng round 1: the library fell back to placeholders, which have no `<id>--<state>`
+ * symbols, so #banh-chung--wrapped/--cooked/--onaltar were references to nothing and the viewer saw an
+ * empty background). A missing state, or one that renders blank, becomes the base drawing (reported).
+ */
+export async function ensureStateSymbols(plan: Pick<Plan, "cast">, defs: string, canvas: { w: number; h: number }, aspectRatio: string): Promise<{ defs: string; fixed: string[] }> {
+  const fixed: string[] = [];
+  const missing = stateAliases(plan, defs);
+  if (missing.length) defs = `${defs}\n${missing.map((a) => a.symbol).join("\n")}`;
+  fixed.push(...missing.filter((a) => !a.first).map((a) => a.id));
+  for (const c of plan.cast) {
+    if (!c.states?.length) continue;
+    for (const st of c.states) {
+      const id = `${c.id}--${st.id}`;
+      const blank = await renderAlone(defs, id, aspectRatio, canvas).then(isNearlyBlank, () => true);
+      if (!blank) continue;
+      // a blank state shows the base drawing instead (when the base itself shows)
+      if (await renderAlone(defs, c.id, aspectRatio, canvas).then(isNearlyBlank, () => true)) continue;
+      const lib = splitLibrary(defs);
+      lib.symbols.delete(id);
+      const alias = stateAliases(plan, [...lib.extras.values(), ...lib.symbols.values()].join("\n")).find((a) => a.id === id);
+      if (!alias) continue;
+      defs = [...lib.extras.values(), ...lib.symbols.values(), alias.symbol].join("\n");
+      if (!fixed.includes(id)) fixed.push(id);
+    }
+  }
+  return { defs, fixed };
 }
 
 /** Deterministic stand-in symbols so a film can still be made when the library keeps failing. */
@@ -448,6 +494,12 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     defs = placeholderLibrary(plan.cast, ctx.canvas);
     kits.clear();
     sheet = await renderArtwork(defs, castSheetFrame(plan.cast.map((c) => c.id), ctx.canvas), aspectRatio, "1K");
+  }
+  // every state symbol exists and shows something alone (the placeholder library has none of them)
+  const statesFixed = await ensureStateSymbols(plan, defs, ctx.canvas, aspectRatio);
+  if (statesFixed.defs !== defs) {
+    defs = statesFixed.defs;
+    if (statesFixed.fixed.length) await recordStep(ctx, { role: "cast", model: "engine", action: "prop-states:fixed", summary: `State symbol(s) missing or blank alone, shown as the base drawing: ${statesFixed.fixed.map((x) => `#${x}`).join(", ")}`, error: `blank or missing: ${statesFixed.fixed.join(", ")}` });
   }
   const sheetPath = snapshotPath(ctx.projectId, ctx.runId, "cast-sheet.png");
   await saveBuffer(sheetPath, sheet);

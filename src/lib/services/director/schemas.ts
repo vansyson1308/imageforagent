@@ -20,6 +20,29 @@ export const castId = z
 /** A prop state id: a short slug ("intact", "torn", "mended"). */
 export const stateId = z.string().regex(/^[a-z][a-z0-9]{1,15}$/, 'State ids are short lowercase words like "torn" or "wrapped"');
 
+/**
+ * The key object's ANATOMY (owner 2026-10-12, round 3): what a stranger must SEE to know it, written by
+ * Ultra before the Cast draws. A vision model rarely knows the object's name (bánh chưng, 江戸風鈴), so the
+ * recognition gate passes it by visible features: the viewer's words name its category, or ≥ 2/3 of its parts.
+ */
+export const anatomySchema = z.object({
+  /** what a stranger may call it, most specific first ("wind chime", "glass bell", "hanging bell") */
+  category: z.array(z.string().trim().min(2).max(40)).min(1).max(5),
+  /** 3–6 visible parts: shape, relative size and position, colour, material cue */
+  parts: z
+    .array(z.object({ part: z.string().trim().min(2).max(40), look: z.string().trim().min(3).max(220) }))
+    .min(3)
+    .max(6),
+  /** everyday look-alikes it must NOT be taken for ("gift box", "spatula") */
+  notLike: z.array(z.string().trim().min(2).max(40)).max(5).default([]),
+  /** per state: the VISIBLE change a viewer must name for that state to pass */
+  states: z
+    .array(z.object({ id: stateId, change: z.string().trim().min(3).max(220) }))
+    .max(4)
+    .default([]),
+});
+export type Anatomy = z.infer<typeof anatomySchema>;
+
 export const castMemberSchema = z.object({
   id: castId,
   name: z.string().min(1).max(60),
@@ -40,6 +63,8 @@ export const castMemberSchema = z.object({
     .optional(),
   /** A prop that flies on a string from someone's hand (a kite, a balloon): the engine draws the string. */
   airborne: z.boolean().optional(),
+  /** The key object's visible anatomy (engine-filled by Ultra before the Cast draws; carried with the cast). */
+  anatomy: anatomySchema.optional(),
 });
 
 export const shotPlanSchema = z.object({
@@ -120,9 +145,19 @@ export const objectNameSchema = z.object({
 });
 export type ObjectName = z.infer<typeof objectNameSchema>;
 
-/** Nano's verdict: is what the viewer named the planned object (and its state)? */
+/**
+ * Nano's reading of what the viewer said, against the object's anatomy. Nano only reports what the
+ * words show; the engine applies the pass rule (`propVerdict`), so a lenient "match" can't slip through.
+ */
 export const propCheckSchema = z.object({
-  match: z.boolean(),
+  /** the viewer's name or description names the object's category (or a close synonym) */
+  category: z.boolean(),
+  /** the anatomy parts the viewer's description shows, by their part name */
+  parts: z.array(z.string().max(40)).max(6),
+  /** the viewer named a different everyday thing it merely resembles (a gift box, a picture frame, a spatula) */
+  lookalike: z.boolean(),
+  /** a state is planned: the description names its visible change (null when no state is checked) */
+  stateChange: z.boolean().nullable(),
   reason: z.string().max(240),
 });
 export type PropCheck = z.infer<typeof propCheckSchema>;

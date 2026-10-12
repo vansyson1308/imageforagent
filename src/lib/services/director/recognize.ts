@@ -1,27 +1,29 @@
-import sharp from "sharp";
 import { prisma } from "@/lib/db";
 import { LlmError } from "@/lib/providers/types";
-import { renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
+import { sanitizeSvg } from "@/lib/services/svgRenderer";
 import { saveBuffer } from "@/lib/services/storage";
 import { callJson, callModel, recordStep, ReplyInvalidError, type DirectorContext } from "@/lib/services/director/context";
 import { castRecognizeUser, castSystem, nameObjectSystem, nameObjectUser, propCheckSystem, propCheckUser } from "@/lib/services/director/prompts";
-import { objectNameSchema, propCheckSchema, type CastMember, type ObjectName, type Plan } from "@/lib/services/director/schemas";
+import { objectNameSchema, propCheckSchema, type Anatomy, type CastMember, type ObjectName, type Plan, type PropCheck } from "@/lib/services/director/schemas";
 import { heroProp, stateMembers, stateSymbol } from "@/lib/services/director/plan";
 import { extractSvgFragment, neededExtras, splitLibrary, symbolIds, toJpegDataUri } from "@/lib/services/director/svgTools";
-import { namespaced, snapshotPath, symbolProblems, type CastLibrary } from "@/lib/services/director/cast";
+import { namespaced, renderAlone, snapshotPath, symbolProblems, type CastLibrary } from "@/lib/services/director/cast";
+
+export { renderAlone, RECOGNIZE_BACKGROUND } from "@/lib/services/director/cast";
 
 /**
  * Hero-prop recognition gate (owner 2026-10-12, A). Generic, no per-film code: each drawing of
  * the story's key object (every state) is rendered ALONE on a plain background, the vision model
- * names it with no story and no hints, and Nano checks that name against the plan's prop (and
- * state). On a miss the Cast redraws that symbol with what the viewer saw as feedback (at most
- * MAX_REDRAWS times). Every look, check and redraw is a trace step. Without a vision model the
- * gate cannot run: it says so in the trace and reports "not checked" (null), never a pass.
+ * names it with no story and no hints, Nano reads that description against the object's anatomy
+ * (`propCheckSchema`), and the engine applies the pass rule (`propVerdict`). On a miss the Cast
+ * redraws that symbol with what the viewer saw as feedback (at most MAX_REDRAWS accepted redraws;
+ * a redraw the engine rejects is retried once with its problem and does not cost a look). Every look,
+ * check and redraw is a trace step. Without a vision model the gate cannot run: it says so in the
+ * trace and reports "not checked" (null), never a pass.
  */
 
-export const MAX_REDRAWS = 2;
-/** The plain background the object is shown on. */
-export const RECOGNIZE_BACKGROUND = "#f4f1ea";
+/** Redraws of a key-object drawing the viewer did not recognise (owner 2026-10-12, round 3: 2 → 4). */
+export const MAX_REDRAWS = 4;
 
 export interface Recognition {
   /** the symbol checked: the base id (first state, or a prop without states) or `<id>--<state>` */
@@ -45,17 +47,26 @@ export function heroSymbols(plan: Plan): Array<{ symbol: string; member: CastMem
   return [{ symbol: hero, member, state: member.states[0] }, ...member.states.slice(1).map((st, k) => ({ symbol: stateSymbol(hero, st.id), member: later[k], state: st }))];
 }
 
-/** One symbol alone, centred on a plain square: what the viewer sees. */
-export async function renderAlone(defs: string, symbol: string, aspectRatio: string, canvas: { w: number; h: number }): Promise<Buffer> {
-  const side = Math.round(Math.min(canvas.w, canvas.h) * 0.86);
-  const x = Math.round((canvas.w - side) / 2);
-  const y = Math.round((canvas.h - side) / 2);
-  const png = await renderArtwork(defs, `<rect width="${canvas.w}" height="${canvas.h}" fill="${RECOGNIZE_BACKGROUND}"/><use href="#${symbol}" x="${x}" y="${y}" width="${side}" height="${side}"/>`, aspectRatio, "1K");
-  const meta = await sharp(png).metadata();
-  const W = meta.width ?? 1024;
-  const H = meta.height ?? 576;
-  const s = Math.min(W, H);
-  return sharp(png).extract({ left: Math.round((W - s) / 2), top: Math.round((H - s) / 2), width: s, height: s }).png().toBuffer();
+/**
+ * The pass rule (owner 2026-10-12, round 3): recognised by VISIBLE FEATURES, not the exact name. The
+ * object passes when the viewer did not name a look-alike AND their words name its category or show
+ * ≥ 2/3 of its anatomy parts; a later state also needs its visible change named. Without an anatomy
+ * (a cast from before round 3) the category alone decides.
+ */
+export function propVerdict(anatomy: Anatomy | null | undefined, stateChecked: boolean, check: PropCheck): { ok: boolean; why: string } {
+  const names = new Set((anatomy?.parts ?? []).map((p) => p.part.trim().toLowerCase()));
+  const seen = [...new Set(check.parts.map((p) => p.trim().toLowerCase()))].filter((p) => names.has(p));
+  const need = Math.ceil((names.size * 2) / 3);
+  const byParts = names.size > 0 && seen.length >= need;
+  const identity = !check.lookalike && (check.category || byParts);
+  const state = !stateChecked || check.stateChange === true;
+  const why = [
+    check.lookalike ? "named a look-alike" : check.category ? "category named" : names.size ? `${seen.length}/${names.size} parts seen (need ${need})` : "category not named",
+    stateChecked ? (check.stateChange ? "state change named" : "state change NOT named") : "",
+  ]
+    .filter(Boolean)
+    .join("; ");
+  return { ok: identity && state, why };
 }
 
 /** The library with one symbol replaced (its new gradients added, renamed when an id is taken). */
@@ -92,46 +103,59 @@ export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, libra
     let ok: boolean | null = null;
     let saw: ObjectName = { name: "", description: "" };
     let redraws = 0;
+    // a later state must show its change; the first state is the object itself
+    const stateChecked = !!t.state && t.symbol !== prop.id;
+    let fresh = true;
     for (let k = 0; ; k++) {
-      const png = await renderAlone(defs, t.symbol, aspectRatio, ctx.canvas);
-      const { uri, jpeg } = await toJpegDataUri(png, 768);
-      const imagePath = snapshotPath(ctx.projectId, ctx.runId, `recognize-${t.symbol}-${k}.jpg`);
-      await saveBuffer(imagePath, jpeg);
-      try {
-        saw = await callJson(ctx, { role: "critic", action: "recognize", model: ctx.models.vision, system: nameObjectSystem(), user: nameObjectUser(), images: [uri], maxTokens: 300, temperature: 0.1, thinking: false, attempt: k, imagePath }, objectNameSchema, "object_name", 1);
-        const verdict = await callJson(ctx, { role: "critic", action: "recognize:check", model: ctx.models.fast, system: propCheckSystem(), user: propCheckUser({ name: prop.name, look: prop.look, state: t.state, saw }), maxTokens: 300, temperature: 0.1, thinking: false, attempt: k }, propCheckSchema, "prop_check", 1);
-        ok = verdict.match;
-        await recordStep(ctx, {
-          role: "critic",
-          model: `${ctx.models.vision} → ${ctx.models.fast}`,
-          action: "recognize:verdict",
-          attempt: k,
-          summary: `#${t.symbol}${t.state ? ` (${t.state.id})` : ""} alone, named "${saw.name}": ${ok ? "recognised" : "NOT recognised"} as ${prop.name} — ${verdict.reason}`,
-          imagePath,
-          error: ok ? null : `viewer saw "${saw.name}": ${saw.description}`,
-        });
-      } catch (e) {
-        if (!(e instanceof ReplyInvalidError || e instanceof LlmError)) throw e;
-        await recordStep(ctx, { role: "critic", model: ctx.models.vision, action: "recognize:error", attempt: k, summary: `Recognition of #${t.symbol} failed to run`, error: errText(e), imagePath });
-        ok = null;
-        break;
+      if (fresh) {
+        const png = await renderAlone(defs, t.symbol, aspectRatio, ctx.canvas);
+        const { uri, jpeg } = await toJpegDataUri(png, 768);
+        const imagePath = snapshotPath(ctx.projectId, ctx.runId, `recognize-${t.symbol}-${k}.jpg`);
+        await saveBuffer(imagePath, jpeg);
+        try {
+          saw = await callJson(ctx, { role: "critic", action: "recognize", model: ctx.models.vision, system: nameObjectSystem(), user: nameObjectUser(), images: [uri], maxTokens: 300, temperature: 0.1, thinking: false, attempt: k, imagePath }, objectNameSchema, "object_name", 1);
+          const check = await callJson(ctx, { role: "critic", action: "recognize:check", model: ctx.models.fast, system: propCheckSystem(), user: propCheckUser({ name: prop.name, look: prop.look, anatomy: prop.anatomy, state: stateChecked ? t.state : null, saw }), maxTokens: 400, temperature: 0.1, thinking: false, attempt: k }, propCheckSchema, "prop_check", 1);
+          const verdict = propVerdict(prop.anatomy, stateChecked, check);
+          ok = verdict.ok;
+          await recordStep(ctx, {
+            role: "critic",
+            model: `${ctx.models.vision} → ${ctx.models.fast}`,
+            action: "recognize:verdict",
+            attempt: k,
+            summary: `#${t.symbol}${t.state ? ` (${t.state.id})` : ""} alone, named "${saw.name}": ${ok ? "recognised" : "NOT recognised"} as ${prop.name} — ${verdict.why}. ${check.reason}`,
+            imagePath,
+            error: ok ? null : `viewer saw "${saw.name}": ${saw.description}`,
+          });
+        } catch (e) {
+          if (!(e instanceof ReplyInvalidError || e instanceof LlmError)) throw e;
+          await recordStep(ctx, { role: "critic", model: ctx.models.vision, action: "recognize:error", attempt: k, summary: `Recognition of #${t.symbol} failed to run`, error: errText(e), imagePath });
+          ok = null;
+          break;
+        }
       }
-      if (ok || k >= MAX_REDRAWS) break;
-      // a miss: the Cast redraws this one symbol with what the viewer saw
+      if (ok || redraws >= MAX_REDRAWS) break;
+      // a miss: the Cast redraws this one symbol with what the viewer saw; a redraw the engine rejects
+      // (too few shapes, broken markup) is retried once with that problem before it counts
       redraws++;
       const previous = splitLibrary(defs).symbols.get(t.symbol) ?? "";
-      const out = await callModel(ctx, { role: "cast", action: "defs:recognize", system: castSystem(ctx.canvas, ctx.options.style), user: castRecognizeUser(plan, t.member, saw, previous), attempt: k, maxTokens: 12000, temperature: 0.5 });
-      try {
-        const drawn = extractSvgFragment(out.text);
-        sanitizeSvg(drawn, "defs");
-        const lib = splitLibrary(drawn);
-        const symbol = lib.symbols.get(t.symbol);
-        const problems = await symbolProblems({ ...t.member, id: t.symbol }, symbol, lib.extras, ctx.canvas, aspectRatio, new Set(symbolIds(defs)), true);
-        if (!symbol || problems.length) throw new Error(problems.join("; ") || `no <symbol id="${t.symbol}">`);
-        defs = replaceSymbol(defs, t.symbol, symbol, neededExtras(symbol, lib.extras), redraws);
-        await recordStep(ctx, { role: "cast", model: out.model, action: "defs:recognize", attempt: k, summary: `#${t.symbol} redrawn after the viewer saw "${saw.name}"` });
-      } catch (e) {
-        await recordStep(ctx, { role: "cast", model: out.model, action: "defs:recognize:invalid", attempt: k, summary: `Redraw of #${t.symbol} rejected; the previous drawing stays`, error: errText(e) });
+      let rejected: string | null = null;
+      fresh = false;
+      for (let r = 0; r < 2 && !fresh; r++) {
+        const out = await callModel(ctx, { role: "cast", action: "defs:recognize", system: castSystem(ctx.canvas, ctx.options.style), user: castRecognizeUser(plan, t.member, saw, previous, rejected), attempt: k, maxTokens: 12000, temperature: 0.5 });
+        try {
+          const drawn = extractSvgFragment(out.text);
+          sanitizeSvg(drawn, "defs");
+          const lib = splitLibrary(drawn);
+          const symbol = lib.symbols.get(t.symbol);
+          const problems = await symbolProblems({ ...t.member, id: t.symbol }, symbol, lib.extras, ctx.canvas, aspectRatio, new Set(symbolIds(defs)), true);
+          if (!symbol || problems.length) throw new Error(problems.join("; ") || `no <symbol id="${t.symbol}">`);
+          defs = replaceSymbol(defs, t.symbol, symbol, neededExtras(symbol, lib.extras), redraws * 2 + r);
+          fresh = true;
+          await recordStep(ctx, { role: "cast", model: out.model, action: "defs:recognize", attempt: k, summary: `#${t.symbol} redrawn (${redraws}/${MAX_REDRAWS}${r ? ", after one rejected try" : ""}) after the viewer saw "${saw.name}"` });
+        } catch (e) {
+          rejected = errText(e);
+          await recordStep(ctx, { role: "cast", model: out.model, action: "defs:recognize:invalid", attempt: k, summary: r === 0 ? `Redraw of #${t.symbol} rejected; retried once with the problem (not counted as a look)` : `Redraw of #${t.symbol} rejected twice; the previous drawing stays`, error: rejected });
+        }
       }
     }
     results.push({ symbol: t.symbol, prop: prop.id, state: t.state?.id ?? null, ok, saw: saw.name, redraws });

@@ -279,7 +279,7 @@ function recognizingCrew(sightings: string[], log: string[]): MockHandler {
       log.push(`saw ${name}`);
       return { name, description: `${name}, drawn on a plain background` };
     }
-    if (role === "PROP_CHECK") return { match: /chime|bell/.test(user.match(/named it: "([^"]*)"/)?.[1] ?? ""), reason: "compared the names" };
+    if (role === "PROP_CHECK") return { category: /chime|bell/.test(user.match(/named it: "([^"]*)"/)?.[1] ?? ""), parts: [], lookalike: false, stateChange: /No state is checked/.test(user) ? null : true, reason: "compared the names" };
     return base(m, o, i);
   };
 }
@@ -319,7 +319,7 @@ describe("A · hero-prop recognition gate (mock crew): render alone → the visi
     const verdict = steps.filter((s) => s.action === "recognize:verdict");
     expect(verdict[0].outputSummary).toMatch(/#furin \(still\) alone, named "a white flower on a stick": NOT recognised/);
     expect(verdict[0].imagePath).toMatch(/recognize-furin-0\.jpg$/);
-    expect(steps.some((s) => s.action === "defs:recognize" && /redrawn after the viewer saw "a white flower on a stick"/.test(s.outputSummary ?? ""))).toBe(true);
+    expect(steps.some((s) => s.action === "defs:recognize" && /redrawn \(1\/4\) after the viewer saw "a white flower on a stick"/.test(s.outputSummary ?? ""))).toBe(true);
     expect(steps.some((s) => s.action === "prop-states")).toBe(true);
     expect(steps.some((s) => s.action === "stop-after-cast")).toBe(true);
     expect(steps.some((s) => s.role === "artist")).toBe(false);
@@ -336,7 +336,11 @@ describe("A · hero-prop recognition gate (mock crew): render alone → the visi
     const log: string[] = [];
     const { summary } = await castOnly(recognizingCrew(["a white flower on a stick"], log));
     expect(summary.propRecognition?.[0]).toMatchObject({ symbol: "furin", ok: false, saw: "a white flower on a stick", redraws: MAX_REDRAWS });
-    expect(log.filter((l) => l === "redraw")).toHaveLength(MAX_REDRAWS + MAX_REDRAWS);
+    expect(MAX_REDRAWS).toBe(4);
+    // #furin: 4 accepted redraws, each looked at again (5 looks). #furin--ringing: every redraw comes back as #furin (wrong
+    // id) → rejected → retried once with that problem; a rejected redraw costs no look (owner 2026-10-12, round 3)
+    expect(log.filter((l) => l === "redraw")).toHaveLength(MAX_REDRAWS + 2 * MAX_REDRAWS);
+    expect(log.filter((l) => l.startsWith("saw "))).toHaveLength(MAX_REDRAWS + 1 + 1);
     expect(measuredProblems("done", { ...summary, stopAfter: undefined }).join(" ")).toMatch(/the key object #furin is not recognised on its own \(a viewer saw "a white flower on a stick"\)/);
   }, 120_000);
 
@@ -393,6 +397,10 @@ describe("castFromRun: a take on an approved cast-only preview reuses its Bible,
     expect(calls).not.toContain("CAST");
     expect(calls).not.toContain("NAME_OBJECT");
     expect(calls).not.toContain("PROP_CHECK");
+    // the anatomy comes with the approved cast: no new ANATOMY call (round 3)
+    expect(calls).not.toContain("ANATOMY");
+    expect(previewBible.cast.find((c) => c.id === "furin")?.anatomy?.parts.length).toBeGreaterThanOrEqual(3);
+    expect((JSON.parse((await prisma.directorRun.findUniqueOrThrow({ where: { id: runId } })).bible!) as Plan).cast.find((c) => c.id === "furin")?.anatomy).toEqual(previewBible.cast.find((c) => c.id === "furin")?.anatomy);
     expect(summary.propRecognition).toEqual(preview.summary.propRecognition);
     // the planner got the cast and its states
     expect(prompts[0]).toMatch(/REUSES an approved cast[\s\S]*- furin \(prop[\s\S]*STATES: "still" \(hanging still\), "ringing"/);
@@ -452,5 +460,163 @@ describe("one malformed symbol costs only itself, never the whole library (previ
     expect(out.defs).toContain('<symbol id="cake--cooked" viewBox="0 0 400 400"><use href="#cake" x="0" y="0" width="400" height="400"/></symbol>');
     // the salvaged library renders as a whole
     await expect(renderArtwork(out.defs, '<use href="#yard" x="0" y="0" width="1920" height="1080"/><use href="#cake--cooked" x="700" y="300" width="400" height="400"/>', "16:9", "1K")).resolves.toBeInstanceOf(Buffer);
+  });
+});
+
+/* ---------- Round 3 (owner 2026-10-12, after #33): the key object, by visible features ---------- */
+
+const FURIN_ANATOMY = {
+  category: ["wind chime", "glass bell", "hanging bell"],
+  parts: [
+    { part: "glass bell", look: "a small transparent glass bell, open at the bottom, a white highlight" },
+    { part: "clapper", look: "a small clapper hanging inside the bell" },
+    { part: "string", look: "a short string from the top of the bell to the eaves" },
+    { part: "paper strip", look: "a long paper strip hanging below on a thread" },
+  ],
+  notLike: ["flower", "candle holder"],
+  states: [
+    { id: "still", change: "hanging straight down" },
+    { id: "ringing", change: "the bell tilted and the paper strip lifted sideways by the wind" },
+  ],
+};
+
+/** A crew with an anatomy, a viewer that sees `sightings`, and a Nano that answers `checks` in turn (the last one repeats). */
+function anatomyCrew(sightings: string[], checks: Array<Record<string, unknown>> | ((user: string) => Record<string, unknown>), log: string[], redraws: string[] = []): MockHandler {
+  const base = recognizingCrew(sightings, log);
+  return (m, o, i) => {
+    const role = m[0].content.match(/^ROLE: (\w+)/)?.[1] ?? "?";
+    const user = m[m.length - 1].content;
+    log.push(`role ${role}`);
+    if (role === "ANATOMY") return FURIN_ANATOMY;
+    if (role === "PROP_CHECK") {
+      log.push(`check ${user.includes("Anatomy parts: glass bell") ? "with anatomy" : "no anatomy"}`);
+      return typeof checks === "function" ? checks(user) : checks.length > 1 ? checks.shift()! : checks[0];
+    }
+    if (role === "CAST" && /named it/.test(user) && redraws.length) {
+      log.push(`redraw prompt: ${/at least 12 separate shapes/.test(user) ? "rule" : "no rule"}${/REJECTED by the engine/.test(user) ? " +rejected" : ""}`);
+      return "```svg\n" + redraws.shift()! + "\n```";
+    }
+    if (role === "CAST" && !/named it/.test(user)) log.push(`cast brief: ${/ANATOMY — draw EVERY part so a stranger names it "wind chime"/.test(user) ? "anatomy" : "none"}`);
+    return base(m, o, i);
+  };
+}
+
+const check = (c: Partial<{ category: boolean; parts: string[]; lookalike: boolean; stateChange: boolean | null }>) => ({ category: false, parts: [], lookalike: false, stateChange: null, reason: "r", ...c });
+
+describe("Round 3 · recognised by visible features (owner 2026-10-12): category or ≥ 2/3 of the anatomy; look-alikes fail; a state needs its change", () => {
+  it("propVerdict: the pass rule, applied by the engine on Nano's report", async () => {
+    const { propVerdict } = await import("@/lib/services/director/recognize");
+    const a = { ...FURIN_ANATOMY, notLike: FURIN_ANATOMY.notLike, states: FURIN_ANATOMY.states };
+    expect(propVerdict(a, false, check({ category: true })).ok).toBe(true);
+    // 3 of 4 parts (≥ 2/3) without the name: passes; 2 of 4 does not
+    expect(propVerdict(a, false, check({ parts: ["glass bell", "clapper", "Paper strip"] })).ok).toBe(true);
+    expect(propVerdict(a, false, check({ parts: ["glass bell", "clapper"] }))).toEqual({ ok: false, why: "2/4 parts seen (need 3)" });
+    // parts Nano invents (not in the anatomy) don't count
+    expect(propVerdict(a, false, check({ parts: ["glass bell", "ribbon", "bow"] })).ok).toBe(false);
+    // a generic look-alike fails whatever else was said ("gift box", "spatula")
+    expect(propVerdict(a, false, check({ category: true, parts: ["glass bell", "clapper", "string"], lookalike: true }))).toEqual({ ok: false, why: "named a look-alike" });
+    // a later state passes only when its visible change is named
+    expect(propVerdict(a, true, check({ category: true, stateChange: false }))).toEqual({ ok: false, why: "category named; state change NOT named" });
+    expect(propVerdict(a, true, check({ category: true, stateChange: true })).ok).toBe(true);
+    // a cast from before round 3 (no anatomy): the category alone decides
+    expect(propVerdict(undefined, false, check({ category: true })).ok).toBe(true);
+    expect(propVerdict(undefined, false, check({ parts: ["glass bell", "clapper", "string"] })).ok).toBe(false);
+  });
+
+  it("Ultra writes the anatomy BEFORE the Cast draws; the Cast draws from it; Nano reads the viewer against it; it is kept in the Bible", async () => {
+    const log: string[] = [];
+    const { runId, summary } = await castOnly(anatomyCrew(["a glass bell with a paper strip"], [check({ category: true }), check({ category: true, stateChange: true })], log));
+    const roles = log.filter((l) => l.startsWith("role ")).map((l) => l.slice(5));
+    expect(roles.indexOf("ANATOMY")).toBeGreaterThan(roles.indexOf("DIRECTOR"));
+    expect(roles.indexOf("ANATOMY")).toBeLessThan(roles.indexOf("CAST"));
+    expect(log).toContain("cast brief: anatomy");
+    expect(log.filter((l) => l.startsWith("check "))).toEqual(["check with anatomy", "check with anatomy"]);
+    expect(summary.propRecognition?.map((r) => r.ok)).toEqual([true, true]);
+    const run = await prisma.directorRun.findUniqueOrThrow({ where: { id: runId } });
+    expect((JSON.parse(run.bible!) as Plan).cast.find((c) => c.id === "furin")?.anatomy).toEqual(FURIN_ANATOMY);
+    const steps = await prisma.directorStep.findMany({ where: { runId }, orderBy: { seq: "asc" } });
+    expect(steps.filter((s) => s.action === "plan:anatomy").at(-1)?.outputSummary).toMatch(/#furin anatomy: wind chime \/ glass bell \/ hanging bell — glass bell, clapper, string, paper strip · states: still → ringing/);
+  }, 120_000);
+
+  it("a look-alike (“a gift box”) is NOT recognised even when Nano lists matching parts; a later state whose change is not named is NOT recognised", async () => {
+    const log: string[] = [];
+    const { summary } = await castOnly(anatomyCrew(["a gift box"], (user) => (/No state is checked/.test(user) ? check({ category: false, parts: ["glass bell", "clapper", "string"], lookalike: true }) : check({ category: true, stateChange: false })), log));
+    expect(summary.propRecognition?.[0]).toMatchObject({ symbol: "furin", ok: false, redraws: MAX_REDRAWS });
+    expect(summary.propRecognition?.[1]).toMatchObject({ symbol: "furin--ringing", ok: false });
+  }, 120_000);
+
+  it(`a redraw the engine rejects (too few shapes) is retried once with that problem and costs no look; the ≥ 12-shape rule is in the redraw brief up front`, async () => {
+    const log: string[] = [];
+    const thin = FURIN_BELL.replace(/<circle[^>]*\/>/g, "").replace(/<rect x="170"[^>]*\/>/, "");
+    const { summary } = await castOnly(anatomyCrew(["a white flower on a stick", "a glass wind chime"], [check({ category: false }), check({ category: true }), check({ category: true, stateChange: true })], log, [thin, FURIN_BELL]));
+    expect(summary.propRecognition?.[0]).toMatchObject({ symbol: "furin", ok: true, redraws: 1, saw: "a glass wind chime" });
+    expect(log.filter((l) => l.startsWith("redraw prompt"))).toEqual(["redraw prompt: rule", "redraw prompt: rule +rejected"]);
+    // two looks at #furin (before, after the accepted redraw): the rejected one was never shown to the viewer
+    expect(log.filter((l) => l === "saw a white flower on a stick" || l === "saw a glass wind chime").length).toBe(3);
+  }, 120_000);
+});
+
+describe("Round 3 · every state symbol rendered alone shows something (bánh chưng round 1: --wrapped/--cooked/--onaltar were an empty background)", () => {
+  const cakePlan = {
+    cast: [
+      { id: "yard", name: "Yard", kind: "set" as const, look: "a courtyard", colors: ["#c8a878", "#8a6a4a"] },
+      { id: "banh-chung", name: "Bánh chưng", kind: "prop" as const, look: "a square leaf parcel", colors: ["#3f7d3f", "#d8c48a"], states: [{ id: "ingredients", look: "piles" }, { id: "wrapped", look: "wrapped" }, { id: "cooked", look: "cooked" }, { id: "onaltar", look: "on the altar" }] },
+    ],
+  };
+  const visible = async (defs: string, id: string) => {
+    const { renderAlone } = await import("@/lib/services/director/recognize");
+    const { isNearlyBlank } = await import("@/lib/services/director/svgTools");
+    return !(await isNearlyBlank(await renderAlone(defs, id, "16:9", canvas)));
+  };
+
+  it("the cause: the all-placeholder library has no state symbols, so each one rendered alone is the bare background", async () => {
+    const { placeholderLibrary } = await import("@/lib/services/director/cast");
+    const defs = placeholderLibrary(cakePlan.cast, canvas);
+    expect(await visible(defs, "banh-chung")).toBe(true);
+    for (const st of ["wrapped", "cooked", "onaltar"]) expect(await visible(defs, `banh-chung--${st}`), st).toBe(false);
+  });
+
+  it("the fix: ensureStateSymbols gives every state a symbol, and a blank one (drawn outside its viewBox) the base drawing", async () => {
+    const { placeholderLibrary, ensureStateSymbols } = await import("@/lib/services/director/cast");
+    const out = await ensureStateSymbols(cakePlan, placeholderLibrary(cakePlan.cast, canvas), canvas, "16:9");
+    expect(out.fixed).toEqual(["banh-chung--wrapped", "banh-chung--cooked", "banh-chung--onaltar"]);
+    for (const st of cakePlan.cast[1].states!) expect(await visible(out.defs, `banh-chung--${st.id}`), st.id).toBe(true);
+    // a state drawn entirely outside its viewBox
+    const offCanvas = `${placeholderLibrary(cakePlan.cast, canvas)}\n<symbol id="banh-chung--cooked" viewBox="0 0 400 400"><rect x="900" y="900" width="200" height="200" fill="#2f4f2f"/></symbol>`;
+    const fixed = await ensureStateSymbols(cakePlan, offCanvas, canvas, "16:9");
+    expect(fixed.fixed).toContain("banh-chung--cooked");
+    expect(fixed.defs).not.toContain('x="900"');
+    for (const st of cakePlan.cast[1].states!) expect(await visible(fixed.defs, `banh-chung--${st.id}`), st.id).toBe(true);
+  });
+
+  it("end to end: whatever the Cast returns, every state symbol in the run's library shows something alone", async () => {
+    // a Cast that never returns a usable library: every member falls back to its placeholder
+    const crew: MockHandler = (m, o, i) => (/^ROLE: CAST/.test(m[0].content) ? "nothing usable" : recognizingCrew(["a glass wind chime"], [])(m, o, i));
+    const { projectId } = await castOnly(crew);
+    const defs = (await prisma.project.findUniqueOrThrow({ where: { id: projectId } })).artworkDefs ?? "";
+    for (const id of ["furin", "furin--still", "furin--ringing"]) expect(await visible(defs, id), id).toBe(true);
+  }, 120_000);
+});
+
+describe("Round 3 · a street or market is paved with stone (the Gion street's ground read as water)", () => {
+  it("a blue or green ground on a paved place becomes stone; a stone-coloured one is kept; the paving has courses and joints", async () => {
+    const { buildSet, stoneGround } = await import("@/lib/services/director/setKit");
+    expect(stoneGround("#3d78b5")).not.toBe("#3d78b5");
+    expect(stoneGround("#2f8f5a")).not.toBe("#2f8f5a");
+    expect(stoneGround("#a9a39a")).toBe("#a9a39a");
+    expect(stoneGround("#c9b89a")).toBe("#c9b89a");
+    expect(stoneGround(undefined)).toBe("#b3aca1");
+    const spec = { place: "market" as const, time: "dusk" as const, weather: "clear" as const, main: "#c9a27a", accent: "#b04a3a", ground: "#3d78b5", props: [], dressing: [] };
+    const defs = buildSet("gion", spec, canvas, []);
+    expect(defs).not.toMatch(/#3d78b5/i);
+    // horizontal course lines with vertical joints, several rows
+    expect((defs.match(/<path d="M0 [\d.]+ H1920( M[\d.]+ [\d.]+ V[\d.]+)+"/g) ?? []).length).toBeGreaterThanOrEqual(4);
+    // the near ground is grey stone, not blue: sample the bottom band of the render
+    const png = await renderArtwork(defs, '<use href="#gion" x="0" y="0" width="1920" height="1080"/>', "16:9", "1K");
+    const { data, info } = await sharp(png).extract({ left: 0, top: 520, width: 1024, height: 50 }).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    let r = 0, g = 0, b = 0;
+    for (let k = 0; k < data.length; k += info.channels) [r, g, b] = [r + data[k], g + data[k + 1], b + data[k + 2]];
+    const px = data.length / info.channels;
+    expect(b / px - r / px).toBeLessThan(20);
   });
 });

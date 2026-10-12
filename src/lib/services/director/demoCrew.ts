@@ -114,8 +114,19 @@ export function demoHandler(opts: { criticScores?: number[]; shots?: number } = 
         return { sees: ["the hero in front of the house"], problems: [], matchesShot: true };
       case "NAME_OBJECT":
         return { name: "an object", description: "a drawn object on a plain background" };
+      case "ANATOMY":
+        return {
+          category: ["object"],
+          parts: [
+            { part: "body", look: "the main shape, centred" },
+            { part: "highlight", look: "a white highlight on the upper left" },
+            { part: "base", look: "what it rests on, below" },
+          ],
+          notLike: [],
+          states: [],
+        };
       case "PROP_CHECK":
-        return { match: true, reason: "The scripted crew always recognises the object." };
+        return { category: true, parts: [], lookalike: false, stateChange: /No state is checked/.test(user) ? null : true, reason: "The scripted crew always recognises the object." };
       case "EDITOR":
         return { edits: [], notes: "No changes needed." };
       case "CONTINUITY":

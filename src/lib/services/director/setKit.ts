@@ -639,11 +639,13 @@ function landscape(c: Ctx): void {
     // countryside / mountains / snowfield: rolling fields
     for (let k = 0; k < 3; k++) o.push(`<path d="M0 ${n(groundY - 120 + k * 40)} Q${n(W * 0.3)} ${n(groundY - 190 + k * 50)} ${n(W * 0.6)} ${n(groundY - 110 + k * 40)} T${W} ${n(groundY - 130 + k * 40)} L${W} ${n(groundY + 40)} L0 ${n(groundY + 40)} Z" fill="${mix(spec.place === "snowfield" ? "#e9eef5" : spec.main, sky.horizon, 0.45 - k * 0.15)}"/>`);
   }
-  // near ground with texture
-  const ground = spec.ground ?? (spec.place === "beach" ? "#ecd9b0" : spec.place === "snowfield" ? "#f2f5fa" : spec.place === "street" || spec.place === "market" ? "#b9b1a6" : mix(spec.main, "#3f7d4e", 0.3));
+  // near ground with texture; a street or market is paved with stone (owner 2026-10-12: the Gion street's ground read as water)
+  const paved = spec.place === "street" || spec.place === "market";
+  const ground = paved ? stoneGround(spec.ground) : (spec.ground ?? (spec.place === "beach" ? "#ecd9b0" : spec.place === "snowfield" ? "#f2f5fa" : mix(spec.main, "#3f7d4e", 0.3)));
   const g0 = c.night ? mix(ground, "#0b1330", 0.45) : ground;
   o.push(`<path d="M0 ${n(groundY)} Q${n(W * 0.35)} ${n(groundY - 26)} ${n(W * 0.6)} ${n(groundY - 6)} T${W} ${n(groundY - 14)} L${W} ${H} L0 ${H} Z" fill="${grad(c, "ground", [[0, mix(g0, "#ffffff", 0.08)], [1, mix(g0, "#1d1a26", 0.18)]])}"/>`);
-  for (let k = 0; k < 46; k++) {
+  if (paved) paving(c, g0, groundY);
+  for (let k = 0; k < (paved ? 0 : 46); k++) {
     const gx = W * rand(c.id, k + 800);
     const gy = groundY + 20 + (H - groundY - 30) * rand(c.id, k + 850);
     if (spec.place === "beach" || spec.place === "snowfield") o.push(`<circle cx="${n(gx)}" cy="${n(gy)}" r="${n(2 + 3 * rand(c.id, k + 900))}" fill="${mix(g0, "#1d1a26", 0.2)}" fill-opacity="0.5"/>`);
@@ -664,6 +666,42 @@ function landscape(c: Ctx): void {
     if (p === "boat" && water) drawProp(c, p, W * sx, (horizon + groundY) / 2 + 40, sc * 0.9);
     else drawProp(c, p, W * sx, sy, sc);
   });
+}
+
+/** Stone for a paved ground: the spec's colour unless it would read as water or grass (a saturated blue, teal or green). */
+export function stoneGround(ground: string | undefined): string {
+  const STONE = "#b3aca1";
+  if (!ground) return STONE;
+  const [r, g, b] = rgb(ground).map((v) => v / 255);
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  const sat = max ? d / max : 0;
+  if (!d || sat < 0.22) return ground;
+  const hue = (max === r ? 60 * (((g - b) / d) % 6) : max === g ? 60 * ((b - r) / d + 2) : 60 * ((r - g) / d + 4)) + 360;
+  const h = hue % 360;
+  return h >= 75 && h <= 260 ? mix(STONE, ground, 0.12) : ground;
+}
+
+/** Flagstone courses from the ground line down, wider and taller toward the camera, joints staggered row to row. */
+function paving(c: Ctx, stone: string, groundY: number): void {
+  const { W, H, out: o } = c;
+  const joint = mix(stone, "#1d1a26", 0.35);
+  let y = groundY + 6;
+  for (let row = 0; y < H; row++) {
+    const h = 20 + 16 * row;
+    const w = 110 + 70 * row;
+    const shift = row % 2 ? w / 2 : 0;
+    const d = [`M0 ${n(y)} H${W}`];
+    for (let x = -shift; x < W; x += w) if (x > 0) d.push(`M${n(x)} ${n(y)} V${n(Math.min(H, y + h))}`);
+    o.push(`<path d="${d.join(" ")}" stroke="${joint}" stroke-opacity="0.55" stroke-width="${n(2 + row * 0.6)}" fill="none"/>`);
+    // a few lighter and darker stones, so the paving reads as stone, not tiles
+    for (let k = 0; k < 3; k++) {
+      const x = -shift + w * Math.floor(rand(c.id, row * 10 + k + 1700) * (W / w + 1));
+      o.push(`<rect x="${n(x + 3)}" y="${n(y + 3)}" width="${n(w - 6)}" height="${n(Math.max(4, Math.min(h, H - y) - 6))}" fill="${mix(stone, k % 2 ? "#1d1a26" : "#ffffff", 0.1)}" fill-opacity="0.6"/>`);
+    }
+    y += h;
+  }
 }
 
 function weather(c: Ctx): void {

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { SCORE_MOODS, type CastMember, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
+import { SCORE_MOODS, type Anatomy, type CastMember, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { CanvasSize } from "@/lib/services/svgRenderer";
 import { CRITTER_VOCABULARY, DOLL_VOCABULARY, EXPRESSIONS, POSES } from "@/lib/services/director/dollKit";
 import { SET_VOCABULARY } from "@/lib/services/director/setKit";
@@ -72,7 +72,7 @@ export function directorSystem(opts: { minShots: number; maxShots: number; langu
     '- shots[].transition INTO the shot: "cut" by default, "dissolve" for time passing, "fadeBlack" for the final shot.',
     "- Group shots into scenes with a short scene label; keep the 180° rule and vary shot sizes between consecutive shots of a scene.",
     `- COVERAGE (a film, not a slideshow): open with an establishing wide shot; use medium shots, close-ups on faces at emotional beats, at least one over-the-shoulder or two-shot when two characters talk, and an insert/detail shot of a key prop. Never two consecutive shots with the same shot type AND the same framing. In films of 6+ shots use at least 2 distinct set areas or camera angles (another corner of the room, outside vs inside, a high or low angle). When the story spans time, give the light an arc (dawn → noon → dusk → night) and say it in each description. If a shot deliberately repeats an earlier composition (a callback), set "intentionalRepeat": true.`,
-    '- PROP STATES: when the story\'s key object CHANGES (a kite intact → torn → mended; banana leaves → a wrapped cake → a cooked cake; a wind chime still → ringing), give that prop "states": [{"id": "intact", "look": "…"}, {"id": "torn", "look": "a long rip from corner to corner, the sail flapping loose"}, …] (2–4, the first is how it starts; each look says what is VISIBLY different), and in every shot that shows it set "propStates": [{"prop": "<id>", "state": "<state id>"}]. A prop that flies on a string from someone\'s hand (a kite, a balloon) gets "airborne": true; the engine draws the string.',
+    '- PROP STATES: when the story\'s key object CHANGES (a kite intact → torn → mended; banana leaves → a wrapped cake → a cooked cake; a wind chime still → ringing), give that prop "states": [{"id": "intact", "look": "…"}, {"id": "torn", "look": "a long rip from corner to corner, the sail flapping loose"}, …] (2–4, the first is how it starts and already shows the object itself, not its loose ingredients; each look says what is VISIBLY different), and in every shot that shows it set "propStates": [{"prop": "<id>", "state": "<state id>"}]. A prop that flies on a string from someone\'s hand (a kite, a balloon) gets "airborne": true; the engine draws the string.',
     `- shots[].mood: the music under the shot, one of ${SCORE_MOODS.join("|")} (the engine composes an original score from it; keep it stable within a scene).`,
     `- shots[].acting: for EVERY character visible in the shot, {"who": id, "pose": one of ${POSES.join("|")}, "expression": one of ${EXPRESSIONS.join("|")}}. Characters must ACT: wave to greet, point at what they notice, hold an object they use, sit when they rest, walk when they arrive or leave, hug at a reunion, bow to thank, kneel to look closely, look-left/look-right toward whom they listen to. Expressions follow the beat (smile, laugh, sad, surprised, sleepy, neutral). Vary them across shots; do not repeat stand+neutral.`,
   ].join("\n");
@@ -184,8 +184,51 @@ export function castSystem(canvas: CanvasSize, style: string): string {
 
 export function castUser(plan: Plan, only?: readonly CastMember[], hero?: string | null): string {
   const members = only ?? plan.cast;
-  const lines = members.map((c: CastMember) => `- ${c.id} (${c.kind}, "${c.name}"): ${c.look} — colors ${c.colors.join(" ")}${hero && (c.id === hero || c.id.startsWith(`${hero}--`)) ? " — THE HERO OBJECT: seen close up in inserts, so draw it in detail (12+ shapes: parts, shaded body, rim light, highlight, pattern, what it hangs from or rests on), never a plain block" : ""}`);
-  return [`Film: "${plan.title}". Palette: ${plan.palette.join(" ")}.`, only ? "Draw ONLY these cast members:" : "Cast & Set Bible:", quoteData("notes", lines.join("\n"), 5000)].join("\n");
+  const anatomy = hero ? plan.cast.find((c) => c.id === hero)?.anatomy : undefined;
+  const lines = members.map((c: CastMember) => {
+    const isHero = hero && (c.id === hero || c.id.startsWith(`${hero}--`));
+    return `- ${c.id} (${c.kind}, "${c.name}"): ${c.look} — colors ${c.colors.join(" ")}${isHero ? ` — THE HERO OBJECT: seen close up in inserts, so draw it in detail (${HERO_SHAPES}+ shapes: parts, shaded body, rim light, highlight, pattern, what it hangs from or rests on), never a plain block${anatomy ? `. ${anatomyBrief(anatomy, c.id.startsWith(`${hero}--`) ? c.id.slice(hero.length + 2) : null)}` : ""}` : ""}`;
+  });
+  return [`Film: "${plan.title}". Palette: ${plan.palette.join(" ")}.`, only ? "Draw ONLY these cast members:" : "Cast & Set Bible:", quoteData("notes", lines.join("\n"), 6000)].join("\n");
+}
+
+/** The shape floor of the hero object (cast.ts symbolProblems enforces it). */
+export const HERO_SHAPES = 12;
+
+/** The key object's anatomy as a drawing brief: every part a stranger needs to see, and (for a state) its visible change. */
+export function anatomyBrief(a: Anatomy, state: string | null): string {
+  const change = state ? a.states.find((x) => x.id === state)?.change : null;
+  return [
+    `ANATOMY — draw EVERY part so a stranger names it "${a.category[0]}" at a glance: ${a.parts.map((p) => `${p.part} (${p.look})`).join("; ")}`,
+    a.notLike.length ? `It must NOT read as ${a.notLike.join(" / ")}` : "",
+    change ? `THIS STATE's visible change, unmistakable: ${change}` : "",
+  ]
+    .filter(Boolean)
+    .join(". ");
+}
+
+// ---------- Anatomy (Ultra): the key object's visible parts, before the Cast draws ----------
+
+export function anatomySystem(): string {
+  return [
+    "ROLE: ANATOMY",
+    "You are the film's prop master. Before the artist draws the story's KEY OBJECT, write what a stranger must SEE to recognise it in a flat vector drawing with no caption. A vision model will name the drawing with no story: it may not know the object's own name, so the object must be told by its VISIBLE features.",
+    GUARD,
+    'Output ONE JSON object: {"category": ["what a stranger may call it, most specific first", …], "parts": [{"part": "short name", "look": "shape, relative size and position, colour, material cue"}, …], "notLike": ["everyday look-alike to avoid", …], "states": [{"id": "<state id>", "change": "what is VISIBLY different in this state"}, …]}',
+    "- category: 1–5 everyday words a stranger could use (\"wind chime\", \"glass bell\", \"hanging bell\"; \"rice cake wrapped in leaves\", \"leaf parcel\"). Not the object's foreign name alone.",
+    "- parts: 3–6 parts that together make it THIS object and not a look-alike: shape, size relative to the whole, where it sits, colour, and a material cue (transparent glass with a white highlight, glossy leaf with veins, thin bamboo strings, paper). Real proportions; the defining silhouette first.",
+    "- notLike: 1–5 generic things a careless drawing of it turns into (a gift box with a ribbon, a picture frame, a candle holder, a spatula).",
+    "- states: one entry per planned state id, in order; change = the visible difference a viewer must notice (\"a jagged hole with a flap hanging and the sky showing through\"), not a feeling. The first state's change is its plain, finished look.",
+    "- Follow the owner's KEY OBJECT notes in the story when there are any; they win over your own idea.",
+  ].join("\n");
+}
+
+export function anatomyUser(member: CastMember, story: string): string {
+  return [
+    `Key object: ${member.name} (#${member.id}).`,
+    quoteData("notes", `Planned look: ${member.look}${member.states?.length ? `\nPlanned states: ${member.states.map((st) => `${st.id} — ${st.look}`).join("; ")}` : ""}`, 1600),
+    quoteData("story", story, 4000),
+  ].join("\n\n");
 }
 
 /** Repair turn for the library: accepted symbols are kept; only the failing ones are redrawn. */
@@ -341,31 +384,50 @@ export function nameObjectUser(): string {
 export function propCheckSystem(): string {
   return [
     "ROLE: PROP_CHECK",
-    "A viewer saw a drawing of an object ALONE, with no story, and named it. Decide whether what they saw is the object the film planned (and, when a state is planned, that state).",
+    "A viewer saw a drawing of an object ALONE, with no story, and named and described it. Report what their WORDS show about the planned object, honestly; the engine decides the verdict from your report.",
     GUARD,
-    'Output ONE JSON object: {"match": true|false, "reason": "one short sentence"}.',
-    '- match = true when the viewer\'s name is the planned kind of object, in other words or a close synonym ("wind chime" for 風鈴, "rice cake wrapped in leaves" for bánh chưng, "kite" for a diamond kite). The colours may differ slightly.',
-    "- match = false when they named a different kind of thing (a flower, a picture frame, a lamp) or when the planned state does not show (a kite planned TORN that they saw as whole).",
+    'Output ONE JSON object: {"category": true|false, "parts": ["part name", …], "lookalike": true|false, "stateChange": true|false|null, "reason": "one short sentence"}.',
+    "- category: true when the viewer's name or description names one of the object's categories or a close synonym (\"bell\" or \"chime\" for a wind chime; \"rice cake in leaves\" or \"leaf parcel\" for bánh chưng; \"kite\" for a kite).",
+    "- parts: the planned anatomy parts their description shows, by the part's name. A part counts only when its DISTINCTIVE feature is named (\"thin bamboo strings\", not just \"lines\"; \"transparent glass bell\", not just \"a shape\"). A look-alike's part does not count (a ribbon with a bow is not bamboo string).",
+    "- lookalike: true when they named a different everyday thing the drawing merely resembles (a gift box, a picture frame, a window, a calendar, a candle holder, a spatula, a broom), including the object's listed look-alikes.",
+    "- stateChange: when a state is planned, true only if their description names that state's visible change (a torn kite: a hole, a rip, a flap; a patched kite: a patch with stitches); false if it does not; null when no state is planned.",
   ].join("\n");
 }
 
-export function propCheckUser(opts: { name: string; look: string; state?: { id: string; look: string } | null; saw: { name: string; description: string } }): string {
+export function propCheckUser(opts: { name: string; look: string; anatomy?: Anatomy | null; state?: { id: string; look: string } | null; saw: { name: string; description: string } }): string {
+  const a = opts.anatomy;
+  const change = opts.state ? (a?.states.find((x) => x.id === opts.state!.id)?.change ?? opts.state.look) : null;
   return [
     `Planned object: ${opts.name}.`,
-    quoteData("notes", `Planned look: ${opts.look}${opts.state ? `\nPlanned state: ${opts.state.id} — ${opts.state.look}` : ""}`, 900),
+    quoteData(
+      "notes",
+      [
+        `Planned look: ${opts.look}`,
+        a ? `Categories: ${a.category.join(", ")}` : "",
+        a ? `Anatomy parts: ${a.parts.map((p) => `${p.part} — ${p.look}`).join("; ")}` : "",
+        a?.notLike.length ? `Look-alikes (NOT this object): ${a.notLike.join(", ")}` : "",
+        opts.state ? `Planned state: ${opts.state.id} — visible change: ${change}` : "No state is checked.",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      1600,
+    ),
     quoteData("notes", `The viewer named it: "${opts.saw.name}". They described it: ${opts.saw.description}`, 600),
   ].join("\n\n");
 }
 
-/** The Cast's redraw turn for a hero prop the viewer did not recognise. */
-export function castRecognizeUser(plan: Plan, member: CastMember, saw: { name: string; description: string }, previous: string): string {
+/** The Cast's redraw turn for a hero prop the viewer did not recognise (or a redraw the engine rejected). */
+export function castRecognizeUser(plan: Plan, member: CastMember, saw: { name: string; description: string }, previous: string, rejected?: string | null): string {
   return [
-    castUser(plan, [member], member.id),
+    castUser(plan, [member], plan.cast.some((c) => c.id === member.id) ? member.id : member.id.split("--")[0]),
     `A viewer who saw your #${member.id} ALONE on a plain background named it "${saw.name}" (${saw.description}). It must read at a glance as: ${member.name}.`,
-    "Redraw it so a stranger names it correctly: its defining silhouette first (what makes this object THIS object), its characteristic parts, materials and how it hangs or rests; then shading, rim light and highlight. Keep its id, viewBox and colours.",
+    `Redraw it so a stranger names it correctly: its defining silhouette first (what makes this object THIS object), every anatomy part, its materials and how it hangs or rests; then shading, rim light and highlight. RULE: at least ${HERO_SHAPES} separate shapes (<path>, <rect>, <circle>, <ellipse>, <polygon>…) inside the symbol, or the engine rejects it. Keep its id, viewBox and colours.`,
+    rejected ? `Your last redraw was REJECTED by the engine before anyone saw it: ${rejected}. Fix exactly that.` : "",
     `Your previous drawing:\n${quoteData("previous", previous, 8000)}`,
     "Return ONLY this symbol (plus its gradients) in the ```svg block.",
-  ].join("\n\n");
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 }
 
 // ---------- Editor (Nano) ----------
