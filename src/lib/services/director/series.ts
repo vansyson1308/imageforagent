@@ -108,6 +108,96 @@ export async function listSeries(demoSession: string | null, demoEnabled: boolea
   });
 }
 
+/**
+ * A full take that REUSES an approved cast-only preview (owner 2026-10-12): the preview run's
+ * whole Bible (ids, looks, prop states), its library (every symbol, state symbols, sets and their
+ * lighting variants, kit characters) and its recognition results, verbatim. The take's planner may
+ * use only these cast ids; the Cast is not called; the recognition gate is not re-spent.
+ */
+export interface CastFromRun extends SeriesData {
+  readonly sourceRunId: string;
+  /** the preview's recognition results, carried over (no re-spend) */
+  readonly recognition: ReadonlyArray<{ symbol: string; prop: string; state: string | null; ok: boolean | null; saw: string; redraws: number }>;
+  /** the preview's kit sets' times of day, variants included (retimeSets / the fidelity brief) */
+  readonly setTimes: ReadonlyMap<string, string>;
+}
+
+const previewSummarySchema = z
+  .object({
+    propRecognition: z.array(z.object({ symbol: z.string(), prop: z.string(), state: z.string().nullable(), ok: z.boolean().nullable(), saw: z.string(), redraws: z.number() })).optional(),
+    castSetTimes: z.record(z.string(), z.string()).optional(),
+  })
+  .passthrough();
+
+/** Load a finished run's cast for reuse (operator only, checked by the route). */
+export async function loadCastFromRun(runId: string): Promise<CastFromRun> {
+  const run = await prisma.directorRun.findUnique({ where: { id: runId } });
+  if (!run) throw new AppError("NOT_FOUND", "Run not found.");
+  if (run.status !== "done" || !run.library || !run.bible) throw new AppError("VALIDATION", "Only a finished run with a cast library can lend its cast.", "Run a cast-only preview first (stopAfter: cast).");
+  const bible = bibleSchema.parse(JSON.parse(run.bible));
+  const summary = previewSummarySchema.safeParse(run.summary ? JSON.parse(run.summary) : {});
+  const s = summary.success ? summary.data : {};
+  return {
+    id: run.id,
+    sourceRunId: run.id,
+    name: `cast of run ${run.id}`,
+    language: run.language,
+    style: run.style,
+    palette: bible.palette,
+    cast: bible.cast,
+    library: run.library,
+    kits: kitsFromJson(run.kits),
+    voices: {},
+    recognition: s.propRecognition ?? [],
+    setTimes: new Map(Object.entries(s.castSetTimes ?? inferSetTimes(bible.cast, run.library))),
+  };
+}
+
+/**
+ * A run from before `castSetTimes` was kept: each kit set's lighting is read back from the variant
+ * the library holds (a set with a `--night` variant is lit for day, and the other way round).
+ */
+export function inferSetTimes(cast: ReadonlyArray<Pick<CastMember, "id" | "kind">>, defs: string): Record<string, string> {
+  const has = (id: string) => new RegExp(`\\bid\\s*=\\s*["']${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`).test(defs);
+  const out: Record<string, string> = {};
+  for (const c of cast.filter((m) => m.kind === "set")) {
+    if (has(`${c.id}--night`)) Object.assign(out, { [c.id]: "day", [`${c.id}--night`]: "night" });
+    else if (has(`${c.id}--day`)) Object.assign(out, { [c.id]: "night", [`${c.id}--day`]: "day" });
+  }
+  return out;
+}
+
+/**
+ * The symbols a reused cast is identified by, each with a short sha256 of its markup: every cast
+ * member, each prop state (`<id>--<state>`) and each set lighting variant (`<id>--day|night`) the
+ * library holds. The preview sheet and the take's log print the same list (owner 2026-10-12).
+ */
+export function castHashes(cast: ReadonlyArray<Pick<CastMember, "id" | "kind" | "states">>, defs: string): Array<{ id: string; sha: string }> {
+  const ids = cast.flatMap((c) => [c.id, ...(c.states ?? []).map((st) => `${c.id}--${st.id}`), ...(c.kind === "set" ? [`${c.id}--day`, `${c.id}--night`] : [])]);
+  return ids.flatMap((id) => {
+    const h = symbolHash(defs, id);
+    return h ? [{ id, sha: h.slice(0, 12) }] : [];
+  });
+}
+
+/** The Director's brief for a take that reuses an approved cast: ONLY these ids, these prop states. */
+export function castFromRunBrief(cast: readonly CastMember[], palette: readonly string[]): string {
+  return [
+    "This film REUSES an approved cast (the engine already has every one of them drawn). Use ONLY these cast ids, exactly as written; do not add new characters, props or sets. Keep each one's look.",
+    ...cast.map((c) => `- ${c.id} (${c.kind}, "${c.name}"): ${c.look}${c.states?.length ? ` — STATES: ${c.states.map((st) => `"${st.id}" (${st.look})`).join(", ")}; in every shot that shows it, set "propStates": [{"prop": "${c.id}", "state": …}]` : ""}`),
+    palette.length ? `Palette: ${palette.join(" ")}.` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** A plan locked to a reused cast: the cast IS the approved one (Bible entries verbatim), shots keep only its ids. */
+export function lockFixedCast(plan: Plan, cast: readonly CastMember[]): { plan: Plan; dropped: string[] } {
+  const ids = new Set(cast.map((c) => c.id));
+  const dropped = [...new Set([...plan.cast.map((c) => c.id), ...plan.shots.flatMap((s) => s.cast)])].filter((id) => !ids.has(id));
+  return { plan: { ...plan, cast: [...cast], shots: plan.shots.map((s) => ({ ...s, cast: s.cast.filter((id) => ids.has(id)) })) }, dropped };
+}
+
 /** The Director's brief for an episode: the recurring cast to reuse by id. */
 export function seriesBrief(series: SeriesData): string {
   const lines = series.cast.map((c) => `- ${c.id} (${c.kind}, "${c.name}"): ${c.look}`);

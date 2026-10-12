@@ -11,7 +11,7 @@ import { createRun, isRunLive } from "@/lib/services/director/loop";
 import { demoFloorPolicy } from "@/lib/services/director/demoPolicy";
 import { reapOrphanRuns, runEventStream, SSE_HEADERS, startDetachedRun } from "@/lib/services/director/runHub";
 import { STYLE_PRESETS } from "@/lib/services/director/prompts";
-import { loadSeries } from "@/lib/services/director/series";
+import { loadCastFromRun, loadSeries } from "@/lib/services/director/series";
 import { decodeWav } from "@/lib/services/audio/wav";
 import type { NarrationShot } from "@/lib/services/director/fixedNarration";
 
@@ -47,6 +47,8 @@ const directorRequestSchema = z.object({
   figure: z.enum(["storybook", "adult"]).optional(),
   /** "cast" = an operator's cast-only preview (plan + library + recognition gate, no shots; owner 2026-10-12) */
   stopAfter: z.literal("cast").optional(),
+  /** an operator's full take on an APPROVED preview's cast: that run's Bible and library, verbatim (owner 2026-10-12) */
+  castFromRun: z.string().regex(/^[a-z0-9]{10,40}$/).optional(),
   narrationShots: z
     .array(
       z.object({
@@ -75,7 +77,8 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     const cfg = demoConfig();
     const sid = requireDemoSession(req, cfg);
     const body = await parseBody(req, directorRequestSchema);
-    if (body.stopAfter && cfg.enabled && !isOperatorRequest(req, cfg)) throw new AppError("UNAUTHORIZED", "A cast-only preview is an operator tool.");
+    if ((body.stopAfter || body.castFromRun) && cfg.enabled && !isOperatorRequest(req, cfg)) throw new AppError("UNAUTHORIZED", "Cast-only previews and cast reuse are operator tools.");
+    if (body.castFromRun && (body.seriesId || body.stopAfter)) throw new AppError("VALIDATION", "castFromRun can't be combined with seriesId or stopAfter.");
     const project = await prisma.project.findUnique({ where: { id } });
     if (!project) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
     if (cfg.enabled && project.demoSession !== sid) throw new AppError("UNAUTHORIZED", "This demo project belongs to another session.");
@@ -101,10 +104,12 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     const ceiling = runCeiling(deps.ceiling, isOperatorRequest(req, cfg));
     const runDeps = { ...deps, ceiling, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }), ...(floor && { floorRedraw: { enabled: floor.enabled, reason: floor.reason } }) };
     const series = body.seriesId ? await loadSeries(body.seriesId, sid, cfg.enabled) : null;
-    const { seriesId: _ignored, narrationShots, ...rest } = body;
+    const castFrom = body.castFromRun ? await loadCastFromRun(body.castFromRun) : null;
+    const { seriesId: _ignored, castFromRun: _from, narrationShots, ...rest } = body;
     void _ignored;
+    void _from;
     if (narrationShots && body.narration) throw new AppError("VALIDATION", "Send either narration or narrationShots, not both.");
-    const request = { projectId: id, ...rest, ...(narrationShots && { narrationShots: decodeNarration(narrationShots) }), series, critic: body.profile === "super-only" ? false : body.critic };
+    const request = { projectId: id, ...rest, ...(narrationShots && { narrationShots: decodeNarration(narrationShots) }), series, castFrom, critic: body.profile === "super-only" ? false : body.critic };
     const { runId, budget } = await createRun(request, runDeps);
     startDetachedRun(runId, request, runDeps, budget);
     return new Response(runEventStream(runId, { replay: true }), { headers: { ...SSE_HEADERS, "X-Director-Run": runId } });

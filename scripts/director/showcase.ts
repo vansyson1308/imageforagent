@@ -7,6 +7,7 @@
  *   npm run director:showcase -- --base http://localhost:3000           # a local `npm run dev` with NEBIUS_API_KEY
  *   … [--only lantern] [--max-shots 8] [--max-usd 0.6] [--set v2] [--remaster 2K@24]
  *   … --refilm v2-kite=<projectId>[,…]   # re-assemble a published film from its project (no model call; D43)
+ *   … --set v2 --cast-from v2-furin=<previewRunId>[,…]   # a take on an APPROVED cast-only preview's cast (owner 2026-10-12)
  *
  * v2 (owner QC 2026-10-10): `--set v2` films the 11-line narrated tellings in
  * showcaseStories.ts with research on, checks the run against the publish gate
@@ -129,13 +130,16 @@ async function main() {
         pid = await client.createProject(`Showcase · ${s.slug}`);
         console.log(`▶ ${s.slug} (${s.language}) project ${pid}${attempt ? " (retry)" : ""}`);
         const v2 = "narration" in s ? { ...narrationOf(s.slug, s.narration), research: arg("--research", "on") === "on" } : { maxShots, research: false };
+        // reuse the approved preview's cast verbatim: its run id per slug (the take's log prints the symbol hashes)
+        const castFromRun = arg("--cast-from").split(",").map((p) => p.split("=")).find(([k]) => k === s.slug)?.[1];
         // the v2 tellings send their SETS brief before the story (the published story stays the lines alone)
-        runId = await client.direct(pid, { story: "brief" in s ? `${s.brief}\n\n${s.story}` : s.story, language: s.language, style: s.style, maxUsd, critic: true, ...v2 }, (e) => {
+        runId = await client.direct(pid, { story: "brief" in s ? `${s.brief}\n\n${s.story}` : s.story, language: s.language, style: s.style, maxUsd, critic: true, ...v2, ...(castFromRun && { castFromRun }) }, (e) => {
           appendFileSync(log, JSON.stringify(e) + "\n");
           if (e.type === "step") {
             const st = e.step as { role: string; action: string; shotIndex: number | null; score: number | null; costUsd: number; error: string | null };
             streamed += st.costUsd;
             console.log(`  ${st.role.padEnd(10)} ${st.action.padEnd(16)} ${st.shotIndex ?? ""} ${st.score ?? ""} $${st.costUsd.toFixed(5)} ${st.error ? "⚠ " + st.error.slice(0, 80) : ""}`);
+            if (/^(cast-from-run|recognize:carried|plan:cast-locked)$/.test(st.action)) console.log(`    ${(e.step as { summary?: string }).summary ?? ""}`);
           }
           if (e.type === "done") done = e;
         });
@@ -151,6 +155,14 @@ async function main() {
       `/api/projects/${pid}/director/runs/${runId}`,
     );
     appendLedger({ script: "showcase", label: s.slug, model: "crew", tokensIn: trace.tokensIn, tokensOut: trace.tokensOut, costUsd: trace.costUsd });
+    // a take on an approved preview's cast: every reused symbol's hash, to compare with the preview sheet's
+    const reused = ((trace.steps ?? []) as Array<{ action: string; output?: string | null }>).find((st) => st.action === "cast-from-run");
+    if (reused?.output) {
+      const r = JSON.parse(reused.output) as { sourceRunId: string; hashes: Array<{ id: string; sha: string }> };
+      const lines = [`# cast reused from preview run ${r.sourceRunId}:`, ...r.hashes.map((h) => `#   #${h.id} ${h.sha}`)];
+      appendFileSync(log, `${lines.join("\n")}\n`);
+      console.log(lines.map((l) => l.replace(/^# ?/, "  ")).join("\n"));
+    }
     writeFileSync(`docs/hackathon/evidence/showcase-${s.slug}-trace.json`, JSON.stringify(trace, null, 2));
     if (!done || trace.status !== "done") {
       console.log(`✘ ${s.slug}: status ${trace.status}. Kept the trace as evidence and skipped publishing.`);

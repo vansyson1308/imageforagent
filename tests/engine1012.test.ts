@@ -347,3 +347,71 @@ describe("A · hero-prop recognition gate (mock crew): render alone → the visi
     expect(measuredProblems("done", { ...summary, stopAfter: undefined }).join(" ")).toMatch(/#furin was not checked by the recognition gate/);
   }, 120_000);
 });
+
+// ---------- a full take REUSES the approved preview's cast (owner 2026-10-12, before any full take) ----------
+
+describe("castFromRun: a take on an approved cast-only preview reuses its Bible, library and recognition verbatim", () => {
+  it("no Cast call, no re-check, the planner is told the cast and its states, new ids are dropped, and the hashes match the preview's", async () => {
+    const { loadCastFromRun, castHashes } = await import("@/lib/services/director/series");
+    // 1 · the preview (cast-only), approved by eye
+    const preview = await castOnly(recognizingCrew(["a glass wind chime"], []));
+    const previewRun = await prisma.directorRun.findUniqueOrThrow({ where: { id: preview.runId } });
+    const previewBible = JSON.parse(previewRun.bible!) as Plan;
+    const previewHashes = castHashes(previewBible.cast, previewRun.library!);
+    expect(previewHashes.map((h) => h.id)).toEqual(expect.arrayContaining(["furin", "furin--still", "furin--ringing", "home", "hero"]));
+    // 2 · the take
+    const calls: string[] = [];
+    const prompts: string[] = [];
+    const base = recognizingCrew(["never asked"], []);
+    const take: MockHandler = (m, o, i) => {
+      const role = m[0].content.match(/^ROLE: (\w+)/)?.[1] ?? "?";
+      calls.push(role);
+      if (role === "DIRECTOR") {
+        prompts.push(m[m.length - 1].content);
+        // the planner tries to add a new prop: the locked cast drops it
+        const p = furinPlan("Yui hangs a wind chime. It rings. Grandma smiles. The summer ends.");
+        return { ...p, cast: [...p.cast, { id: "teacup", name: "Teacup", kind: "prop", look: "a small teacup", colors: ["#ffffff"] }], shots: p.shots.map((s) => ({ ...s, cast: [...s.cast, "teacup"] })) };
+      }
+      return base(m, o, i);
+    };
+    const p = await prisma.project.create({ data: { name: "engine1012-take" } });
+    created.push(p.id);
+    const d = { provider: new MockLlmProvider(take), models: MOCK_MODELS, visionAvailable: true, modelNotes: [], tavily: null, ceiling: DEFAULT_BUDGET, floorRedraw: { enabled: false, reason: "test" } };
+    const castFrom = await loadCastFromRun(preview.runId);
+    const req = { projectId: p.id, story: "Yui hangs a wind chime. It rings. Grandma smiles. The summer ends.", language: "en", style: "storybook", critic: false, research: false, maxShots: 4, castFrom };
+    const { runId, budget } = await createRun(req, d);
+    const ctrl = registerRun(runId);
+    let summary;
+    try {
+      summary = await executeRun(runId, req, d, budget, () => {}, ctrl.signal);
+    } finally {
+      unregisterRun(runId);
+    }
+    expect(summary.status).toBe("done");
+    expect(summary.castFromRun).toBe(preview.runId);
+    // no Cast call and no recognition re-spend
+    expect(calls).not.toContain("CAST");
+    expect(calls).not.toContain("NAME_OBJECT");
+    expect(calls).not.toContain("PROP_CHECK");
+    expect(summary.propRecognition).toEqual(preview.summary.propRecognition);
+    // the planner got the cast and its states
+    expect(prompts[0]).toMatch(/REUSES an approved cast[\s\S]*- furin \(prop[\s\S]*STATES: "still" \(hanging still\), "ringing"/);
+    const steps = await prisma.directorStep.findMany({ where: { runId }, orderBy: { seq: "asc" } });
+    expect(steps.find((s) => s.action === "plan:cast-locked")?.outputSummary).toMatch(/dropped new id\(s\) #teacup/);
+    expect(steps.find((s) => s.action === "recognize:carried")?.outputSummary).toMatch(/#furin recognised \("a glass wind chime"\)/);
+    // the take's log: one hash per reused symbol, the same as the preview's
+    const reused = JSON.parse(steps.find((s) => s.action === "cast-from-run")!.output!) as { sourceRunId: string; hashes: Array<{ id: string; sha: string }> };
+    expect(reused.sourceRunId).toBe(preview.runId);
+    expect(reused.hashes).toEqual(previewHashes);
+    // and the take's library is the preview's, verbatim (plus the take's own posed variants and paintings, appended)
+    const takeRun = await prisma.directorRun.findUniqueOrThrow({ where: { id: runId } });
+    expect(castHashes(previewBible.cast, takeRun.library!)).toEqual(previewHashes);
+    expect((JSON.parse(takeRun.bible!) as Plan).cast.map((c) => c.id)).toEqual(previewBible.cast.map((c) => c.id));
+  }, 180_000);
+
+  it("reads an older preview's set lighting back from its variants", async () => {
+    const { inferSetTimes } = await import("@/lib/services/director/series");
+    const defs = '<symbol id="beach" viewBox="0 0 1 1"/><symbol id="beach--night" viewBox="0 0 1 1"/><symbol id="room" viewBox="0 0 1 1"/><symbol id="room--day" viewBox="0 0 1 1"/><symbol id="yard" viewBox="0 0 1 1"/>';
+    expect(inferSetTimes([{ id: "beach", kind: "set" }, { id: "room", kind: "set" }, { id: "yard", kind: "set" }], defs)).toEqual({ beach: "day", "beach--night": "night", room: "night", "room--day": "day" });
+  });
+});
