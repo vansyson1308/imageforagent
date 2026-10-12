@@ -31,6 +31,17 @@ _Started 2026-10-09 (ICT). Branch `claude/gifted-cannon-1nhl2s` → small PRs to
 **Spend (v2)**: v1 total **$3.23** (ledger). v2 cap **$14** (raised from $10 by the owner on 2026-10-11); stop line `SPEND_ALERT_USD` = 3.23 + 14 = **17.23**. Token Factory balance reported by the owner: _pending (O2)_.
 
 ### v2 log
+- 2026-10-12: **Showcase re-shoot (owner plan 2026-10-11)** on the hosted demo (`d15ecbc`, operator cap 800 k live, daily budget 6 M; research on; 2 takes per film; $1.49 for the six takes, v2 spend ≈ $5.10 of $14): **no take passed the measured gates; nothing published, the hero/README GIF/OG are unchanged.** Contact sheets + one credit frame per film sent to the owner for QC. Evidence: [evidence/reshoot-2026-10-12/](evidence/reshoot-2026-10-12/).
+  | Film | Take | Rendered | Gate failures | Wrong time/place | Length | Critic mean (min) | Cost |
+  |---|---|---|---|---|---|---|---|
+  | fūrin | 1 | 11/11 | 6 | 1, 2, 4 | 64.8 s | 5.0 (3) | $0.278 |
+  | fūrin | **2** (better) | 10/11 | 7 | — | 70.6 s | 5.9 (4) | $0.255 |
+  | kite | 1 | 11/11 | 5 | 2, 4, 5, 11 | 59.6 s | 4.9 (2) | $0.369 |
+  | kite | **2** (better) | 11/11 | **0** | 2, 8 (time only) | 53.6 s | 6.2 (3) | $0.188 |
+  | bánh chưng | 1 | 11/11 | 3 | 10, 11 | 40.6 s | 6.1 (3) | $0.187 |
+  | bánh chưng | **2** (better) | 11/11 | 4 | 2, 3 | 49.8 s | 6.5 (3) | $0.209 |
+
+  What still fails: medium-shot key props drawn at 0.05–0.3 % of the frame (needs 0.40 %), night frames too dark for the figures, an Artist `<svg>` root that loses a shot, and the VLM reading one warm beach sky as "late afternoon" where the plan says morning (kite 2/8). Owner question raised: should morning-vs-afternoon (not day-vs-night) block?
 - 2026-10-11: **Owner decisions** (D69): operator per-run cap 800 k (judges stay at 500 k, `/api/health` shows both), revised publish gate (measured gates block; critic mean ≥ 5.5 and no shot < 4; the action verdict moves to the by-eye checklist; owner + QC may approve past critic scores, never past a measured gate), camera-move rule in the critic, hero props drawn in detail and ≥ 25 % of an insert, a readable kneel. Spend cap $14; day budget 6 M for 10-12 → 14. WAVs OK as they are. Schedule: 10-12 re-shoot fūrin (hero candidate), kite, bánh chưng, up to 2 takes each · 10-13 Hidamari Shorts · 10-14 frozen-commit bench.
 - 2026-10-11: **Fūrin run 4** (`3c76aa7`, $0.255): 10/11 shots, 7 off-plan, not publishable; best by eye so far (kit figures, the three briefed sets). The daytime opening was still drawn at night ("Summer day" was not read as day) → fixed (D68). Live runs stopped for today; v2 spend ≈ $3.61 of $10. [Contact sheet](evidence/reshoot-2026-10-11/v2-furin-run4-contact.jpg).
 - 2026-10-11: **Fūrin re-shoots 2 and 3** (after D66): run 2 5 off-plan, run 3 9 off-plan; still not publishable, nothing published. Run 2: no festival-street set; run 3: sets right (SETS brief) but both dolls rejected on colour fields → freehand figures. Fixed: SETS brief per showcase film, tolerant doll colours (D67). Today's re-shoot spend $1.62 (5 runs); v2 total ≈ $3.36 of $10. Contact sheets: [run 2](evidence/reshoot-2026-10-11/v2-furin-run2-contact.jpg), [run 3](evidence/reshoot-2026-10-11/v2-furin-run3-contact.jpg).
