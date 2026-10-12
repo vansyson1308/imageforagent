@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/db";
 import { parseTsv } from "@/lib/services/tsvParser";
 import { replaceScript } from "@/lib/services/frameWrites";
-import { callJson, recordStep, type DirectorContext } from "@/lib/services/director/context";
-import { planSchema, type CastMember, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
-import { directorSystem, directorUser } from "@/lib/services/director/prompts";
+import { callJson, recordStep, ReplyInvalidError, type DirectorContext } from "@/lib/services/director/context";
+import { LlmError } from "@/lib/providers/types";
+import { anatomySchema, planSchema, type Anatomy, type CastMember, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
+import { anatomySystem, anatomyUser, directorSystem, directorUser } from "@/lib/services/director/prompts";
 import { castFromRunBrief, lockFixedCast, lockSeriesCast, seriesBrief, type SeriesData } from "@/lib/services/director/series";
 import type { Frame } from "@/generated/prisma/client";
 
@@ -72,8 +73,38 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
     best = withSets.plan;
     await recordStep(ctx, { role: "director", model: "engine", action: "plan:sets", summary: `The plan had no set: the engine added ${withSets.added.join(", ")}${withSets.dropped.length ? ` and dropped the least-used prop(s) ${withSets.dropped.map((d) => `#${d}`).join(", ")} to make room` : ""}` });
   }
-  return best;
+  return withAnatomy(ctx, best, story);
 }
+
+/**
+ * The key object's anatomy (owner 2026-10-12, round 3): before the Cast draws, Ultra writes the 3–6
+ * visible parts a stranger needs to recognise it, its everyday categories and look-alikes, and each
+ * state's visible change. The Cast draws from it; the recognition gate passes the drawing by it. A cast
+ * reused from an approved preview already carries it (no new call). A failed call leaves the plan as is.
+ */
+export async function withAnatomy(ctx: DirectorContext, plan: Plan, story: string): Promise<Plan> {
+  const hero = heroProp(plan);
+  const member = plan.cast.find((c) => c.id === hero);
+  if (!hero || !member) return plan;
+  if (member.anatomy) {
+    await recordStep(ctx, { role: "director", model: "engine", action: "plan:anatomy", summary: `#${hero} anatomy carried with the cast: ${anatomyLine(member.anatomy)}` });
+    return plan;
+  }
+  try {
+    const raw = await callJson(ctx, { role: "director", action: "plan:anatomy", system: anatomySystem(), user: anatomyUser(member, story), maxTokens: 1500, temperature: 0.3 }, anatomySchema, "prop_anatomy", 1);
+    // one change per planned state, in the plan's order (a state Ultra skipped keeps its planned look)
+    const states = (member.states ?? []).map((st) => raw.states.find((x) => x.id === st.id) ?? { id: st.id, change: st.look.slice(0, 220) });
+    const anatomy: Anatomy = { ...raw, states };
+    await recordStep(ctx, { role: "director", model: ctx.models.strong, action: "plan:anatomy", summary: `#${hero} anatomy: ${anatomyLine(anatomy)}`, output: JSON.stringify(anatomy) });
+    return { ...plan, cast: plan.cast.map((c) => (c.id === hero ? { ...c, anatomy } : c)) };
+  } catch (e) {
+    if (!(e instanceof ReplyInvalidError || e instanceof LlmError)) throw e;
+    await recordStep(ctx, { role: "director", model: ctx.models.strong, action: "plan:anatomy:error", summary: `No anatomy for #${hero}: the recognition gate checks by category only`, error: e.message });
+    return plan;
+  }
+}
+
+const anatomyLine = (a: Anatomy) => `${a.category.join(" / ")} — ${a.parts.map((p) => p.part).join(", ")}${a.states.length ? ` · states: ${a.states.map((s) => s.id).join(" → ")}` : ""}`;
 
 /** The Director's brief for a narrated episode: one shot per line, in order. */
 export function narrationBrief(lines: readonly string[]): string {

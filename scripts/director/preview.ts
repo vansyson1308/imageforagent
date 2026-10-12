@@ -62,7 +62,7 @@ async function main() {
       appendFileSync(log, JSON.stringify(e) + "\n");
       if (e.type === "step") {
         const st = e.step as { role: string; action: string; costUsd: number; summary?: string; error: string | null };
-        if (/recognize|prop-states|library|stop-after/.test(st.action)) console.log(`  ${st.role.padEnd(8)} ${st.action.padEnd(20)} ${(st.summary ?? "").slice(0, 110)}${st.error ? ` ⚠ ${st.error.slice(0, 80)}` : ""}`);
+        if (/recognize|prop-states|library|stop-after|anatomy/.test(st.action)) console.log(`  ${st.role.padEnd(8)} ${st.action.padEnd(20)} ${(st.summary ?? "").slice(0, 110)}${st.error ? ` ⚠ ${st.error.slice(0, 80)}` : ""}`);
       }
     });
     const trace = await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${runId}`);
