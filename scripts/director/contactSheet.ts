@@ -39,7 +39,10 @@ export async function contactSheet(tiles: readonly SheetTile[], opts: { aspect: 
     const x = gap + (i % cols) * (w + gap);
     const y = titleH + gap + Math.floor(i / cols) * (h + labelH + gap);
     layers.push({ input: await sharp(t.image).resize(w, h, { fit: "contain", background: "#222" }).toBuffer(), left: x, top: y });
-    labels.push(`<text x="${x + 4}" y="${y + h + 21}" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#ddd">${esc(t.label)}</text>`);
+    // a label never runs into the next tile: about 0.6 em per character at 17 px
+    const max = Math.floor((w - 8) / (17 * 0.6));
+    const label = t.label.length > max ? `${t.label.slice(0, max - 1)}…` : t.label;
+    labels.push(`<text x="${x + 4}" y="${y + h + 21}" font-family="DejaVu Sans, sans-serif" font-size="17" fill="#ddd">${esc(label)}</text>`);
   }
   const overlay = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}"><text x="${gap}" y="38" font-family="DejaVu Sans, sans-serif" font-size="26" font-weight="bold" fill="#fff">${esc(opts.title)}</text>${labels.join("")}</svg>`;
   layers.push({ input: Buffer.from(overlay), left: 0, top: 0 });

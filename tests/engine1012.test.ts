@@ -415,3 +415,42 @@ describe("castFromRun: a take on an approved cast-only preview reuses its Bible,
     expect(inferSetTimes([{ id: "beach", kind: "set" }, { id: "room", kind: "set" }, { id: "yard", kind: "set" }], defs)).toEqual({ beach: "day", "beach--night": "night", room: "night", "room--day": "day" });
   });
 });
+
+describe("D71 in the sets: a dusk-lit set is wrong for a morning or afternoon shot (preview 2026-10-12, the kite's beach)", () => {
+  it("the shots planned in daylight on a dusk set get a day variant; dusk and night shots keep the dusk set", async () => {
+    const { setTimeVariant, setForShot } = await import("@/lib/services/director/fidelity");
+    const p = planSchema.parse(demoPlan("A. B.", 2));
+    const shot = (description: string) => ({ ...p.shots[0], scene: "Seafront", description, cast: ["beach"] });
+    const plan = { shots: [shot("Brighton seafront on a windy autumn morning."), shot("Afternoon light on the seafront."), shot("Golden dusk bathes the beach.")] };
+    expect(setTimeVariant(plan, "beach", "dusk")).toBe("day");
+    const times = new Map([["beach", "dusk"], ["beach--day", "day"]]);
+    expect(setForShot(plan.shots[0], "beach", times)).toBe("beach--day");
+    expect(setForShot(plan.shots[2], "beach", times)).toBe("beach");
+    expect(setForShot(shot("Night falls on the beach."), "beach", times)).toBe("beach");
+    // a golden set is the DAY bucket: no variant needed for a morning shot
+    expect(setTimeVariant({ shots: [plan.shots[0]] }, "beach", "golden")).toBeNull();
+  });
+});
+
+describe("one malformed symbol costs only itself, never the whole library (preview 2026-10-12, bánh chưng)", () => {
+  it("salvageLibrary keeps every symbol that renders, replaces the broken member with its placeholder and a broken state with its base", async () => {
+    const { salvageLibrary } = await import("@/lib/services/director/cast");
+    const members = [
+      { id: "yard", name: "Yard", kind: "set" as const, look: "a courtyard", colors: ["#c8a878"] },
+      { id: "cake", name: "Cake", kind: "prop" as const, look: "a square green cake", colors: ["#4f8a4f"] },
+      { id: "cake--cooked", name: "Cake (cooked)", kind: "prop" as const, look: "cooked", colors: ["#4f8a4f"] },
+    ];
+    const extras = new Map([["yard-sky", '<linearGradient id="yard-sky"><stop offset="0" stop-color="#9fd3f0"/></linearGradient>'], ["cake-sheen", '<radialGradient id="cake-sheen"><stop offset="0" stop-color="#ffffff"/></radialGradient>']]);
+    const good = '<symbol id="yard" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="url(#yard-sky)"/></symbol>';
+    const broken = '<symbol id="cake" viewBox="0 0 400 400"><rect x="10" y="10" width="380" height="380" fill="url(#cake-sheen)"</symbol>';
+    const brokenState = '<symbol id="cake--cooked" viewBox="0 0 400 400"><circle cx="200" cy="200" r="150" fill="#3a6a3a"</symbol>';
+    const out = await salvageLibrary([good, broken, brokenState], extras, members, canvas, "16:9");
+    expect(out.broken).toEqual(["cake", "cake--cooked"]);
+    expect(out.defs).toContain(good);
+    expect(out.defs).toContain('<linearGradient id="yard-sky">');
+    expect(out.defs).not.toContain("cake-sheen");
+    expect(out.defs).toContain('<symbol id="cake--cooked" viewBox="0 0 400 400"><use href="#cake" x="0" y="0" width="400" height="400"/></symbol>');
+    // the salvaged library renders as a whole
+    await expect(renderArtwork(out.defs, '<use href="#yard" x="0" y="0" width="1920" height="1080"/><use href="#cake--cooked" x="700" y="300" width="400" height="400"/>', "16:9", "1K")).resolves.toBeInstanceOf(Buffer);
+  });
+});

@@ -5,6 +5,7 @@
  * owner's by-eye approval before any full take is spent.
  *
  *   DEMO_PASSCODE=… npm run director:preview -- --base https://<host> [--only v2-furin]
+ *   … --resheet v2-kite=<projectId>:<runId>   # rebuild a sheet from a finished preview (no model call)
  *
  * The operator passcode comes from the environment only (never a CLI argument: process lists,
  * shell history). Output: docs/hackathon/evidence/preview-<date>/<slug>-sheet.jpg (+ -trace.json,
@@ -45,15 +46,19 @@ async function main() {
   const client = new StudioClient({ base, passcode: process.env.DEMO_PASSCODE });
   await client.unlock();
   const canvas = { w: 1920, h: 1080 };
+  // --resheet <slug>=<projectId>:<runId>[,…]: rebuild sheets from finished preview runs (no model call)
+  const resheet = new Map(arg("--resheet").split(",").filter(Boolean).map((p) => p.split("=") as [string, string]));
   for (const s of SHOWCASE_V2) {
     if (only && s.slug !== only) continue;
+    if (resheet.size && !resheet.has(s.slug)) continue;
     assertSpendUnder();
     const log = `${out}/${s.slug}.log`;
-    writeFileSync(log, `# ${new Date().toISOString()} ${base} ${s.slug} (cast-only preview)\n`);
-    const pid = await client.createProject(`Preview · ${s.slug}`);
-    console.log(`▶ ${s.slug} project ${pid}`);
+    const again = resheet.get(s.slug)?.split(":");
+    if (!again) writeFileSync(log, `# ${new Date().toISOString()} ${base} ${s.slug} (cast-only preview)\n`);
+    const pid = again?.[0] ?? (await client.createProject(`Preview · ${s.slug}`));
+    console.log(`▶ ${s.slug} project ${pid}${again ? " (re-sheet, no model call)" : ""}`);
     // the same story, brief and narration lines the full take sends, so the plan is planned the same way
-    const runId = await client.direct(pid, { story: `${setsBrief(s)}\n\n${s.lines.join(s.language === "ja" ? "" : " ")}`, language: s.language, style: s.style, critic: true, research: true, narration: s.lines, maxUsd: 0.3, stopAfter: "cast" }, (e) => {
+    const runId = again?.[1] ?? await client.direct(pid, { story: `${setsBrief(s)}\n\n${s.lines.join(s.language === "ja" ? "" : " ")}`, language: s.language, style: s.style, critic: true, research: true, narration: s.lines, maxUsd: 0.3, stopAfter: "cast" }, (e) => {
       appendFileSync(log, JSON.stringify(e) + "\n");
       if (e.type === "step") {
         const st = e.step as { role: string; action: string; costUsd: number; summary?: string; error: string | null };
@@ -61,7 +66,7 @@ async function main() {
       }
     });
     const trace = await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${runId}`);
-    appendLedger({ script: "preview", label: s.slug, model: "crew", tokensIn: trace.tokensIn, tokensOut: trace.tokensOut, costUsd: trace.costUsd });
+    if (!again) appendLedger({ script: "preview", label: s.slug, model: "crew", tokensIn: trace.tokensIn, tokensOut: trace.tokensOut, costUsd: trace.costUsd });
     writeFileSync(`${out}/${s.slug}-trace.json`, JSON.stringify(trace, null, 2));
     if (trace.status !== "done" || !trace.bible) {
       console.log(`✘ ${s.slug}: status ${trace.status}`);
@@ -80,14 +85,14 @@ async function main() {
       const r = rec.get(t.symbol);
       const verdict = r ? (r.ok === true ? "recognised" : r.ok === false ? "NOT recognised" : "not checked") : "not checked";
       const png = await renderAlone(defs, t.symbol, "16:9", canvas);
-      tiles.push({ image: await sharp(png).resize(1080, 1080).png().toBuffer(), label: `#${t.symbol}${t.state ? ` (${t.state.id})` : ""} ${sha.get(t.symbol) ?? ""} · viewer: "${(r?.saw ?? "").slice(0, 30)}" · ${verdict}` });
+      tiles.push({ image: await sharp(png).resize(1080, 1080).png().toBuffer(), label: `${verdict === "recognised" ? "OK" : verdict === "NOT recognised" ? "NOT OK" : "unchecked"} #${t.symbol} ${sha.get(t.symbol) ?? ""} "${r?.saw ?? ""}"` });
     }
     // every set, each time of day it is lit for
     for (const c of plan.cast.filter((m) => m.kind === "set")) {
       for (const id of [c.id, timedSetId(c.id, "day"), timedSetId(c.id, "night")]) {
         if (!new RegExp(`id="${id}"`).test(defs)) continue;
         const png = await renderArtwork(defs, `<use href="#${id}" x="0" y="0" width="${canvas.w}" height="${canvas.h}"/>`, "16:9", "1K");
-        tiles.push({ image: png, label: `#${id} ${sha.get(id) ?? ""} · ${c.name.slice(0, 32)}` });
+        tiles.push({ image: png, label: `#${id} ${sha.get(id) ?? ""}` });
       }
     }
     writeFileSync(`${out}/${s.slug}-sheet.jpg`, await contactSheet(tiles, { aspect: "16:9", title: `${s.slug} · ${plan.title} · cast-only preview · run ${runId}` }));
