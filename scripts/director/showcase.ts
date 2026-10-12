@@ -64,7 +64,27 @@ export const SHOWCASE_STORIES = [
  * told at film length (11 narrated lines, 45–90 s; owner QC 2026-10-10).
  * Published as `v2-<key>` with version "v2"; the v1 films stay.
  */
-export const SHOWCASE_STORIES_V2 = SHOWCASE_V2.map((s) => ({ slug: s.slug, language: s.language, style: s.style, story: s.lines.join(s.language === "ja" ? "" : " "), brief: setsBrief(s), narration: s.lines }));
+/**
+ * The Japanese showcase is the Hidamari pilot PILOT01 tegami (owner 2026-10-12, D77; fūrin dropped): a 9:16 Short
+ * made from the owner's package (fixed narration in the owner's recordings, adult figures, its settings as the brief).
+ */
+const PILOT_SHOWCASE: Record<string, string> = { "v2-tegami": "PILOT01_tegami" };
+
+type V2Story = { slug: string; language: string; style: string; story: string; brief: string; narration: readonly string[]; aspect?: "9:16"; figure?: "adult"; pilot?: string };
+
+function pilotStory(slug: string, folder: string): V2Story {
+  const pkg = loadPackage(`docs/hackathon/pilot/${folder}`, true);
+  const lines = pkg.production.scenes.flatMap((sc) => sc.lines.map((l) => l.text));
+  return { slug, language: pkg.meta.language, style: pkg.meta.style, story: lines.join(""), brief: pkg.story, narration: lines, aspect: pkg.meta.aspectRatio === "9:16" ? "9:16" : undefined, figure: "adult", pilot: folder };
+}
+
+export const SHOWCASE_STORIES_V2: V2Story[] = [
+  ...SHOWCASE_V2.filter((s) => s.slug !== "v2-furin").map((s) => ({ slug: s.slug, language: s.language, style: s.style, story: s.lines.join(s.language === "ja" ? "" : " "), brief: setsBrief(s), narration: s.lines })),
+  ...Object.entries(PILOT_SHOWCASE).map(([slug, folder]) => pilotStory(slug, folder)),
+];
+
+/** The film's format: a pilot Short is 9:16 (contact sheet, credits, the 30–60 s window, D78). */
+const aspectOf = (slug: string): "16:9" | "9:16" => (SHOWCASE_STORIES_V2.find((x) => x.slug === slug)?.aspect === "9:16" ? "9:16" : "16:9");
 
 const argv = process.argv.slice(2);
 const arg = (k: string, d = "") => {
@@ -99,7 +119,7 @@ async function main() {
       const dir = `public/showcase/${slug}`;
       writeFileSync(`${dir}/film.mp4`, await client.download(`/api/projects/${pid}/film.mp4`));
       const published = JSON.parse(readFileSync(`${dir}/trace.json`, "utf8")) as { steps?: CreditStep[] };
-      await appendCredits(`${dir}/film.mp4`, "16:9", filmCredits(published.steps ?? [], { voiceCredit: readVoiceCredit(packageDir(slug)) }));
+      await appendCredits(`${dir}/film.mp4`, aspectOf(slug), filmCredits(published.steps ?? [], { voiceCredit: readVoiceCredit(packageDir(slug)) }));
       spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", "2", "-i", `${dir}/film.mp4`, "-frames:v", "1", "-q:v", "3", `${dir}/poster.jpg`]);
       const [fw, fh, rate] = spawnSync("ffprobe", ["-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height,r_frame_rate", "-of", "csv=p=0", `${dir}/film.mp4`], { encoding: "utf8" }).stdout.trim().split(",");
       const [n, d] = (rate ?? "0/1").split("/").map(Number);
@@ -132,14 +152,26 @@ async function main() {
         const v2 = "narration" in s ? { ...narrationOf(s.slug, s.narration), research: arg("--research", "on") === "on" } : { maxShots, research: false };
         // reuse the approved preview's cast verbatim: its run id per slug (the take's log prints the symbol hashes)
         const castFromRun = arg("--cast-from").split(",").map((p) => p.split("=")).find(([k]) => k === s.slug)?.[1];
-        // the v2 tellings send their SETS brief before the story (the published story stays the lines alone)
-        runId = await client.direct(pid, { story: "brief" in s ? `${s.brief}\n\n${s.story}` : s.story, language: s.language, style: s.style, maxUsd, critic: true, ...v2, ...(castFromRun && { castFromRun }) }, (e) => {
+        // engine edits on that cast (D77): --edits "v2-kite=kite:starred:star:patched[,…]" (prop:state:op[:on] or prop:single)
+        const castEdits = arg("--edits")
+          .split(",")
+          .filter(Boolean)
+          .map((e) => (e.includes("=") ? e.split("=") : [s.slug, e]))
+          .filter(([k]) => k === s.slug)
+          .map(([, spec]) => {
+            const [prop, a, b, on] = spec.split(":");
+            return b ? { prop, state: a, op: b, ...(on && { on }) } : { prop, op: a };
+          });
+        const pilot = "pilot" in s && s.pilot ? { aspectRatio: "9:16", figure: "adult" } : {};
+        // the v2 tellings send their SETS brief before the story (the published story stays the lines alone); a pilot's brief is its whole package story
+        const story = "brief" in s ? ("pilot" in s && s.pilot ? s.brief : `${s.brief}\n\n${s.story}`) : s.story;
+        runId = await client.direct(pid, { story, language: s.language, style: s.style, maxUsd, critic: true, ...v2, ...pilot, ...(castFromRun && { castFromRun }), ...(castEdits.length && { castEdits }) }, (e) => {
           appendFileSync(log, JSON.stringify(e) + "\n");
           if (e.type === "step") {
             const st = e.step as { role: string; action: string; shotIndex: number | null; score: number | null; costUsd: number; error: string | null };
             streamed += st.costUsd;
             console.log(`  ${st.role.padEnd(10)} ${st.action.padEnd(16)} ${st.shotIndex ?? ""} ${st.score ?? ""} $${st.costUsd.toFixed(5)} ${st.error ? "⚠ " + st.error.slice(0, 80) : ""}`);
-            if (/^(cast-from-run|recognize:carried|plan:cast-locked)$/.test(st.action)) console.log(`    ${(e.step as { summary?: string }).summary ?? ""}`);
+            if (/^(cast-from-run|cast-edits|recognize:carried|plan:cast-locked)$/.test(st.action)) console.log(`    ${(e.step as { summary?: string }).summary ?? ""}`);
           }
           if (e.type === "done") done = e;
         });
@@ -170,7 +202,7 @@ async function main() {
     }
     if (set === "v2") {
       // v2: the measured gates block; critic shortfalls go to the by-eye candidate (owner + QC may approve past them); nothing is published from here
-      const problems = [...measuredProblems(trace.status, trace.summary), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0])];
+      const problems = [...measuredProblems(trace.status, trace.summary, aspectOf(s.slug)), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0])];
       if (problems.length) {
         console.log(`✘ ${s.slug}: ${problems.join("; ")}. Kept the trace as evidence and skipped publishing.`);
         continue;
@@ -190,7 +222,7 @@ async function main() {
  * recordings once they are all there (fixed narration, D59); until then its lines go as plain narration and the
  * film can't be published (voiceProblems: the JA demo voice is non-commercial).
  */
-const packageDir = (slug: string) => `docs/hackathon/pilot/SHOWCASE_${slug.replace(/^v2-/, "")}`;
+const packageDir = (slug: string) => (PILOT_SHOWCASE[slug] ? `docs/hackathon/pilot/${PILOT_SHOWCASE[slug]}` : `docs/hackathon/pilot/SHOWCASE_${slug.replace(/^v2-/, "")}`);
 
 function narrationOf(slug: string, lines: readonly string[]): { narration: readonly string[] } | { narrationShots: ReturnType<typeof loadPackage>["shots"] } {
   const dir = packageDir(slug);
@@ -234,12 +266,12 @@ async function writeCandidate(client: StudioClient, slug: string, pid: string, r
   writeFileSync(`${dir}/checklist.md`, checklistTemplate({ slug, projectId: pid, runId, commit: health.commit.slice(0, 7), hero: plan ? heroProp(plan) : null, shots, critic, recognition }));
   // the contact sheet: every shot on one image, for the owner's by-eye QC
   const tiles = shots.filter((sh) => existsSync(`${dir}/${sh.image}`)).map((sh) => ({ image: `${dir}/${sh.image}`, label: `${String(sh.index).padStart(2, "0")} · ${sh.measured.split(" · ")[0]} · critic ${scores[sh.index] ?? "n/a"}/10` }));
-  writeFileSync(`${dir}/contact.jpg`, await contactSheet(tiles, { aspect: "16:9", title: `${slug} · ${plan?.title ?? ""} · run ${runId} · ${health.commit.slice(0, 7)}` }));
+  writeFileSync(`${dir}/contact.jpg`, await contactSheet(tiles, { aspect: aspectOf(slug), title: `${slug} · ${plan?.title ?? ""} · run ${runId} · ${health.commit.slice(0, 7)}` }));
   // one frame of the credit card exactly as publishing would append it (the film itself stays on the server until publish)
   const preview = `${tmpdir()}/${slug}-${runId}-preview.mp4`;
   writeFileSync(preview, await client.download(`/api/projects/${pid}/film.mp4?v=${runId}`));
   const filmSec = probe(preview).dur;
-  await appendCredits(preview, "16:9", filmCredits((trace.steps ?? []) as CreditStep[], { voiceCredit: readVoiceCredit(packageDir(slug)) }));
+  await appendCredits(preview, aspectOf(slug), filmCredits((trace.steps ?? []) as CreditStep[], { voiceCredit: readVoiceCredit(packageDir(slug)) }));
   const total = probe(preview).dur;
   spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", (total - 1.5).toFixed(2), "-i", preview, "-frames:v", "1", "-vf", "scale=1280:-2", "-q:v", "3", `${dir}/credits.jpg`]);
   rmSync(preview, { force: true });
@@ -261,7 +293,7 @@ async function publish(client: StudioClient, s: { slug: string; language: string
   const film = await client.download(`/api/projects/${pid}/film.mp4`);
   writeFileSync(`${dir}/film.mp4`, film);
   // every published film ends with its credits, read from the trace: the owner's voice (decision A1), VAIS-1000, Nemotron on Nebius, Tavily
-  await appendCredits(`${dir}/film.mp4`, "16:9", filmCredits((trace.steps ?? []) as CreditStep[], { voiceCredit: readVoiceCredit(packageDir(s.slug)) }));
+  await appendCredits(`${dir}/film.mp4`, aspectOf(s.slug), filmCredits((trace.steps ?? []) as CreditStep[], { voiceCredit: readVoiceCredit(packageDir(s.slug)) }));
   // the label states what the published file IS (measured), not what was asked for
   const probe = spawnSync("ffprobe", ["-v", "error", "-select_streams", "v", "-show_entries", "stream=width,height,r_frame_rate", "-of", "csv=p=0", `${dir}/film.mp4`], { encoding: "utf8" }).stdout.trim();
   const [fw, fh, rate] = probe.split(",");
@@ -281,6 +313,7 @@ async function publish(client: StudioClient, s: { slug: string; language: string
     story: s.story,
     film: `/showcase/${s.slug}/film.mp4`,
     poster: `/showcase/${s.slug}/poster.jpg`,
+    aspect: aspectOf(s.slug),
     trace: `/showcase/${s.slug}/trace.json`,
     models: trace.models,
     provider: trace.provider,
@@ -311,7 +344,7 @@ async function publishChecked(client: StudioClient, pairs: string, base: string,
     // measured gates always block; the critic's scores block unless the owner and QC approved the film by eye
     const critic = criticProblems(trace.summary);
     const problems = [
-      ...measuredProblems(trace.status, trace.summary),
+      ...measuredProblems(trace.status, trace.summary, aspectOf(slug)),
       ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0]),
       ...checklistProblems(md, Number(trace.summary.shots ?? 0)),
       ...(critic.length && !criticOverride(md) ? [`critic: ${critic.join("; ")} (needs "Critic override: APPROVED by owner … and QC …" in the checklist)`] : []),
@@ -325,7 +358,9 @@ async function publishChecked(client: StudioClient, pairs: string, base: string,
   }
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-});
+if (process.argv[1]?.endsWith("showcase.ts")) {
+  main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+  });
+}

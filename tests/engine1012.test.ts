@@ -829,3 +829,59 @@ describe("D77 · the recognition gate is a model's judgement: owner + QC may app
     expect(measured("done", { ...s, gateFailures: 1 })).toEqual(["1 shot(s) still fail a measured gate"]);
   });
 });
+
+/* ---------- D78 (owner + QC 2026-10-12 night): the starred kite, Shorts' length, tegami as the Japanese showcase ---------- */
+
+describe("D78 · #kite--starred = the approved patched red kite + a big gold star (engine only, no model call)", () => {
+  const r5 = JSON.parse(readFileSync("docs/hackathon/evidence/preview-2026-10-12-r5/v2-kite-trace.json", "utf8")) as { bible: Plan; library: string };
+
+  it("star on #kite--patched: every other symbol keeps its approved hash, the star is gold on the patch, deterministic", async () => {
+    const { applyCastEdits, findSpot } = await import("@/lib/services/director/stateTransforms");
+    const { castHashes } = await import("@/lib/services/director/series");
+    const { renderAlone } = await import("@/lib/services/director/recognize");
+    const before = castHashes(r5.bible.cast, r5.library);
+    expect(before.find((h) => h.id === "kite--patched")?.sha).toBe("c47c749f99e4");
+    const out = await applyCastEdits(r5.bible.cast, r5.library, [{ prop: "kite", state: "starred", op: "star", on: "patched" }]);
+    expect(() => sanitizeSvg(out.library, "defs")).not.toThrow();
+    const after = castHashes(out.cast, out.library);
+    for (const h of after) if (h.id !== "kite--starred") expect(h.sha, h.id).toBe(before.find((b) => b.id === h.id)?.sha);
+    expect(out.library).toMatch(/<symbol id="kite--starred"[^>]*><use href="#kite--patched"/);
+    expect(out.report[0]).toMatch(/#kite--starred = star of #kite on #kite--patched/);
+    const spot = (await findSpot(out.library, "kite"))!;
+    const at = (v: number) => (Math.round(1080 * 0.86) * (v / 400) + (1080 - Math.round(1080 * 0.86)) / 2) / 1080;
+    const png = await renderAlone(out.library, "kite--starred", "16:9", canvas);
+    const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const i = (Math.round(at(spot.y) * info.height) * info.width + Math.round(at(spot.x) * info.width)) * info.channels;
+    const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
+    expect(r).toBeGreaterThan(200);
+    expect(g).toBeGreaterThan(150);
+    expect(b).toBeLessThan(110); // gold, at the centre of the patch
+    expect((await applyCastEdits(r5.bible.cast, r5.library, [{ prop: "kite", state: "starred", op: "star", on: "patched" }])).library).toBe(out.library);
+    await expect(applyCastEdits(r5.bible.cast, r5.library, [{ prop: "kite", state: "starred", op: "star", on: "mended" }])).rejects.toThrow(/no drawing #kite--mended/);
+  });
+});
+
+describe("D78 · a 9:16 Short runs 30–60 s; a 16:9 showcase film 45–90 s", () => {
+  it("tegami's 43.4 s passes as a Short and would fail as a showcase film; the edges hold", async () => {
+    const { durationWindow, measuredProblems: measured } = await import("@/lib/services/director/publishGate");
+    const ok = { rendered: 7, shots: 7, gateFailures: 0 };
+    expect(durationWindow("9:16")).toMatchObject({ min: 30, max: 60 });
+    expect(durationWindow("16:9")).toMatchObject({ min: 45, max: 90 });
+    expect(measured("done", { ...ok, durationSec: 43.4 }, "9:16")).toEqual([]);
+    expect(measured("done", { ...ok, durationSec: 43.4 })).toEqual(["film is 43.4 s (a showcase film runs 45–90 s)"]);
+    expect(measured("done", { ...ok, durationSec: 29.9 }, "9:16")).toEqual(["film is 29.9 s (a 9:16 Short runs 30–60 s)"]);
+    expect(measured("done", { ...ok, durationSec: 60.5 }, "9:16")).toEqual(["film is 60.5 s (a 9:16 Short runs 30–60 s)"]);
+    expect(measured("done", { ...ok, durationSec: 60 }, "9:16")).toEqual([]);
+  });
+
+  it("the v2 showcase is kite, bánh chưng and tegami (fūrin dropped); tegami is a 9:16 Short from the owner's package", async () => {
+    const { SHOWCASE_STORIES_V2 } = await import("../scripts/director/showcase");
+    expect(SHOWCASE_STORIES_V2.map((s) => s.slug)).toEqual(["v2-kite", "v2-banh-chung", "v2-tegami"]);
+    const t = SHOWCASE_STORIES_V2.find((s) => s.slug === "v2-tegami")!;
+    expect(t).toMatchObject({ language: "ja", aspect: "9:16", figure: "adult", pilot: "PILOT01_tegami" });
+    expect(t.narration).toHaveLength(8);
+    expect(t.brief).toMatch(/喫茶ひだまり/);
+    const bc = SHOWCASE_STORIES_V2.find((s) => s.slug === "v2-banh-chung")!;
+    expect(bc.brief).toMatch(/LAST shot the bánh chưng sits on a small wooden table in the front room/);
+  });
+});

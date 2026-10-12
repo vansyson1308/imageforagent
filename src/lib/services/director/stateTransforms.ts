@@ -11,6 +11,9 @@ import type { CastMember } from "@/lib/services/director/schemas";
  * - `tear`: a jagged hole through the object (what is behind it shows through: the hole is clipped
  *   out, not painted), its frayed edge, and a flap of the object's own colour hanging from the hole.
  * - `patch`: a white cloth patch with visible running stitches and cross-stitches over the same spot.
+ * - `star`: a big gold five-point star painted on the same spot — on another state's drawing (`on`, e.g.
+ *   the patched one: owner 2026-10-12 night, the kite's starred state is its patched state + a gold star) or,
+ *   without one, on a patch of its own.
  *
  * Both are new `<symbol>`s that `<use>` the base drawing, so the base stays byte-identical and every
  * state lines up pixel-perfectly with it. The spot is found on the base drawing alone (`findSpot`): the
@@ -18,7 +21,7 @@ import type { CastMember } from "@/lib/services/director/schemas";
  * tear and a later patch land on the same spot. Deterministic: same base → same spot → same markup.
  */
 
-export const STATE_OPS = ["tear", "patch"] as const;
+export const STATE_OPS = ["tear", "patch", "star"] as const;
 export type StateOp = (typeof STATE_OPS)[number];
 
 export interface ViewBox {
@@ -190,8 +193,37 @@ export function patchSymbol(baseId: string, id: string, vb: ViewBox, spot: Spot)
   ].join("");
 }
 
-/** One edit of a reused cast (an operator request option, D77). */
-export type CastEdit = { readonly prop: string; readonly state: string; readonly op: StateOp } | { readonly prop: string; readonly op: "single" };
+/** The five-point star's outline around the spot, tilted with the patch. */
+function starPath(spot: Spot): string {
+  const R = spot.r * 1.25 * 0.88;
+  const r = R * 0.42;
+  const pts = Array.from({ length: 10 }, (_, i) => {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const k = i % 2 ? r : R;
+    return `${n(spot.x + Math.cos(a) * k)} ${n(spot.y + Math.sin(a) * k)}`;
+  });
+  return `M${pts.join(" L")} Z`;
+}
+
+/** `star`: a big gold star painted on the spot, over another state's drawing (`onId`) or over a patch of its own. */
+export function starSymbol(baseId: string, id: string, vb: ViewBox, spot: Spot, onId: string | null): string {
+  const under = onId ? placeBase(onId, vb) : patchSymbol(baseId, `${id}-p`, vb, spot).replace(/^<symbol\b[^>]*>/, "").replace(/<\/symbol>$/, "");
+  const d = starPath(spot);
+  return [
+    `<symbol id="${id}" viewBox="${n(vb.x)} ${n(vb.y)} ${n(vb.w)} ${n(vb.h)}">`,
+    under,
+    `<g transform="rotate(-7 ${n(spot.x)} ${n(spot.y)})">`,
+    `<path d="${d}" fill="#000000" fill-opacity="0.15" transform="translate(${n(spot.r * 0.06)} ${n(spot.r * 0.08)})"/>`,
+    `<path d="${d}" fill="#f2c230" stroke="#b8860b" stroke-width="${n(spot.r * 0.06)}" stroke-linejoin="round"/>`,
+    // a painted highlight on the upper arms
+    `<path d="M${n(spot.x)} ${n(spot.y - spot.r * 0.85)} L${n(spot.x + spot.r * 0.18)} ${n(spot.y - spot.r * 0.3)} L${n(spot.x)} ${n(spot.y - spot.r * 0.22)} Z" fill="#fff3b8" fill-opacity="0.8"/>`,
+    `</g>`,
+    `</symbol>`,
+  ].join("");
+}
+
+/** One edit of a reused cast (an operator request option, D77). `on`: the state a `star` is painted over. */
+export type CastEdit = { readonly prop: string; readonly state: string; readonly op: StateOp; readonly on?: string } | { readonly prop: string; readonly op: "single" };
 
 /**
  * Apply edits to a reused cast and its library. `tear`/`patch` replace `<prop>--<state>` with the
@@ -223,9 +255,11 @@ export async function applyCastEdits(cast: readonly CastMember[], library: strin
     const spot = await findSpot(defs, e.prop);
     if (!spot) throw new Error(`#${e.prop}: no spot on the drawing to ${e.op} (the object is too thin)`);
     const id = `${e.prop}--${e.state}`;
-    lib.symbols.set(id, e.op === "tear" ? tearSymbol(e.prop, id, vb, spot) : patchSymbol(e.prop, id, vb, spot));
+    const onId = e.op === "star" && e.on ? `${e.prop}--${e.on}` : null;
+    if (onId && !lib.symbols.has(onId)) throw new Error(`no drawing #${onId} to paint the star on`);
+    lib.symbols.set(id, e.op === "tear" ? tearSymbol(e.prop, id, vb, spot) : e.op === "patch" ? patchSymbol(e.prop, id, vb, spot) : starSymbol(e.prop, id, vb, spot, onId));
     changed.push(id);
-    report.push(`#${id} = ${e.op} of #${e.prop} at (${n(spot.x)}, ${n(spot.y)}) r ${n(spot.r)}`);
+    report.push(`#${id} = ${e.op} of #${e.prop}${onId ? ` on #${onId}` : ""} at (${n(spot.x)}, ${n(spot.y)}) r ${n(spot.r)}`);
     lib = splitLibrary([...lib.extras.values(), ...lib.symbols.values()].join("\n"));
   }
   const out = [...lib.extras.values(), ...lib.symbols.values()].join("\n");
