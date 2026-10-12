@@ -5,7 +5,7 @@ import { publishVerdict, spokenLines } from "@/lib/services/director/pilotPolicy
  * The showcase publish gate (owner QC 2026-10-10, revised by the owner 2026-10-11).
  * BLOCKING, measured: every shot drawn; zero gate failures (prop size D53, edge crop,
  * night readability, empty frame and the other measured gates); no shot off-plan in its
- * time of day or place; no shot without a set; 45–90 s long. JUDGEMENTS (a model's, so the
+ * time of day or place; no shot without a set; 45–90 s long (a 9:16 Short: 30–60 s, D78). JUDGEMENTS (a model's, so the
  * owner + QC may approve past them by eye with a signed line, never past a measured gate): the
  * CRITIC — the film's mean score ≥ 5.5 and no shot below 4 — and the key-object RECOGNITION gate
  * (owner 2026-10-12 evening, D77: the viewer's words stay on the checklist). The critic's "action" verdict is not a gate: it goes to
@@ -16,13 +16,21 @@ import { publishVerdict, spokenLines } from "@/lib/services/director/pilotPolicy
 
 export const SHOWCASE_MIN_SEC = 45;
 export const SHOWCASE_MAX_SEC = 90;
+/** A vertical Short (9:16) runs 30–60 s, the YouTube Shorts window (owner + QC 2026-10-12, D78: tegami's narration is 43.4 s). */
+export const SHORT_MIN_SEC = 30;
+export const SHORT_MAX_SEC = 60;
+
+/** The length a published film must have, by format: 16:9 showcase films 45–90 s, 9:16 Shorts 30–60 s. */
+export function durationWindow(aspect: string = "16:9"): { min: number; max: number; kind: string } {
+  return aspect === "9:16" ? { min: SHORT_MIN_SEC, max: SHORT_MAX_SEC, kind: "a 9:16 Short" } : { min: SHOWCASE_MIN_SEC, max: SHOWCASE_MAX_SEC, kind: "a showcase film" };
+}
 /** The film's mean critic score must reach this. */
 export const SHOWCASE_MIN_MEAN = 5.5;
 /** No shot may score below this. */
 export const SHOWCASE_MIN_SHOT = 4;
 
 /** Measured problems: no person can approve these away. */
-export function measuredProblems(status: string, s: Partial<RunSummary>): string[] {
+export function measuredProblems(status: string, s: Partial<RunSummary>, aspect: string = "16:9"): string[] {
   const out: string[] = [];
   if (status !== "done") out.push(`run status is "${status}"`);
   if ((s.rendered ?? 0) !== (s.shots ?? -1)) out.push(`${s.rendered ?? 0}/${s.shots ?? 0} shots rendered`);
@@ -31,7 +39,8 @@ export function measuredProblems(status: string, s: Partial<RunSummary>): string
   if (s.setless?.length) out.push(`shot(s) without a set: ${s.setless.join(", ")}`);
   if (s.stopAfter) out.push(`this is a ${s.stopAfter}-only preview run, not a film`);
   const d = s.durationSec ?? 0;
-  if (d < SHOWCASE_MIN_SEC || d > SHOWCASE_MAX_SEC) out.push(`film is ${d.toFixed(1)} s (a showcase film runs ${SHOWCASE_MIN_SEC}–${SHOWCASE_MAX_SEC} s)`);
+  const w = durationWindow(aspect);
+  if (d < w.min || d > w.max) out.push(`film is ${d.toFixed(1)} s (${w.kind} runs ${w.min}–${w.max} s)`);
   return out;
 }
 
@@ -65,8 +74,8 @@ export function recognitionProblems(s: Partial<RunSummary>): string[] {
 }
 
 /** What blocks publishing, from the run summary alone (empty = the automatic gate passes). */
-export function publishProblems(status: string, s: Partial<RunSummary>): string[] {
-  return [...measuredProblems(status, s), ...criticProblems(s), ...recognitionProblems(s)];
+export function publishProblems(status: string, s: Partial<RunSummary>, aspect: string = "16:9"): string[] {
+  return [...measuredProblems(status, s, aspect), ...criticProblems(s), ...recognitionProblems(s)];
 }
 
 /**

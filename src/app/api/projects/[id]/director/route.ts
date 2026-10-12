@@ -54,7 +54,7 @@ const directorRequestSchema = z.object({
   castEdits: z
     .array(
       z.union([
-        z.object({ prop: z.string().regex(/^[a-z][a-z0-9-]{1,31}$/), state: z.string().regex(/^[a-z][a-z0-9]{1,15}$/), op: z.enum(STATE_OPS) }),
+        z.object({ prop: z.string().regex(/^[a-z][a-z0-9-]{1,31}$/), state: z.string().regex(/^[a-z][a-z0-9]{1,15}$/), op: z.enum(STATE_OPS), on: z.string().regex(/^[a-z][a-z0-9]{1,15}$/).optional() }),
         z.object({ prop: z.string().regex(/^[a-z][a-z0-9-]{1,31}$/), op: z.literal("single") }),
       ]),
     )
