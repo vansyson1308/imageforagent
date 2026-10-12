@@ -134,7 +134,7 @@ export function replaceSymbol(defs: string, id: string, symbol: string, extras: 
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, library: CastLibrary, aspectRatio: string, carried: readonly Recognition[] = []): Promise<{ library: CastLibrary; results: Recognition[] }> {
+export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, library: CastLibrary, aspectRatio: string, carried: readonly Recognition[] = [], engineDrawn: ReadonlySet<string> = new Set()): Promise<{ library: CastLibrary; results: Recognition[] }> {
   const all = heroSymbols(plan);
   if (!all.length) return { library, results: [] };
   // a take on an approved preview's cast: what the preview already checked is carried over, not re-spent (owner 2026-10-12)
@@ -193,6 +193,11 @@ export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, libra
         }
       }
       if (ok || redraws >= MAX_REDRAWS) break;
+      // an engine-drawn state (D77: tear/patch on the approved base) is never handed back to the Cast: the gate only reports
+      if (engineDrawn.has(t.symbol)) {
+        await recordStep(ctx, { role: "critic", model: "engine", action: "recognize:engine-drawn", summary: `#${t.symbol} is drawn by the engine on the approved base: not redrawn by the Cast; the owner and QC judge it by eye` });
+        break;
+      }
       // a miss: the Cast redraws this one symbol with what the viewer saw; a redraw the engine rejects
       // (too few shapes, broken markup) is retried once with that problem before it counts
       redraws++;

@@ -21,7 +21,17 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
   // a take on an approved preview's cast (owner 2026-10-12): the cast IS that one, verbatim; anything new is dropped
   // narrated episodes: each shot's narration is fixed to its line (the plan only stages it)
   const dropped = new Set<string>();
-  const lock = (p: Plan) => {
+  const lock = (raw: Plan) => {
+    // an anatomy comes from Ultra's own ANATOMY call (or with a reused approved cast), never from the plan reply:
+    // tegami preview 2026-10-12, the planner wrote one with the category "prop", which no viewer's words can match
+    const p = {
+      ...raw,
+      cast: raw.cast.map((c) => {
+        const { anatomy: _a, ...rest } = c;
+        void _a;
+        return rest;
+      }),
+    };
     let locked = series ? lockSeriesCast(p, series) : p;
     if (fixedCast) {
       const f = lockFixedCast(locked, fixedCast.cast);
@@ -79,7 +89,7 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
     best = withSets.plan;
     await recordStep(ctx, { role: "director", model: "engine", action: "plan:sets", summary: `The plan had no set: the engine added ${withSets.added.join(", ")}${withSets.dropped.length ? ` and dropped the least-used prop(s) ${withSets.dropped.map((d) => `#${d}`).join(", ")} to make room` : ""}` });
   }
-  return withAnatomy(ctx, best, story);
+  return withAnatomy(ctx, best, story, !!fixedCast);
 }
 
 /**
@@ -88,11 +98,11 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
  * state's visible change. The Cast draws from it; the recognition gate passes the drawing by it. A cast
  * reused from an approved preview already carries it (no new call). A failed call leaves the plan as is.
  */
-export async function withAnatomy(ctx: DirectorContext, plan: Plan, story: string): Promise<Plan> {
+export async function withAnatomy(ctx: DirectorContext, plan: Plan, story: string, reusedCast = false): Promise<Plan> {
   const hero = heroProp(plan);
   const member = plan.cast.find((c) => c.id === hero);
   if (!hero || !member) return plan;
-  if (member.anatomy) {
+  if (member.anatomy && reusedCast) {
     await recordStep(ctx, { role: "director", model: "engine", action: "plan:anatomy", summary: `#${hero} anatomy carried with the cast: ${anatomyLine(member.anatomy)}` });
     return plan;
   }

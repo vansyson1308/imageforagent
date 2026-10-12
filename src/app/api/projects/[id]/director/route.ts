@@ -11,7 +11,8 @@ import { createRun, isRunLive } from "@/lib/services/director/loop";
 import { demoFloorPolicy } from "@/lib/services/director/demoPolicy";
 import { reapOrphanRuns, runEventStream, SSE_HEADERS, startDetachedRun } from "@/lib/services/director/runHub";
 import { STYLE_PRESETS } from "@/lib/services/director/prompts";
-import { loadCastFromRun, loadSeries } from "@/lib/services/director/series";
+import { editCastFromRun, loadCastFromRun, loadSeries } from "@/lib/services/director/series";
+import { STATE_OPS } from "@/lib/services/director/stateTransforms";
 import { decodeWav } from "@/lib/services/audio/wav";
 import type { NarrationShot } from "@/lib/services/director/fixedNarration";
 
@@ -49,6 +50,16 @@ const directorRequestSchema = z.object({
   stopAfter: z.literal("cast").optional(),
   /** an operator's full take on an APPROVED preview's cast: that run's Bible and library, verbatim (owner 2026-10-12) */
   castFromRun: z.string().regex(/^[a-z0-9]{10,40}$/).optional(),
+  /** engine edits on that reused cast (D77, operator only): tear/patch a key-object state on the approved base, or keep one look */
+  castEdits: z
+    .array(
+      z.union([
+        z.object({ prop: z.string().regex(/^[a-z][a-z0-9-]{1,31}$/), state: z.string().regex(/^[a-z][a-z0-9]{1,15}$/), op: z.enum(STATE_OPS) }),
+        z.object({ prop: z.string().regex(/^[a-z][a-z0-9-]{1,31}$/), op: z.literal("single") }),
+      ]),
+    )
+    .max(6)
+    .optional(),
   narrationShots: z
     .array(
       z.object({
@@ -78,7 +89,9 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     const sid = requireDemoSession(req, cfg);
     const body = await parseBody(req, directorRequestSchema);
     if ((body.stopAfter || body.castFromRun) && cfg.enabled && !isOperatorRequest(req, cfg)) throw new AppError("UNAUTHORIZED", "Cast-only previews and cast reuse are operator tools.");
-    if (body.castFromRun && (body.seriesId || body.stopAfter)) throw new AppError("VALIDATION", "castFromRun can't be combined with seriesId or stopAfter.");
+    // a cast-only preview MAY start from an approved cast (with engine edits, D77): the edited preview is the one approved next
+    if (body.castFromRun && body.seriesId) throw new AppError("VALIDATION", "castFromRun can't be combined with seriesId.");
+    if (body.castEdits?.length && !body.castFromRun) throw new AppError("VALIDATION", "castEdits need castFromRun (they edit an approved cast).");
     const project = await prisma.project.findUnique({ where: { id } });
     if (!project) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
     if (cfg.enabled && project.demoSession !== sid) throw new AppError("UNAUTHORIZED", "This demo project belongs to another session.");
@@ -104,8 +117,12 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     const ceiling = runCeiling(deps.ceiling, isOperatorRequest(req, cfg));
     const runDeps = { ...deps, ceiling, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }), ...(floor && { floorRedraw: { enabled: floor.enabled, reason: floor.reason } }) };
     const series = body.seriesId ? await loadSeries(body.seriesId, sid, cfg.enabled) : null;
-    const castFrom = body.castFromRun ? await loadCastFromRun(body.castFromRun) : null;
-    const { seriesId: _ignored, castFromRun: _from, narrationShots, ...rest } = body;
+    const loaded = body.castFromRun ? await loadCastFromRun(body.castFromRun) : null;
+    const castFrom = loaded && body.castEdits?.length ? await editCastFromRun(loaded, body.castEdits).catch((e: unknown) => {
+      throw new AppError("VALIDATION", `castEdits: ${e instanceof Error ? e.message : String(e)}`);
+    }) : loaded;
+    const { seriesId: _ignored, castFromRun: _from, castEdits: _edits, narrationShots, ...rest } = body;
+    void _edits;
     void _ignored;
     void _from;
     if (narrationShots && body.narration) throw new AppError("VALIDATION", "Send either narration or narrationShots, not both.");

@@ -26,7 +26,7 @@ import { StudioClient, type SseEvent } from "./client";
 import { appendLedger, assertSpendUnder } from "./ledger";
 import sharp from "sharp";
 import { SHOWCASE_V2, setsBrief } from "./showcaseStories";
-import { checklistProblems, checklistTemplate, criticOverride, criticProblems, measuredProblems, voiceProblems } from "@/lib/services/director/publishGate";
+import { checklistProblems, checklistTemplate, criticOverride, criticProblems, measuredProblems, recognitionOverride, recognitionProblems, voiceProblems } from "@/lib/services/director/publishGate";
 import { loadPackage } from "./pilot";
 import { appendCredits, probe, readVoiceCredit } from "./credits";
 import { contactSheet } from "./contactSheet";
@@ -176,8 +176,9 @@ async function main() {
         continue;
       }
       const critic = criticProblems(trace.summary);
+      const recognition = recognitionProblems(trace.summary);
       const dir = await writeCandidate(client, s.slug, pid, runId, trace, critic);
-      console.log(`◐ ${s.slug}: passed the measured gates${critic.length ? ` (critic: ${critic.join("; ")})` : " and the critic"}. Look at every frame and fill ${dir}/checklist.md, then: --set v2 --publish ${s.slug}=${pid}`);
+      console.log(`◐ ${s.slug}: passed the measured gates${critic.length ? ` (critic: ${critic.join("; ")})` : " and the critic"}${recognition.length ? ` (recognition: ${recognition.join("; ")})` : ""}. Look at every frame and fill ${dir}/checklist.md, then: --set v2 --publish ${s.slug}=${pid}`);
       continue;
     }
     await publish(client, { slug: s.slug, language: s.language, story: s.story }, pid, trace, base, set, index, indexPath);
@@ -227,7 +228,10 @@ async function writeCandidate(client: StudioClient, slug: string, pid: string, r
       measured: `${p?.shotType ?? f.shotType ?? "?"} · cast ${p?.cast.map((c) => `#${c}`).join(" ") ?? "?"} · critic ${scores[f.index] ?? "n/a"}/10${actions[f.index] ? ` · critic's action note: ${actions[f.index]}` : ""} · plan: ${(p?.description ?? "").slice(0, 200)}`,
     });
   }
-  writeFileSync(`${dir}/checklist.md`, checklistTemplate({ slug, projectId: pid, runId, commit: health.commit.slice(0, 7), hero: plan ? heroProp(plan) : null, shots, critic }));
+  // what the viewer said about each drawing of the key object stays on the checklist (D77), recognised or not
+  const seen = ((trace.summary.propRecognition ?? []) as Array<{ symbol: string; ok: boolean | null; saw: string }>).map((r) => `#${r.symbol}: ${r.ok === true ? "recognised" : r.ok === false ? "NOT recognised" : "not checked"} — the viewer said "${r.saw}"`);
+  const recognition = recognitionProblems(trace.summary).length ? seen : [];
+  writeFileSync(`${dir}/checklist.md`, checklistTemplate({ slug, projectId: pid, runId, commit: health.commit.slice(0, 7), hero: plan ? heroProp(plan) : null, shots, critic, recognition }));
   // the contact sheet: every shot on one image, for the owner's by-eye QC
   const tiles = shots.filter((sh) => existsSync(`${dir}/${sh.image}`)).map((sh) => ({ image: `${dir}/${sh.image}`, label: `${String(sh.index).padStart(2, "0")} · ${sh.measured.split(" · ")[0]} · critic ${scores[sh.index] ?? "n/a"}/10` }));
   writeFileSync(`${dir}/contact.jpg`, await contactSheet(tiles, { aspect: "16:9", title: `${slug} · ${plan?.title ?? ""} · run ${runId} · ${health.commit.slice(0, 7)}` }));
@@ -311,6 +315,7 @@ async function publishChecked(client: StudioClient, pairs: string, base: string,
       ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0]),
       ...checklistProblems(md, Number(trace.summary.shots ?? 0)),
       ...(critic.length && !criticOverride(md) ? [`critic: ${critic.join("; ")} (needs "Critic override: APPROVED by owner … and QC …" in the checklist)`] : []),
+      ...(recognitionProblems(trace.summary).length && !recognitionOverride(md) ? [`recognition: ${recognitionProblems(trace.summary).join("; ")} (needs "Recognition override: APPROVED by owner … and QC …" in the checklist)`] : []),
     ];
     if (problems.length) {
       console.log(`✘ ${slug}: not published. ${problems.join("; ")}`);

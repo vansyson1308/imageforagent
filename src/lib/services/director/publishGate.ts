@@ -5,9 +5,10 @@ import { publishVerdict, spokenLines } from "@/lib/services/director/pilotPolicy
  * The showcase publish gate (owner QC 2026-10-10, revised by the owner 2026-10-11).
  * BLOCKING, measured: every shot drawn; zero gate failures (prop size D53, edge crop,
  * night readability, empty frame and the other measured gates); no shot off-plan in its
- * time of day or place; no shot without a set; the key object recognised on its own (every
- * state, owner 2026-10-12); 45–90 s long. CRITIC: the film's mean
- * score ≥ 5.5 and no shot below 4. The critic's "action" verdict is not a gate: it goes to
+ * time of day or place; no shot without a set; 45–90 s long. JUDGEMENTS (a model's, so the
+ * owner + QC may approve past them by eye with a signed line, never past a measured gate): the
+ * CRITIC — the film's mean score ≥ 5.5 and no shot below 4 — and the key-object RECOGNITION gate
+ * (owner 2026-10-12 evening, D77: the viewer's words stay on the checklist). The critic's "action" verdict is not a gate: it goes to
  * the by-eye checklist. Then a person ticks the checklist (crops, darkness, hero object,
  * story beat, key action). A by-eye approval may override the critic's scores, never a
  * measured gate. Pure: the showcase script does the I/O.
@@ -28,11 +29,6 @@ export function measuredProblems(status: string, s: Partial<RunSummary>): string
   if ((s.gateFailures ?? 0) > 0) out.push(`${s.gateFailures} shot(s) still fail a measured gate`);
   if (s.offPlan?.length) out.push(`wrong time of day or place in shot(s): ${s.offPlan.join(", ")}`);
   if (s.setless?.length) out.push(`shot(s) without a set: ${s.setless.join(", ")}`);
-  // the hero-prop recognition gate (owner 2026-10-12, A): a key object a viewer can't name, or a check that did not run
-  for (const r of s.propRecognition ?? []) {
-    if (r.ok === false) out.push(`the key object #${r.symbol} is not recognised on its own (a viewer saw "${r.saw}")`);
-    else if (r.ok === null) out.push(`the key object #${r.symbol} was not checked by the recognition gate`);
-  }
   if (s.stopAfter) out.push(`this is a ${s.stopAfter}-only preview run, not a film`);
   const d = s.durationSec ?? 0;
   if (d < SHOWCASE_MIN_SEC || d > SHOWCASE_MAX_SEC) out.push(`film is ${d.toFixed(1)} s (a showcase film runs ${SHOWCASE_MIN_SEC}–${SHOWCASE_MAX_SEC} s)`);
@@ -54,9 +50,23 @@ export function criticProblems(s: Partial<RunSummary>): string[] {
   return out;
 }
 
+/**
+ * The key-object recognition gate's findings (owner 2026-10-12, A): a key object a viewer did not name,
+ * or a check that did not run. A model's judgement like the critic's (D77): the owner and QC may approve
+ * past it by eye with a signed `Recognition override` line; what the viewer said stays on the checklist.
+ */
+export function recognitionProblems(s: Partial<RunSummary>): string[] {
+  const out: string[] = [];
+  for (const r of s.propRecognition ?? []) {
+    if (r.ok === false) out.push(`the key object #${r.symbol} is not recognised on its own (a viewer saw "${r.saw}")`);
+    else if (r.ok === null) out.push(`the key object #${r.symbol} was not checked by the recognition gate`);
+  }
+  return out;
+}
+
 /** What blocks publishing, from the run summary alone (empty = the automatic gate passes). */
 export function publishProblems(status: string, s: Partial<RunSummary>): string[] {
-  return [...measuredProblems(status, s), ...criticProblems(s)];
+  return [...measuredProblems(status, s), ...criticProblems(s), ...recognitionProblems(s)];
 }
 
 /**
@@ -83,7 +93,7 @@ export interface ChecklistShot {
  * replaces each `[ ]` with `[x]` (pass) or `[!]` (fail) after looking at the
  * frame, and signs the verdict line. Unticked boxes block publishing.
  */
-export function checklistTemplate(opts: { slug: string; projectId: string; runId: string; commit: string; hero: string | null; shots: readonly ChecklistShot[]; critic?: readonly string[] }): string {
+export function checklistTemplate(opts: { slug: string; projectId: string; runId: string; commit: string; hero: string | null; shots: readonly ChecklistShot[]; critic?: readonly string[]; recognition?: readonly string[] }): string {
   const head = [
     `# By-eye checklist · ${opts.slug}`,
     "",
@@ -100,6 +110,20 @@ export function checklistTemplate(opts: { slug: string; projectId: string; runId
           "The owner and QC may approve the film past these by eye (owner decision 2026-10-11): replace `none` with `APPROVED by owner <name> and QC <name>`. A by-eye approval never overrides a measured gate.",
           "",
           "Critic override: none",
+          "",
+        ]
+      : []),
+    ...(opts.recognition?.length
+      ? [
+          "## Key-object recognition (a model's judgement, not a measured gate)",
+          "",
+          "What the viewer (the vision model) said, with no story, about each drawing of the key object alone:",
+          "",
+          ...opts.recognition.map((c) => `- ${c}`),
+          "",
+          "The owner and QC may approve the key object past this by eye (owner decision 2026-10-12, D77): replace `none` with `APPROVED by owner <name> and QC <name>`. A by-eye approval never overrides a measured gate.",
+          "",
+          "Recognition override: none",
           "",
         ]
       : []),
@@ -121,11 +145,20 @@ export function checklistTemplate(opts: { slug: string; projectId: string; runId
   return [...head, ...rows, "## Verdict", "", "Reviewer: ", "", "Verdict: PENDING (write PASS or FAIL)", ""].join("\n");
 }
 
+/** A signed `<kind> override: APPROVED by owner <name> and QC <name>` line (real names: the template's "<name>" placeholders are refused, QC of #30). */
+function signedOverride(md: string, kind: "Critic" | "Recognition"): boolean {
+  const line = md.match(new RegExp(`^${kind} override: (.+)$`, "m"))?.[1]?.trim() ?? "";
+  return /^APPROVED by owner (?!<)\S.* and QC (?!<)\S/.test(line);
+}
+
 /** True when the checklist carries the owner's and QC's by-eye approval past the critic's scores. */
 export function criticOverride(md: string): boolean {
-  // real names for both (QC of #30): the template's "<name>" placeholders are refused
-  const line = md.match(/^Critic override: (.+)$/m)?.[1]?.trim() ?? "";
-  return /^APPROVED by owner (?!<)\S.* and QC (?!<)\S/.test(line);
+  return signedOverride(md, "Critic");
+}
+
+/** True when the checklist carries the owner's and QC's by-eye approval of the key object past the recognition gate (D77). */
+export function recognitionOverride(md: string): boolean {
+  return signedOverride(md, "Recognition");
 }
 
 /** What keeps a filled checklist from passing (empty = publish). */

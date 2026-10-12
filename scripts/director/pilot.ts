@@ -5,6 +5,7 @@
  * DEMO_PASSCODE from the environment, never printed).
  *
  *   DEMO_PASSCODE=… npx tsx scripts/director/pilot.ts [--base …] [--episodes 1,2,3] [--series <id>] [--media <dir>] [--draft]
+ *   … --episodes 1 --cast-from <runId>   # a take on an approved cast-only preview's cast (D73/D77; episode 1 only)
  *
  * - Each episode is an owner package in docs/hackathon/pilot/PILOT0N_<slug>/
  *   (scripts/director/owner-packages.ts): production.json (one scene per
@@ -92,6 +93,8 @@ async function main() {
   const wanted = arg("--episodes") ? arg("--episodes").split(",").map(Number) : folders.map((_, i) => i + 1);
   const media = arg("--media");
   let seriesId = arg("--series") || null;
+  const castFromRun = arg("--cast-from") || null;
+  if (castFromRun && (wanted.length !== 1 || seriesId)) throw new Error("--cast-from takes one episode and no --series (a take on an approved preview's cast)");
   const client = new StudioClient({ base, passcode: process.env.DEMO_PASSCODE });
   await client.unlock();
 
@@ -107,7 +110,7 @@ async function main() {
     let summary: Record<string, unknown> | null = null;
     const runId = await client.direct(
       pid,
-      { story: pkg.story, language: pkg.meta.language, style: pkg.meta.style, aspectRatio: pkg.meta.aspectRatio, figure: "adult", narrationShots: pkg.shots, critic: true, research: false, ...(seriesId && { seriesId }) },
+      { story: pkg.story, language: pkg.meta.language, style: pkg.meta.style, aspectRatio: pkg.meta.aspectRatio, figure: "adult", narrationShots: pkg.shots, critic: true, research: false, ...(seriesId && { seriesId }), ...(castFromRun && { castFromRun }) },
       (e: SseEvent) => {
         if (e.type === "done") summary = e.summary as Record<string, unknown> | null;
       },
@@ -116,6 +119,12 @@ async function main() {
     if (!summary) throw new Error(`${folder}: run ${runId} ended without a summary`);
     const trace = await client.json<{ costUsd: number; steps: Array<{ role: string; action: string; shotIndex: number | null; model: string; output?: string | null; error?: string | null }> }>("GET", `/api/projects/${pid}/director/runs/${runId}`);
     appendLedger({ script: "pilot", label: `${folder}:${runId}`, model: "crew", tokensIn: Number((summary as { tokens?: number }).tokens ?? 0), tokensOut: 0, costUsd: trace.costUsd });
+    // a take on an approved preview's cast: every reused symbol's hash, to compare with the preview sheet's
+    const reused = trace.steps.find((st) => st.action === "cast-from-run");
+    if (reused?.output) {
+      const r = JSON.parse(reused.output) as { sourceRunId: string; hashes: Array<{ id: string; sha: string }> };
+      console.log([`  cast reused from preview run ${r.sourceRunId}:`, ...r.hashes.map((h) => `    #${h.id} ${h.sha}`)].join("\n"));
+    }
     if (n === 1 && !seriesId) {
       const saved = await client.json<{ id: string; members: string[] }>("POST", "/api/series", { runId, name: SERIES_NAME });
       seriesId = saved.id;
@@ -149,6 +158,8 @@ async function main() {
       seriesSymbolSha256: hashes,
       ownerRecordedLines: pkg.production.scenes.flatMap((s) => s.lines.map((l) => l.id)).filter((id) => !pkg.missing.includes(id)),
       timingsMismatches: pkg.mismatched,
+      // the key-object recognition gate's verdicts with the viewer's words (a judgement: owner + QC may approve past it, D77)
+      recognition: (sum.propRecognition ?? []) as unknown,
       publishable: blockers.length === 0,
       blockers,
       ownerEdits: null,

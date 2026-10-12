@@ -5,6 +5,7 @@ import type { KitSpec } from "@/lib/services/director/cast";
 import { castMemberSchema, type CastMember, type Plan } from "@/lib/services/director/schemas";
 import { splitLibrary } from "@/lib/services/director/svgTools";
 import { z } from "zod";
+import { applyCastEdits, type CastEdit } from "@/lib/services/director/stateTransforms";
 
 /**
  * Series mode (SPEC v2 WP5): a daily channel needs the SAME host and set in
@@ -120,6 +121,20 @@ export interface CastFromRun extends SeriesData {
   readonly recognition: ReadonlyArray<{ symbol: string; prop: string; state: string | null; ok: boolean | null; saw: string; redraws: number }>;
   /** the preview's kit sets' times of day, variants included (retimeSets / the fidelity brief) */
   readonly setTimes: ReadonlyMap<string, string>;
+  /** engine edits applied on top of the reused cast (D77): what changed, what was removed, for the trace */
+  readonly edits?: { readonly report: readonly string[]; readonly changed: readonly string[]; readonly removed: readonly string[] };
+}
+
+/**
+ * A reused cast with engine edits applied (D77): `tear`/`patch` redraw a key-object state on the approved base,
+ * `single` keeps one look. Recognition carried over for an edited or removed symbol is dropped (the edited one is
+ * checked again; a removed one is gone).
+ */
+export async function editCastFromRun(from: CastFromRun, edits: readonly CastEdit[]): Promise<CastFromRun> {
+  if (!edits.length) return from;
+  const r = await applyCastEdits(from.cast, from.library, edits);
+  const touched = new Set([...r.changed, ...r.removed]);
+  return { ...from, cast: r.cast, library: r.library, recognition: from.recognition.filter((x) => !touched.has(x.symbol)), edits: { report: r.report, changed: r.changed, removed: r.removed } };
 }
 
 const previewSummarySchema = z

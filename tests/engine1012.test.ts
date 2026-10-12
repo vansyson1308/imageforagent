@@ -17,7 +17,7 @@ import { buildDoll, dollFace, dollSchema } from "@/lib/services/director/dollKit
 import { validateDrawing } from "@/lib/services/director/artist";
 import { artistUser } from "@/lib/services/director/prompts";
 import { extractSvgFragment, unwrapSvg } from "@/lib/services/director/svgTools";
-import { measuredProblems } from "@/lib/services/director/publishGate";
+import { measuredProblems, recognitionProblems } from "@/lib/services/director/publishGate";
 import { heroSymbols, MAX_REDRAWS } from "@/lib/services/director/recognize";
 import { renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
 import type { KitSpec } from "@/lib/services/director/cast";
@@ -341,14 +341,14 @@ describe("A · hero-prop recognition gate (mock crew): render alone → the visi
     // id) → rejected → retried once with that problem; a rejected redraw costs no look (owner 2026-10-12, round 3)
     expect(log.filter((l) => l === "redraw")).toHaveLength(MAX_REDRAWS + 2 * MAX_REDRAWS);
     expect(log.filter((l) => l.startsWith("saw "))).toHaveLength(MAX_REDRAWS + 1 + 1);
-    expect(measuredProblems("done", { ...summary, stopAfter: undefined }).join(" ")).toMatch(/the key object #furin is not recognised on its own \(a viewer saw "a white flower on a stick"\)/);
+    expect(recognitionProblems({ ...summary, stopAfter: undefined }).join(" ")).toMatch(/the key object #furin is not recognised on its own \(a viewer saw "a white flower on a stick"\)/);
   }, 120_000);
 
   it("without a vision model the gate says so and reports “not checked” (null), which also blocks publishing", async () => {
     const { runId, summary } = await castOnly(recognizingCrew(["x"], []), false);
     expect(summary.propRecognition?.map((r) => r.ok)).toEqual([null, null]);
     expect((await prisma.directorStep.findFirst({ where: { runId, action: "recognize:skipped" } }))?.outputSummary).toMatch(/no vision model/);
-    expect(measuredProblems("done", { ...summary, stopAfter: undefined }).join(" ")).toMatch(/#furin was not checked by the recognition gate/);
+    expect(recognitionProblems({ ...summary, stopAfter: undefined }).join(" ")).toMatch(/#furin was not checked by the recognition gate/);
   }, 120_000);
 });
 
@@ -703,4 +703,129 @@ describe("Round 4 · a miss keeps the best drawing of the round, not the last; a
     const steps = await prisma.directorStep.findMany({ where: { runId }, orderBy: { seq: "asc" } });
     expect(steps.find((s) => s.action === "recognize:kept-best")?.outputSummary).toMatch(/#furin--ringing: kept the best drawing of the round \(the viewer saw "a glass wind chime"\)/);
   }, 120_000);
+});
+
+/* ---------- D77 (owner 2026-10-12 evening): engine-drawn states, one look, the recognition override ---------- */
+
+describe("D77 · prop state transforms: the engine tears and patches the APPROVED kite (round 4, #kite fc34c57b116c)", () => {
+  const r4 = JSON.parse(readFileSync("docs/hackathon/evidence/preview-2026-10-12-r4/v2-kite-trace.json", "utf8")) as { bible: Plan; library: string };
+  const px = async (png: Buffer, fx: number, fy: number) => {
+    const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+    const i = (Math.round(fy * info.height) * info.width + Math.round(fx * info.width)) * info.channels;
+    return [data[i], data[i + 1], data[i + 2]];
+  };
+
+  it("tear = a hole clipped THROUGH the kite (what is behind shows), with a flap; patch = a white stitched patch on the same spot; the base and every other symbol stay byte-identical", async () => {
+    const { applyCastEdits, findSpot } = await import("@/lib/services/director/stateTransforms");
+    const { castHashes } = await import("@/lib/services/director/series");
+    const { renderAlone, RECOGNIZE_BACKGROUND } = await import("@/lib/services/director/recognize");
+    const before = castHashes(r4.bible.cast, r4.library);
+    expect(before.find((h) => h.id === "kite")?.sha).toBe("fc34c57b116c");
+    const out = await applyCastEdits(r4.bible.cast, r4.library, [{ prop: "kite", state: "torn", op: "tear" }, { prop: "kite", state: "patched", op: "patch" }]);
+    expect(() => sanitizeSvg(out.library, "defs")).not.toThrow();
+    expect(out.changed).toEqual(["kite--torn", "kite--patched"]);
+    const after = castHashes(out.cast, out.library);
+    for (const h of after) if (!out.changed.includes(h.id)) expect(h.sha, h.id).toBe(before.find((b) => b.id === h.id)?.sha);
+    expect(after.find((h) => h.id === "kite--starred")?.sha).toBe("94cf223f4c4d");
+    // the spot, in the kite's 400-unit viewBox, and what each state shows there (rendered alone on the plain background)
+    const spot = (await findSpot(out.library, "kite"))!;
+    expect(spot).toMatchObject({ x: expect.any(Number), y: expect.any(Number) });
+    const at = (v: number) => (Math.round(1080 * 0.86) * (v / 400) + (1080 - Math.round(1080 * 0.86)) / 2) / 1080;
+    const [fx, fy] = [at(spot.x), at(spot.y)];
+    const base = await px(await renderAlone(out.library, "kite", "16:9", canvas), fx, fy);
+    const torn = await px(await renderAlone(out.library, "kite--torn", "16:9", canvas), fx, fy);
+    const patched = await px(await renderAlone(out.library, "kite--patched", "16:9", canvas), fx, fy);
+    const bg = [1, 3, 5].map((i) => parseInt(RECOGNIZE_BACKGROUND.slice(i, i + 2), 16));
+    expect(base[0]).toBeGreaterThan(base[1] + 80); // the red sail
+    expect(Math.max(...torn.map((v, i) => Math.abs(v - bg[i])))).toBeLessThan(12); // the background, through the hole
+    expect(Math.min(...patched)).toBeGreaterThan(200); // white cloth
+    // deterministic: the same base gives the same markup
+    const again = await applyCastEdits(r4.bible.cast, r4.library, [{ prop: "kite", state: "torn", op: "tear" }, { prop: "kite", state: "patched", op: "patch" }]);
+    expect(again.library).toBe(out.library);
+  });
+
+  it("single = one look: the state symbols are removed and the member has no states (bánh chưng round 4, #banh-chung 82007704a615)", async () => {
+    const { applyCastEdits } = await import("@/lib/services/director/stateTransforms");
+    const { castHashes } = await import("@/lib/services/director/series");
+    const bc = JSON.parse(readFileSync("docs/hackathon/evidence/preview-2026-10-12-r4/v2-banh-chung-trace.json", "utf8")) as { bible: Plan; library: string };
+    const out = await applyCastEdits(bc.bible.cast, bc.library, [{ prop: "banh-chung", op: "single" }]);
+    expect(out.removed.sort()).toEqual(["banh-chung--cooked", "banh-chung--cooking", "banh-chung--wrapped"]);
+    expect(out.cast.find((c) => c.id === "banh-chung")?.states).toBeUndefined();
+    expect(castHashes(out.cast, out.library).find((h) => h.id === "banh-chung")?.sha).toBe("82007704a615");
+    await expect(applyCastEdits(bc.bible.cast, bc.library, [{ prop: "banh-chung", state: "torn", op: "tear" }])).rejects.toThrow(/has no state "torn"/);
+  });
+
+  it("end to end: a cast-only preview on an approved cast with edits — the planner gets the edited cast, the edited states are checked again but never handed to the Cast", async () => {
+    const { loadCastFromRun, editCastFromRun } = await import("@/lib/services/director/series");
+    const preview = await castOnly(recognizingCrew(["a glass wind chime"], []));
+    const calls: string[] = [];
+    const base = recognizingCrew(["a glass wind chime"], []);
+    const crew: MockHandler = (m, o, i) => {
+      calls.push(m[0].content.match(/^ROLE: (\w+)/)?.[1] ?? "?");
+      return base(m, o, i);
+    };
+    const { replaceSymbol } = await import("@/lib/services/director/recognize");
+    // a solid body to patch (the scripted crew's fūrin is a thin flower: no spot fits on it)
+    const solid = `<symbol id="furin" viewBox="0 0 400 400"><rect x="40" y="40" width="320" height="320" rx="30" fill="#4a90c2"/>${Array.from({ length: 11 }, (_, k) => `<circle cx="${70 + k * 25}" cy="330" r="6" fill="#ffffff"/>`).join("")}</symbol>`;
+    const loaded = await loadCastFromRun(preview.runId);
+    const castFrom = await editCastFromRun({ ...loaded, library: replaceSymbol(loaded.library, "furin", solid, new Map()) }, [{ prop: "furin", state: "ringing", op: "patch" }]);
+    expect(castFrom.edits?.changed).toEqual(["furin--ringing"]);
+    expect(castFrom.recognition.map((r) => r.symbol)).toEqual(["furin"]);
+    const p = await prisma.project.create({ data: { name: "engine1012-edits" } });
+    created.push(p.id);
+    const d = { provider: new MockLlmProvider(crew), models: MOCK_MODELS, visionAvailable: true, modelNotes: [], tavily: null, ceiling: DEFAULT_BUDGET };
+    const req = { projectId: p.id, story: "Yui hangs a wind chime. It rings. Grandma smiles. The summer ends.", language: "en", style: "storybook", critic: true, research: false, maxShots: 4, stopAfter: "cast" as const, castFrom };
+    const { runId, budget } = await createRun(req, d);
+    const ctrl = registerRun(runId);
+    let summary;
+    try {
+      summary = await executeRun(runId, req, d, budget, () => {}, ctrl.signal);
+    } finally {
+      unregisterRun(runId);
+    }
+    expect(summary.status).toBe("done");
+    expect(calls).not.toContain("CAST");
+    const steps = await prisma.directorStep.findMany({ where: { runId }, orderBy: { seq: "asc" } });
+    expect(steps.find((s) => s.action === "cast-edits")?.outputSummary).toMatch(/#furin--ringing = patch of #furin/);
+    expect(steps.find((s) => s.action === "recognize:carried")?.outputSummary).toMatch(/#furin recognised/);
+    // the edited state was looked at again (the viewer's words go to the checklist)
+    expect(steps.some((s) => s.action === "recognize:verdict" && /#furin--ringing/.test(s.outputSummary ?? ""))).toBe(true);
+    expect(summary.propRecognition?.map((r) => r.symbol)).toEqual(["furin", "furin--ringing"]);
+  }, 180_000);
+
+  it("the planner's own anatomy is dropped: only Ultra's ANATOMY call (or a reused approved cast) gives one (tegami preview: category \"prop\")", async () => {
+    const log: string[] = [];
+    const crew: MockHandler = (m, o, i) => {
+      const role = m[0].content.match(/^ROLE: (\w+)/)?.[1];
+      if (role === "DIRECTOR") {
+        const p = furinPlan("Yui hangs a wind chime. It rings. Grandma smiles. The summer ends.");
+        return { ...p, cast: p.cast.map((c) => (c.id === "furin" ? { ...c, anatomy: { category: ["prop"], parts: [{ part: "body", look: "a body" }, { part: "flap", look: "a flap" }, { part: "letter", look: "a letter" }], notLike: [], states: [] } } : c)) };
+      }
+      if (role === "ANATOMY") log.push("anatomy call");
+      return anatomyCrew(["a glass wind chime"], [check({ category: true })], log)(m, o, i);
+    };
+    const { runId } = await castOnly(crew);
+    expect(log).toContain("anatomy call");
+    const run = await prisma.directorRun.findUniqueOrThrow({ where: { id: runId } });
+    expect((JSON.parse(run.bible!) as Plan).cast.find((c) => c.id === "furin")?.anatomy?.category).toEqual(FURIN_ANATOMY.category);
+  }, 120_000);
+});
+
+describe("D77 · the recognition gate is a model's judgement: owner + QC may approve past it by eye; measured gates stay", () => {
+  it("recognition problems are no longer measured problems; the checklist carries the viewer's words and a Recognition override line that needs both names", async () => {
+    const { checklistTemplate, recognitionOverride, recognitionProblems, measuredProblems: measured } = await import("@/lib/services/director/publishGate");
+    const s = { rendered: 10, shots: 10, gateFailures: 0, durationSec: 60, propRecognition: [{ symbol: "banh-chung", prop: "banh-chung", state: null, ok: false, saw: "window", redraws: 4 }] };
+    expect(measured("done", s)).toEqual([]);
+    expect(recognitionProblems(s)).toEqual(['the key object #banh-chung is not recognised on its own (a viewer saw "window")']);
+    const md = checklistTemplate({ slug: "v2-banh-chung", projectId: "p", runId: "r", commit: "abc1234", hero: "banh-chung", shots: [], recognition: ['#banh-chung: NOT recognised — the viewer said "window"'] });
+    expect(md).toMatch(/## Key-object recognition \(a model's judgement, not a measured gate\)/);
+    expect(md).toMatch(/- #banh-chung: NOT recognised — the viewer said "window"/);
+    expect(recognitionOverride(md)).toBe(false);
+    const sign = (line: string) => recognitionOverride(md.replace("Recognition override: none", `Recognition override: ${line}`));
+    expect(sign("APPROVED by owner vansyson and QC lead")).toBe(true);
+    expect(sign("APPROVED by owner vansyson")).toBe(false);
+    expect(sign("APPROVED by owner <name> and QC <name>")).toBe(false);
+    // a measured problem still blocks, whatever is signed
+    expect(measured("done", { ...s, gateFailures: 1 })).toEqual(["1 shot(s) still fail a measured gate"]);
+  });
 });
