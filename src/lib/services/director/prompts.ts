@@ -187,7 +187,8 @@ export function castUser(plan: Plan, only?: readonly CastMember[], hero?: string
   const anatomy = hero ? plan.cast.find((c) => c.id === hero)?.anatomy : undefined;
   const lines = members.map((c: CastMember) => {
     const isHero = hero && (c.id === hero || c.id.startsWith(`${hero}--`));
-    return `- ${c.id} (${c.kind}, "${c.name}"): ${c.look} — colors ${c.colors.join(" ")}${isHero ? ` — THE HERO OBJECT: seen close up in inserts, so draw it in detail (${HERO_SHAPES}+ shapes: parts, shaded body, rim light, highlight, pattern, what it hangs from or rests on), never a plain block${anatomy ? `. ${anatomyBrief(anatomy, c.id.startsWith(`${hero}--`) ? c.id.slice(hero.length + 2) : null)}` : ""}` : ""}`;
+    const flies = c.airborne || (isHero && plan.cast.find((m) => m.id === hero)?.airborne);
+    return `- ${c.id} (${c.kind}, "${c.name}"): ${c.look} — colors ${c.colors.join(" ")}${isHero ? ` — THE HERO OBJECT: seen close up in inserts, so draw it in detail (${HERO_SHAPES}+ shapes: parts, shaded body, rim light, highlight, pattern, what it hangs from or rests on), never a plain block, its main body filling 60–90% of the viewBox${anatomy ? `. ${anatomyBrief(anatomy, c.id.startsWith(`${hero}--`) ? c.id.slice(hero.length + 2) : null)}` : ""}` : ""}${flies ? " — IT FLIES: do NOT draw its flying string or line in the symbol (the engine draws it from the holder's hand); the object alone fills the viewBox" : ""}`;
   });
   return [`Film: "${plan.title}". Palette: ${plan.palette.join(" ")}.`, only ? "Draw ONLY these cast members:" : "Cast & Set Bible:", quoteData("notes", lines.join("\n"), 6000)].join("\n");
 }
@@ -216,7 +217,7 @@ export function anatomySystem(): string {
     GUARD,
     'Output ONE JSON object: {"category": ["what a stranger may call it, most specific first", …], "parts": [{"part": "short name", "look": "shape, relative size and position, colour, material cue"}, …], "notLike": ["everyday look-alike to avoid", …], "states": [{"id": "<state id>", "change": "what is VISIBLY different in this state"}, …]}',
     "- category: 1–5 everyday words a stranger could use (\"wind chime\", \"glass bell\", \"hanging bell\"; \"rice cake wrapped in leaves\", \"leaf parcel\"). Not the object's foreign name alone.",
-    "- parts: 3–6 parts that together make it THIS object and not a look-alike: shape, size relative to the whole, where it sits, colour, and a material cue (transparent glass with a white highlight, glossy leaf with veins, thin bamboo strings, paper). Real proportions; the defining silhouette first.",
+    "- parts: 3–6 parts OF THE OBJECT ITSELF (not a flying string or line it is held by: the engine draws that) that together make it THIS object and not a look-alike: shape, size relative to the whole, where it sits, colour, and a material cue (transparent glass with a white highlight, glossy leaf with veins, thin bamboo strings, paper). Real proportions; the defining silhouette first.",
     "- notLike: 1–5 generic things a careless drawing of it turns into (a gift box with a ribbon, a picture frame, a candle holder, a spatula).",
     "- states: one entry per planned state id, in order; change = the visible difference a viewer must notice (\"a jagged hole with a flap hanging and the sky showing through\"), not a feeling. The first state's change is its plain, finished look.",
     "- Follow the owner's KEY OBJECT notes in the story when there are any; they win over your own idea.",

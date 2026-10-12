@@ -8,6 +8,12 @@ import { anatomySystem, anatomyUser, directorSystem, directorUser } from "@/lib/
 import { castFromRunBrief, lockFixedCast, lockSeriesCast, seriesBrief, type SeriesData } from "@/lib/services/director/series";
 import type { Frame } from "@/generated/prisma/client";
 
+/**
+ * Output budget of a plan reply. 8000 cut plans off mid-JSON (round-3 preview 2026-10-12: bánh chưng
+ * failed on 3 truncated plans; 11 of the 10-12 plan calls hit the 8000 cap, the reasoning included).
+ */
+export const PLAN_MAX_TOKENS = 14000;
+
 /** Director (Ultra): story → validated Plan (shot list + Cast & Set Bible). */
 export async function runPlan(ctx: DirectorContext, story: string, references: string | null, referenceCount = 0, series: SeriesData | null = null, narration: readonly string[] | null = null, fixedCast: { cast: CastMember[]; palette: string[] } | null = null): Promise<Plan> {
   const seriesNote = [fixedCast ? castFromRunBrief(fixedCast.cast, fixedCast.palette) : null, series ? seriesBrief(series) : null, narration ? narrationBrief(narration) : null].filter(Boolean).join("\n\n") || null;
@@ -33,7 +39,7 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
       action: "plan",
       system: directorSystem({ minShots, maxShots, language: ctx.options.language, style: ctx.options.style }),
       user: directorUser(story, references, seriesNote),
-      maxTokens: 8000,
+      maxTokens: PLAN_MAX_TOKENS,
       temperature: 0.6,
     },
     planSchema,
@@ -52,7 +58,7 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
           action: "plan:retry",
           system: directorSystem({ minShots, maxShots, language: ctx.options.language, style: ctx.options.style }),
           user: `${directorUser(story, references, seriesNote)}\n\nYour previous plan was rejected by the coverage check: ${problems.join("; ")}. Fix exactly these points and keep the story.`,
-          maxTokens: 8000,
+          maxTokens: PLAN_MAX_TOKENS,
           temperature: 0.5,
         },
         planSchema,

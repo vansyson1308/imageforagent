@@ -39,7 +39,8 @@ async function main() {
   const base = arg("--base", "http://localhost:3000");
   const only = arg("--only");
   const day = new Date().toISOString().slice(0, 10);
-  const out = `docs/hackathon/evidence/preview-${day}`;
+  // --out <dir>: a later round the same day must not overwrite an earlier round's evidence
+  const out = arg("--out") || `docs/hackathon/evidence/preview-${day}`;
   mkdirSync(out, { recursive: true });
   console.log(`ledger spend so far: $${assertSpendUnder().toFixed(4)}`);
   if (argv.includes("--passcode")) throw new Error("Pass the operator passcode in DEMO_PASSCODE, not on the command line.");

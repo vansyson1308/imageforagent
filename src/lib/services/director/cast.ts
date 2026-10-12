@@ -6,6 +6,7 @@ import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
 import { castRepairUser, castSystem, castUser, HERO_SHAPES } from "@/lib/services/director/prompts";
 import sharp from "sharp";
+import { visibleBody } from "@/lib/services/director/svgTools";
 import { badPaints, castSheetFrame, extractJsonBlock, fixPaints, extractSvgFragment, isNearlyBlank, missingRefs, neededExtras, normalizeSet, opaquePieces, splitLibrary, symbolIds, symbolInfo, transparentShare } from "@/lib/services/director/svgTools";
 import { ANIMAL_WORDS, buildCritter, buildDoll, critterSchema, dollSchema, naturalHair, naturalSkin, normalizeDollSpec, type CritterSpec, type DollSpec } from "@/lib/services/director/dollKit";
 import { measureFrame, readableSetProblem } from "@/lib/services/director/frameGates";
@@ -67,6 +68,13 @@ export async function symbolProblems(
     problems.push(
       `#${id} has only ${s.shapes} shapes; draw at least ${min} (${member.kind === "set" ? "sky, far, middle and near layers, light sources" : member.kind === "character" ? "hair, face with eyes/brows/mouth, clothes in 2-3 tones, arms, hands, legs, shoes" : hero ? "it is the story's hero object, seen close up in inserts: its parts, a shaded body, rim light and highlight, texture or pattern lines, and what it hangs from or rests on" : "the object's parts and highlights"})`,
     );
+  if (member.kind === "prop" && hero && !problems.length) {
+    // the key object must fill its own viewBox (round-3 preview, kite: a long string drawn inside the symbol left
+    // the kite a small diamond at the bottom of its square, its torn and patched states unreadable)
+    const fill = await heroFill([...neededExtras(symbol, extras).values(), symbol].join("\n"), id, aspectRatio, canvas).catch(() => null);
+    if (fill && fill.w < HERO_FILL && fill.h < HERO_FILL)
+      problems.push(`#${id}: the object itself fills only ${Math.round(fill.w * 100)}% × ${Math.round(fill.h * 100)}% of its viewBox; draw the object LARGE, its main body filling 60–90% of the viewBox (no long string or empty space: the engine draws a kite's flying string)`);
+  }
   if (member.kind === "character" && !problems.length) {
     const alone = await renderArtwork([...neededExtras(symbol, extras).values(), symbol].join("\n"), `<use href="#${id}" x="0" y="0" width="720" height="1080"/>`, aspectRatio, "1K").catch(() => null);
     if (alone) {
@@ -161,6 +169,18 @@ export async function salvageLibrary(symbols: readonly string[], extras: Readonl
   const used = new Map<string, string>();
   for (const sym of kept) for (const [k, v] of neededExtras(sym, extras)) used.set(k, v);
   return { defs: [...used.values(), body].join("\n"), broken };
+}
+
+/** Share of its viewBox the key object's main body must reach in width or height. */
+export const HERO_FILL = 0.45;
+
+/** The main body (thin strings and lines ignored) of a symbol rendered alone, as a share of the square. */
+export async function heroFill(defs: string, id: string, aspectRatio: string, canvas: { w: number; h: number }): Promise<{ w: number; h: number } | null> {
+  const png = await renderAlone(defs, id, aspectRatio, canvas);
+  const { width = 1, height = 1 } = await sharp(png).metadata();
+  const bg = await sharp({ create: { width, height, channels: 4, background: RECOGNIZE_BACKGROUND } }).png().toBuffer();
+  const { body } = await visibleBody(png, bg);
+  return body ? { w: body.x1 - body.x0, h: body.y1 - body.y0 } : null;
 }
 
 /** The plain background an object is shown on, alone. */
