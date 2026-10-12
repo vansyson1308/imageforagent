@@ -157,10 +157,11 @@ export const HELD_PROP_SHARE = 0.26;
  * its lower edge. One prop per holder, in shot-cast order. Pure: returns the
  * new painting and what it did.
  */
-export function attachHeldProps(svg: string, shot: ShotPlan, kits: ReadonlyMap<string, KitSpec>, props: readonly string[]): { svg: string; notes: string[] } {
+export function attachHeldProps(svg: string, shot: ShotPlan, kits: ReadonlyMap<string, KitSpec>, props: readonly string[]): { svg: string; notes: string[]; held: string[] } {
   const holders = kitPlacements(svg, kits).filter((p) => p.pose === "hold");
   const free = shot.cast.filter((id) => props.includes(id));
   const notes: string[] = [];
+  const held: string[] = [];
   let out = svg;
   for (const h of holders) {
     const prop = free.shift();
@@ -172,7 +173,10 @@ export function attachHeldProps(svg: string, shot: ShotPlan, kits: ReadonlyMap<s
     const x = Math.round(ox + hand.x * s - size / 2);
     const y = Math.round(oy + hand.y * s - size * 0.8);
     const esc = prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    out = out.replace(new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#${esc}["'][^>]*?(/>|>\\s*</use>)`, "g"), "");
+    // the prop in the state this shot plans (owner 2026-10-12): #kite--torn, never the base
+    const state = shot.propStates?.find((ps) => ps.prop === prop)?.state;
+    const symbol = state ? `${prop}--${state}` : prop;
+    out = out.replace(new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#${esc}(?:--[a-z0-9]+)?["'][^>]*?(/>|>\\s*</use>)`, "g"), "");
     const at = out.indexOf(h.markup);
     if (at < 0) continue;
     let end = at + h.markup.length;
@@ -181,8 +185,67 @@ export function attachHeldProps(svg: string, shot: ShotPlan, kits: ReadonlyMap<s
       const close = out.indexOf("</use>", end);
       if (close >= 0) end = close + "</use>".length;
     }
-    out = `${out.slice(0, end)}<use href="#${prop}" x="${x}" y="${y}" width="${size}" height="${size}"/>${out.slice(end)}`;
-    notes.push(`#${prop} put in #${h.who}'s hands (hold): ${size}×${size} at (${x}, ${y})`);
+    out = `${out.slice(0, end)}<use href="#${symbol}" x="${x}" y="${y}" width="${size}" height="${size}"/>${out.slice(end)}`;
+    notes.push(`#${symbol} put in #${h.who}'s hands (hold): ${size}×${size} at (${x}, ${y})`);
+    held.push(prop);
+  }
+  return { svg: out, notes, held };
+}
+
+// ---------- airborne props: the string from the hand (owner 2026-10-12, C) ----------
+
+/** A prop the plan did not flag still flies when its name says so (kite, balloon). */
+export const AIRBORNE_WORDS = /\b(kites?|balloons?)\b|diều|bóng bay|凧|風船/iu;
+
+/** Props that fly on a string from someone's hand: flagged `airborne`, or named like one (unless flagged false). */
+export function airborneProps(cast: ReadonlyArray<{ id: string; name: string; kind: string; airborne?: boolean }>): string[] {
+  return cast.filter((c) => c.kind === "prop" && (c.airborne ?? AIRBORNE_WORDS.test(`${c.name} ${c.id.replace(/-/g, " ")}`))).map((c) => c.id);
+}
+
+/**
+ * C (owner 2026-10-12, kite shots 1, 9, 10 had no string and nobody holding it): an airborne prop
+ * that flies ABOVE a kit character of the shot gets a thin string from that character's hand to the
+ * prop, drawn by the engine just before the prop (so the prop covers its end). The holder is the
+ * character the plan has hold/point/wave, else the one nearest the prop; walkers are skipped (they
+ * leave the painting). Only plainly placed `<use>`s (no transformed group), so positions are known.
+ */
+export function tetherAirborne(svg: string, shot: ShotPlan, kits: ReadonlyMap<string, KitSpec>, airborne: readonly string[], canvas: CanvasSize, night = false): { svg: string; notes: string[] } {
+  const notes: string[] = [];
+  // a revision comes back with the engine's earlier strings in it: they are redrawn from the new positions
+  let out = svg.replace(/<path\b[^>]*\bdata-tether\s*=\s*["'][^"']*["'][^>]*\/>/g, "");
+  const people = kitPlacements(out, kits).filter((p) => p.pose !== "walk_a" && p.pose !== "walk_b");
+  for (const id of shot.cast.filter((c) => airborne.includes(c))) {
+    const esc = id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const m = new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#${esc}(?:--[a-z0-9]+)?["'][^>]*?/?>`).exec(out);
+    if (!m || /\btransform\s*=/.test(m[0])) continue;
+    const num = (a: string) => Number(m[0].match(new RegExp(`\\s${a}\\s*=\\s*["']?(-?[\\d.]+)`))?.[1] ?? NaN);
+    const [x, y, w, h] = [num("x"), num("y"), num("width"), num("height")];
+    if (![x, y, w, h].every(Number.isFinite) || w <= 0 || h <= 0) continue;
+    const kx = x + w / 2;
+    const ky = y + h / 2;
+    const handOf = (p: Placement) => {
+      const { s, ox, oy } = placementMap(p);
+      const hand = faceOf(kits.get(p.who)!, p.pose, p.expression).hand;
+      return { x: ox + hand.x * s, y: oy + hand.y * s };
+    };
+    const cue = (p: Placement) => shot.acting?.find((a) => a.who === p.who)?.pose;
+    const ranked = [...people].sort((a, b) => Number(["hold", "point", "wave"].includes(cue(b) ?? "")) - Number(["hold", "point", "wave"].includes(cue(a) ?? "")) || Math.abs(a.x + a.w / 2 - kx) - Math.abs(b.x + b.w / 2 - kx));
+    const holder = ranked[0];
+    if (!holder) {
+      notes.push(`#${id} flies with nobody in the shot to hold its string (no string drawn)`);
+      continue;
+    }
+    const hand = handOf(holder);
+    // only a prop up in the air: its lower edge above the hand (a kite on the table, or in the hands, has no string)
+    if (y + h * 0.75 > hand.y - canvas.h * 0.05) continue;
+    const dist = Math.hypot(kx - hand.x, ky - hand.y);
+    const cx = (kx + hand.x) / 2;
+    const cy = (ky + hand.y) / 2 + dist * 0.08;
+    const width = Math.max(2.5, Math.round(canvas.h * 0.0028 * 10) / 10);
+    const r = (v: number) => Math.round(v * 10) / 10;
+    const string = `<path data-tether="${id}" d="M${r(hand.x)} ${r(hand.y)} Q${r(cx)} ${r(cy)} ${r(kx)} ${r(ky)}" fill="none" stroke="${night ? "#f3ead2" : "#3a3036"}" stroke-opacity="0.8" stroke-width="${width}" stroke-linecap="round"/>`;
+    out = out.slice(0, m.index) + string + out.slice(m.index);
+    notes.push(`string drawn from #${holder.who}'s hand to #${id} (${Math.round(dist)} px)`);
   }
   return { svg: out, notes };
 }

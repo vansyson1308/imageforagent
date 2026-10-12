@@ -5,7 +5,8 @@ import { publishVerdict, spokenLines } from "@/lib/services/director/pilotPolicy
  * The showcase publish gate (owner QC 2026-10-10, revised by the owner 2026-10-11).
  * BLOCKING, measured: every shot drawn; zero gate failures (prop size D53, edge crop,
  * night readability, empty frame and the other measured gates); no shot off-plan in its
- * time of day or place; no shot without a set; 45–90 s long. CRITIC: the film's mean
+ * time of day or place; no shot without a set; the key object recognised on its own (every
+ * state, owner 2026-10-12); 45–90 s long. CRITIC: the film's mean
  * score ≥ 5.5 and no shot below 4. The critic's "action" verdict is not a gate: it goes to
  * the by-eye checklist. Then a person ticks the checklist (crops, darkness, hero object,
  * story beat, key action). A by-eye approval may override the critic's scores, never a
@@ -27,6 +28,12 @@ export function measuredProblems(status: string, s: Partial<RunSummary>): string
   if ((s.gateFailures ?? 0) > 0) out.push(`${s.gateFailures} shot(s) still fail a measured gate`);
   if (s.offPlan?.length) out.push(`wrong time of day or place in shot(s): ${s.offPlan.join(", ")}`);
   if (s.setless?.length) out.push(`shot(s) without a set: ${s.setless.join(", ")}`);
+  // the hero-prop recognition gate (owner 2026-10-12, A): a key object a viewer can't name, or a check that did not run
+  for (const r of s.propRecognition ?? []) {
+    if (r.ok === false) out.push(`the key object #${r.symbol} is not recognised on its own (a viewer saw "${r.saw}")`);
+    else if (r.ok === null) out.push(`the key object #${r.symbol} was not checked by the recognition gate`);
+  }
+  if (s.stopAfter) out.push(`this is a ${s.stopAfter}-only preview run, not a film`);
   const d = s.durationSec ?? 0;
   if (d < SHOWCASE_MIN_SEC || d > SHOWCASE_MAX_SEC) out.push(`film is ${d.toFixed(1)} s (a showcase film runs ${SHOWCASE_MIN_SEC}–${SHOWCASE_MAX_SEC} s)`);
   return out;

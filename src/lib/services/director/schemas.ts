@@ -17,6 +17,9 @@ export const castId = z
   .string()
   .regex(/^[a-z][a-z0-9-]{1,31}$/, 'Cast ids are lowercase slugs like "grandma" or "tea-house"');
 
+/** A prop state id: a short slug ("intact", "torn", "mended"). */
+export const stateId = z.string().regex(/^[a-z][a-z0-9]{1,15}$/, 'State ids are short lowercase words like "torn" or "wrapped"');
+
 export const castMemberSchema = z.object({
   id: castId,
   name: z.string().min(1).max(60),
@@ -26,6 +29,17 @@ export const castMemberSchema = z.object({
   colors: z.array(hex).min(1).max(6),
   /** Research note numbers (1-based) this design uses. Empty when there was no research. */
   cites: z.array(z.number().int().min(0).max(99)).max(8).optional(),
+  /**
+   * A prop that changes during the story (owner 2026-10-12): kite intact → torn → mended,
+   * bánh chưng leaves → wrapped → cooked, fūrin still → ringing. The Cast draws one symbol per
+   * state from the same base (`<id>--<state>`); each shot names the state it shows.
+   */
+  states: z
+    .array(z.object({ id: stateId, look: z.string().min(3).max(300) }))
+    .max(4)
+    .optional(),
+  /** A prop that flies on a string from someone's hand (a kite, a balloon): the engine draws the string. */
+  airborne: z.boolean().optional(),
 });
 
 export const shotPlanSchema = z.object({
@@ -45,6 +59,11 @@ export const shotPlanSchema = z.object({
   intentionalRepeat: z.boolean().optional(),
   /** Music mood under this shot (the engine's own score synth, WP4.6). */
   mood: z.enum(SCORE_MOODS).optional(),
+  /** The state each stateful prop in this shot is in ({prop, state}); a prop with states that is not named keeps its last state. */
+  propStates: z
+    .array(z.object({ prop: castId, state: stateId }))
+    .max(4)
+    .optional(),
   /** What each visible character DOES in this shot (kit characters are posed by the engine). */
   acting: z
     .array(z.object({ who: castId, pose: z.enum(POSES), expression: z.enum(EXPRESSIONS) }))
@@ -93,6 +112,20 @@ export const lookSchema = z.object({
   matchesShot: z.boolean(),
 });
 export type Look = z.infer<typeof lookSchema>;
+
+/** What a viewer names an object drawn ALONE on a plain background (no story, no hints): the recognition gate. */
+export const objectNameSchema = z.object({
+  name: z.string().min(1).max(80),
+  description: z.string().max(240),
+});
+export type ObjectName = z.infer<typeof objectNameSchema>;
+
+/** Nano's verdict: is what the viewer named the planned object (and its state)? */
+export const propCheckSchema = z.object({
+  match: z.boolean(),
+  reason: z.string().max(240),
+});
+export type PropCheck = z.infer<typeof propCheckSchema>;
 
 export const editorEditSchema = z.object({
   index: z.number().int().min(1),

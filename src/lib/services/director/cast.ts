@@ -1,4 +1,4 @@
-import { heroProp } from "@/lib/services/director/plan";
+import { heroProp, stateAliases, stateMembers } from "@/lib/services/director/plan";
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
@@ -141,7 +141,7 @@ export function placeholderLibrary(cast: readonly CastMember[], canvas: { w: num
     .join("\n");
 }
 
-interface Candidate {
+export interface Candidate {
   readonly symbol: string;
   readonly extras: Map<string, string>;
   readonly attempt: number;
@@ -149,7 +149,7 @@ interface Candidate {
 }
 
 /** Rename paint-server ids that collide with an earlier attempt's (different) definition. */
-function namespaced(c: Candidate, taken: ReadonlyMap<string, string>): { symbol: string; extras: Map<string, string> } {
+export function namespaced(c: Candidate, taken: ReadonlyMap<string, string>): { symbol: string; extras: Map<string, string> } {
   let symbol = c.symbol;
   let defs = [...c.extras.entries()];
   for (const [id, def] of c.extras) {
@@ -182,10 +182,15 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
   // prop members `<set>-d<n>` the Cast must draw; the set is rebuilt with them at assembly
   const setSpecs = new Map<string, SetSpec>();
   const dressMembers: CastMember[] = [];
-  const allMembers = () => [...plan.cast, ...dressMembers];
+  // a prop that changes during the story gets one symbol per later state, drawn from the same base (owner 2026-10-12)
+  const states = stateMembers(plan);
+  pending.push(...states);
+  const allMembers = () => [...plan.cast, ...states, ...dressMembers];
+  const isHero = (id: string) => !!hero && (id === hero || id.startsWith(`${hero}--`));
   for (let attempt = 0; attempt <= ctx.budget.budget.maxRepairs && pending.length; attempt++) {
     throwIfCancelled(ctx);
-    const user = attempt === 0 ? castUser(plan, undefined, hero) : castRepairUser(plan, pending, [...accepted.keys()], problems, hero);
+    // the first turn asks for the whole Bible, the key object's later states included
+    const user = attempt === 0 ? castUser({ ...plan, cast: [...plan.cast, ...states] }, undefined, hero) : castRepairUser(plan, pending, [...accepted.keys()], problems, hero);
     const out = await callModel(ctx, { role: "cast", action: attempt === 0 ? "defs" : "defs:repair", system, user, attempt, maxTokens: 16000, temperature: 0.5 });
     // Human characters come as doll specs (```json {"dolls": {...}}); the engine draws them
     const dolls = new Map<string, string>();
@@ -278,7 +283,7 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     const checkList = [...pending, ...dressMembers.filter((d) => !accepted.has(d.id) && !pending.some((p) => p.id === d.id))];
     for (const c of checkList) {
       const symbol = parsed.symbols.get(c.id);
-      const found = await symbolProblems(c, symbol, parsed.extras, ctx.canvas, aspectRatio, known, c.id === hero);
+      const found = await symbolProblems(c, symbol, parsed.extras, ctx.canvas, aspectRatio, known, isHero(c.id));
       // Animals go through the animal kit: a hand-drawn one is rejected (until the lenient last attempt)
       if (strict && symbol && !dolls.has(c.id) && c.kind === "character" && ANIMAL_WORDS.test(`${c.name} ${c.look}`)) {
         found.unshift(`#${c.id} is an animal: do not draw it, describe it for the animal kit under "critters" in the \`\`\`json block`);
@@ -373,6 +378,11 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
     timed.push(`#${vid}`);
   }
   if (timed.length) await recordStep(ctx, { role: "cast", model: "engine", action: "set-times", summary: `Sets lit for both times of day their shots need: ${timed.join(", ")}` });
+  // every state has a symbol: the first state is the base drawing; a later state the Cast never drew falls back to it (reported)
+  const aliases = stateAliases(plan, [...extras.values(), ...symbols].join("\n"));
+  symbols.push(...aliases.map((a) => a.symbol));
+  const lost = aliases.filter((a) => !a.first).map((a) => `#${a.id}`);
+  if (states.length) await recordStep(ctx, { role: "cast", model: "engine", action: "prop-states", summary: `Key object states: ${plan.cast.filter((c) => c.states?.length).map((c) => `#${c.id} ${c.states!.map((st) => st.id).join(" → ")}`).join("; ")}`, error: lost.length ? `state(s) not drawn, shown as the base drawing: ${lost.join(", ")}` : null });
   let defs = [...extras.values(), ...symbols].join("\n");
   let sheet: Buffer;
   let placeholder = placeholders.length === plan.cast.length;

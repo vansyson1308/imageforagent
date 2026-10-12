@@ -80,6 +80,63 @@ export function retimeSets(svg: string, shot: Pick<ShotPlan, "scene" | "descript
   return out;
 }
 
+/**
+ * Time-of-day BUCKETS (owner decision 2026-10-12, D71): dawn, morning, noon, afternoon and the
+ * golden late afternoon are ONE bucket, "day"; dusk (sunset, twilight, evening) and night are the
+ * others. Only a different bucket is off-plan: morning vs afternoon never is (kite take 2, shot 2).
+ */
+export type TimeBucket = "day" | "dusk" | "night";
+
+const BUCKET_WORDS: ReadonlyArray<[TimeBucket, RegExp]> = [
+  ["dusk", /\b(dusk|sunset|sundown|twilight|evening)\b|hoàng hôn|chạng vạng|chiều tối|夕方|夕暮れ|夕焼け|黄昏/giu],
+  ["night", /\b(night|nighttime|midnight|moonlit|moonlight|starry)\b|ban đêm|nửa đêm|đêm|夜|深夜|月夜/giu],
+  ["day", /\b(dawn|sunrise|morning|noon|midday|afternoon|daytime|daylight|day|sunny|sunlit|golden hour)\b|bình minh|buổi sáng|ban ngày|buổi trưa|buổi chiều|朝|昼|午後|日中/giu],
+];
+
+/** The time words a text names, each with its bucket ("late afternoon, not morning" → afternoon/day, morning/day). */
+export function timeWords(text: string): Array<{ word: string; bucket: TimeBucket }> {
+  const out: Array<{ word: string; bucket: TimeBucket }> = [];
+  let rest = text;
+  for (const [bucket, re] of BUCKET_WORDS) {
+    for (const m of rest.matchAll(re)) out.push({ word: m[0].toLowerCase(), bucket });
+    // a word is counted once, in the first bucket that names it ("midnight" is not also "night")
+    rest = rest.replace(re, " ");
+  }
+  return out;
+}
+
+/** The buckets a text names ("late afternoon, not morning" → {day}; "sunset, not afternoon" → {dusk, day}). */
+export function bucketsNamed(text: string): Set<TimeBucket> {
+  return new Set(timeWords(text).map((w) => w.bucket));
+}
+
+/** The bucket a set's kit light belongs to. */
+export function setBucket(lit: string | undefined): TimeBucket | null {
+  if (!lit) return null;
+  return lit === "night" ? "night" : lit === "dusk" ? "dusk" : "day";
+}
+
+/** The bucket a shot's own words plan (dusk words win over day/night ones; null = not stated). */
+export function plannedBucket(shot: Pick<ShotPlan, "scene" | "description"> & { readonly mood?: string | null }): TimeBucket | null {
+  const named = bucketsNamed(`${shot.scene} ${shot.description}`);
+  if (named.has("dusk") && !named.has("night")) return "dusk";
+  return shotTime(shot);
+}
+
+/**
+ * Nano's "wrong time" whose note compares two times of ONE bucket ("brightness indicates late
+ * afternoon, not morning") is not an off-plan time (D71): the verdict becomes "ok". A note that
+ * names one time only ("night not clearly depicted") or two buckets ("sunset, not afternoon") stays.
+ */
+export function withinBucket(c: Critique): Critique {
+  const f = c.fidelity;
+  if (!f || f.time !== "wrong") return c;
+  // two different times named, both in one bucket: the critic compared morning with afternoon
+  const words = timeWords(f.note ?? "");
+  const sameBucket = new Set(words.map((w) => w.word)).size >= 2 && new Set(words.map((w) => w.bucket)).size === 1;
+  return sameBucket ? { ...c, fidelity: { ...f, time: "ok", note: `${f.note} (same time-of-day bucket: not off-plan, D71)`.slice(0, 240) } } : c;
+}
+
 export const FIDELITY_AXES = ["time", "place", "action"] as const;
 
 /** The axes Nano judged "wrong" (time of day, place, key action). */
@@ -109,7 +166,8 @@ export function actionNote(c: Critique | null | undefined): string | null {
  * (below the accept bar and the floor), forces "revise" and puts the mismatch first in the
  * issues the Artist gets back. A "wrong" action is passed on as the first issue, unscored.
  */
-export function enforceFidelity(c: Critique): Critique {
+export function enforceFidelity(judged: Critique): Critique {
+  const c = withinBucket(judged);
   const wrong = offPlanAxes(c);
   if (!wrong.length) {
     const note = actionNote(c);
@@ -119,15 +177,26 @@ export function enforceFidelity(c: Critique): Critique {
   return { ...c, score: Math.min(c.score, 6), verdict: "revise", issues: [what, ...c.issues].slice(0, 6) };
 }
 
+const BUCKET_TEXT: Record<TimeBucket, string> = { day: "the DAY bucket (dawn to golden late afternoon)", dusk: "the DUSK bucket (sunset, twilight, evening)", night: "the NIGHT bucket" };
+
 /** Story context and measured facts the fidelity verdict is judged against. */
-export function fidelityBrief(plan: Pick<Plan, "title" | "logline">, shot: ShotPlan, setTimes: ReadonlyMap<string, string>): string {
-  const planned = shotTime(shot);
-  const sets = shot.cast.filter((id) => setTimes.has(id)).map((id) => `#${id} is lit for ${setTimes.get(setForShot(shot, id, setTimes))}`);
+export function fidelityBrief(plan: Pick<Plan, "title" | "logline"> & { readonly cast?: Plan["cast"] }, shot: ShotPlan, setTimes: ReadonlyMap<string, string>): string {
+  const planned = plannedBucket(shot);
+  const sets = shot.cast.filter((id) => setTimes.has(id)).map((id) => {
+    const lit = setTimes.get(setForShot(shot, id, setTimes));
+    return `#${id} is lit for ${lit} (${BUCKET_TEXT[setBucket(lit) ?? "day"]})`;
+  });
+  // the key object's planned state (owner 2026-10-12): the critic checks it shows
+  const states = (shot.propStates ?? []).flatMap((ps) => {
+    const st = plan.cast?.find((c) => c.id === ps.prop)?.states?.find((x) => x.id === ps.state);
+    return st ? [`#${ps.prop} must show its state "${ps.state}": ${st.look}`] : [];
+  });
   return [
     `Story: "${plan.title}" — ${plan.logline}`,
     `Scene: ${shot.scene}.`,
-    planned ? `The plan's words put this shot at ${planned === "night" ? "NIGHT" : "DAYTIME"}.` : "",
+    planned ? `The plan's words put this shot in ${BUCKET_TEXT[planned]}.` : "",
     sets.length ? `Set lighting (engine kit): ${sets.join("; ")}.` : "",
+    states.length ? `Key object: ${states.join("; ")}.` : "",
   ]
     .filter(Boolean)
     .join(" ");

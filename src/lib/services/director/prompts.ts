@@ -3,6 +3,7 @@ import { SCORE_MOODS, type CastMember, type Plan, type ShotPlan } from "@/lib/se
 import type { CanvasSize } from "@/lib/services/svgRenderer";
 import { CRITTER_VOCABULARY, DOLL_VOCABULARY, EXPRESSIONS, POSES } from "@/lib/services/director/dollKit";
 import { SET_VOCABULARY } from "@/lib/services/director/setKit";
+import { NIGHT_WORDS } from "@/lib/services/director/fidelity";
 
 /**
  * Prompts for the crew. Every system prompt starts with a machine-readable
@@ -71,6 +72,7 @@ export function directorSystem(opts: { minShots: number; maxShots: number; langu
     '- shots[].transition INTO the shot: "cut" by default, "dissolve" for time passing, "fadeBlack" for the final shot.',
     "- Group shots into scenes with a short scene label; keep the 180° rule and vary shot sizes between consecutive shots of a scene.",
     `- COVERAGE (a film, not a slideshow): open with an establishing wide shot; use medium shots, close-ups on faces at emotional beats, at least one over-the-shoulder or two-shot when two characters talk, and an insert/detail shot of a key prop. Never two consecutive shots with the same shot type AND the same framing. In films of 6+ shots use at least 2 distinct set areas or camera angles (another corner of the room, outside vs inside, a high or low angle). When the story spans time, give the light an arc (dawn → noon → dusk → night) and say it in each description. If a shot deliberately repeats an earlier composition (a callback), set "intentionalRepeat": true.`,
+    '- PROP STATES: when the story\'s key object CHANGES (a kite intact → torn → mended; banana leaves → a wrapped cake → a cooked cake; a wind chime still → ringing), give that prop "states": [{"id": "intact", "look": "…"}, {"id": "torn", "look": "a long rip from corner to corner, the sail flapping loose"}, …] (2–4, the first is how it starts; each look says what is VISIBLY different), and in every shot that shows it set "propStates": [{"prop": "<id>", "state": "<state id>"}]. A prop that flies on a string from someone\'s hand (a kite, a balloon) gets "airborne": true; the engine draws the string.',
     `- shots[].mood: the music under the shot, one of ${SCORE_MOODS.join("|")} (the engine composes an original score from it; keep it stable within a scene).`,
     `- shots[].acting: for EVERY character visible in the shot, {"who": id, "pose": one of ${POSES.join("|")}, "expression": one of ${EXPRESSIONS.join("|")}}. Characters must ACT: wave to greet, point at what they notice, hold an object they use, sit when they rest, walk when they arrive or leave, hug at a reunion, bow to thank, kneel to look closely, look-left/look-right toward whom they listen to. Expressions follow the beat (smile, laugh, sad, surprised, sleepy, neutral). Vary them across shots; do not repeat stand+neutral.`,
   ].join("\n");
@@ -182,7 +184,7 @@ export function castSystem(canvas: CanvasSize, style: string): string {
 
 export function castUser(plan: Plan, only?: readonly CastMember[], hero?: string | null): string {
   const members = only ?? plan.cast;
-  const lines = members.map((c: CastMember) => `- ${c.id} (${c.kind}, "${c.name}"): ${c.look} — colors ${c.colors.join(" ")}${c.id === hero ? " — THE HERO OBJECT: seen close up in inserts, so draw it in detail (12+ shapes: parts, shaded body, rim light, highlight, pattern, what it hangs from or rests on), never a plain block" : ""}`);
+  const lines = members.map((c: CastMember) => `- ${c.id} (${c.kind}, "${c.name}"): ${c.look} — colors ${c.colors.join(" ")}${hero && (c.id === hero || c.id.startsWith(`${hero}--`)) ? " — THE HERO OBJECT: seen close up in inserts, so draw it in detail (12+ shapes: parts, shaded body, rim light, highlight, pattern, what it hangs from or rests on), never a plain block" : ""}`);
   return [`Film: "${plan.title}". Palette: ${plan.palette.join(" ")}.`, only ? "Draw ONLY these cast members:" : "Cast & Set Bible:", quoteData("notes", lines.join("\n"), 5000)].join("\n");
 }
 
@@ -244,14 +246,25 @@ export function artistUser(opts: {
   const { plan, shot } = opts;
   const castLines = plan.cast
     .filter((c) => shot.cast.includes(c.id))
-    .map((c) => `- #${c.id} (${c.kind}): ${c.look}`)
+    .map((c) => `- #${c.id} (${c.kind}): ${c.look}${c.airborne ? " (it flies: place it up in the sky above the character who holds its string; the engine draws the string from their hand)" : ""}`)
     .join("\n");
+  // the key object's state in this shot (owner 2026-10-12): the engine swaps #prop for its state symbol, the Artist is told why
+  const states = (shot.propStates ?? []).flatMap((ps) => {
+    const st = plan.cast.find((c) => c.id === ps.prop)?.states?.find((x) => x.id === ps.state);
+    return st ? [`- #${ps.prop} is ${ps.state.toUpperCase()} in this shot: place <use href="#${ps.prop}--${ps.state}" …/> (${st.look})`] : [];
+  });
+  // the night rule with the FIRST draw (re-shoot 2026-10-12: dim figures came back on every repair)
+  const night = NIGHT_WORDS.test(`${shot.scene} ${shot.description}`);
   return [
     `Film "${plan.title}" — shot ${opts.index} of ${plan.shots.length}. Scene: ${shot.scene}.`,
     `Shot type: ${shot.shotType}. Duration ${shot.durationSec}s.`,
     quoteData("notes", `Description: ${shot.description}${shot.dialogue ? `\nLine (${shot.speaker ?? "?"}): ${shot.dialogue}` : ""}`, 1500),
     `Library symbols available: ${opts.symbols.map((s) => `#${s}`).join(" ") || "(none)"}.`,
     castLines ? `Cast in this shot:\n${castLines}` : "",
+    states.length ? `KEY OBJECT STATE (use exactly these symbols):\n${states.join("\n")}` : "",
+    night
+      ? `NIGHT SHOT — drawing order: 1) the set, 2) the navy tint <rect width="${opts.canvas.w}" height="${opts.canvas.h}" fill="#0b1330" fill-opacity="0.45"/>, 3) warm glows (radialGradient) behind or beside each character, 4) the characters and props LAST, never under the tint. Every character must stay bright (figure brightness ≥ 95/255) and stand out from what is behind it.`
+      : "",
     opts.actingBrief ?? "",
     `Palette: ${plan.palette.join(" ")}.`,
     shot.mode === "motion" ? ambientContract(opts.canvas, shot.durationSec) : "",
@@ -272,7 +285,7 @@ export function criticSystem(mode: "vision" | "text"): string {
       : "You are the Visual Critic. Unless VISUAL OBSERVATIONS are given you work WITHOUT the image: judge the frame from its SVG source, the render statistics and the ENGINE CHECKS against the shot description. ENGINE CHECKS are measured on the render and authoritative: never lower the score for character size or brightness when they PASSED; when a check FAILED, score ≤ 6 and put its fix first. Judge what the checks cannot: does the frame show what the description says (named characters and props present, the action, the setting, the time of day), is the composition clear (rule of thirds, no awkward overlaps, no big empty areas), are foreground details and light sources there.",
     GUARD,
     'Output ONE JSON object: {"score": 0-10, "verdict": "accept"|"revise", "issues": [...], "fixes": [...], "fidelity": {"time": "ok"|"wrong"|"unclear", "place": "ok"|"wrong"|"unclear", "action": "ok"|"wrong"|"unclear", "note": "…"}}.',
-    "- fidelity: compare the render (VISUAL OBSERVATIONS, ENGINE CHECKS, mean brightness) with the PLAN and the STORY. time = the planned time of day (a night scene that renders bright/day, or a day scene that renders dark, is \"wrong\"; a story set on a festival night such as Đêm Ba Mươi is night). place = the planned setting (indoors vs outdoors, the named place). action = the shot's key action or key object is visible. \"wrong\" only when the render clearly contradicts the plan; \"unclear\" when you cannot tell. note: one short sentence naming the mismatch (empty when all ok). A \"wrong\" time or place means the frame is off-plan: score ≤ 6 and put the fix first.",
+    "- fidelity: compare the render (VISUAL OBSERVATIONS, ENGINE CHECKS, mean brightness) with the PLAN and the STORY. time = the planned time of day, judged in three BUCKETS: DAY (dawn, morning, noon, afternoon, golden late afternoon: all one bucket), DUSK (sunset, twilight, evening), NIGHT. Only a different bucket is \"wrong\" (a night scene that renders bright, a day scene that renders as night); morning vs afternoon, or noon vs golden hour, is never \"wrong\". A story set on a festival night such as Đêm Ba Mươi is night. place = the planned setting (indoors vs outdoors, the named place). action = the shot's key action or key object is visible (when the PLAN names the key object's state, e.g. \"torn\", that state must show). \"wrong\" only when the render clearly contradicts the plan; \"unclear\" when you cannot tell. note: one short sentence naming the mismatch (empty when all ok). A \"wrong\" time or place means the frame is off-plan: score ≤ 6 and put the fix first.",
     "- CAMERA MOVES: a pan, dolly, tilt, zoom, crane or tracking move cannot be seen in a still frame. Never mark a shot \"wrong\" or lower its score because a camera move is not visible; judge only what a still can show (who, where, when, what they do, the key object).",
     "- score: 9–10 the frame clearly tells the shot, good composition; 7–8 good with minor issues; 4–6 subject unclear or important elements missing/overlapping; 0–3 blank, broken or wrong.",
     '- verdict "revise" only when a concrete fix would clearly improve the frame (score < 7).',
@@ -307,6 +320,52 @@ export function lookSystem(): string {
 
 export function lookUser(opts: { shot: ShotPlan; index: number; checks?: string }): string {
   return [`Shot ${opts.index}: ${opts.shot.shotType}.`, quoteData("notes", opts.shot.description, 1500), opts.checks ? `Measured by the engine on this render:${opts.checks}` : ""].filter(Boolean).join("\n\n");
+}
+
+// ---------- Hero-prop recognition (owner 2026-10-12): the vision model names it, Nano checks the name ----------
+
+export function nameObjectSystem(): string {
+  return [
+    "ROLE: NAME_OBJECT",
+    "You see ONE object drawn alone on a plain background. Say what it is, as a stranger would at first glance. You know nothing about any story: do not guess one.",
+    GUARD,
+    'Output ONE JSON object: {"name": "what it is, 1–5 words", "description": "one sentence: its shape, parts, material and colours, and its condition (whole, torn, wrapped, cooked, moving…)"}.',
+    '- If it does not look like any real object, say what it looks most like ("a white flower on a stick", "a brown picture frame").',
+  ].join("\n");
+}
+
+export function nameObjectUser(): string {
+  return "What is this object?";
+}
+
+export function propCheckSystem(): string {
+  return [
+    "ROLE: PROP_CHECK",
+    "A viewer saw a drawing of an object ALONE, with no story, and named it. Decide whether what they saw is the object the film planned (and, when a state is planned, that state).",
+    GUARD,
+    'Output ONE JSON object: {"match": true|false, "reason": "one short sentence"}.',
+    '- match = true when the viewer\'s name is the planned kind of object, in other words or a close synonym ("wind chime" for 風鈴, "rice cake wrapped in leaves" for bánh chưng, "kite" for a diamond kite). The colours may differ slightly.',
+    "- match = false when they named a different kind of thing (a flower, a picture frame, a lamp) or when the planned state does not show (a kite planned TORN that they saw as whole).",
+  ].join("\n");
+}
+
+export function propCheckUser(opts: { name: string; look: string; state?: { id: string; look: string } | null; saw: { name: string; description: string } }): string {
+  return [
+    `Planned object: ${opts.name}.`,
+    quoteData("notes", `Planned look: ${opts.look}${opts.state ? `\nPlanned state: ${opts.state.id} — ${opts.state.look}` : ""}`, 900),
+    quoteData("notes", `The viewer named it: "${opts.saw.name}". They described it: ${opts.saw.description}`, 600),
+  ].join("\n\n");
+}
+
+/** The Cast's redraw turn for a hero prop the viewer did not recognise. */
+export function castRecognizeUser(plan: Plan, member: CastMember, saw: { name: string; description: string }, previous: string): string {
+  return [
+    castUser(plan, [member], member.id),
+    `A viewer who saw your #${member.id} ALONE on a plain background named it "${saw.name}" (${saw.description}). It must read at a glance as: ${member.name}.`,
+    "Redraw it so a stranger names it correctly: its defining silhouette first (what makes this object THIS object), its characteristic parts, materials and how it hangs or rests; then shading, rim light and highlight. Keep its id, viewBox and colours.",
+    `Your previous drawing:\n${quoteData("previous", previous, 8000)}`,
+    "Return ONLY this symbol (plus its gradients) in the ```svg block.",
+  ].join("\n\n");
 }
 
 // ---------- Editor (Nano) ----------

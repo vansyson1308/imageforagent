@@ -8,16 +8,68 @@ import sharp from "sharp";
  */
 
 /** Pull the SVG fragment out of a reply (```svg fence, bare markup, or a stray <svg> wrapper). */
-export function extractSvgFragment(text: string): string {
+export function extractSvgFragment(text: string, canvas?: { w: number; h: number }): string {
   const fence = text.match(/```(?:svg|xml|html)?\s*\n([\s\S]*?)```/i);
   let s = fence ? fence[1] : text;
   s = s.replace(/<!--[\s\S]*?-->/g, "");
   s = s.replace(/<\?xml[^>]*\?>/gi, "");
-  const root = s.match(/<svg\b[^>]*>([\s\S]*)<\/svg>/i);
-  if (root) s = root[1];
   const a = s.indexOf("<");
   const b = s.lastIndexOf(">");
-  return a >= 0 && b > a ? s.slice(a, b + 1).trim() : "";
+  return a >= 0 && b > a ? unwrapSvg(s.slice(a, b + 1).trim(), canvas) : "";
+}
+
+const fmtN = (v: number) => String(Math.round(v * 1000) / 1000);
+
+/** The `<g transform>` that places an `<svg>` viewport's content where the viewport would (preserveAspectRatio meet/none). */
+function viewportTransform(attrs: string, fallback?: { w: number; h: number }): string {
+  const num = (a: string) => {
+    const v = attrs.match(new RegExp(`\\s${a}\\s*=\\s*["']?\\s*(-?[\\d.]+)\\s*(?:px)?["']?(?=[\\s/>]|$)`))?.[1];
+    return v === undefined ? NaN : Number(v);
+  };
+  const x = Number.isFinite(num("x")) ? num("x") : 0;
+  const y = Number.isFinite(num("y")) ? num("y") : 0;
+  const vb = attrs.match(/viewBox\s*=\s*["']([^"']+)["']/)?.[1]?.trim().split(/[\s,]+/).map(Number);
+  if (!vb || vb.length !== 4 || !vb.every(Number.isFinite) || vb[2] <= 0 || vb[3] <= 0) return x || y ? `translate(${fmtN(x)} ${fmtN(y)})` : "";
+  const [vx, vy, vw, vh] = vb;
+  const w = Number.isFinite(num("width")) ? num("width") : (fallback?.w ?? vw);
+  const h = Number.isFinite(num("height")) ? num("height") : (fallback?.h ?? vh);
+  if (/preserveAspectRatio\s*=\s*["']\s*none/i.test(attrs)) {
+    const sx = w / vw;
+    const sy = h / vh;
+    return `translate(${fmtN(x - vx * sx)} ${fmtN(y - vy * sy)}) scale(${fmtN(sx)} ${fmtN(sy)})`;
+  }
+  const k = Math.min(w / vw, h / vh);
+  const tx = x + (w - vw * k) / 2 - vx * k;
+  const ty = y + (h - vh * k) / 2 - vy * k;
+  return k === 1 && !tx && !ty ? "" : `translate(${fmtN(tx)} ${fmtN(ty)}) scale(${fmtN(k)})`;
+}
+
+/**
+ * The Artist's `<svg>` slips (re-shoot 2026-10-12, fūrin shot 8 was lost to one): an outer root
+ * wrapping the fragment is unwrapped (its viewBox mapped onto the canvas), a nested `<svg>`
+ * viewport becomes the `<g transform>` that places its content the same way, and a stray open
+ * or close tag is dropped. Only tags are rewritten (numbers we compute); the result still goes
+ * through sanitizeSvg like any fragment, so nothing the sanitizer rejects gets through.
+ */
+export function unwrapSvg(fragment: string, canvas?: { w: number; h: number }): string {
+  let s = fragment;
+  // an outer root: the fragment opens with <svg …> and what follows is balanced once its own closing tag (if any) is cut
+  const open = /^<svg\b([^>]*?)\/?>/i.exec(s);
+  if (open) {
+    const inner = s.slice(open[0].length).replace(/<\/svg>\s*$/i, "");
+    const count = (re: RegExp) => (inner.match(re) ?? []).length;
+    if (count(/<svg\b/gi) === count(/<\/svg>/gi)) {
+      const t = canvas ? viewportTransform(open[1].replace(/\s(width|height|x|y)\s*=\s*["'][^"']*["']/gi, ""), canvas) : "";
+      s = t ? `<g transform="${t}">${inner}</g>` : inner;
+    }
+  }
+  for (let k = 0; k < 24; k++) {
+    const m = /<svg\b([^>]*)>((?:(?!<svg\b)[\s\S])*?)<\/svg>/i.exec(s);
+    if (!m) break;
+    const t = viewportTransform(m[1]);
+    s = s.slice(0, m.index) + (t ? `<g transform="${t}">${m[2]}</g>` : `<g>${m[2]}</g>`) + s.slice(m.index + m[0].length);
+  }
+  return s.replace(/<svg\b[^>]*\/>/gi, "").replace(/<svg\b[^>]*>/gi, "").replace(/<\/svg>/gi, "").trim();
 }
 
 /** The ```json block that follows the svg block in a motion-shot reply, if any. */
@@ -350,10 +402,80 @@ export async function visibleArea(withUse: Buffer, without: Buffer): Promise<num
 }
 
 /**
+ * What an element visibly adds (`withUse` over `without`), and its MAIN BODY (owner 2026-10-12, E):
+ * the pixels whose horizontal AND vertical runs are both at least 1.2% of the frame width, so a
+ * string, a stick or a thin hook drops out and a long stick with a tiny bell cannot carry the
+ * span. Boxes are in [0,1] of the frame; areas are shares of the frame.
+ */
+export async function visibleBody(withUse: Buffer, without: Buffer): Promise<{ box: Box01 | null; body: Box01 | null; area: number; bodyArea: number }> {
+  const a = await rgba(withUse);
+  const b = await rgba(without);
+  const step = 2;
+  const W = Math.ceil(a.w / step);
+  const H = Math.ceil(a.h / step);
+  const on = new Uint8Array(W * H);
+  for (let gy = 0; gy < H; gy++) {
+    for (let gx = 0; gx < W; gx++) {
+      const i = (gy * step * a.w + gx * step) * 4;
+      if (Math.abs(a.data[i] - b.data[i]) + Math.abs(a.data[i + 1] - b.data[i + 1]) + Math.abs(a.data[i + 2] - b.data[i + 2]) > 30) on[gy * W + gx] = 1;
+    }
+  }
+  const T = Math.max(3, Math.round(W * 0.012));
+  const hRun = new Uint16Array(W * H);
+  const vRun = new Uint16Array(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; ) {
+      if (!on[y * W + x]) { x++; continue; }
+      let e = x;
+      while (e < W && on[y * W + e]) e++;
+      for (let k = x; k < e; k++) hRun[y * W + k] = e - x;
+      x = e;
+    }
+  }
+  for (let x = 0; x < W; x++) {
+    for (let y = 0; y < H; ) {
+      if (!on[y * W + x]) { y++; continue; }
+      let e = y;
+      while (e < H && on[e * W + x]) e++;
+      for (let k = y; k < e; k++) vRun[k * W + x] = e - y;
+      y = e;
+    }
+  }
+  const all = { x0: W, y0: H, x1: -1, y1: -1, n: 0 };
+  const thick = { x0: W, y0: H, x1: -1, y1: -1, n: 0 };
+  const grow = (g: typeof all, x: number, y: number) => {
+    g.n++;
+    if (x < g.x0) g.x0 = x;
+    if (x > g.x1) g.x1 = x;
+    if (y < g.y0) g.y0 = y;
+    if (y > g.y1) g.y1 = y;
+  };
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const i = y * W + x;
+      if (!on[i]) continue;
+      grow(all, x, y);
+      if (hRun[i] >= T && vRun[i] >= T) grow(thick, x, y);
+    }
+  }
+  const box01 = (g: typeof all): Box01 | null => (g.x1 < 0 ? null : { x0: g.x0 / W, y0: g.y0 / H, x1: (g.x1 + 1) / W, y1: (g.y1 + 1) / H });
+  return { box: box01(all), body: box01(thick), area: all.n / (W * H), bodyArea: thick.n / (W * H) };
+}
+
+export interface Box01 {
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+}
+
+/**
  * An insert (or a close-up with nobody in it) is about its object (owner 2026-10-11, QC of #30).
  * Slender objects (a fūrin: a dome, a string, a paper strip) cover little area even at full
  * height, so the object reads when it SPANS the frame: ≥ 60% of its height or ≥ 45% of its
  * width, with at least 2% of the frame covered; or when it covers 25% of the frame outright.
+ * The span is measured on the object's MAIN BODY (visibleBody, owner 2026-10-12): a long string
+ * or stick with a tiny object on its end does not carry it.
  */
 export const INSERT_PROP_AREA = 0.25;
 export const INSERT_PROP_SPAN_H = 0.6;

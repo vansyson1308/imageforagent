@@ -78,6 +78,10 @@ export interface RunSummary {
   readonly costUsd: number;
   readonly continuity: string[];
   readonly textCritic: boolean;
+  /** the hero-prop recognition gate (owner 2026-10-12): each drawing of the key object, named by a viewer who saw it alone */
+  readonly propRecognition?: ReadonlyArray<{ symbol: string; prop: string; state: string | null; ok: boolean | null; saw: string; redraws: number }>;
+  /** "cast" = a cast-only preview run (no shots) */
+  readonly stopAfter?: "cast";
   /** how much research the Bible used (only when research ran) */
   readonly research?: { notes: number; cited: number; castCiting: number; shotsCiting: number; byUse: Record<string, number> };
 }

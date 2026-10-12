@@ -1,4 +1,4 @@
-import { shotSize } from "@/lib/services/director/plan";
+import { restateProps, shotSize } from "@/lib/services/director/plan";
 import { prisma } from "@/lib/db";
 import { AppError } from "@/lib/services/apiError";
 import { renderArtwork, sanitizeSvg } from "@/lib/services/svgRenderer";
@@ -8,11 +8,11 @@ import { MAX_SVG_BYTES } from "@/lib/config/limits";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
 import { artistSystem, artistUser } from "@/lib/services/director/prompts";
 import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/director/camera";
-import { actingLayer, attachHeldProps, speakerId } from "@/lib/services/director/acting";
+import { actingLayer, airborneProps, attachHeldProps, speakerId, tetherAirborne } from "@/lib/services/director/acting";
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
 import { retimeSets, shotTime, timedSetId } from "@/lib/services/director/fidelity";
-import { applyPlacement, badPaints, coveredShare, INSERT_PROP_AREA, INSERT_PROP_MIN_AREA, INSERT_PROP_SPAN_H, INSERT_PROP_SPAN_W, INSERT_PROP_TARGET_H, minPropArea, visibleArea, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { applyPlacement, badPaints, coveredShare, INSERT_PROP_AREA, INSERT_PROP_MIN_AREA, INSERT_PROP_SPAN_H, INSERT_PROP_SPAN_W, INSERT_PROP_TARGET_H, minPropArea, visibleArea, visibleBody, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, edgeCuts, emptyFrameProblem, EXIT_ENTRY_WORDS, figureLight, GATE, measureFrame, OVER_SHOULDER, type EdgeSide, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
@@ -90,6 +90,8 @@ export async function validateDrawing(
     strict?: boolean;
     /** Accepted neighbouring shots (index ± 1) for the near-duplicate gate. */
     neighbours?: readonly Neighbour[];
+    /** Props that fly on a string (a kite): the engine draws the string from the holder's hand. */
+    airborne?: readonly string[];
   },
 ): Promise<Drawing> {
   let svg = extractSvgFragment(text);
@@ -99,7 +101,7 @@ export async function validateDrawing(
   if (bad.length && opts.strict !== false) throw new Error(`Unresolvable paint value(s) ${bad.map((b) => `"${b}"`).join(", ")} render BLACK: write url(#gradient-id) exactly (and declare the gradient in <defs>), or use a plain #rrggbb colour.`);
   if (bad.length) svg = fixPaints(svg, "#9aa3ad");
   // a kit character in the hold pose holds the shot's prop (owner QC 2026-10-10): the engine puts it in the hands
-  const held = opts.kits && opts.props?.length ? attachHeldProps(svg, opts.shot, opts.kits, opts.props) : { svg, notes: [] };
+  const held = opts.kits && opts.props?.length ? attachHeldProps(svg, opts.shot, opts.kits, opts.props) : { svg, notes: [], held: [] as string[] };
   svg = held.svg;
   try {
     sanitizeSvg(svg, "frame");
@@ -149,6 +151,16 @@ export async function validateDrawing(
       checks = fixed.checks;
     }
   }
+  // D (owner 2026-10-12): an undersized prop is the engine's to scale, before any repair turn (re-measured, every gate again)
+  if (checks.small.length) {
+    const fixed = await propScaleFix(svg, checks, opts, held.held);
+    if (fixed) {
+      fixed.checks.facts.push(...held.notes);
+      svg = fixed.svg;
+      png = fixed.png;
+      checks = fixed.checks;
+    }
+  }
   // D45: when the only problems are the main figure's size/headroom and it is placed plainly, the engine frames it (re-measured, every gate again)
   const placed = checks.subject && checks.problems.length && checks.problems.every((p) => REFRAMABLE.some((r) => r.test(p))) ? plainPlacement(svg, checks.subject.id) : null;
   if (placed && checks.subject) {
@@ -174,6 +186,15 @@ export async function validateDrawing(
     }
   }
   if (opts.strict !== false && checks.problems.length) throw new Error(`Framing/lighting check failed: ${checks.problems.join("; ")}.`);
+  // C (owner 2026-10-12): a kite up in the sky hangs on a string from its holder's hand, drawn by the engine on the final layout
+  if (opts.airborne?.length && opts.kits) {
+    const tied = tetherAirborne(svg, opts.shot, opts.kits, opts.airborne, opts.canvas, NIGHT_WORDS.test(`${opts.shot.scene} ${opts.shot.description}`));
+    if (tied.svg !== svg) {
+      svg = tied.svg;
+      png = await renderArtwork(opts.castDefs, svg, opts.aspectRatio, "1K");
+    }
+    checks.facts.push(...tied.notes);
+  }
   return { svg, ambient, png, checks, thumb: small };
 }
 
@@ -188,11 +209,12 @@ async function qualityGates(
   svg: string,
   png: Buffer,
   opts: { castDefs: string; aspectRatio: string; shot: ShotPlan; characters?: readonly string[]; sets?: readonly string[]; props?: readonly string[]; canvas: { w: number; h: number } },
-): Promise<{ problems: string[]; facts: string[]; subject: { id: string; box: Box } | null; cuts: { id: string; sides: EdgeSide[] }[]; dim: string[] }> {
+): Promise<{ problems: string[]; facts: string[]; subject: { id: string; box: Box } | null; cuts: { id: string; sides: EdgeSide[] }[]; dim: string[]; small: SmallProp[] }> {
   const problems: string[] = [];
   const facts: string[] = [];
   const cuts: { id: string; sides: EdgeSide[] }[] = [];
   const dim: string[] = [];
+  const small: SmallProp[] = [];
   const lum = await meanBrightness(png);
   const night = NIGHT_WORDS.test(`${opts.shot.scene} ${opts.shot.description}`);
   const dark = night || lum < GATE.darkFrame;
@@ -262,7 +284,8 @@ async function qualityGates(
   const aboutTheProp = size === "insert" || (size === "close" && !opts.shot.cast.some((id) => opts.characters?.includes(id)));
   const minArea = minPropArea(opts.shot.shotType);
   const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
-  const about: Array<{ id: string; area: number; h: number; w: number }> = [];
+  // the span of an object the shot is about is its MAIN BODY's, never its string or stick (owner 2026-10-12, E)
+  const about: Array<{ id: string; area: number; h: number; w: number; fullH: number; fullW: number }> = [];
   for (const id of propsInShot) {
     const stripped = withoutUses(svg, id);
     if (stripped === svg) {
@@ -270,31 +293,39 @@ async function qualityGates(
       continue;
     }
     const without = await renderArtwork(opts.castDefs, stripped, opts.aspectRatio, "1K");
-    const area = await visibleArea(png, without);
     if (aboutTheProp) {
-      const box = await visibleBox(png, without);
-      about.push({ id, area, h: box ? box.y1 - box.y0 : 0, w: box ? box.x1 - box.x0 : 0 });
+      const v = await visibleBody(png, without);
+      const span = (b: typeof v.body) => (b ? { h: b.y1 - b.y0, w: b.x1 - b.x0 } : { h: 0, w: 0 });
+      about.push({ id, area: v.area, ...span(v.body), fullH: span(v.box).h, fullW: span(v.box).w });
       continue;
     }
+    const area = await visibleArea(png, without);
     const side = Math.round(Math.sqrt((minArea / 0.6) * opts.canvas.w * opts.canvas.h));
-    if (area < minArea) problems.push(`#${id} (a key prop) shows only ${pct(area)} of the frame; a "${opts.shot.shotType}" needs at least ${pct(minArea)} so the story object reads (use width/height ≈ ${side} or more, in front of the set, not hidden behind a character)`);
-    else facts.push(`#${id} visible, ${pct(area)} of the frame`);
+    if (area < minArea) {
+      small.push({ id, kind: "area", area, need: minArea });
+      problems.push(`#${id} (a key prop) shows only ${pct(area)} of the frame; a "${opts.shot.shotType}" needs at least ${pct(minArea)} so the story object reads (use width/height ≈ ${side} or more, in front of the set, not hidden behind a character)`);
+    } else facts.push(`#${id} visible, ${pct(area)} of the frame`);
   }
   if (about.length) {
     const reads = (m: (typeof about)[number]) => m.area >= INSERT_PROP_AREA || ((m.h >= INSERT_PROP_SPAN_H || m.w >= INSERT_PROP_SPAN_W) && m.area >= INSERT_PROP_MIN_AREA);
-    // the object the shot is about: the one that reads, else the one that spans the most
+    // the object the shot is about: the one that reads, else the one whose body spans the most
     const subject = about.find(reads) ?? [...about].sort((a, b) => Math.max(b.h, b.w) - Math.max(a.h, a.w) || b.area - a.area)[0];
-    if (reads(subject)) facts.push(`#${subject.id} carries this "${opts.shot.shotType}": ${Math.round(subject.h * 100)}% of the frame height, ${Math.round(subject.w * 100)}% of its width, ${pct(subject.area)} of the frame`);
-    else
+    const whole = (m: (typeof about)[number]) => (m.fullH - m.h > 0.04 || m.fullW - m.w > 0.04 ? ` (with its string or stick the whole object spans ${Math.round(m.fullH * 100)}% × ${Math.round(m.fullW * 100)}%; only the main body counts)` : "");
+    if (reads(subject)) facts.push(`#${subject.id} carries this "${opts.shot.shotType}": its main body spans ${Math.round(subject.h * 100)}% of the frame height, ${Math.round(subject.w * 100)}% of its width, ${pct(subject.area)} of the frame`);
+    else {
+      small.push({ id: subject.id, kind: "span", area: subject.area, need: INSERT_PROP_MIN_AREA, bodyH: subject.h, bodyW: subject.w });
       problems.push(
-        `this "${opts.shot.shotType}" is about #${subject.id}, but it spans only ${Math.round(subject.h * 100)}% of the frame height and ${Math.round(subject.w * 100)}% of its width (${pct(subject.area)} of the frame): make it span about ${Math.round(INSERT_PROP_TARGET_H * 100)}% of the frame height (height ≈ ${Math.round(INSERT_PROP_TARGET_H * opts.canvas.h)}), centred, not cropped by any frame edge, in front of the set`,
+        `this "${opts.shot.shotType}" is about #${subject.id}, but its main body spans only ${Math.round(subject.h * 100)}% of the frame height and ${Math.round(subject.w * 100)}% of its width (${pct(subject.area)} of the frame)${whole(subject)}: make the object's body span about ${Math.round(INSERT_PROP_TARGET_H * 100)}% of the frame height (height ≈ ${Math.round(INSERT_PROP_TARGET_H * opts.canvas.h)}), centred, not cropped by any frame edge, in front of the set`,
       );
+    }
     // every other prop of the shot still has to read at medium-shot size
     const other = minPropArea("Medium shot");
     for (const m of about) {
       if (m === subject) continue;
-      if (m.area < other) problems.push(`#${m.id} (a key prop) shows only ${pct(m.area)} of the frame; it needs at least ${pct(other)} beside #${subject.id} (bigger, in front of the set)`);
-      else facts.push(`#${m.id} visible, ${pct(m.area)} of the frame`);
+      if (m.area < other) {
+        small.push({ id: m.id, kind: "area", area: m.area, need: other });
+        problems.push(`#${m.id} (a key prop) shows only ${pct(m.area)} of the frame; it needs at least ${pct(other)} beside #${subject.id} (bigger, in front of the set)`);
+      } else facts.push(`#${m.id} visible, ${pct(m.area)} of the frame`);
     }
   }
   // Measured on the BACKGROUND (every character removed): flat blocks the set is made of
@@ -342,7 +373,60 @@ async function qualityGates(
   } else if (shotTime(opts.shot) === "day" && lum < 60) {
     problems.push(`this is a daytime scene but the frame's mean brightness is only ${lum}/255 (should be ≥ 60): remove dark overlays over the set and use a day sky`);
   }
-  return { problems, facts, subject: subject && subjectId && kitIds.has(subjectId) ? { id: subjectId, box: subject } : null, cuts, dim };
+  return { problems, facts, subject: subject && subjectId && kitIds.has(subjectId) ? { id: subjectId, box: subject } : null, cuts, dim, small };
+}
+
+/** A prop the gate found too small: by area (needs `need`), or an object of an insert whose body does not span the frame. */
+export interface SmallProp {
+  readonly id: string;
+  readonly kind: "area" | "span";
+  readonly area: number;
+  readonly need: number;
+  readonly bodyH?: number;
+  readonly bodyW?: number;
+}
+
+/** How much to grow a small prop: area → √(need/area) with 15% headroom; span → the target body height. Capped at 6×. */
+export function propScale(p: SmallProp): number {
+  const f = p.kind === "span" ? (p.bodyH && p.bodyH > 0 ? (INSERT_PROP_TARGET_H / p.bodyH) * 1.02 : 0) : p.area > 0 ? Math.sqrt(p.need / p.area) * 1.15 : 0;
+  return Math.min(6, f);
+}
+
+/**
+ * D (owner 2026-10-12): an undersized prop is scaled by the ENGINE before any repair turn. A
+ * plainly placed prop grows about its centre and is kept inside the frame; a held prop grows
+ * about the grip (its point in the hands), so it stays in the hand. Kept only when the
+ * re-measured frame has fewer problems.
+ */
+async function propScaleFix(svg: string, checks: Gates, opts: GateOpts, held: readonly string[]): Promise<{ svg: string; png: Buffer; checks: Gates } | null> {
+  let out = svg;
+  const notes: string[] = [];
+  for (const p of checks.small) {
+    const placed = plainPlacement(out, p.id);
+    const f = propScale(p);
+    if (!placed || f <= 1.01) continue;
+    const inHand = held.includes(p.id);
+    const ax = placed.x + placed.w / 2;
+    const ay = placed.y + placed.h * (inHand ? 0.8 : 0.5);
+    const k = Math.min(f, (opts.canvas.w * 0.96) / placed.w, (opts.canvas.h * (p.kind === "span" ? 1.1 : 0.96)) / placed.h);
+    const w = Math.round(placed.w * k);
+    const h = Math.round(placed.h * k);
+    let x = Math.round(ax - (ax - placed.x) * k);
+    let y = Math.round(ay - (ay - placed.y) * k);
+    if (!inHand) {
+      x = Math.max(0, Math.min(opts.canvas.w - w, x));
+      if (p.kind !== "span") y = Math.max(0, Math.min(opts.canvas.h - h, y));
+      else y = Math.round((opts.canvas.h - h) / 2);
+    }
+    out = applyPlacement(out, placed, { x, y, w, h });
+    notes.push(`#${p.id} scaled ${k.toFixed(2)}× about its ${inHand ? "grip (held)" : "centre"}: ${Math.round(placed.w)}×${Math.round(placed.h)} → ${w}×${h}`);
+  }
+  if (out === svg) return null;
+  const png = await renderArtwork(opts.castDefs, out, opts.aspectRatio, "1K");
+  const after = await qualityGates(out, png, opts);
+  if (after.problems.length >= checks.problems.length) return null;
+  after.facts.push(`fixed by the engine: ${notes.join("; ")} (was: ${checks.problems.filter((x) => !after.problems.includes(x)).join("; ")})`);
+  return { svg: out, png, checks: after };
 }
 
 type GateOpts = Parameters<typeof qualityGates>[2] & { kits?: ReadonlyMap<string, KitSpec>; props?: readonly string[] };
@@ -442,7 +526,8 @@ export async function drawShot(
     });
     try {
       // each set as lit for this shot's own time of day (a day shot on a night-lit set places its day variant)
-      const drawing = await validateDrawing(opts.setTimes ? retimeSets(out.text, opts.shot, opts.setTimes) : out.text, {
+      // …and each key object in the state this shot plans (owner 2026-10-12)
+      const drawing = await validateDrawing(restateProps(opts.setTimes ? retimeSets(out.text, opts.shot, opts.setTimes) : out.text, opts.shot), {
         castDefs: opts.castDefs,
         symbols: opts.symbols,
         aspectRatio: opts.aspectRatio,
@@ -456,6 +541,7 @@ export async function drawShot(
         kits: opts.kits,
         strict: attempt < maxAttempts - 1,
         neighbours: opts.neighbours?.(),
+        airborne: airborneProps(opts.plan.cast),
       });
       return { drawing, attempts: attempt + 1, lastError: null };
     } catch (e) {

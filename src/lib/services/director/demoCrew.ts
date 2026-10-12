@@ -112,6 +112,10 @@ export function demoHandler(opts: { criticScores?: number[]; shots?: number } = 
       }
       case "LOOK":
         return { sees: ["the hero in front of the house"], problems: [], matchesShot: true };
+      case "NAME_OBJECT":
+        return { name: "an object", description: "a drawn object on a plain background" };
+      case "PROP_CHECK":
+        return { match: true, reason: "The scripted crew always recognises the object." };
       case "EDITOR":
         return { edits: [], notes: "No changes needed." };
       case "CONTINUITY":

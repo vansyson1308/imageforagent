@@ -15,6 +15,7 @@
     "director:models": "tsx scripts/director/models.ts",
     "director:smoke": "tsx scripts/director/smoke.ts",
     "director:showcase": "tsx scripts/director/showcase.ts",
+    "director:preview": "tsx scripts/director/preview.ts",
     "director:bench": "tsx scripts/eval/director_bench.ts",
     "judge:pdf": "tsx scripts/judge-access-pdf.ts",
     "showcase:assets": "tsx scripts/director/showcase-assets.ts"

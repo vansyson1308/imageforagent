@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { parseTsv } from "@/lib/services/tsvParser";
 import { replaceScript } from "@/lib/services/frameWrites";
 import { callJson, recordStep, type DirectorContext } from "@/lib/services/director/context";
-import { planSchema, type Plan } from "@/lib/services/director/schemas";
+import { planSchema, type CastMember, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import { directorSystem, directorUser } from "@/lib/services/director/prompts";
 import { lockSeriesCast, seriesBrief, type SeriesData } from "@/lib/services/director/series";
 import type { Frame } from "@/generated/prisma/client";
@@ -186,7 +186,99 @@ export function normalizePlan(plan: Plan, maxShots: number, referenceCount = 0):
       if (pick) s.cast = [...s.cast, pick];
     });
   }
+  return normalizeStates({ ...plan, cast, shots });
+}
+
+/** The symbol id of a prop's state ("kite--torn"). */
+export const stateSymbol = (prop: string, state: string) => `${prop}--${state}`;
+
+/**
+ * Prop states (owner 2026-10-12): kept only on props, ids unique; a shot's `propStates` only
+ * names props of its own cast and states they have. Every shot that shows a stateful prop gets
+ * a state: the one it names, else the state the prop was last seen in (continuity), else the first.
+ */
+export function normalizeStates(plan: Plan): Plan {
+  const cast: CastMember[] = plan.cast.map((c) => {
+    const seen = new Set<string>();
+    const states = c.kind === "prop" ? (c.states ?? []).filter((st) => (seen.has(st.id) ? false : (seen.add(st.id), true))) : [];
+    const { states: _s, ...rest } = c;
+    void _s;
+    return states.length >= 2 ? { ...rest, states } : rest;
+  });
+  const stateful = new Map(cast.filter((c) => c.states?.length).map((c) => [c.id, c.states!.map((st) => st.id)] as const));
+  const last = new Map<string, string>();
+  const shots = plan.shots.map((s) => {
+    const named = (s.propStates ?? []).filter((ps) => s.cast.includes(ps.prop) && stateful.get(ps.prop)?.includes(ps.state));
+    const out: Array<{ prop: string; state: string }> = [];
+    for (const id of s.cast) {
+      const ids = stateful.get(id);
+      if (!ids) continue;
+      const state = named.find((ps) => ps.prop === id)?.state ?? last.get(id) ?? ids[0];
+      last.set(id, state);
+      out.push({ prop: id, state });
+    }
+    const { propStates: _p, ...rest } = s;
+    void _p;
+    return out.length ? { ...rest, propStates: out } : rest;
+  });
   return { ...plan, cast, shots };
+}
+
+/**
+ * A drawing with each stateful prop swapped for the symbol of the state this shot plans: `#kite`
+ * (or another state's `#kite--intact`) → `#kite--torn` (exact `#id` references only, like retimeSets).
+ */
+export function restateProps(svg: string, shot: Pick<ShotPlan, "propStates">): string {
+  let out = svg;
+  for (const ps of shot.propStates ?? []) {
+    const esc = ps.prop.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    out = out.replace(new RegExp(`((?:xlink:)?href\\s*=\\s*["'])#${esc}(?:--[a-z0-9]+)?(["'])`, "g"), `$1#${stateSymbol(ps.prop, ps.state)}$2`);
+  }
+  return out;
+}
+
+/** The state each stateful prop of this shot is in (after normalizeStates every one has one). */
+export function propStateOf(shot: Pick<ShotPlan, "propStates">): Map<string, string> {
+  return new Map((shot.propStates ?? []).map((ps) => [ps.prop, ps.state] as const));
+}
+
+/**
+ * The extra library members a stateful prop needs: one per state after the first (the base
+ * symbol is drawn in the first state; the engine aliases `<id>--<first>` to it). Each is drawn
+ * from the same base: same object, colours and viewBox, only what the state changes differs.
+ */
+export function stateMembers(plan: Pick<Plan, "cast">): CastMember[] {
+  return plan.cast.flatMap((c) =>
+    (c.states ?? []).slice(1).map((st) => ({
+      id: stateSymbol(c.id, st.id),
+      name: `${c.name} (${st.id})`.slice(0, 60),
+      kind: "prop" as const,
+      look: `The SAME object as #${c.id} (${c.look.slice(0, 160)}) in its state "${st.id}": ${st.look}. Same colours, same viewBox 0 0 400 400, same size and position; change only what this state changes, and make that change obvious at a glance`.slice(0, 500),
+      colors: c.colors,
+    })),
+  );
+}
+
+/**
+ * State symbols the library still lacks, as symbols that place the base drawing: always the first
+ * state (the base IS drawn in it), and any later state the Cast never drew (`first: false`), so a
+ * shot never references a missing symbol.
+ */
+export function stateAliases(plan: Pick<Plan, "cast">, defs: string): Array<{ id: string; symbol: string; first: boolean }> {
+  const out: Array<{ id: string; symbol: string; first: boolean }> = [];
+  for (const c of plan.cast) {
+    if (!c.states?.length) continue;
+    const esc = c.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const vb = defs.match(new RegExp(`<symbol\\b[^>]*\\bid\\s*=\\s*["']${esc}["'][^>]*>`))?.[0].match(/viewBox\s*=\s*["']([^"']+)["']/)?.[1];
+    const [x0, y0, w, h] = (vb ?? "").trim().split(/[\s,]+/).map(Number);
+    if (!vb || ![x0, y0].every(Number.isFinite) || !(w > 0) || !(h > 0)) continue;
+    c.states.forEach((st, k) => {
+      const alias = stateSymbol(c.id, st.id);
+      if (new RegExp(`\\bid\\s*=\\s*["']${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}["']`).test(defs)) return;
+      out.push({ id: alias, first: k === 0, symbol: `<symbol id="${alias}" viewBox="${vb}"><use href="#${c.id}" x="${x0}" y="${y0}" width="${w}" height="${h}"/></symbol>` });
+    });
+  }
+  return out;
 }
 
 const OUTDOOR_WORDS = /\b(beach|sand|sandy|shore|seafront|seaside|waterfront|street|road|field|meadow|park|forest|woods|mountain|hillside|riverbank|pier|harbou?r|market square|rooftop)\b|bãi biển|bờ biển|cát|đường phố|cánh đồng|浜|海辺|砂浜|通り|野原|山道/iu;

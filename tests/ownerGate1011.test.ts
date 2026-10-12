@@ -73,26 +73,49 @@ describe("hero props read (owner 2026-10-11: run 4's fūrin was a plain orange b
   const fopts = (shotType: string, cast: string[]) => ({ ...opts(shotType, cast), castDefs: defs + FURIN, symbols: ["hero", "home", "kid", "kite", "furin"], props: ["kite", "furin"] });
   const furin = (h: number) => `<use href="#furin" x="${Math.round(960 - (h * 300) / 1400)}" y="${Math.round(540 - h / 2)}" width="${Math.round((h * 300) / 700)}" height="${h}"/>`;
 
-  it("QC of #30: a slender hanging prop reads when it spans the frame (700 px tall passes, 500 px fails), not only at 25% area", async () => {
+  // inside a transformed group: the gate's verdict as the Artist would get it (the engine can't rescale a grouped prop)
+  const grouped = (use: string) => `<g transform="translate(0 0)">${use}</g>`;
+
+  it("QC of #30 + E (owner 2026-10-12): a slender hanging prop reads when its MAIN BODY spans the frame, not its hook or string", async () => {
     expect([INSERT_PROP_AREA, INSERT_PROP_SPAN_H, INSERT_PROP_SPAN_W, INSERT_PROP_MIN_AREA]).toEqual([0.25, 0.6, 0.45, 0.02]);
-    const tall = await validateDrawing(`\`\`\`svg\n${bg}${furin(700)}\n\`\`\``, fopts("Close-up", ["furin", "home"]));
+    // 700 px: the whole fūrin spans 64%, but its hook is 16% of it: the body (dome to the end of the strip) spans 54% → fails now
+    await expect(validateDrawing(`\`\`\`svg\n${bg}${grouped(furin(700))}\n\`\`\``, fopts("Close-up", ["furin", "home"]))).rejects.toThrow(
+      /is about #furin, but its main body spans only 5\d% of the frame height .*whole object spans 6\d% × \d+%; only the main body counts\): make the object's body span about 65% of the frame height \(height ≈ 702\), centred, not cropped by any frame edge/,
+    );
+    // 800 px: the body spans 61% → reads
+    const tall = await validateDrawing(`\`\`\`svg\n${bg}${grouped(furin(800))}\n\`\`\``, fopts("Close-up", ["furin", "home"]));
     expect(tall.checks?.problems).toEqual([]);
-    expect(tall.checks?.facts.join(" ")).toMatch(/#furin carries this "Close-up": 6\d% of the frame height/);
-    await expect(validateDrawing(`\`\`\`svg\n${bg}${furin(500)}\n\`\`\``, fopts("Close-up", ["furin", "home"]))).rejects.toThrow(/is about #furin, but it spans only 4\d% of the frame height .*make it span about 65% of the frame height \(height ≈ 702\), centred, not cropped by any frame edge/);
+    expect(tall.checks?.facts.join(" ")).toMatch(/#furin carries this "Close-up": its main body spans 6\d% of the frame height/);
+    await expect(validateDrawing(`\`\`\`svg\n${bg}${grouped(furin(500))}\n\`\`\``, fopts("Close-up", ["furin", "home"]))).rejects.toThrow(/is about #furin, but its main body spans only [34]\d% of the frame height/);
+  });
+
+  // fūrin take 2, shot 10: a long stick with a small bell on its end spanned 57% of the height at 1.04% of the frame
+  const STICK_BELL = `<symbol id="chime" viewBox="0 0 300 700"><rect x="146" y="0" width="8" height="610" fill="#5a4630"/><path d="M110 690 Q110 610 150 610 Q190 610 190 690 Z" fill="#7fc4d8"/><circle cx="150" cy="694" r="6" fill="#c9a23c"/></symbol>`;
+  it("E, fūrin take 2 shot 10's case: a long stick with a tiny bell does not carry an insert, and the engine can't scale it into one", async () => {
+    const o = { ...fopts("Close-up", ["chime", "home"]), castDefs: defs + STICK_BELL, symbols: ["hero", "home", "kid", "kite", "chime"], props: ["chime"] };
+    const use = `<use href="#chime" x="827" y="230" width="266" height="620"/>`;
+    // 620 px tall (57% of the frame) — the stick spans it, the bell's body is a few percent
+    await expect(validateDrawing(`\`\`\`svg\n${bg}${use}\n\`\`\``, o)).rejects.toThrow(/is about #chime, but its main body spans only \d% of the frame height .*whole object spans 5\d% × \d+%; only the main body counts/);
+  });
+
+  it("D: the engine scales a plainly placed object of an insert until its body spans the frame (centred), before any repair turn", async () => {
+    const d = await validateDrawing(`\`\`\`svg\n${bg}${furin(700)}\n\`\`\``, fopts("Close-up", ["furin", "home"]));
+    expect(d.checks?.problems).toEqual([]);
+    expect(d.checks?.facts.join(" ")).toMatch(/fixed by the engine: #furin scaled 1\.\d+× about its centre: 300×700 → \d+×\d+/);
   });
 
   it("a compact object passes on area alone (≥ 25%), and too small fails, in an insert", async () => {
-    const small = `\`\`\`svg\n${bg}<use href="#kite" x="780" y="360" width="360" height="360"/>\n\`\`\``;
-    await expect(validateDrawing(small, opts("Insert", ["kite", "home"]))).rejects.toThrow(/is about #kite, but it spans only/);
+    const small = `\`\`\`svg\n${bg}${grouped('<use href="#kite" x="780" y="360" width="360" height="360"/>')}\n\`\`\``;
+    await expect(validateDrawing(small, opts("Insert", ["kite", "home"]))).rejects.toThrow(/is about #kite, but its main body spans only/);
     const big = `\`\`\`svg\n${bg}<use href="#kite" x="360" y="-180" width="1200" height="1200"/>\n\`\`\``;
     expect((await validateDrawing(big, opts("Insert", ["kite", "home"]))).checks?.problems).toEqual([]);
   });
 
   it("the other props of an about-the-object shot still need medium-shot size (≥ 0.40%)", async () => {
-    const tinyKite = '<use href="#kite" x="100" y="100" width="40" height="40"/>';
-    await expect(validateDrawing(`\`\`\`svg\n${bg}${furin(700)}${tinyKite}\n\`\`\``, fopts("Insert", ["furin", "kite", "home"]))).rejects.toThrow(/#kite \(a key prop\) shows only [\d.]+% of the frame; it needs at least 0\.40% beside #furin/);
+    const tinyKite = grouped('<use href="#kite" x="100" y="100" width="40" height="40"/>');
+    await expect(validateDrawing(`\`\`\`svg\n${bg}${furin(800)}${tinyKite}\n\`\`\``, fopts("Insert", ["furin", "kite", "home"]))).rejects.toThrow(/#kite \(a key prop\) shows only [\d.]+% of the frame; it needs at least 0\.40% beside #furin/);
     const okKite = '<use href="#kite" x="100" y="100" width="220" height="220"/>';
-    expect((await validateDrawing(`\`\`\`svg\n${bg}${furin(700)}${okKite}\n\`\`\``, fopts("Insert", ["furin", "kite", "home"]))).checks?.problems).toEqual([]);
+    expect((await validateDrawing(`\`\`\`svg\n${bg}${furin(800)}${okKite}\n\`\`\``, fopts("Insert", ["furin", "kite", "home"]))).checks?.problems).toEqual([]);
   });
 
   it("a close-up of a character holding the prop keeps the close-up prop size (not 25%)", async () => {
