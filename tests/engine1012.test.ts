@@ -277,7 +277,7 @@ function recognizingCrew(sightings: string[], log: string[]): MockHandler {
     if (role === "NAME_OBJECT") {
       const name = sightings.length > 1 ? sightings.shift()! : sightings[0];
       log.push(`saw ${name}`);
-      return { name, description: `${name}, drawn on a plain background` };
+      return { name, description: `${name}, drawn on a plain background, swinging in the wind` };
     }
     if (role === "PROP_CHECK") return { category: /chime|bell/.test(user.match(/named it: "([^"]*)"/)?.[1] ?? ""), parts: [], lookalike: false, stateChange: /No state is checked/.test(user) ? null : true, reason: "compared the names" };
     return base(m, o, i);
@@ -506,26 +506,56 @@ const check = (c: Partial<{ category: boolean; parts: string[]; lookalike: boole
 describe("Round 3 · recognised by visible features (owner 2026-10-12): category or ≥ 2/3 of the anatomy; look-alikes fail; a state needs its change", () => {
   it("propVerdict: the pass rule, applied by the engine on Nano's report", async () => {
     const { propVerdict } = await import("@/lib/services/director/recognize");
-    const a = { ...FURIN_ANATOMY, notLike: FURIN_ANATOMY.notLike, states: FURIN_ANATOMY.states };
-    expect(propVerdict(a, false, check({ category: true })).ok).toBe(true);
+    const a = FURIN_ANATOMY;
+    const saw = (name: string, description = "") => ({ name, description });
+    const ringing = (drawn = true) => ({ id: "ringing", change: FURIN_ANATOMY.states[1].change, drawn });
+    expect(propVerdict(a, check({ category: true }), { saw: saw("glass wind chime") }).ok).toBe(true);
     // 3 of 4 parts (≥ 2/3) without the name: passes; 2 of 4 does not
-    expect(propVerdict(a, false, check({ parts: ["glass bell", "clapper", "Paper strip"] })).ok).toBe(true);
-    expect(propVerdict(a, false, check({ parts: ["glass bell", "clapper"] }))).toEqual({ ok: false, why: "2/4 parts seen (need 3)" });
+    expect(propVerdict(a, check({ parts: ["glass bell", "clapper", "Paper strip"] })).ok).toBe(true);
+    expect(propVerdict(a, check({ parts: ["glass bell", "clapper"] }))).toEqual({ ok: false, why: "2/4 parts seen (need 3)" });
     // parts Nano invents (not in the anatomy) don't count
-    expect(propVerdict(a, false, check({ parts: ["glass bell", "ribbon", "bow"] })).ok).toBe(false);
+    expect(propVerdict(a, check({ parts: ["glass bell", "ribbon", "bow"] })).ok).toBe(false);
     // a generic look-alike fails whatever else was said ("gift box", "spatula")
-    expect(propVerdict(a, false, check({ category: true, parts: ["glass bell", "clapper", "string"], lookalike: true }))).toEqual({ ok: false, why: "named a look-alike" });
-    // a later state passes only when its visible change is named
-    expect(propVerdict(a, true, check({ category: true, stateChange: false }))).toEqual({ ok: false, why: "category named; state change NOT named" });
-    expect(propVerdict(a, true, check({ category: true, stateChange: true })).ok).toBe(true);
-    // a cast from before round 3 (no anatomy): the category alone decides
-    expect(propVerdict(undefined, false, check({ category: true })).ok).toBe(true);
-    expect(propVerdict(undefined, false, check({ parts: ["glass bell", "clapper", "string"] })).ok).toBe(false);
+    expect(propVerdict(a, check({ category: true, parts: ["glass bell", "clapper", "string"], lookalike: true }))).toEqual({ ok: false, why: "named a look-alike" });
+    // a later state passes only when it was drawn and its visible change is named
+    expect(propVerdict(a, check({ category: true, stateChange: false }), { saw: saw("wind chime"), state: ringing() })).toEqual({ ok: false, why: "category named; state change NOT named" });
+    expect(propVerdict(a, check({ category: true, stateChange: true }), { saw: saw("wind chime", "the paper strip is lifted sideways by the wind"), state: ringing() }).ok).toBe(true);
+    // a cast from before round 3 (no anatomy): Nano's category alone decides
+    expect(propVerdict(undefined, check({ category: true })).ok).toBe(true);
+    expect(propVerdict(undefined, check({ parts: ["glass bell", "clapper", "string"] })).ok).toBe(false);
+  });
+
+  it("the engine checks Nano's claims against the viewer's words (round-3 previews: two false passes)", async () => {
+    const { propVerdict, headNoun } = await import("@/lib/services/director/recognize");
+    expect(["glass wind chime", "paper-strip chime", "rice cake wrapped in leaves", "leaf parcel", "diamond-shaped kite", "gift box"].map(headNoun)).toEqual(["chime", "chime", "cake", "parcel", "kite", "box"]);
+    // fūrin round 3, #furin--ringing: Nano said category: true for "a white flower on a stick"
+    const r3 = JSON.parse(readFileSync("docs/hackathon/evidence/preview-2026-10-12-r3/v2-furin-trace.json", "utf8")) as { bible: Plan; steps: Array<{ action: string; output: string | null }> };
+    const furin = r3.bible.cast.find((c) => c.id === "furin")!;
+    const nano = r3.steps.filter((x) => x.action === "recognize:check" && x.output).map((x) => JSON.parse(x.output!)).at(-1);
+    expect(nano.category).toBe(true);
+    const flower = propVerdict(furin.anatomy, nano, { saw: { name: "a white flower on a stick", description: "A white flower with a long stem on a stick" }, state: { id: "ringing", change: furin.anatomy!.states[1].change, drawn: true } });
+    expect(flower.ok).toBe(false);
+    // kite round 3, #kite--patched: the Cast never drew it (the base drawing stood in), yet Nano said stateChange: true
+    const kite = JSON.parse(readFileSync("docs/hackathon/evidence/preview-2026-10-12-r3/v2-kite-trace.json", "utf8")) as { bible: Plan };
+    const k = kite.bible.cast.find((c) => c.id === "kite")!;
+    const patched = { id: "patched", change: k.anatomy!.states.find((x) => x.id === "patched")!.change };
+    const plainKite = { name: "kite", description: "A red diamond kite with a white string" };
+    expect(propVerdict(k.anatomy, check({ category: true, stateChange: true }), { saw: plainKite, state: { ...patched, drawn: false } })).toEqual({ ok: false, why: "category named; state NOT drawn (the base drawing stands in)" });
+    // and even drawn, a description that names no change word (colour and shape words don't count) fails
+    expect(propVerdict(k.anatomy, check({ category: true, stateChange: true }), { saw: plainKite, state: { ...patched, drawn: true } }).ok).toBe(false);
+    expect(propVerdict(k.anatomy, check({ category: true, stateChange: true }), { saw: { name: "kite", description: "a red kite with a white cloth patch sewn on with stitches" }, state: { ...patched, drawn: true } }).ok).toBe(true);
+  });
+
+  it("a stand-in state symbol (only the base placed) is told apart from a drawn one", async () => {
+    const { isBaseStandIn } = await import("@/lib/services/director/recognize");
+    const defs = `${FURIN_BELL}\n<symbol id="furin--still" viewBox="0 0 400 400"><use href="#furin" x="0" y="0" width="400" height="400"/></symbol>\n${RINGING}`;
+    expect(isBaseStandIn(defs, "furin--still", "furin")).toBe(true);
+    expect(isBaseStandIn(defs, "furin--ringing", "furin")).toBe(false);
   });
 
   it("Ultra writes the anatomy BEFORE the Cast draws; the Cast draws from it; Nano reads the viewer against it; it is kept in the Bible", async () => {
     const log: string[] = [];
-    const { runId, summary } = await castOnly(anatomyCrew(["a glass bell with a paper strip"], [check({ category: true }), check({ category: true, stateChange: true })], log));
+    const { runId, summary } = await castOnly(anatomyCrew(["a glass bell, its paper strip lifted sideways by the wind"], [check({ category: true }), check({ category: true, stateChange: true })], log));
     const roles = log.filter((l) => l.startsWith("role ")).map((l) => l.slice(5));
     expect(roles.indexOf("ANATOMY")).toBeGreaterThan(roles.indexOf("DIRECTOR"));
     expect(roles.indexOf("ANATOMY")).toBeLessThan(roles.indexOf("CAST"));
@@ -618,5 +648,35 @@ describe("Round 3 · a street or market is paved with stone (the Gion street's g
     for (let k = 0; k < data.length; k += info.channels) [r, g, b] = [r + data[k], g + data[k + 1], b + data[k + 2]];
     const px = data.length / info.channels;
     expect(b / px - r / px).toBeLessThan(20);
+  });
+});
+
+describe("Round 3 · the key object fills its own viewBox; a flying object's string is the engine's (kite round 3: a tiny kite under a long string)", () => {
+  const parts = (cx: number, cy: number, r: number) =>
+    [
+      `<path d="M${cx} ${cy - r} L${cx + r * 0.75} ${cy} L${cx} ${cy + r} L${cx - r * 0.75} ${cy} Z" fill="#d94a3d"/>`,
+      `<path d="M${cx} ${cy - r} L${cx + r * 0.75} ${cy} L${cx} ${cy} Z" fill="#e8665a"/>`,
+      `<path d="M${cx} ${cy - r} V${cy + r} M${cx - r * 0.75} ${cy} H${cx + r * 0.75}" stroke="#c9a46a" stroke-width="${Math.max(2, r / 20)}"/>`,
+      ...Array.from({ length: 10 }, (_, k) => `<circle cx="${cx - r * 0.4 + k * r * 0.08}" cy="${cy + r * 0.3}" r="${Math.max(1, r / 30)}" fill="#ffffff" fill-opacity="0.6"/>`),
+    ].join("");
+  const kiteMember = { id: "kite", name: "Red kite", kind: "prop" as const, look: "a red diamond kite", colors: ["#d94a3d"] };
+
+  it("a small kite under a long string inside its symbol is rejected; the same kite drawn large passes", async () => {
+    const { symbolProblems } = await import("@/lib/services/director/cast");
+    const tiny = `<symbol id="kite" viewBox="0 0 400 400"><path d="M200 10 V330" stroke="#ffffff" stroke-width="2"/>${parts(200, 340, 40)}</symbol>`;
+    const big = `<symbol id="kite" viewBox="0 0 400 400">${parts(200, 200, 170)}</symbol>`;
+    const p1 = await symbolProblems(kiteMember, tiny, new Map(), canvas, "16:9", new Set(), true);
+    expect(p1.join(" ")).toMatch(/the object itself fills only \d+% × \d+% of its viewBox; draw the object LARGE/);
+    expect(await symbolProblems(kiteMember, big, new Map(), canvas, "16:9", new Set(), true)).toEqual([]);
+    // not the key object: no fill rule
+    expect(await symbolProblems(kiteMember, tiny, new Map(), canvas, "16:9", new Set(), false)).toEqual([]);
+  });
+
+  it("the Cast is told a flying key object (and each of its states) has no string in its symbol", async () => {
+    const { castUser } = await import("@/lib/services/director/prompts");
+    const plan = { ...planSchema.parse(demoPlan("One. Two. Three.", 3)), cast: [{ ...kiteMember, airborne: true, states: [{ id: "intact", look: "whole" }, { id: "torn", look: "a jagged hole" }] }] } as Plan;
+    const brief = castUser({ ...plan, cast: [...plan.cast, ...stateMembers(plan)] }, undefined, "kite");
+    expect(brief.match(/IT FLIES: do NOT draw its flying string/g)?.length).toBe(2);
+    expect(brief).toMatch(/its main body filling 60–90% of the viewBox/);
   });
 });

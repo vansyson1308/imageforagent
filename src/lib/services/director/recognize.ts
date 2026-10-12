@@ -47,26 +47,74 @@ export function heroSymbols(plan: Plan): Array<{ symbol: string; member: CastMem
   return [{ symbol: hero, member, state: member.states[0] }, ...member.states.slice(1).map((st, k) => ({ symbol: stateSymbol(hero, st.id), member: later[k], state: st }))];
 }
 
+/** Lowercase word stems (a trailing plural / -ed / -ing dropped), for matching a viewer's words. */
+export function stems(text: string): Set<string> {
+  const out = new Set<string>();
+  for (const w of text.toLowerCase().split(/[^\p{L}\p{N}]+/u)) {
+    if (w.length < 3) continue;
+    out.add(w.length > 5 && w.endsWith("ing") ? w.slice(0, -3) : w.length > 4 && w.endsWith("ed") ? w.slice(0, -2) : w.length > 4 && w.endsWith("es") ? w.slice(0, -2) : w.length > 3 && w.endsWith("s") ? w.slice(0, -1) : w);
+  }
+  return out;
+}
+
+/** The head noun of a category or look-alike phrase: "rice cake wrapped in leaves" → cake, "paper-strip chime" → chime. */
+export function headNoun(phrase: string): string {
+  const words = phrase.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  const cut = words.findIndex((w, i) => i > 0 && /^(in|with|of|on|wrapped|tied|made|from|for|hanging|under)$/.test(w));
+  const head = (cut > 0 ? words.slice(0, cut) : words).at(-1) ?? "";
+  return [...stems(head)][0] ?? head;
+}
+
+/** Words that say nothing about a state's change on their own (colours, sizes, generic shapes). */
+const NOT_A_CHANGE = new Set(["the", "and", "with", "its", "now", "same", "still", "one", "two", "into", "over", "from", "that", "this", "visible", "small", "big", "large", "little", "long", "short", "thin", "white", "red", "blue", "green", "yellow", "gold", "black", "brown", "grey", "gray", "pink", "orange", "purple", "beige", "light", "dark", "bright", "shape", "line", "object", "side", "top", "bottom", "centre", "center", "clearly", "slightly", "very"]);
+
 /**
  * The pass rule (owner 2026-10-12, round 3): recognised by VISIBLE FEATURES, not the exact name. The
  * object passes when the viewer did not name a look-alike AND their words name its category or show
- * ≥ 2/3 of its anatomy parts; a later state also needs its visible change named. Without an anatomy
- * (a cast from before round 3) the category alone decides.
+ * ≥ 2/3 of its anatomy parts; a later state also needs its visible change named. Nano reports; the
+ * engine decides, and checks Nano's claims against the viewer's own words (round 3 previews: Nano
+ * passed "a white flower on a stick" as a wind chime, and a kite state that was never drawn):
+ * - category: some category's head noun ("chime", "bell", "kite", "cake") is in the viewer's words;
+ * - look-alike: the viewer's NAME holds a listed look-alike's head noun ("flower") → a look-alike;
+ * - state: the state was actually drawn (not the base drawing standing in), and the viewer's words
+ *   share a word with that state's change that the base anatomy does not already have.
+ * Without an anatomy (a cast from before round 3) Nano's category alone decides.
  */
-export function propVerdict(anatomy: Anatomy | null | undefined, stateChecked: boolean, check: PropCheck): { ok: boolean; why: string } {
+export function propVerdict(anatomy: Anatomy | null | undefined, check: PropCheck, opts: { saw?: ObjectName; state?: { id: string; change: string; drawn: boolean } | null } = {}): { ok: boolean; why: string } {
   const names = new Set((anatomy?.parts ?? []).map((p) => p.part.trim().toLowerCase()));
   const seen = [...new Set(check.parts.map((p) => p.trim().toLowerCase()))].filter((p) => names.has(p));
   const need = Math.ceil((names.size * 2) / 3);
+  const words = stems(`${opts.saw?.name ?? ""} ${opts.saw?.description ?? ""}`);
+  const nameWords = stems(opts.saw?.name ?? "");
+  const verified = !anatomy || !opts.saw;
+  const categoryHeard = verified || anatomy!.category.some((c) => words.has(headNoun(c)));
+  const lookalikeHeard = !verified && anatomy!.notLike.some((c) => nameWords.has(headNoun(c)));
+  const lookalike = check.lookalike || lookalikeHeard;
+  const category = check.category && categoryHeard;
   const byParts = names.size > 0 && seen.length >= need;
-  const identity = !check.lookalike && (check.category || byParts);
-  const state = !stateChecked || check.stateChange === true;
+  const identity = !lookalike && (category || byParts);
+  let state = true;
+  let stateWhy = "";
+  if (opts.state) {
+    const base = stems((anatomy?.parts ?? []).map((p) => `${p.part} ${p.look}`).join(" "));
+    const changeWords = [...stems(`${opts.state.id} ${opts.state.change}`)].filter((w) => !NOT_A_CHANGE.has(w) && !base.has(w));
+    const heard = verified || !changeWords.length || changeWords.some((w) => words.has(w));
+    state = opts.state.drawn && check.stateChange === true && heard;
+    stateWhy = !opts.state.drawn ? "state NOT drawn (the base drawing stands in)" : check.stateChange && heard ? "state change named" : "state change NOT named";
+  }
   const why = [
-    check.lookalike ? "named a look-alike" : check.category ? "category named" : names.size ? `${seen.length}/${names.size} parts seen (need ${need})` : "category not named",
-    stateChecked ? (check.stateChange ? "state change named" : "state change NOT named") : "",
+    lookalike ? `named a look-alike${lookalikeHeard && !check.lookalike ? ` ("${opts.saw?.name}")` : ""}` : category ? "category named" : check.category && !categoryHeard ? "no category word in the viewer's words" : names.size ? `${seen.length}/${names.size} parts seen (need ${need})` : "category not named",
+    stateWhy,
   ]
     .filter(Boolean)
     .join("; ");
   return { ok: identity && state, why };
+}
+
+/** A state symbol that only places the base drawing (the Cast never drew the state, or it rendered blank). */
+export function isBaseStandIn(defs: string, symbol: string, base: string): boolean {
+  const body = splitLibrary(defs).symbols.get(symbol) ?? "";
+  return new RegExp(`^<symbol\\b[^>]*>\\s*<use\\s+href="#${base.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"[^>]*/>\\s*</symbol>$`).test(body.trim());
 }
 
 /** The library with one symbol replaced (its new gradients added, renamed when an id is taken). */
@@ -115,7 +163,8 @@ export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, libra
         try {
           saw = await callJson(ctx, { role: "critic", action: "recognize", model: ctx.models.vision, system: nameObjectSystem(), user: nameObjectUser(), images: [uri], maxTokens: 300, temperature: 0.1, thinking: false, attempt: k, imagePath }, objectNameSchema, "object_name", 1);
           const check = await callJson(ctx, { role: "critic", action: "recognize:check", model: ctx.models.fast, system: propCheckSystem(), user: propCheckUser({ name: prop.name, look: prop.look, anatomy: prop.anatomy, state: stateChecked ? t.state : null, saw }), maxTokens: 400, temperature: 0.1, thinking: false, attempt: k }, propCheckSchema, "prop_check", 1);
-          const verdict = propVerdict(prop.anatomy, stateChecked, check);
+          const change = prop.anatomy?.states.find((x) => x.id === t.state?.id)?.change ?? t.state?.look ?? "";
+          const verdict = propVerdict(prop.anatomy, check, { saw, state: stateChecked && t.state ? { id: t.state.id, change, drawn: !isBaseStandIn(defs, t.symbol, prop.id) } : null });
           ok = verdict.ok;
           await recordStep(ctx, {
             role: "critic",

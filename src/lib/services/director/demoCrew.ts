@@ -116,7 +116,8 @@ export function demoHandler(opts: { criticScores?: number[]; shots?: number } = 
         return { name: "an object", description: "a drawn object on a plain background" };
       case "ANATOMY":
         return {
-          category: ["object"],
+          // the scripted crew calls the key object by its own name
+          category: [user.match(/^Key object: (.+) \(#[a-z0-9-]+\)\./m)?.[1]?.slice(0, 40) ?? "object"],
           parts: [
             { part: "body", look: "the main shape, centred" },
             { part: "highlight", look: "a white highlight on the upper left" },
