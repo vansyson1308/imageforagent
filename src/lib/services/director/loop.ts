@@ -292,7 +292,7 @@ export async function executeRun(
       }
     }
     // A · the story's key object must be recognisable on its own, every state (owner 2026-10-12)
-    const recognized = await recognizeHeroProps(ctx, plan, library, aspectRatio, req.castFrom?.recognition);
+    const recognized = await recognizeHeroProps(ctx, plan, library, aspectRatio, req.castFrom?.recognition, new Set(req.castFrom?.edits?.changed ?? []));
     library = recognized.library;
     propRecognition = recognized.results;
     castSetTimes = library.setTimes ? Object.fromEntries(library.setTimes) : undefined;
@@ -549,9 +549,10 @@ async function castFromRun(ctx: DirectorContext, plan: Parameters<typeof runCast
     role: "cast",
     model: "preview",
     action: "cast-from-run",
-    summary: `Reused the approved cast of run ${from.sourceRunId} verbatim (no Cast call): ${hashes.map((h) => `#${h.id} ${h.sha}`).join(" · ")}`,
-    output: JSON.stringify({ sourceRunId: from.sourceRunId, hashes }),
+    summary: `Reused the approved cast of run ${from.sourceRunId}${from.edits ? ", with engine edits" : " verbatim"} (no Cast call): ${hashes.map((h) => `#${h.id} ${h.sha}`).join(" · ")}`,
+    output: JSON.stringify({ sourceRunId: from.sourceRunId, hashes, ...(from.edits && { edits: from.edits }) }),
   });
+  if (from.edits) await recordStep(ctx, { role: "cast", model: "engine", action: "cast-edits", summary: `Engine edits on the approved cast (D77): ${from.edits.report.join(" · ")}`, output: JSON.stringify(from.edits) });
   return { defs: from.library, symbols: symbolIds(from.library), placeholder: false, kits: new Map(from.kits), setTimes: from.setTimes };
 }
 

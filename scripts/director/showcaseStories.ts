@@ -62,7 +62,7 @@ export const SHOWCASE_V2: readonly ShowcaseStory[] = [
       "Hanoi's old quarter rooftops under New Year's Eve fireworks (kit place: village); midnight",
     ],
     keyObject:
-      "Bánh chưng: a flat SQUARE parcel wrapped in glossy green dong leaves with visible leaf texture (veins), tied with two pairs of thin pale bamboo strings each way (four strings crossing in a grid, NOT a ribbon, NO bow), a darker green leaf fold at the corners. States in order: wrapped (fresh bright green leaves, crisp strings) → cooking (the parcel in a big pot of boiling water, steam rising) → cooked (leaves darkened to deep olive and glossy, strings swollen, set on a plate on the altar).",
+      "Bánh chưng: a flat SQUARE parcel wrapped in glossy green dong leaves with visible leaf texture (veins), tied with two pairs of thin pale bamboo strings each way (four strings crossing in a grid, NOT a ribbon, NO bow), a darker green leaf fold at the corners. ONE look only (owner 2026-10-12, D77): the wrapped parcel; the cooking is told by the pot and the fire in the courtyard sets, and the altar by the front room.",
     language: "vi",
     style: "storybook",
     lines: [
