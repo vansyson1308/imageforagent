@@ -72,16 +72,22 @@ export function replaceSymbol(defs: string, id: string, symbol: string, extras: 
 
 const errText = (e: unknown) => (e instanceof Error ? e.message : String(e));
 
-export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, library: CastLibrary, aspectRatio: string): Promise<{ library: CastLibrary; results: Recognition[] }> {
-  const targets = heroSymbols(plan);
-  if (!targets.length) return { library, results: [] };
+export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, library: CastLibrary, aspectRatio: string, carried: readonly Recognition[] = []): Promise<{ library: CastLibrary; results: Recognition[] }> {
+  const all = heroSymbols(plan);
+  if (!all.length) return { library, results: [] };
+  // a take on an approved preview's cast: what the preview already checked is carried over, not re-spent (owner 2026-10-12)
+  const kept = all.flatMap((t) => carried.filter((r) => r.symbol === t.symbol));
+  if (kept.length) await recordStep(ctx, { role: "critic", model: "preview", action: "recognize:carried", summary: `Recognition carried over from the approved preview: ${kept.map((r) => `#${r.symbol} ${r.ok === true ? "recognised" : r.ok === false ? "NOT recognised" : "not checked"} ("${r.saw}")`).join(" · ")}` });
+  const targets = all.filter((t) => !kept.some((r) => r.symbol === t.symbol));
+  if (!targets.length) return { library, results: kept };
   if (!ctx.visionAvailable || !ctx.models.vision) {
     await recordStep(ctx, { role: "critic", model: "engine", action: "recognize:skipped", summary: `Hero-prop recognition not run: no vision model in this run (${targets.map((t) => `#${t.symbol}`).join(", ")} not checked)` });
-    return { library, results: targets.map((t) => ({ symbol: t.symbol, prop: t.member.id.split("--")[0], state: t.state?.id ?? null, ok: null, saw: "", redraws: 0 })) };
+    return { library, results: [...kept, ...targets.map((t) => ({ symbol: t.symbol, prop: t.member.id.split("--")[0], state: t.state?.id ?? null, ok: null, saw: "", redraws: 0 }))] };
   }
   let defs = library.defs;
-  const results: Recognition[] = [];
-  const prop = plan.cast.find((c) => c.id === targets[0].symbol)!;
+  const results: Recognition[] = [...kept];
+  // the base symbol comes first: its member is the planned prop itself
+  const prop = all[0].member;
   for (const t of targets) {
     let ok: boolean | null = null;
     let saw: ObjectName = { name: "", description: "" };

@@ -347,3 +347,110 @@ describe("A · hero-prop recognition gate (mock crew): render alone → the visi
     expect(measuredProblems("done", { ...summary, stopAfter: undefined }).join(" ")).toMatch(/#furin was not checked by the recognition gate/);
   }, 120_000);
 });
+
+// ---------- a full take REUSES the approved preview's cast (owner 2026-10-12, before any full take) ----------
+
+describe("castFromRun: a take on an approved cast-only preview reuses its Bible, library and recognition verbatim", () => {
+  it("no Cast call, no re-check, the planner is told the cast and its states, new ids are dropped, and the hashes match the preview's", async () => {
+    const { loadCastFromRun, castHashes } = await import("@/lib/services/director/series");
+    // 1 · the preview (cast-only), approved by eye
+    const preview = await castOnly(recognizingCrew(["a glass wind chime"], []));
+    const previewRun = await prisma.directorRun.findUniqueOrThrow({ where: { id: preview.runId } });
+    const previewBible = JSON.parse(previewRun.bible!) as Plan;
+    const previewHashes = castHashes(previewBible.cast, previewRun.library!);
+    expect(previewHashes.map((h) => h.id)).toEqual(expect.arrayContaining(["furin", "furin--still", "furin--ringing", "home", "hero"]));
+    // 2 · the take
+    const calls: string[] = [];
+    const prompts: string[] = [];
+    const base = recognizingCrew(["never asked"], []);
+    const take: MockHandler = (m, o, i) => {
+      const role = m[0].content.match(/^ROLE: (\w+)/)?.[1] ?? "?";
+      calls.push(role);
+      if (role === "DIRECTOR") {
+        prompts.push(m[m.length - 1].content);
+        // the planner tries to add a new prop: the locked cast drops it
+        const p = furinPlan("Yui hangs a wind chime. It rings. Grandma smiles. The summer ends.");
+        return { ...p, cast: [...p.cast, { id: "teacup", name: "Teacup", kind: "prop", look: "a small teacup", colors: ["#ffffff"] }], shots: p.shots.map((s) => ({ ...s, cast: [...s.cast, "teacup"] })) };
+      }
+      return base(m, o, i);
+    };
+    const p = await prisma.project.create({ data: { name: "engine1012-take" } });
+    created.push(p.id);
+    const d = { provider: new MockLlmProvider(take), models: MOCK_MODELS, visionAvailable: true, modelNotes: [], tavily: null, ceiling: DEFAULT_BUDGET, floorRedraw: { enabled: false, reason: "test" } };
+    const castFrom = await loadCastFromRun(preview.runId);
+    const req = { projectId: p.id, story: "Yui hangs a wind chime. It rings. Grandma smiles. The summer ends.", language: "en", style: "storybook", critic: false, research: false, maxShots: 4, castFrom };
+    const { runId, budget } = await createRun(req, d);
+    const ctrl = registerRun(runId);
+    let summary;
+    try {
+      summary = await executeRun(runId, req, d, budget, () => {}, ctrl.signal);
+    } finally {
+      unregisterRun(runId);
+    }
+    expect(summary.status).toBe("done");
+    expect(summary.castFromRun).toBe(preview.runId);
+    // no Cast call and no recognition re-spend
+    expect(calls).not.toContain("CAST");
+    expect(calls).not.toContain("NAME_OBJECT");
+    expect(calls).not.toContain("PROP_CHECK");
+    expect(summary.propRecognition).toEqual(preview.summary.propRecognition);
+    // the planner got the cast and its states
+    expect(prompts[0]).toMatch(/REUSES an approved cast[\s\S]*- furin \(prop[\s\S]*STATES: "still" \(hanging still\), "ringing"/);
+    const steps = await prisma.directorStep.findMany({ where: { runId }, orderBy: { seq: "asc" } });
+    expect(steps.find((s) => s.action === "plan:cast-locked")?.outputSummary).toMatch(/dropped new id\(s\) #teacup/);
+    expect(steps.find((s) => s.action === "recognize:carried")?.outputSummary).toMatch(/#furin recognised \("a glass wind chime"\)/);
+    // the take's log: one hash per reused symbol, the same as the preview's
+    const reused = JSON.parse(steps.find((s) => s.action === "cast-from-run")!.output!) as { sourceRunId: string; hashes: Array<{ id: string; sha: string }> };
+    expect(reused.sourceRunId).toBe(preview.runId);
+    expect(reused.hashes).toEqual(previewHashes);
+    // and the take's library is the preview's, verbatim (plus the take's own posed variants and paintings, appended)
+    const takeRun = await prisma.directorRun.findUniqueOrThrow({ where: { id: runId } });
+    expect(castHashes(previewBible.cast, takeRun.library!)).toEqual(previewHashes);
+    expect((JSON.parse(takeRun.bible!) as Plan).cast.map((c) => c.id)).toEqual(previewBible.cast.map((c) => c.id));
+  }, 180_000);
+
+  it("reads an older preview's set lighting back from its variants", async () => {
+    const { inferSetTimes } = await import("@/lib/services/director/series");
+    const defs = '<symbol id="beach" viewBox="0 0 1 1"/><symbol id="beach--night" viewBox="0 0 1 1"/><symbol id="room" viewBox="0 0 1 1"/><symbol id="room--day" viewBox="0 0 1 1"/><symbol id="yard" viewBox="0 0 1 1"/>';
+    expect(inferSetTimes([{ id: "beach", kind: "set" }, { id: "room", kind: "set" }, { id: "yard", kind: "set" }], defs)).toEqual({ beach: "day", "beach--night": "night", room: "night", "room--day": "day" });
+  });
+});
+
+describe("D71 in the sets: a dusk-lit set is wrong for a morning or afternoon shot (preview 2026-10-12, the kite's beach)", () => {
+  it("the shots planned in daylight on a dusk set get a day variant; dusk and night shots keep the dusk set", async () => {
+    const { setTimeVariant, setForShot } = await import("@/lib/services/director/fidelity");
+    const p = planSchema.parse(demoPlan("A. B.", 2));
+    const shot = (description: string) => ({ ...p.shots[0], scene: "Seafront", description, cast: ["beach"] });
+    const plan = { shots: [shot("Brighton seafront on a windy autumn morning."), shot("Afternoon light on the seafront."), shot("Golden dusk bathes the beach.")] };
+    expect(setTimeVariant(plan, "beach", "dusk")).toBe("day");
+    const times = new Map([["beach", "dusk"], ["beach--day", "day"]]);
+    expect(setForShot(plan.shots[0], "beach", times)).toBe("beach--day");
+    expect(setForShot(plan.shots[2], "beach", times)).toBe("beach");
+    expect(setForShot(shot("Night falls on the beach."), "beach", times)).toBe("beach");
+    // a golden set is the DAY bucket: no variant needed for a morning shot
+    expect(setTimeVariant({ shots: [plan.shots[0]] }, "beach", "golden")).toBeNull();
+  });
+});
+
+describe("one malformed symbol costs only itself, never the whole library (preview 2026-10-12, bánh chưng)", () => {
+  it("salvageLibrary keeps every symbol that renders, replaces the broken member with its placeholder and a broken state with its base", async () => {
+    const { salvageLibrary } = await import("@/lib/services/director/cast");
+    const members = [
+      { id: "yard", name: "Yard", kind: "set" as const, look: "a courtyard", colors: ["#c8a878"] },
+      { id: "cake", name: "Cake", kind: "prop" as const, look: "a square green cake", colors: ["#4f8a4f"] },
+      { id: "cake--cooked", name: "Cake (cooked)", kind: "prop" as const, look: "cooked", colors: ["#4f8a4f"] },
+    ];
+    const extras = new Map([["yard-sky", '<linearGradient id="yard-sky"><stop offset="0" stop-color="#9fd3f0"/></linearGradient>'], ["cake-sheen", '<radialGradient id="cake-sheen"><stop offset="0" stop-color="#ffffff"/></radialGradient>']]);
+    const good = '<symbol id="yard" viewBox="0 0 1920 1080"><rect width="1920" height="1080" fill="url(#yard-sky)"/></symbol>';
+    const broken = '<symbol id="cake" viewBox="0 0 400 400"><rect x="10" y="10" width="380" height="380" fill="url(#cake-sheen)"</symbol>';
+    const brokenState = '<symbol id="cake--cooked" viewBox="0 0 400 400"><circle cx="200" cy="200" r="150" fill="#3a6a3a"</symbol>';
+    const out = await salvageLibrary([good, broken, brokenState], extras, members, canvas, "16:9");
+    expect(out.broken).toEqual(["cake", "cake--cooked"]);
+    expect(out.defs).toContain(good);
+    expect(out.defs).toContain('<linearGradient id="yard-sky">');
+    expect(out.defs).not.toContain("cake-sheen");
+    expect(out.defs).toContain('<symbol id="cake--cooked" viewBox="0 0 400 400"><use href="#cake" x="0" y="0" width="400" height="400"/></symbol>');
+    // the salvaged library renders as a whole
+    await expect(renderArtwork(out.defs, '<use href="#yard" x="0" y="0" width="1920" height="1080"/><use href="#cake--cooked" x="700" y="300" width="400" height="400"/>', "16:9", "1K")).resolves.toBeInstanceOf(Buffer);
+  });
+});

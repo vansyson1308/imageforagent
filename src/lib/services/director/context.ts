@@ -82,6 +82,10 @@ export interface RunSummary {
   readonly propRecognition?: ReadonlyArray<{ symbol: string; prop: string; state: string | null; ok: boolean | null; saw: string; redraws: number }>;
   /** "cast" = a cast-only preview run (no shots) */
   readonly stopAfter?: "cast";
+  /** the kit sets' times of day (variants included), kept so a take can reuse this run's cast */
+  readonly castSetTimes?: Record<string, string>;
+  /** the preview run whose cast this film reused verbatim */
+  readonly castFromRun?: string;
   /** how much research the Bible used (only when research ran) */
   readonly research?: { notes: number; cited: number; castCiting: number; shotsCiting: number; byUse: Record<string, number> };
 }

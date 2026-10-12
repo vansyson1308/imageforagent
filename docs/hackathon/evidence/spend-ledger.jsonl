@@ -159,3 +159,6 @@
 {"at":"2026-10-12T00:39:09.777Z","script":"showcase","label":"v2-kite","model":"crew","tokensIn":124699,"tokensOut":133057,"costUsd":0.18819534}
 {"at":"2026-10-12T00:45:38.585Z","script":"showcase","label":"v2-banh-chung","model":"crew","tokensIn":127568,"tokensOut":147156,"costUsd":0.18683844}
 {"at":"2026-10-12T00:52:05.798Z","script":"showcase","label":"v2-banh-chung","model":"crew","tokensIn":140792,"tokensOut":164515,"costUsd":0.20892108}
+{"at":"2026-10-12T07:52:53.356Z","script":"preview","label":"v2-kite","model":"crew","tokensIn":17216,"tokensOut":28052,"costUsd":0.0625842}
+{"at":"2026-10-12T07:58:00.792Z","script":"preview","label":"v2-banh-chung","model":"crew","tokensIn":73971,"tokensOut":66674,"costUsd":0.10000542}
+{"at":"2026-10-12T08:00:52.572Z","script":"preview","label":"v2-furin","model":"crew","tokensIn":40864,"tokensOut":39896,"costUsd":0.07097214}

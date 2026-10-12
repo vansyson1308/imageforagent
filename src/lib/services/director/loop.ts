@@ -11,7 +11,7 @@ import { decideResearch, measureResearchUse, researchMode, runResearch, type Res
 import { runPlan, writeScript } from "@/lib/services/director/plan";
 import { runCast, type CastLibrary } from "@/lib/services/director/cast";
 import { recognizeHeroProps, type Recognition } from "@/lib/services/director/recognize";
-import { mergeLibraries, persistRunCast, type SeriesData } from "@/lib/services/director/series";
+import { castHashes, mergeLibraries, persistRunCast, type CastFromRun, type SeriesData } from "@/lib/services/director/series";
 import { actingBrief, neededVariants, variantDefs } from "@/lib/services/director/acting";
 import { variantId } from "@/lib/services/director/dollKit";
 import { symbolIds } from "@/lib/services/director/svgTools";
@@ -65,6 +65,8 @@ export interface DirectorRequest {
   readonly figure?: "storybook" | "adult";
   /** "cast": stop after the cast library and the hero-prop recognition gate (a cheap preview of the props and sets, no shots) */
   readonly stopAfter?: "cast";
+  /** reuse an approved cast-only preview's cast verbatim (operator only): no re-plan of the cast, no Cast call, no re-check */
+  readonly castFrom?: CastFromRun | null;
 }
 
 export interface DirectorDeps {
@@ -203,6 +205,7 @@ export async function executeRun(
   let continuity: string[] = [];
   let researchUse: ResearchUse | null = null;
   let propRecognition: Recognition[] = [];
+  let castSetTimes: Record<string, string> | undefined;
   try {
     await prisma.project.update({ where: { id: req.projectId }, data: { aspectRatio, resolution: "1K", playbackSpeed: 3 } });
     for (const n of deps.modelNotes) await recordStep(ctx, { role: "system", model: "catalog", action: "models", summary: n });
@@ -226,7 +229,7 @@ export async function executeRun(
     emit({ type: "status", message: "Director is planning the shots…" });
     const narration = req.narrationShots ? req.narrationShots.map((s) => shotText(s, req.language)) : (req.narration ?? null);
     const fixedVoices = req.narrationShots ? new Map<number, NonNullable<ReturnType<typeof shotVoice>>>() : null;
-    let plan = await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null, narration);
+    let plan = await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null, narration, req.castFrom ? { cast: req.castFrom.cast, palette: req.castFrom.palette } : null);
     if (req.narrationShots && fixedVoices) {
       // the owner's recordings, one per planned shot (a shorter plan gets the remaining lines on its last shot, like withNarration)
       const n = plan.shots.length;
@@ -276,7 +279,7 @@ export async function executeRun(
 
     // 5 · Cast & set library (Super)
     emit({ type: "status", message: "Artist is designing the cast…" });
-    let library = await castForEpisode(ctx, plan, aspectRatio, req.series ?? null);
+    let library = req.castFrom ? await castFromRun(ctx, plan, req.castFrom) : await castForEpisode(ctx, plan, aspectRatio, req.series ?? null);
     // Acting variants (WP4.1): the posed/expressive symbols the plan asks for, built from the same kit specs
     if (library.kits.size) {
       const extra = variantDefs(plan, library.kits, library.defs);
@@ -289,9 +292,10 @@ export async function executeRun(
       }
     }
     // A · the story's key object must be recognisable on its own, every state (owner 2026-10-12)
-    const recognized = await recognizeHeroProps(ctx, plan, library, aspectRatio);
+    const recognized = await recognizeHeroProps(ctx, plan, library, aspectRatio, req.castFrom?.recognition);
     library = recognized.library;
     propRecognition = recognized.results;
+    castSetTimes = library.setTimes ? Object.fromEntries(library.setTimes) : undefined;
     await persistRunCast(runId, { library: library.defs, kits: library.kits });
     if (req.stopAfter === "cast") {
       await recordStep(ctx, { role: "system", model: "engine", action: "stop-after-cast", summary: "Cast-only preview: stopped after the library and the recognition gate (no shots drawn)" });
@@ -418,7 +422,7 @@ export async function executeRun(
     }
   }
 
-  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic, ctx.visionAvailable && options.critic && ctx.models.vision ? `${ctx.models.vision} looks · ${ctx.models.fast} scores` : null)), ...(researchUse && { research: researchUse }), ...(propRecognition.length && { propRecognition }), ...(req.stopAfter && { stopAfter: req.stopAfter }) };
+  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic, ctx.visionAvailable && options.critic && ctx.models.vision ? `${ctx.models.vision} looks · ${ctx.models.fast} scores` : null)), ...(researchUse && { research: researchUse }), ...(propRecognition.length && { propRecognition }), ...(req.stopAfter && { stopAfter: req.stopAfter }), ...(castSetTimes && { castSetTimes }), ...(req.castFrom && { castFromRun: req.castFrom.sourceRunId }) };
   await prisma.directorRun.update({
     where: { id: runId },
     data: { status, error, summary: JSON.stringify(summary), finishedAt: new Date(), tokensIn: tracker.tokensIn, tokensOut: tracker.tokensOut, costUsd: tracker.costUsd },
@@ -531,6 +535,24 @@ async function scoreFilm(ctx: DirectorContext, plan: Parameters<typeof renderSco
   } catch (e) {
     await recordStep(ctx, { role: "system", model: "engine:score", action: "music", summary: "Score skipped", error: e instanceof Error ? e.message : String(e) });
   }
+}
+
+/**
+ * A take on an approved preview's cast (owner 2026-10-12): the preview's library verbatim (every
+ * symbol, prop state, set and lighting variant, kit character), its kits and set lighting; no Cast
+ * call. The trace lists a short sha256 per reused symbol, the same list the preview sheet prints.
+ */
+async function castFromRun(ctx: DirectorContext, plan: Parameters<typeof runCast>[1], from: CastFromRun): Promise<CastLibrary> {
+  await prisma.project.update({ where: { id: ctx.projectId }, data: { artworkDefs: from.library } });
+  const hashes = castHashes(plan.cast, from.library);
+  await recordStep(ctx, {
+    role: "cast",
+    model: "preview",
+    action: "cast-from-run",
+    summary: `Reused the approved cast of run ${from.sourceRunId} verbatim (no Cast call): ${hashes.map((h) => `#${h.id} ${h.sha}`).join(" · ")}`,
+    output: JSON.stringify({ sourceRunId: from.sourceRunId, hashes }),
+  });
+  return { defs: from.library, symbols: symbolIds(from.library), placeholder: false, kits: new Map(from.kits), setTimes: from.setTimes };
 }
 
 /**

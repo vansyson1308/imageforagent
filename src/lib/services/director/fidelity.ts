@@ -43,10 +43,14 @@ export function setTimeFix(plan: Pick<Plan, "shots">, setId: string, time: strin
   return null;
 }
 
-/** A set lit for `lit` is wrong for a shot planned at `want` (dusk reads as night; day and golden hours read as day). */
+/**
+ * A set lit for `lit` is wrong for a shot planned at `want`: a night shot needs night or dusk light;
+ * a day shot needs the DAY bucket (dawn, day, golden), so a dusk-lit set is wrong for it too (D71:
+ * day vs dusk blocks; preview 2026-10-12, the kite's beach was lit at dusk for its morning shots).
+ */
 function timeMismatch(want: PlannedTime, lit: string | undefined): boolean {
   if (!want || !lit) return false;
-  return want === "night" ? lit !== "night" && lit !== "dusk" : lit === "night";
+  return want === "night" ? lit !== "night" && lit !== "dusk" : lit === "night" || lit === "dusk";
 }
 
 /** The id of a set's variant lit for another time of day ("house-veranda--day"). */

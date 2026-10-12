@@ -125,6 +125,44 @@ export async function validateLibrary(defs: string, cast: readonly CastMember[],
   return png;
 }
 
+/**
+ * A library that failed to render as a whole: each symbol is rendered alone (with the gradients it
+ * uses); one that fails is replaced by its member's placeholder (a cast member), the base it varies
+ * (a prop state or set lighting variant, `<id>--…`), or dropped. Gradients only the broken symbols
+ * used are dropped with them. Pure apart from the renders.
+ */
+export async function salvageLibrary(symbols: readonly string[], extras: ReadonlyMap<string, string>, members: readonly CastMember[], canvas: { w: number; h: number }, aspectRatio: string): Promise<{ defs: string; broken: string[] }> {
+  const kept: string[] = [];
+  const broken: string[] = [];
+  for (const sym of symbols) {
+    const ids = symbolIds(sym);
+    const own = neededExtras(sym, extras);
+    const ok = await renderArtwork([...own.values(), sym].join("\n"), castSheetFrame(ids.slice(0, 6), canvas), aspectRatio, "1K").then(
+      () => true,
+      () => false,
+    );
+    if (ok) {
+      kept.push(sym);
+      continue;
+    }
+    for (const id of ids) {
+      broken.push(id);
+      const member = members.find((m) => m.id === id);
+      const base = id.includes("--") ? id.slice(0, id.indexOf("--")) : null;
+      if (member && !base) kept.push(placeholderLibrary([member], canvas));
+      else if (base) {
+        const vb = member?.kind === "set" || members.find((m) => m.id === base)?.kind === "set" ? `0 0 ${canvas.w} ${canvas.h}` : "0 0 400 400";
+        const [, , w, h] = vb.split(" ");
+        kept.push(`<symbol id="${id}" viewBox="${vb}"><use href="#${base}" x="0" y="0" width="${w}" height="${h}"/></symbol>`);
+      }
+    }
+  }
+  const body = kept.join("\n");
+  const used = new Map<string, string>();
+  for (const sym of kept) for (const [k, v] of neededExtras(sym, extras)) used.set(k, v);
+  return { defs: [...used.values(), body].join("\n"), broken };
+}
+
 /** Deterministic stand-in symbols so a film can still be made when the library keeps failing. */
 export function placeholderLibrary(cast: readonly CastMember[], canvas: { w: number; h: number }): string {
   return cast
@@ -384,12 +422,26 @@ export async function runCast(ctx: DirectorContext, plan: Plan, aspectRatio: str
   const lost = aliases.filter((a) => !a.first).map((a) => `#${a.id}`);
   if (states.length) await recordStep(ctx, { role: "cast", model: "engine", action: "prop-states", summary: `Key object states: ${plan.cast.filter((c) => c.states?.length).map((c) => `#${c.id} ${c.states!.map((st) => st.id).join(" → ")}`).join("; ")}`, error: lost.length ? `state(s) not drawn, shown as the base drawing: ${lost.join(", ")}` : null });
   let defs = [...extras.values(), ...symbols].join("\n");
-  let sheet: Buffer;
   let placeholder = placeholders.length === plan.cast.length;
-  try {
-    sheet = await validateLibrary(defs, plan.cast, ctx.canvas, aspectRatio, false);
-  } catch (e) {
-    await recordStep(ctx, { role: "cast", model: "engine", action: "defs:invalid", summary: "Assembled library rejected", error: e instanceof Error ? e.message : String(e) });
+  let sheet: Buffer | null = await validateLibrary(defs, plan.cast, ctx.canvas, aspectRatio, false).catch(async (e: unknown) => {
+    // one malformed symbol must not cost the whole library (preview 2026-10-12, bánh chưng: a broken <rect> turned
+    // every set and character into a placeholder): render each symbol alone and replace only the ones that fail
+    const salvaged = await salvageLibrary(symbols, extras, allMembers(), ctx.canvas, aspectRatio);
+    const retry = salvaged.broken.length ? await validateLibrary(salvaged.defs, plan.cast, ctx.canvas, aspectRatio, false).catch(() => null) : null;
+    await recordStep(ctx, {
+      role: "cast",
+      model: "engine",
+      action: retry ? "defs:salvaged" : "defs:invalid",
+      summary: retry ? `Assembled library failed to render; replaced only the broken symbol(s): ${salvaged.broken.map((x) => `#${x}`).join(", ")}` : "Assembled library rejected",
+      error: e instanceof Error ? e.message : String(e),
+    });
+    if (!retry) return null;
+    defs = salvaged.defs;
+    placeholders.push(...salvaged.broken.filter((x) => plan.cast.some((c) => c.id === x) && !placeholders.includes(x)));
+    for (const x of salvaged.broken) kits.delete(x);
+    return retry;
+  });
+  if (!sheet) {
     placeholder = true;
     placeholders.splice(0, placeholders.length, ...plan.cast.map((c) => c.id));
     fallback.length = 0;

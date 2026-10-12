@@ -4,16 +4,23 @@ import { replaceScript } from "@/lib/services/frameWrites";
 import { callJson, recordStep, type DirectorContext } from "@/lib/services/director/context";
 import { planSchema, type CastMember, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import { directorSystem, directorUser } from "@/lib/services/director/prompts";
-import { lockSeriesCast, seriesBrief, type SeriesData } from "@/lib/services/director/series";
+import { castFromRunBrief, lockFixedCast, lockSeriesCast, seriesBrief, type SeriesData } from "@/lib/services/director/series";
 import type { Frame } from "@/generated/prisma/client";
 
 /** Director (Ultra): story → validated Plan (shot list + Cast & Set Bible). */
-export async function runPlan(ctx: DirectorContext, story: string, references: string | null, referenceCount = 0, series: SeriesData | null = null, narration: readonly string[] | null = null): Promise<Plan> {
-  const seriesNote = [series ? seriesBrief(series) : null, narration ? narrationBrief(narration) : null].filter(Boolean).join("\n\n") || null;
+export async function runPlan(ctx: DirectorContext, story: string, references: string | null, referenceCount = 0, series: SeriesData | null = null, narration: readonly string[] | null = null, fixedCast: { cast: CastMember[]; palette: string[] } | null = null): Promise<Plan> {
+  const seriesNote = [fixedCast ? castFromRunBrief(fixedCast.cast, fixedCast.palette) : null, series ? seriesBrief(series) : null, narration ? narrationBrief(narration) : null].filter(Boolean).join("\n\n") || null;
   // series episodes: lock the recurring cast BEFORE normalising, so a recurring id the plan forgot to list isn't dropped from its shots
+  // a take on an approved preview's cast (owner 2026-10-12): the cast IS that one, verbatim; anything new is dropped
   // narrated episodes: each shot's narration is fixed to its line (the plan only stages it)
+  const dropped = new Set<string>();
   const lock = (p: Plan) => {
-    const locked = series ? lockSeriesCast(p, series) : p;
+    let locked = series ? lockSeriesCast(p, series) : p;
+    if (fixedCast) {
+      const f = lockFixedCast(locked, fixedCast.cast);
+      f.dropped.forEach((d) => dropped.add(d));
+      locked = f.plan;
+    }
     return narration ? withNarration(locked, narration) : locked;
   };
   const maxShots = ctx.budget.budget.maxShots;
@@ -59,6 +66,7 @@ export async function runPlan(ctx: DirectorContext, story: string, references: s
       // keep the first plan; the film goes on
     }
   }
+  if (dropped.size) await recordStep(ctx, { role: "director", model: "engine", action: "plan:cast-locked", summary: `The approved cast is locked: dropped new id(s) ${[...dropped].map((d) => `#${d}`).join(", ")} from the plan` });
   const withSets = ensureSets(best);
   if (withSets.added.length) {
     best = withSets.plan;
