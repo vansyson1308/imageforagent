@@ -348,7 +348,9 @@ const words = (t: string) => t.toLowerCase().split(/[^\p{L}\p{N}]+/u).filter((w)
 export function misplacedShots(plan: Pick<Plan, "cast" | "shots">): Array<{ shot: number; set: string; why: string }> {
   const sets = plan.cast.filter((c) => c.kind === "set");
   if (sets.length < 1) return [];
-  const keys = new Map(sets.map((c) => [c.id, new Set([...words(c.name), ...words(c.id.replace(/-/g, " "))])] as const));
+  // a character's name is not a place: "Grandfather's kitchen" must not claim every shot that names Grandfather (kite, 2026-10-14)
+  const people = new Set(plan.cast.filter((c) => c.kind === "character").flatMap((c) => [...words(c.name), ...words(c.id.replace(/-/g, " "))]));
+  const keys = new Map(sets.map((c) => [c.id, new Set([...words(c.name), ...words(c.id.replace(/-/g, " "))].filter((w) => !people.has(w)))] as const));
   const indoor = (c: (typeof sets)[number]) => INDOOR_WORDS.test(`${c.name} ${c.id.replace(/-/g, " ")}`) || (INDOOR_WORDS.test(c.look.split(/[.;]/)[0]) && !OUTDOOR_WORDS.test(c.look.split(/[.;]/)[0]));
   const out: Array<{ shot: number; set: string; why: string }> = [];
   plan.shots.forEach((s, i) => {
