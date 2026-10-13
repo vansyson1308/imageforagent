@@ -8,6 +8,7 @@
  *   … [--only lantern] [--max-shots 8] [--max-usd 0.6] [--set v2] [--remaster 2K@24]
  *   … --refilm v2-kite=<projectId>[,…]   # re-assemble a published film from its project (no model call; D43)
  *   … --set v2 --cast-from v2-furin=<previewRunId>[,…]   # a take on an APPROVED cast-only preview's cast (owner 2026-10-12)
+ *   … --set v2 --only v2-tegami --redo v2-tegami=<projectId>:<takeRunId>:5[+7]   # redraw only those shots of a take (D84, ≤ 2 redos per shot)
  *
  * v2 (owner QC 2026-10-10): `--set v2` films the 11-line narrated tellings in
  * showcaseStories.ts with research on, checks the run against the publish gate
@@ -135,7 +136,7 @@ async function main() {
     for (const pair of arg("--sheet").split(",")) {
       const [slug, ids] = pair.split("=");
       const [pid, runId] = (ids ?? "").split(":");
-      const trace = await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${runId}`);
+      const trace = await withTakeSteps(client, pid, await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${runId}`));
       const failed = [...measuredProblems(trace.status, trace.summary, aspectOf(slug)), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0])];
       console.log(`${failed.length ? "✘" : "◐"} ${slug}: ${await writeCandidate(client, slug, pid, runId, trace, criticProblems(trace.summary), failed)}/`);
     }
@@ -156,11 +157,15 @@ async function main() {
     let pid = "";
     let runId = "";
     let done: SseEvent | null = null;
-    for (let attempt = 0; attempt < 2 && !done; attempt++) {
+    // D84: a redo redraws only the named shots of a finished take, on that take's project (one attempt: no fresh project)
+    const redoSpec = arg("--redo").split(",").map((p) => p.split("=")).find(([k]) => k === s.slug)?.[1];
+    const redo = redoSpec ? (([p, r, shots]) => ({ pid: p, runId: r, shots: (shots ?? "").split("+").map(Number).filter((n) => n > 0) }))(redoSpec.split(":")) : null;
+    if (redo && (!redo.pid || !redo.runId || !redo.shots.length)) throw new Error(`--redo ${s.slug}=${redoSpec}: expected <projectId>:<takeRunId>:<shot>[+<shot>]`);
+    for (let attempt = 0; attempt < (redo ? 1 : 2) && !done; attempt++) {
       let streamed = 0;
       try {
-        pid = await client.createProject(`Showcase · ${s.slug}`);
-        console.log(`▶ ${s.slug} (${s.language}) project ${pid}${attempt ? " (retry)" : ""}`);
+        pid = redo ? redo.pid : await client.createProject(`Showcase · ${s.slug}`);
+        console.log(`▶ ${s.slug} (${s.language}) project ${pid}${attempt ? " (retry)" : ""}${redo ? ` — redo of take ${redo.runId}, shot(s) ${redo.shots.join(", ")}` : ""}`);
         const v2 = "narration" in s ? { ...narrationOf(s.slug, s.narration), research: arg("--research", "on") === "on" } : { maxShots, research: false };
         // reuse the approved preview's cast verbatim: its run id per slug (the take's log prints the symbol hashes)
         const castFromRun = arg("--cast-from").split(",").map((p) => p.split("=")).find(([k]) => k === s.slug)?.[1];
@@ -179,13 +184,16 @@ async function main() {
         const story = "brief" in s ? ("pilot" in s && s.pilot ? s.brief : `${s.brief}\n\n${s.story}`) : s.story;
         // a v2 film is held to its format's floor + 1 s for the transitions' overlap (D79): 46 s for 16:9, 31 s for a 9:16 Short
         const floor = "narration" in s ? { minFilmSec: durationWindow(aspectOf(s.slug)).min + 1 } : {};
-        runId = await client.direct(pid, { story, language: s.language, style: s.style, maxUsd, critic: true, ...v2, ...pilot, ...floor, ...(castFromRun && { castFromRun }), ...(castEdits.length && { castEdits }) }, (e) => {
+        const body = redo
+          ? { story, language: s.language, style: s.style, maxUsd, critic: true, research: false, ...pilot, ...floor, redoRun: redo.runId, redoShots: redo.shots }
+          : { story, language: s.language, style: s.style, maxUsd, critic: true, ...v2, ...pilot, ...floor, ...(castFromRun && { castFromRun }), ...(castEdits.length && { castEdits }) };
+        runId = await client.direct(pid, body, (e) => {
           appendFileSync(log, JSON.stringify(e) + "\n");
           if (e.type === "step") {
             const st = e.step as { role: string; action: string; shotIndex: number | null; score: number | null; costUsd: number; error: string | null };
             streamed += st.costUsd;
             console.log(`  ${st.role.padEnd(10)} ${st.action.padEnd(16)} ${st.shotIndex ?? ""} ${st.score ?? ""} $${st.costUsd.toFixed(5)} ${st.error ? "⚠ " + st.error.slice(0, 80) : ""}`);
-            if (/^(cast-from-run|cast-edits|recognize:carried|plan:cast-locked|pad-holds)$/.test(st.action)) console.log(`    ${(e.step as { summary?: string }).summary ?? ""}`);
+            if (/^(cast-from-run|cast-edits|recognize:carried|plan:cast-locked|pad-holds|redo)$/.test(st.action)) console.log(`    ${(e.step as { summary?: string }).summary ?? ""}`);
           }
           if (e.type === "done") done = e;
         });
@@ -196,11 +204,12 @@ async function main() {
       }
     }
     if (!runId) continue;
-    const trace = await client.json<Record<string, unknown> & { costUsd: number; tokensIn: number; tokensOut: number; bible: { title: string; logline: string } | null; summary: Record<string, unknown>; models: Record<string, string>; provider: string; status: string }>(
-      "GET",
-      `/api/projects/${pid}/director/runs/${runId}`,
+    const trace = await withTakeSteps(
+      client,
+      pid,
+      await client.json<Record<string, unknown> & { costUsd: number; tokensIn: number; tokensOut: number; bible: { title: string; logline: string } | null; summary: Record<string, unknown>; models: Record<string, string>; provider: string; status: string }>("GET", `/api/projects/${pid}/director/runs/${runId}`),
     );
-    appendLedger({ script: "showcase", label: s.slug, model: "crew", tokensIn: trace.tokensIn, tokensOut: trace.tokensOut, costUsd: trace.costUsd });
+    appendLedger({ script: redo ? "showcase-redo" : "showcase", label: s.slug, model: "crew", tokensIn: trace.tokensIn, tokensOut: trace.tokensOut, costUsd: trace.costUsd });
     // a take on an approved preview's cast: every reused symbol's hash, to compare with the preview sheet's
     const reused = ((trace.steps ?? []) as Array<{ action: string; output?: string | null }>).find((st) => st.action === "cast-from-run");
     if (reused?.output) {
@@ -254,6 +263,21 @@ function narrationOf(slug: string, lines: readonly string[]): { narration: reado
   for (const m of pkg.mismatched) console.log(`  ⚠ ${m}`);
   console.log(`  ${dir}: the owner's recordings narrate every line`);
   return { narrationShots: pkg.shots };
+}
+
+/**
+ * D84: a redo's trace holds only its own steps; the film's research, voices and every other shot come from the take it
+ * redid (and that take's own take, for a second redo). The credits and the voice checks read the whole chain, take first.
+ */
+async function withTakeSteps<T extends { summary: Record<string, unknown>; steps?: unknown }>(client: StudioClient, pid: string, trace: T): Promise<T> {
+  let steps = (trace.steps ?? []) as unknown[];
+  let src = (trace.summary.redoOf as { sourceRunId?: string } | undefined)?.sourceRunId;
+  for (let hop = 0; src && hop < 6; hop++) {
+    const t = await client.json<{ summary: Record<string, unknown>; steps?: unknown[] }>("GET", `/api/projects/${pid}/director/runs/${src}`);
+    steps = [...(t.steps ?? []), ...steps];
+    src = (t.summary?.redoOf as { sourceRunId?: string } | undefined)?.sourceRunId;
+  }
+  return { ...trace, steps };
 }
 
 type Trace = Record<string, unknown> & { costUsd: number; tokensIn: number; tokensOut: number; bible: { title: string; logline: string } | null; summary: Record<string, unknown>; models: Record<string, string>; provider: string; status: string; id?: string };
@@ -360,7 +384,7 @@ async function publishChecked(client: StudioClient, pairs: string, base: string,
     const dir = (existsSync(root) ? readdirSync(root) : []).map((d) => `${root}/${d}`).find((d) => d.split("/").pop()!.startsWith(`${slug}-`) && existsSync(`${d}/candidate.json`) && JSON.parse(readFileSync(`${d}/candidate.json`, "utf8")).projectId === pid);
     if (!dir) throw new Error(`--publish ${pair}: no by-eye candidate for that project in ${root}/`);
     const cand = JSON.parse(readFileSync(`${dir}/candidate.json`, "utf8")) as { runId: string };
-    const trace = await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${cand.runId}`);
+    const trace = await withTakeSteps(client, pid, await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${cand.runId}`));
     const md = readFileSync(`${dir}/checklist.md`, "utf8");
     // measured gates always block; the critic's scores block unless the owner and QC approved the film by eye
     const critic = criticProblems(trace.summary);

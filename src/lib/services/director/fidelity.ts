@@ -122,8 +122,22 @@ export function setBucket(lit: string | undefined): TimeBucket | null {
   return lit === "night" ? "night" : lit === "dusk" ? "dusk" : "day";
 }
 
-/** The bucket a shot's own words plan (dusk words win over day/night ones; null = not stated). */
-export function plannedBucket(shot: Pick<ShotPlan, "scene" | "description"> & { readonly mood?: string | null }): TimeBucket | null {
+/** "golden dusk", "golden sunset", "dusk gold": the warm low sun the golden kit light draws (D82). */
+export const GOLDEN_DUSK = /\bgolden\s+(?:dusk|sunset|evening|twilight)\b|\b(?:dusk|sunset|evening)\s+gold(?:en)?\b/i;
+
+/**
+ * D82 (owner + QC 2026-10-13, kite take 1 shot 11): a shot planned at "golden dusk" on a set the kit
+ * lit "golden" is golden hour, the DAY bucket — the render and the plan agree, so the critic's
+ * "brightness indicates day, not dusk" is not off-plan. Only with a golden-lit set in the shot.
+ */
+export function goldenHour(shot: Pick<ShotPlan, "scene" | "description"> & { readonly cast: readonly string[] }, setTimes: ReadonlyMap<string, string>): boolean {
+  if (!GOLDEN_DUSK.test(`${shot.scene} ${shot.description}`)) return false;
+  return shot.cast.some((id) => setTimes.get(setForShot(shot, id, setTimes)) === "golden");
+}
+
+/** The bucket a shot's own words plan (dusk words win over day/night ones; null = not stated); golden dusk on a golden set is day (D82). */
+export function plannedBucket(shot: Pick<ShotPlan, "scene" | "description"> & { readonly mood?: string | null; readonly cast?: readonly string[] }, setTimes?: ReadonlyMap<string, string>): TimeBucket | null {
+  if (setTimes && shot.cast && goldenHour({ ...shot, cast: shot.cast }, setTimes)) return "day";
   const named = bucketsNamed(`${shot.scene} ${shot.description}`);
   if (named.has("dusk") && !named.has("night")) return "dusk";
   return shotTime(shot);
@@ -141,6 +155,15 @@ export function withinBucket(c: Critique): Critique {
   const words = timeWords(f.note ?? "");
   const sameBucket = new Set(words.map((w) => w.word)).size >= 2 && new Set(words.map((w) => w.bucket)).size === 1;
   return sameBucket ? { ...c, fidelity: { ...f, time: "ok", note: `${f.note} (same time-of-day bucket: not off-plan, D71)`.slice(0, 240) } } : c;
+}
+
+/** D82: on a golden-dusk shot with a golden-lit set, a "wrong time" that names only day and dusk times is golden hour, not off-plan. */
+export function goldenHourVerdict(c: Critique): Critique {
+  const f = c.fidelity;
+  if (!f || f.time !== "wrong") return c;
+  const buckets = bucketsNamed(f.note ?? "");
+  if (buckets.has("night")) return c;
+  return { ...c, fidelity: { ...f, time: "ok", note: `${f.note} (golden dusk on a golden-lit set is golden hour, the day bucket: not off-plan, D82)`.slice(0, 240) } };
 }
 
 export const FIDELITY_AXES = ["time", "place", "action"] as const;
@@ -172,8 +195,8 @@ export function actionNote(c: Critique | null | undefined): string | null {
  * (below the accept bar and the floor), forces "revise" and puts the mismatch first in the
  * issues the Artist gets back. A "wrong" action is passed on as the first issue, unscored.
  */
-export function enforceFidelity(judged: Critique): Critique {
-  const c = withinBucket(judged);
+export function enforceFidelity(judged: Critique, opts: { readonly goldenHour?: boolean } = {}): Critique {
+  const c = opts.goldenHour ? goldenHourVerdict(withinBucket(judged)) : withinBucket(judged);
   const wrong = offPlanAxes(c);
   if (!wrong.length) {
     const note = actionNote(c);
@@ -187,7 +210,8 @@ const BUCKET_TEXT: Record<TimeBucket, string> = { day: "the DAY bucket (dawn to 
 
 /** Story context and measured facts the fidelity verdict is judged against. */
 export function fidelityBrief(plan: Pick<Plan, "title" | "logline"> & { readonly cast?: Plan["cast"] }, shot: ShotPlan, setTimes: ReadonlyMap<string, string>): string {
-  const planned = plannedBucket(shot);
+  const planned = plannedBucket(shot, setTimes);
+  const golden = goldenHour(shot, setTimes);
   const sets = shot.cast.filter((id) => setTimes.has(id)).map((id) => {
     const lit = setTimes.get(setForShot(shot, id, setTimes));
     return `#${id} is lit for ${lit} (${BUCKET_TEXT[setBucket(lit) ?? "day"]})`;
@@ -200,7 +224,7 @@ export function fidelityBrief(plan: Pick<Plan, "title" | "logline"> & { readonly
   return [
     `Story: "${plan.title}" — ${plan.logline}`,
     `Scene: ${shot.scene}.`,
-    planned ? `The plan's words put this shot in ${BUCKET_TEXT[planned]}.` : "",
+    planned ? `The plan's words put this shot in ${BUCKET_TEXT[planned]}${golden ? ' ("golden dusk" on a golden-lit set is golden hour: warm low sun, bright sky, long shadows)' : ""}.` : "",
     sets.length ? `Set lighting (engine kit): ${sets.join("; ")}.` : "",
     states.length ? `Key object: ${states.join("; ")}.` : "",
   ]

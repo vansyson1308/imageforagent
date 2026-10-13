@@ -13,7 +13,7 @@ import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
 import { retimeSets, shotTime, timedSetId } from "@/lib/services/director/fidelity";
 import { restsOnTable, tableUnder } from "@/lib/services/director/restSurface";
-import { applyPlacement, badPaints, coveredShare, INSERT_PROP_AREA, INSERT_PROP_MIN_AREA, INSERT_PROP_SPAN_H, INSERT_PROP_SPAN_W, INSERT_PROP_TARGET_H, minPropArea, visibleArea, visibleBody, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
+import { applyPlacement, type Placement, badPaints, coveredShare, INSERT_PROP_AREA, INSERT_PROP_MIN_AREA, INSERT_PROP_SPAN_H, INSERT_PROP_SPAN_W, INSERT_PROP_TARGET_H, minPropArea, visibleArea, visibleBody, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, edgeCuts, emptyFrameProblem, EXIT_ENTRY_WORDS, figureLight, GATE, measureFrame, OVER_SHOULDER, type EdgeSide, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
@@ -162,6 +162,16 @@ export async function validateDrawing(
       checks = fixed.checks;
     }
   }
+  // D83 (owner 2026-10-13): a prop drawn over a face (the engine's own held prop included) is the engine's to move down to the chest
+  if (checks.covered.length) {
+    const fixed = await faceCoverFix(svg, checks, opts);
+    if (fixed) {
+      fixed.checks.facts.push(...held.notes);
+      svg = fixed.svg;
+      png = fixed.png;
+      checks = fixed.checks;
+    }
+  }
   // D45: when the only problems are the main figure's size/headroom and it is placed plainly, the engine frames it (re-measured, every gate again)
   const placed = checks.subject && checks.problems.length && checks.problems.every((p) => REFRAMABLE.some((r) => r.test(p))) ? plainPlacement(svg, checks.subject.id) : null;
   if (placed && checks.subject) {
@@ -233,8 +243,9 @@ async function qualityGates(
   svg: string,
   png: Buffer,
   opts: { castDefs: string; aspectRatio: string; shot: ShotPlan; characters?: readonly string[]; sets?: readonly string[]; props?: readonly string[]; canvas: { w: number; h: number } },
-): Promise<{ problems: string[]; facts: string[]; subject: { id: string; box: Box } | null; cuts: { id: string; sides: EdgeSide[] }[]; dim: string[]; small: SmallProp[] }> {
+): Promise<{ problems: string[]; facts: string[]; subject: { id: string; box: Box } | null; cuts: { id: string; sides: EdgeSide[] }[]; dim: string[]; small: SmallProp[]; covered: { id: string; box: Box }[] }> {
   const problems: string[] = [];
+  const covered: { id: string; box: Box }[] = [];
   const facts: string[] = [];
   const cuts: { id: string; sides: EdgeSide[] }[] = [];
   const dim: string[] = [];
@@ -270,6 +281,8 @@ async function qualityGates(
       const cover = await coveredShare(png, alone, await renderArtwork(opts.castDefs, withoutUses(upTo, id), opts.aspectRatio, "1K"));
       if (cover && cover.head >= GATE.maxFaceCover && cover.head - cover.rest >= 0.15) {
         problems.push(`#${id}'s face is covered by something drawn after it (${Math.round(cover.head * 100)}% of the head hidden): move that prop or character aside so the face shows (a held prop goes at chest or hand height, beside the head), or draw it before #${id}`);
+        const cbox = await visibleBox(png, without);
+        if (cbox) covered.push({ id, box: cbox });
       }
     }
     const box = pct > 0 ? await visibleBox(png, without) : null;
@@ -397,7 +410,7 @@ async function qualityGates(
   } else if (shotTime(opts.shot) === "day" && lum < 60) {
     problems.push(`this is a daytime scene but the frame's mean brightness is only ${lum}/255 (should be ≥ 60): remove dark overlays over the set and use a day sky`);
   }
-  return { problems, facts, subject: subject && subjectId && kitIds.has(subjectId) ? { id: subjectId, box: subject } : null, cuts, dim, small };
+  return { problems, facts, subject: subject && subjectId && kitIds.has(subjectId) ? { id: subjectId, box: subject } : null, cuts, dim, small, covered };
 }
 
 /** A prop the gate found too small: by area (needs `need`), or an object of an insert whose body does not span the frame. */
@@ -444,6 +457,53 @@ async function propScaleFix(svg: string, checks: Gates, opts: GateOpts, held: re
     }
     out = applyPlacement(out, placed, { x, y, w, h });
     notes.push(`#${p.id} scaled ${k.toFixed(2)}× about its ${inHand ? "grip (held)" : "centre"}: ${Math.round(placed.w)}×${Math.round(placed.h)} → ${w}×${h}`);
+  }
+  if (out === svg) return null;
+  const png = await renderArtwork(opts.castDefs, out, opts.aspectRatio, "1K");
+  const after = await qualityGates(out, png, opts);
+  if (after.problems.length >= checks.problems.length) return null;
+  after.facts.push(`fixed by the engine: ${notes.join("; ")} (was: ${checks.problems.filter((x) => !after.problems.includes(x)).join("; ")})`);
+  return { svg: out, png, checks: after };
+}
+
+/** Where a figure's head ends: the top 30% of its visible box is the head (the face-cover gate's split). */
+export const HEAD_SHARE = 0.3;
+
+/**
+ * D83 (owner 2026-10-13, tegami take 2 shot 5): a prop drawn after a figure and over its head
+ * (the "hold" pose puts the engine's held prop at the hands, and raised hands put it over the
+ * mouth) moves DOWN to the figure's chest: its top just under the head, same x and size, shrunk
+ * only to stay inside the frame. Plainly placed props only; kept only when the re-measured frame
+ * has fewer problems (like the small-prop rescale).
+ */
+export function chestPlacement(prop: Placement, head: { x0: number; x1: number; y0: number; bottom: number }, canvas: { w: number; h: number }): Placement | null {
+  const overlapsHead = prop.x < head.x1 && prop.x + prop.w > head.x0 && prop.y < head.bottom && prop.y + prop.h > head.y0;
+  if (!overlapsHead) return null;
+  const y = Math.round(head.bottom + canvas.h * 0.02);
+  if (y >= canvas.h * 0.95) return null;
+  const k = Math.min(1, (canvas.h - y) / prop.h);
+  const w = Math.round(prop.w * k);
+  const h = Math.round(prop.h * k);
+  return { x: Math.round(prop.x + (prop.w - w) / 2), y, w, h };
+}
+
+async function faceCoverFix(svg: string, checks: Gates, opts: GateOpts): Promise<{ svg: string; png: Buffer; checks: Gates } | null> {
+  let out = svg;
+  const notes: string[] = [];
+  const { w: W, h: H } = opts.canvas;
+  for (const c of checks.covered) {
+    const esc = c.id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const figure = new RegExp(`<use\\b[^>]*href\\s*=\\s*["']#${esc}(?:--[a-z0-9_-]+)?["']`).exec(out);
+    if (!figure) continue;
+    const head = { x0: c.box.x0 * W, x1: c.box.x1 * W, y0: c.box.y0 * H, bottom: (c.box.y0 + (c.box.y1 - c.box.y0) * HEAD_SHARE) * H };
+    for (const prop of opts.shot.cast.filter((id) => opts.props?.includes(id))) {
+      const placed = plainPlacement(out, prop);
+      if (!placed || placed.at < figure.index) continue;
+      const to = chestPlacement(placed, head, opts.canvas);
+      if (!to) continue;
+      out = applyPlacement(out, placed, to);
+      notes.push(`#${prop} moved off #${c.id}'s face to the chest: ${Math.round(placed.w)}×${Math.round(placed.h)} at (${Math.round(placed.x)}, ${Math.round(placed.y)}) → ${to.w}×${to.h} at (${to.x}, ${to.y})`);
+    }
   }
   if (out === svg) return null;
   const png = await renderArtwork(opts.castDefs, out, opts.aspectRatio, "1K");

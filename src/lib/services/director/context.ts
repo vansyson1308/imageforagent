@@ -58,6 +58,10 @@ export interface RunSummary {
   readonly revisions: number;
   /** shots whose final version still fails a measured gate (kept on the lenient last attempt) */
   readonly gateFailures?: number;
+  /** which shots those are (D84: a single-shot redo swaps the redone shots' results in) */
+  readonly gateFailShots?: number[];
+  /** a single-shot redo (D84): the take it redid and the shots it redrew; the summary is the take's with those shots swapped in */
+  readonly redoOf?: { sourceRunId: string; shots: number[] };
   /** shots whose final version Nano still judges off-plan (wrong time of day or place) */
   readonly offPlan?: number[];
   /** the critic's "wrong action" notes per shot: a by-eye checklist item, not a gate (owner decision 2026-10-11) */

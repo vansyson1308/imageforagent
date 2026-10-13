@@ -15,6 +15,9 @@ import { editCastFromRun, loadCastFromRun, loadSeries } from "@/lib/services/dir
 import { STATE_OPS } from "@/lib/services/director/stateTransforms";
 import { decodeWav } from "@/lib/services/audio/wav";
 import type { NarrationShot } from "@/lib/services/director/fixedNarration";
+import { MAX_REDO_SHOTS } from "@/lib/services/director/redo";
+import { planSchema, type Plan } from "@/lib/services/director/schemas";
+import type { RunSummary } from "@/lib/services/director/context";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -62,6 +65,9 @@ const directorRequestSchema = z.object({
     )
     .max(6)
     .optional(),
+  /** single-shot redo (D84, operator only): redraw these shots of a finished take on its own project, same plan and cast */
+  redoRun: z.string().regex(/^[a-z0-9]{10,40}$/).optional(),
+  redoShots: z.array(z.number().int().min(1).max(24)).min(1).max(MAX_REDO_SHOTS).optional(),
   narrationShots: z
     .array(
       z.object({
@@ -93,6 +99,10 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     if ((body.stopAfter || body.castFromRun) && cfg.enabled && !isOperatorRequest(req, cfg)) throw new AppError("UNAUTHORIZED", "Cast-only previews and cast reuse are operator tools.");
     // a cast-only preview MAY start from an approved cast (with engine edits, D77): the edited preview is the one approved next
     if (body.castFromRun && body.seriesId) throw new AppError("VALIDATION", "castFromRun can't be combined with seriesId.");
+    // D84: a single-shot redo is an operator tool too
+    if ((body.redoRun || body.redoShots) && cfg.enabled && !isOperatorRequest(req, cfg)) throw new AppError("UNAUTHORIZED", "Single-shot redo is an operator tool.");
+    if (!body.redoRun !== !body.redoShots?.length) throw new AppError("VALIDATION", "A redo needs both redoRun and redoShots.");
+    if (body.redoRun && (body.castFromRun || body.castEdits?.length || body.stopAfter || body.seriesId || body.narrationShots || body.narration)) throw new AppError("VALIDATION", "A redo reuses its take's plan, cast and voices: send only redoRun, redoShots (and minFilmSec).");
     if (body.castEdits?.length && !body.castFromRun) throw new AppError("VALIDATION", "castEdits need castFromRun (they edit an approved cast).");
     const project = await prisma.project.findUnique({ where: { id } });
     if (!project) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
@@ -119,20 +129,37 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     const ceiling = runCeiling(deps.ceiling, isOperatorRequest(req, cfg));
     const runDeps = { ...deps, ceiling, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }), ...(floor && { floorRedraw: { enabled: floor.enabled, reason: floor.reason } }) };
     const series = body.seriesId ? await loadSeries(body.seriesId, sid, cfg.enabled) : null;
-    const loaded = body.castFromRun ? await loadCastFromRun(body.castFromRun) : null;
+    const redo = body.redoRun && body.redoShots ? await loadRedo(id, body.redoRun, body.redoShots) : null;
+    const loaded = body.castFromRun ? await loadCastFromRun(body.castFromRun) : redo ? await loadCastFromRun(redo.sourceRunId) : null;
     const castFrom = loaded && body.castEdits?.length ? await editCastFromRun(loaded, body.castEdits).catch((e: unknown) => {
       throw new AppError("VALIDATION", `castEdits: ${e instanceof Error ? e.message : String(e)}`);
     }) : loaded;
-    const { seriesId: _ignored, castFromRun: _from, castEdits: _edits, narrationShots, ...rest } = body;
+    const { seriesId: _ignored, castFromRun: _from, castEdits: _edits, redoRun: _redoRun, redoShots: _redoShots, narrationShots, ...rest } = body;
     void _edits;
+    void _redoRun;
+    void _redoShots;
     void _ignored;
     void _from;
     if (narrationShots && body.narration) throw new AppError("VALIDATION", "Send either narration or narrationShots, not both.");
-    const request = { projectId: id, ...rest, ...(narrationShots && { narrationShots: decodeNarration(narrationShots) }), series, castFrom, critic: body.profile === "super-only" ? false : body.critic };
+    const request = { projectId: id, ...rest, ...(narrationShots && { narrationShots: decodeNarration(narrationShots) }), series, castFrom, redo, ...(redo && { maxShots: redo.shots.length }), critic: body.profile === "super-only" ? false : body.critic };
     const { runId, budget } = await createRun(request, runDeps);
     startDetachedRun(runId, request, runDeps, budget);
     return new Response(runEventStream(runId, { replay: true }), { headers: { ...SSE_HEADERS, "X-Director-Run": runId } });
   });
+}
+
+/** D84: the take a redo redraws shots of — a finished run on THIS project, with its plan and summary; the shots must exist in it. */
+async function loadRedo(projectId: string, runId: string, shots: readonly number[]): Promise<{ sourceRunId: string; shots: number[]; plan: Plan; summary: RunSummary }> {
+  const run = await prisma.directorRun.findUnique({ where: { id: runId } });
+  if (!run || run.projectId !== projectId) throw new AppError("NOT_FOUND", "No such take on this project.");
+  if (run.status !== "done" || !run.bible || !run.summary || !run.library) throw new AppError("VALIDATION", "Only a finished take (with its plan, cast and summary) can have shots redone.");
+  const plan = planSchema.parse(JSON.parse(run.bible));
+  const summary = JSON.parse(run.summary) as RunSummary;
+  if (summary.stopAfter) throw new AppError("VALIDATION", "A cast-only preview has no shots to redo.");
+  const unique = [...new Set(shots)].sort((a, b) => a - b);
+  const bad = unique.filter((i) => i > plan.shots.length);
+  if (bad.length) throw new AppError("VALIDATION", `The take has ${plan.shots.length} shots: no shot ${bad.join(", ")}.`);
+  return { sourceRunId: run.id, shots: unique, plan, summary };
 }
 
 /** The owner's recordings as bytes, each checked to be a readable WAV before any model call. */

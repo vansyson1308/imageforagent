@@ -25,7 +25,7 @@ export interface CritiqueOutcome {
  * If the vision model rejects image input, the run switches to text mode and
  * records that switch. A critic failure never blocks the film (critique: null).
  */
-export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan; index: number; drawing: Drawing; round: number; context?: string }): Promise<CritiqueOutcome> {
+export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan; index: number; drawing: Drawing; round: number; context?: string; goldenHour?: boolean }): Promise<CritiqueOutcome> {
   const { uri, jpeg } = await toJpegDataUri(opts.drawing.png);
   const imagePath = snapshotPath(ctx.projectId, ctx.runId, `f${String(opts.index).padStart(2, "0")}-r${opts.round}.jpg`);
   await saveBuffer(imagePath, jpeg);
@@ -63,7 +63,7 @@ export async function critiqueShot(ctx: DirectorContext, opts: { shot: ShotPlan;
       1,
     );
     // an off-plan frame (wrong time of day or place) is never accepted; a wrong action is a checklist note
-    const critique = enforceFidelity(judged);
+    const critique = enforceFidelity(judged, { goldenHour: opts.goldenHour });
     await noteScore(ctx, opts.index, critique, mode, imagePath);
     return { critique, mode, imagePath };
   } catch (e) {

@@ -1035,3 +1035,189 @@ describe("D81 · every camera move keeps the painting on the canvas, whatever it
     }
   });
 });
+
+/* ---------- D82–D84 (owner + QC final decisions, 2026-10-13) ---------- */
+
+describe("D82 · \"golden dusk\" on a golden-lit set is golden hour, the day bucket (kite take 1, shot 11)", () => {
+  const t1 = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-kite-cmv5x8pqj00012aqtw2ld6ad3/trace.json", "utf8")) as {
+    bible: Plan;
+    summary: { castSetTimes: Record<string, string> };
+    steps: Array<{ action: string; shotIndex: number | null; output: string | null }>;
+  };
+  const times = new Map(Object.entries(t1.summary.castSetTimes));
+  const s11 = t1.bible.shots[10];
+  it("the plan and the render agree: the critic's \"day, not dusk\" is not off-plan; a night note, or a dusk-lit set, still is", async () => {
+    const { goldenHour, plannedBucket, enforceFidelity, fidelityBrief } = await import("@/lib/services/director/fidelity");
+    expect(s11.description).toMatch(/^Golden dusk glows over the sand/);
+    expect(times.get("brighton-seafront")).toBe("golden");
+    expect(goldenHour(s11, times)).toBe(true);
+    expect(plannedBucket(s11, times)).toBe("day");
+    expect(plannedBucket(s11)).toBe("dusk"); // without the set's light, the words alone stay dusk
+    expect(fidelityBrief(t1.bible, s11, times)).toMatch(/DAY bucket[^.]*"golden dusk" on a golden-lit set is golden hour/);
+    // the take's own verdicts on shot 11: off-plan before, golden hour now
+    const judged = t1.steps.filter((s) => s.action === "score" && s.shotIndex === 11).map((s) => critiqueSchema.parse(JSON.parse(s.output!)));
+    expect(judged.length).toBeGreaterThan(0);
+    const raw = { ...judged[0], fidelity: { time: "wrong" as const, place: "ok" as const, action: "ok" as const, note: "brightness indicates day, not dusk" } };
+    expect(offPlanAxes(enforceFidelity(raw))).toEqual(["time"]);
+    expect(offPlanAxes(enforceFidelity(raw, { goldenHour: true }))).toEqual([]);
+    expect(enforceFidelity(raw, { goldenHour: true }).fidelity?.note).toMatch(/golden hour, the day bucket: not off-plan, D82/);
+    // a night reading is still wrong, and so is a golden dusk on a set lit for dusk
+    expect(offPlanAxes(enforceFidelity({ ...raw, fidelity: { ...raw.fidelity, note: "it looks like night, not dusk" } }, { goldenHour: true }))).toEqual(["time"]);
+    expect(goldenHour(s11, new Map([["brighton-seafront", "dusk"]]))).toBe(false);
+    expect(goldenHour({ ...s11, scene: "Homeward", description: "Dusk falls over the sand" }, times)).toBe(false);
+  });
+});
+
+describe("D83 · a held prop over a face moves down to the chest (tegami take 2, shot 5)", () => {
+  const t2 = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-tegami-cmv5zd43a00012aqjvcwijeov/trace.json", "utf8")) as {
+    bible: Plan;
+    library: string;
+    kits: string;
+    steps: Array<{ action: string; role: string; shotIndex: number | null; output: string | null }>;
+  };
+  it("every drawing the take rejected for the covered face now passes, the envelope at the chest; the face shows", async () => {
+    const { kitsFromJson } = await import("@/lib/services/director/series");
+    const rejected = t2.steps.filter((s) => s.shotIndex === 5 && s.role === "artist" && s.output && /repair|revise/.test(s.action));
+    expect(rejected.length).toBeGreaterThanOrEqual(4);
+    const opts = {
+      castDefs: t2.library,
+      symbols: t2.bible.cast.map((c) => c.id),
+      aspectRatio: "9:16",
+      shot: t2.bible.shots[4],
+      index: 5,
+      canvas: { w: 1080, h: 1920 },
+      fps: 12,
+      characters: t2.bible.cast.filter((c) => c.kind === "character").map((c) => c.id),
+      sets: t2.bible.cast.filter((c) => c.kind === "set").map((c) => c.id),
+      props: t2.bible.cast.filter((c) => c.kind === "prop").map((c) => c.id),
+      kits: kitsFromJson(t2.kits),
+    };
+    for (const r of rejected) {
+      // strict, like every attempt but the last: it no longer throws for the covered face
+      const d = await validateDrawing(r.output!, opts);
+      expect(d.checks!.problems).toEqual([]);
+      expect(d.checks!.facts.join(" ")).toMatch(/#envelope moved off #elderly-gentleman's face to the chest/);
+    }
+  }, 180_000);
+
+  it("chestPlacement: only a prop over the head moves, to just under it, shrunk only to stay in frame", async () => {
+    const { chestPlacement } = await import("@/lib/services/director/artist");
+    const head = { x0: 300, x1: 700, y0: 600, bottom: 900 };
+    const cv = { w: 1080, h: 1920 };
+    expect(chestPlacement({ x: 400, y: 700, w: 300, h: 300 }, head, cv)).toEqual({ x: 400, y: 938, w: 300, h: 300 });
+    expect(chestPlacement({ x: 800, y: 700, w: 200, h: 200 }, head, cv)).toBeNull(); // beside the head: stays
+    expect(chestPlacement({ x: 400, y: 1100, w: 300, h: 300 }, head, cv)).toBeNull(); // already at the chest
+    const low = chestPlacement({ x: 300, y: 1500, w: 400, h: 400 }, { ...head, y0: 1400, bottom: 1700 }, cv)!;
+    expect(low.y + low.h).toBeLessThanOrEqual(cv.h);
+    expect(low.w).toBe(low.h);
+  });
+});
+
+describe("D84 · single-shot redo: only the named shots are redrawn, on the take's project, plan and cast", () => {
+  it("shotPatterns groups each shot's camera patterns (nested patterns included)", async () => {
+    const { shotPatterns } = await import("@/lib/services/director/redo");
+    const defs = '<symbol id="hero"/>\n<pattern id="art-f1" x="0"><rect/><pattern id="f1-dots"><circle/></pattern></pattern>\n<pattern id="act-f1-hero-a"><g/></pattern>\n<pattern id="art-f12"><rect/></pattern>\n<pattern id="tile"><rect/></pattern>';
+    const m = shotPatterns(defs);
+    expect([...m.keys()]).toEqual([1, 12]);
+    expect(m.get(1)).toBe('<pattern id="art-f1" x="0"><rect/><pattern id="f1-dots"><circle/></pattern></pattern>\n<pattern id="act-f1-hero-a"><g/></pattern>');
+    expect(m.get(12)).toBe('<pattern id="art-f12"><rect/></pattern>');
+  });
+
+  it("mergeRedo swaps the redone shots' results into the take's summary", async () => {
+    const { mergeRedo } = await import("@/lib/services/director/redo");
+    const base = { status: "done", shots: 7, rendered: 7, firstPassOk: 3, repairs: 9, criticBefore: 5, criticAfter: 6, revisions: 6, lintErrors: 0, lintWarnings: 0, durationSec: 46.8, wallMs: 1, tokens: 1, costUsd: 0.08, continuity: ["c"], textCritic: false };
+    const take = { ...base, gateFailures: 1, gateFailShots: [5], offPlan: [5], setless: [], belowFloor: [3, 5], shotScores: { 1: 8, 2: 7, 3: 4, 4: 9, 5: 3, 6: 7, 7: 6 }, actionNotes: { 5: "envelope over the face" }, propRecognition: [{ symbol: "envelope", prop: "envelope", state: null, ok: false, saw: "tag", redraws: 0 }], castSetTimes: { kissaten: "day" } };
+    const fresh = { ...base, repairs: 2, revisions: 1, costUsd: 0.01, continuity: [], gateFailures: 0, gateFailShots: [], offPlan: [], setless: [], belowFloor: [], shotScores: { 5: 7 }, actionNotes: {} };
+    const m = mergeRedo(take, fresh, [5], "take1");
+    expect(m.gateFailures).toBe(0);
+    expect(m.gateFailShots).toEqual([]);
+    expect(m.offPlan).toEqual([]);
+    expect(m.belowFloor).toEqual([3]);
+    expect(m.shotScores).toEqual({ 1: 8, 2: 7, 3: 4, 4: 9, 5: 7, 6: 7, 7: 6 });
+    expect(m.actionNotes).toEqual({});
+    expect(m.criticAfter).toBe(6.86);
+    expect(m.repairs).toBe(11);
+    expect(m.costUsd).toBe(0.01);
+    expect(m.continuity).toEqual(["c"]);
+    expect(m.propRecognition).toEqual(take.propRecognition);
+    expect(m.castSetTimes).toEqual({ kissaten: "day" });
+    expect(m.redoOf).toEqual({ sourceRunId: "take1", shots: [5] });
+    // a take from before gateFailShots: its failure count is kept (a redo never clears a failure it can't see)
+    const { gateFailShots: _g, ...old } = take;
+    void _g;
+    expect(mergeRedo(old, fresh, [5], "take1").gateFailures).toBe(1);
+  });
+
+  it("a redo on a finished take: no plan, cast, voice, recognition or editor call; the other shots and their camera patterns stay byte-identical", async () => {
+    const { loadCastFromRun } = await import("@/lib/services/director/series");
+    const { shotPatterns } = await import("@/lib/services/director/redo");
+    const preview = await castOnly(recognizingCrew(["a glass wind chime"], []));
+    const p = await prisma.project.create({ data: { name: "engine1012-redo" } });
+    created.push(p.id);
+    const take: MockHandler = (m, o, i) => (m[0].content.match(/^ROLE: (\w+)/)?.[1] === "DIRECTOR" ? furinPlan("Yui hangs a wind chime. It rings. Grandma smiles. The summer ends.") : recognizingCrew(["never asked"], [])(m, o, i));
+    const d = { provider: new MockLlmProvider(take), models: MOCK_MODELS, visionAvailable: true, modelNotes: [], tavily: null, ceiling: DEFAULT_BUDGET, floorRedraw: { enabled: false, reason: "test" } };
+    const run = async (req: Parameters<typeof createRun>[0], deps: typeof d) => {
+      const { runId, budget } = await createRun(req, deps);
+      const ctrl = registerRun(runId);
+      try {
+        return { runId, summary: await executeRun(runId, req, deps, budget, () => {}, ctrl.signal) };
+      } finally {
+        unregisterRun(runId);
+      }
+    };
+    const story = "Yui hangs a wind chime. It rings. Grandma smiles. The summer ends.";
+    const t = await run({ projectId: p.id, story, language: "en", style: "storybook", critic: true, research: false, maxShots: 4, castFrom: await loadCastFromRun(preview.runId) }, d);
+    expect(t.summary.status).toBe("done");
+    expect(t.summary.gateFailShots).toBeDefined();
+    const before = await prisma.frame.findMany({ where: { projectId: p.id }, orderBy: { index: "asc" } });
+    const defsBefore = shotPatterns((await prisma.project.findUniqueOrThrow({ where: { id: p.id } })).artworkDefs ?? "");
+    expect([...defsBefore.keys()].sort()).toEqual([1, 2, 3, 4]);
+    // the redo of shot 2, as the route builds it
+    const takeRun = await prisma.directorRun.findUniqueOrThrow({ where: { id: t.runId } });
+    const calls: string[] = [];
+    const redoCrew: MockHandler = (m, o, i) => {
+      calls.push(m[0].content.match(/^ROLE: (\w+)/)?.[1] ?? "?");
+      return take(m, o, i);
+    };
+    const r = await run(
+      {
+        projectId: p.id,
+        story,
+        language: "en",
+        style: "storybook",
+        critic: true,
+        research: false,
+        maxShots: 1,
+        castFrom: await loadCastFromRun(t.runId),
+        redo: { sourceRunId: t.runId, shots: [2], plan: planSchema.parse(JSON.parse(takeRun.bible!)), summary: JSON.parse(takeRun.summary!) },
+      },
+      { ...d, provider: new MockLlmProvider(redoCrew) },
+    );
+    expect(r.summary.status).toBe("done");
+    expect(r.summary.redoOf).toEqual({ sourceRunId: t.runId, shots: [2] });
+    expect(new Set(calls)).not.toContain("DIRECTOR");
+    expect(new Set(calls)).not.toContain("CAST");
+    expect(new Set(calls)).not.toContain("NAME_OBJECT");
+    expect(new Set(calls)).not.toContain("EDITOR");
+    expect(calls.length).toBeGreaterThan(0);
+    const after = await prisma.frame.findMany({ where: { projectId: p.id }, orderBy: { index: "asc" } });
+    expect(after.map((f) => f.index)).toEqual(before.map((f) => f.index));
+    for (const i of [0, 2, 3]) {
+      expect(after[i].imagePath).toBe(before[i].imagePath);
+      expect(after[i].artworkSvg).toBe(before[i].artworkSvg);
+      expect(after[i].motionSpec).toBe(before[i].motionSpec);
+    }
+    // only shot 2 was drawn and rendered by the redo
+    const redoSteps = await prisma.directorStep.findMany({ where: { runId: r.runId } });
+    expect([...new Set(redoSteps.map((s) => s.shotIndex).filter((x) => x !== null))]).toEqual([2]);
+    expect(redoSteps.some((s) => s.shotIndex === 2 && /^render-(clip|still)$/.test(s.action))).toBe(true);
+    expect(redoSteps.find((s) => s.action === "redo")?.outputSummary).toMatch(/shot\(s\) 2 redrawn/);
+    const defsAfter = shotPatterns((await prisma.project.findUniqueOrThrow({ where: { id: p.id } })).artworkDefs ?? "");
+    for (const i of [1, 3, 4]) expect(defsAfter.get(i)).toBe(defsBefore.get(i));
+    expect(defsAfter.has(2)).toBe(true);
+    // the redo's run can itself be the source of a second redo (its plan, cast and summary are kept)
+    const redoRun = await prisma.directorRun.findUniqueOrThrow({ where: { id: r.runId } });
+    expect(redoRun.bible && redoRun.library && redoRun.summary).toBeTruthy();
+    expect(Object.keys(r.summary.shotScores ?? {}).map(Number).sort()).toEqual([1, 2, 3, 4]);
+  }, 240_000);
+});

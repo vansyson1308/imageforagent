@@ -21,9 +21,10 @@ import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { commitShot, drawShot, padHolds, type Drawing } from "@/lib/services/director/artist";
 import { critiqueShot, fixesText } from "@/lib/services/director/critic";
 import { shotText, shotVoice, type NarrationShot } from "@/lib/services/director/fixedNarration";
-import { actionNote, fidelityBrief, offPlanAxes } from "@/lib/services/director/fidelity";
+import { actionNote, fidelityBrief, goldenHour, offPlanAxes } from "@/lib/services/director/fidelity";
 import { lintProject, runContinuity, runDialogue, runEditor } from "@/lib/services/director/editor";
-import type { Critique } from "@/lib/services/director/schemas";
+import type { Critique, Plan } from "@/lib/services/director/schemas";
+import { mergeRedo, shotPatterns } from "@/lib/services/director/redo";
 import type { Frame } from "@/generated/prisma/client";
 
 /**
@@ -69,6 +70,12 @@ export interface DirectorRequest {
   readonly castFrom?: CastFromRun | null;
   /** the film's floor (the format's minimum length + a margin for transitions): shorter, and every shot holds a little longer (padHolds) */
   readonly minFilmSec?: number;
+  /**
+   * single-shot redo (D84, operator only): redraw only these shots of a finished take on its own project, with the take's
+   * plan and cast (castFrom = the take); no research, plan, script, voices, cast or recognition calls; the summary is the take's
+   * with the redone shots swapped in
+   */
+  readonly redo?: { readonly sourceRunId: string; readonly shots: readonly number[]; readonly plan: Plan; readonly summary: RunSummary } | null;
 }
 
 export interface DirectorDeps {
@@ -216,7 +223,8 @@ export async function executeRun(
     // 1 · Research (optional, Tavily)
     let references: string | null = null;
     let referenceNotes: Awaited<ReturnType<typeof runResearch>>["notes"] = [];
-    if (options.research && deps.tavily) {
+    const redo = req.redo ?? null;
+    if (options.research && deps.tavily && !redo) {
       const mode = researchMode(req.research);
       const go = mode === "on" || (await decideResearch(ctx, req.story)).needed;
       if (go) {
@@ -231,8 +239,9 @@ export async function executeRun(
     emit({ type: "status", message: "Director is planning the shots…" });
     const narration = req.narrationShots ? req.narrationShots.map((s) => shotText(s, req.language)) : (req.narration ?? null);
     const fixedVoices = req.narrationShots ? new Map<number, NonNullable<ReturnType<typeof shotVoice>>>() : null;
-    let plan = await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null, narration, req.castFrom ? { cast: req.castFrom.cast, palette: req.castFrom.palette } : null);
-    if (req.narrationShots && fixedVoices) {
+    let plan = redo ? redo.plan : await runPlan(ctx, req.story, references, referenceNotes.length, req.series ?? null, narration, req.castFrom ? { cast: req.castFrom.cast, palette: req.castFrom.palette } : null);
+    if (redo) await recordStep(ctx, { role: "system", model: "engine", action: "redo", summary: `Single-shot redo of run ${redo.sourceRunId}: shot(s) ${redo.shots.join(", ")} redrawn with the take's plan and cast; every other shot stays as the take committed it (D84)`, output: JSON.stringify({ sourceRunId: redo.sourceRunId, shots: redo.shots }) });
+    if (req.narrationShots && fixedVoices && !redo) {
       // the owner's recordings, one per planned shot (a shorter plan gets the remaining lines on its last shot, like withNarration)
       const n = plan.shots.length;
       req.narrationShots.forEach((_, i) => {
@@ -269,10 +278,15 @@ export async function executeRun(
     });
 
     // 3 · Script (same path as a human TSV import)
-    let frames = await writeScript(ctx, plan);
+    let frames = redo ? await prisma.frame.findMany({ where: { projectId: req.projectId }, orderBy: { index: "asc" } }) : await writeScript(ctx, plan);
+    // the redo keeps every other shot's camera pattern as committed (castFromRun below resets the defs to the cast)
+    const keptPatterns = redo ? shotPatterns((await prisma.project.findUniqueOrThrow({ where: { id: req.projectId } })).artworkDefs ?? "") : new Map<number, string>();
 
     // 4 · Dialogue first, so each shot is timed to hold its line (a cast-only preview draws no shot: no voices)
-    if (req.stopAfter !== "cast") {
+    if (redo) {
+      // the take's voices stay; its holds are recomputed (padHolds is a pure function of the plan and the recorded voices)
+      if (req.minFilmSec) plan = padHolds(plan, frames, req.minFilmSec).plan;
+    } else if (req.stopAfter !== "cast") {
       emit({ type: "status", message: "Recording dialogue (local TTS)…" });
       const voices = await runDialogue(ctx, plan, frames, req.series?.voices ?? {}, fixedVoices ?? undefined);
       frames = voices.frames;
@@ -301,7 +315,9 @@ export async function executeRun(
       }
     }
     // A · the story's key object must be recognisable on its own, every state (owner 2026-10-12)
-    const recognized = await recognizeHeroProps(ctx, plan, library, aspectRatio, req.castFrom?.recognition, new Set(req.castFrom?.edits?.changed ?? []));
+    const recognized = redo
+      ? { library, results: [...(redo.summary.propRecognition ?? [])] as Recognition[] }
+      : await recognizeHeroProps(ctx, plan, library, aspectRatio, req.castFrom?.recognition, new Set(req.castFrom?.edits?.changed ?? []));
     library = recognized.library;
     propRecognition = recognized.results;
     castSetTimes = library.setTimes ? Object.fromEntries(library.setTimes) : undefined;
@@ -310,7 +326,9 @@ export async function executeRun(
       await recordStep(ctx, { role: "system", model: "engine", action: "stop-after-cast", summary: "Cast-only preview: stopped after the library and the recognition gate (no shots drawn)" });
       throw new StopAfterCast();
     }
-    const patterns = new Map<number, string>();
+    const patterns = new Map<number, string>([...keptPatterns.entries()].filter(([i]) => !redo?.shots.includes(i)));
+    // the project's defs hold the other shots' paintings again at once (a redo that draws nothing leaves the take whole)
+    if (redo) await prisma.project.update({ where: { id: req.projectId }, data: { artworkDefs: [library.defs, ...[...keptPatterns.entries()].sort((a, b) => a[0] - b[0]).map(([, p]) => p)].join("\n") } });
     // accepted paintings' thumbnails: the near-duplicate gate compares each shot with its neighbours
     const thumbs = new Map<number, Buffer>();
     const neighbours = (index: number) => () => [index - 1, index + 1].filter((i) => thumbs.has(i)).map((i) => ({ index: i, thumb: thumbs.get(i)! }));
@@ -338,7 +356,8 @@ export async function executeRun(
       st.setless = !placesASet(first.drawing.svg, plan);
       if (!options.critic) return;
       const planBrief = fidelityBrief(plan, shot, library.setTimes ?? new Map());
-      const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0, context: planBrief });
+      const golden = goldenHour(shot, library.setTimes ?? new Map());
+      const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0, context: planBrief, goldenHour: golden });
       best = { drawing: first.drawing, critique: c0.critique };
       st.before = c0.critique?.score ?? null;
       st.after = st.before;
@@ -348,7 +367,7 @@ export async function executeRun(
         const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits, setTimes: library.setTimes });
         st.repairs += Math.max(0, rev.attempts - 1);
         if (!rev.drawing) break;
-        const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round, context: planBrief });
+        const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round, context: planBrief, goldenHour: golden });
         st.revisions++;
         if (cr.critique && cr.critique.score > c.score) {
           best = { drawing: rev.drawing, critique: cr.critique };
@@ -382,7 +401,7 @@ export async function executeRun(
         });
         st.repairs += Math.max(0, fresh.attempts - 1);
         if (fresh.drawing) {
-          const cf = await critiqueShot(ctx, { shot, index: frame.index, drawing: fresh.drawing, round: budget.maxCriticRounds + 1, context: planBrief });
+          const cf = await critiqueShot(ctx, { shot, index: frame.index, drawing: fresh.drawing, round: budget.maxCriticRounds + 1, context: planBrief, goldenHour: golden });
           st.revisions++;
           if (cf.critique && cf.critique.score > fb.score) {
             best = { drawing: fresh.drawing, critique: cf.critique };
@@ -402,16 +421,19 @@ export async function executeRun(
       st.setless = !placesASet(best.drawing.svg, plan);
       if (st.offPlan.length) await recordStep(ctx, { role: "critic", model: ctx.models.fast, action: "off-plan", shotIndex: frame.index, score: best.critique?.score ?? null, summary: `Shot ${frame.index} still off-plan after revisions (${st.offPlan.join(" + ")})`, error: best.critique?.fidelity?.note || null });
     };
-    await runPool(frames, Math.max(1, Math.min(6, deps.concurrency ?? 1)), doShot);
+    await runPool(redo ? frames.filter((f) => redo.shots.includes(f.index)) : frames, Math.max(1, Math.min(6, deps.concurrency ?? 1)), doShot);
 
-    // 7 · Editor (Nano): lint fixes + continuity
-    emit({ type: "status", message: "Editor is checking timing and continuity…" });
-    // narrated films: the lines are fixed (the Editor may move a voice or a transition, never rewrite a line)
-    await runEditor(ctx, plan, req.series?.voices ?? {}, Boolean(narration));
-    continuity = await runContinuity(ctx, plan);
+    // a redo changes only its shots: the take's edit, continuity notes and score stay
+    if (!redo) {
+      // 7 · Editor (Nano): lint fixes + continuity
+      emit({ type: "status", message: "Editor is checking timing and continuity…" });
+      // narrated films: the lines are fixed (the Editor may move a voice or a transition, never rewrite a line)
+      await runEditor(ctx, plan, req.series?.voices ?? {}, Boolean(narration));
+      continuity = await runContinuity(ctx, plan);
 
-    // 8 · Original score bed from the engine's own synth (WP4.6), ducked under dialogue by the film mix
-    await scoreFilm(ctx, plan);
+      // 8 · Original score bed from the engine's own synth (WP4.6), ducked under dialogue by the film mix
+      await scoreFilm(ctx, plan);
+    }
   } catch (e) {
     if (e instanceof StopAfterCast) {
       // the preview is complete: status stays "done"
@@ -431,7 +453,8 @@ export async function executeRun(
     }
   }
 
-  const summary = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic, ctx.visionAvailable && options.critic && ctx.models.vision ? `${ctx.models.vision} looks · ${ctx.models.fast} scores` : null)), ...(researchUse && { research: researchUse }), ...(propRecognition.length && { propRecognition }), ...(req.stopAfter && { stopAfter: req.stopAfter }), ...(castSetTimes && { castSetTimes }), ...(req.castFrom && { castFromRun: req.castFrom.sourceRunId }) };
+  const own = { ...(await summarize(req.projectId, status, shotStats, tracker, continuity, !ctx.visionAvailable && options.critic, ctx.visionAvailable && options.critic && ctx.models.vision ? `${ctx.models.vision} looks · ${ctx.models.fast} scores` : null)), ...(researchUse && { research: researchUse }), ...(propRecognition.length && { propRecognition }), ...(req.stopAfter && { stopAfter: req.stopAfter }), ...(castSetTimes && { castSetTimes }), ...(req.castFrom && { castFromRun: req.castFrom.sourceRunId }) };
+  const summary = req.redo && status === "done" ? mergeRedo(req.redo.summary, own, req.redo.shots, req.redo.sourceRunId) : own;
   await prisma.directorRun.update({
     where: { id: runId },
     data: { status, error, summary: JSON.stringify(summary), finishedAt: new Date(), tokensIn: tracker.tokensIn, tokensOut: tracker.tokensOut, costUsd: tracker.costUsd },
@@ -504,6 +527,7 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     criticAfter: mean(scored.map((s) => s.after!)),
     revisions: all.reduce((n, s) => n + s.revisions, 0),
     gateFailures: all.filter((s) => (s.gateFailures ?? 0) > 0).length,
+    gateFailShots: [...stats.entries()].filter(([, s]) => (s.gateFailures ?? 0) > 0).map(([i]) => i).sort((a, b) => a - b),
     offPlan: [...stats.entries()].filter(([, s]) => s.offPlan?.length).map(([i]) => i).sort((a, b) => a - b),
     actionNotes: Object.fromEntries([...stats.entries()].filter(([, s]) => s.actionNote).map(([i, s]) => [i, s.actionNote as string])),
     setless: [...stats.entries()].filter(([, s]) => s.setless).map(([i]) => i).sort((a, b) => a - b),
