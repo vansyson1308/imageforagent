@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     title: TITLE,
     description: DESCRIPTION,
     siteName: "Storyboard Studio Director",
-    images: [{ url: "/og.jpg", width: 1024, height: 576, alt: "A still from 夏休みの風鈴, a v2 film made by the Nemotron crew: a girl and her grandmother in a lit tea room" }],
+    images: [{ url: "/og.jpg", width: 1024, height: 576, alt: "A still from The Mended Kite, a v2 film made by the Nemotron crew: Maya flies her mended red kite on the Brighton seafront" }],
   },
   twitter: { card: "summary_large_image", title: TITLE, description: DESCRIPTION, images: ["/og.jpg"] },
 };

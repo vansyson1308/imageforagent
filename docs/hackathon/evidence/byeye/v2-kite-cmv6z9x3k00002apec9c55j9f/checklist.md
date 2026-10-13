@@ -182,6 +182,6 @@ Note: QC by eye: OK — REDONE (owner 2026-10-14, one attempt): they walk home i
 
 ## Verdict
 
-Reviewer: QC — Claude (by eye, every frame at full size, 2026-10-14); owner signature pending
+Reviewer: owner Nguyễn Văn Sơn + QC Claude (QC re-checked every frame by eye; owner sign-off 2026-10-14)
 
-Verdict: PENDING — QC: PASS by eye (shot 11's floating kite accepted by eye per the owner's rule); the owner signs, then writes PASS here
+Verdict: PASS (Reviewer: owner Nguyễn Văn Sơn + QC Claude)
