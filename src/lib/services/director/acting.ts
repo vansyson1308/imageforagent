@@ -202,6 +202,41 @@ export function airborneProps(cast: ReadonlyArray<{ id: string; name: string; ki
   return cast.filter((c) => c.kind === "prop" && (c.airborne ?? AIRBORNE_WORDS.test(`${c.name} ${c.id.replace(/-/g, " ")}`))).map((c) => c.id);
 }
 
+/** "the kite surging higher than ever", "flies", "in the sky": an airborne prop that is UP, not in the hands (D86). */
+export const UP_IN_THE_AIR = /\b(fly|flies|flying|flew|soar\w*|surg\w*|sky|skies|high(?:er)?|above|aloft|overhead|in the air|climb\w*)\b|đang bay|bay lên|bay cao|trên trời|trên cao|空|舞い上/iu;
+
+/** Is this airborne prop up in the air in this shot (by the shot's own words)? */
+export function flyingIn(shot: Pick<ShotPlan, "description" | "cast">, airborne: readonly string[]): string[] {
+  return UP_IN_THE_AIR.test(shot.description) ? shot.cast.filter((c) => airborne.includes(c)) : [];
+}
+
+/**
+ * D86 (b) (owner + QC 2026-10-13, kite take 2 shot 9: "Maya darts into the wind, the kite surging higher",
+ * Maya planned to walk, so nobody held the string and none was drawn): when an airborne prop is up in a
+ * shot and no kit character of the shot is posed to hold/point/wave, the shot's flyer is posed "hold" (the
+ * string is then drawn from that hand, C). The flyer: the one planned to walk (darting into the wind), else
+ * the one the description names, else the first. Their expression is kept.
+ */
+export function holdAirborne(plan: Plan, kits: ReadonlyMap<string, KitSpec>, airborne: readonly string[]): { plan: Plan; posed: Array<{ shot: number; who: string; was: string | null }> } {
+  const posed: Array<{ shot: number; who: string; was: string | null }> = [];
+  const name = (id: string) => (plan.cast.find((c) => c.id === id)?.name ?? id).split(/[\s(,]/)[0].toLowerCase();
+  const shots = plan.shots.map((shot, i) => {
+    if (!flyingIn(shot, airborne).length) return shot;
+    const people = shot.cast.filter((c) => kits.has(c));
+    if (!people.length) return shot;
+    const cue = (who: string) => shot.acting?.find((a) => a.who === who);
+    if (people.some((who) => ["hold", "point", "wave"].includes(cue(who)?.pose ?? ""))) return shot;
+    const text = shot.description.toLowerCase();
+    const flyer = people.find((who) => cue(who)?.pose === "walk") ?? people.find((who) => text.includes(name(who))) ?? people[0];
+    const was = cue(flyer)?.pose ?? null;
+    posed.push({ shot: i + 1, who: flyer, was });
+    const expression = cue(flyer)?.expression ?? "neutral";
+    const acting = [...(shot.acting ?? []).filter((a) => a.who !== flyer), { who: flyer, pose: "hold" as const, expression }];
+    return { ...shot, acting };
+  });
+  return { plan: posed.length ? { ...plan, shots } : plan, posed };
+}
+
 /**
  * C (owner 2026-10-12, kite shots 1, 9, 10 had no string and nobody holding it): an airborne prop
  * that flies ABOVE a kit character of the shot gets a thin string from that character's hand to the

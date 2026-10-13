@@ -68,6 +68,8 @@ const directorRequestSchema = z.object({
   /** single-shot redo (D84, operator only): redraw these shots of a finished take on its own project, same plan and cast */
   redoRun: z.string().regex(/^[a-z0-9]{10,40}$/).optional(),
   redoShots: z.array(z.number().int().min(1).max(24)).min(1).max(MAX_REDO_SHOTS).optional(),
+  /** QC's by-eye note per redone shot (D86): the Artist's first issue */
+  redoNotes: z.record(z.string().regex(/^\d{1,2}$/), z.string().trim().min(3).max(400)).optional(),
   narrationShots: z
     .array(
       z.object({
@@ -130,15 +132,18 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     const ceiling = runCeiling(deps.ceiling, isOperatorRequest(req, cfg));
     const runDeps = { ...deps, ceiling, ...(gate && { externalGate: gate.gate, onSpend: gate.spend }), ...(floor && { floorRedraw: { enabled: floor.enabled, reason: floor.reason } }) };
     const series = body.seriesId ? await loadSeries(body.seriesId, sid, cfg.enabled) : null;
-    const redo = body.redoRun && body.redoShots ? await loadRedo(id, body.redoRun, body.redoShots) : null;
+    const loadedRedo = body.redoRun && body.redoShots ? await loadRedo(id, body.redoRun, body.redoShots) : null;
+    if (body.redoNotes && Object.keys(body.redoNotes).some((k) => !loadedRedo?.shots.includes(Number(k)))) throw new AppError("VALIDATION", "redoNotes may only name shots being redone.");
+    const redo = loadedRedo && body.redoNotes ? { ...loadedRedo, notes: Object.fromEntries(Object.entries(body.redoNotes).map(([k, v]) => [Number(k), v])) } : loadedRedo;
     const loaded = body.castFromRun ? await loadCastFromRun(body.castFromRun) : redo ? await loadCastFromRun(redo.sourceRunId) : null;
     const castFrom = loaded && body.castEdits?.length ? await editCastFromRun(loaded, body.castEdits).catch((e: unknown) => {
       throw new AppError("VALIDATION", `castEdits: ${e instanceof Error ? e.message : String(e)}`);
     }) : loaded;
-    const { seriesId: _ignored, castFromRun: _from, castEdits: _edits, redoRun: _redoRun, redoShots: _redoShots, narrationShots, ...rest } = body;
+    const { seriesId: _ignored, castFromRun: _from, castEdits: _edits, redoRun: _redoRun, redoShots: _redoShots, redoNotes: _redoNotes, narrationShots, ...rest } = body;
     void _edits;
     void _redoRun;
     void _redoShots;
+    void _redoNotes;
     void _ignored;
     void _from;
     if (narrationShots && body.narration) throw new AppError("VALIDATION", "Send either narration or narrationShots, not both.");

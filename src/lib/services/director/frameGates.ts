@@ -148,12 +148,43 @@ export const GATE = {
   nightFigureContrast: 35,
   /** a frame darker than this is judged for night readability even when its words don't say night */
   darkFrame: 110,
+  /** two kit figures whose visible boxes overlap by more than this share of the smaller box read as one standing on or inside the other (owner + QC 2026-10-13, D86: tegami take 3 shots 4–5, bánh chưng take 2 shot 3) */
+  maxFigureOverlap: 0.3,
 } as const;
 
 /** The plan marks a character leaving or entering the frame: an edge cut is allowed then (owner QC 2026-10-10). */
 export const EXIT_ENTRY_WORDS = /\b(exits?|exiting|enters?|entering|leaves|leaving|walks? (?:out|off|away|in)|runs? (?:out|off|away|in)|steps? (?:in|out)|arrives?|arriving|comes? in|off[- ]?screen|(?:into|out of) (?:the )?frame)\b|ra khỏi|bước vào|đi vào|chạy vào|chạy ra|đi ra|rời đi|出て|入って|入る|去って|現れ|立ち去/i;
 /** An over-the-shoulder shot frames the foreground character cut by the edge on purpose. */
 export const OVER_SHOULDER = /over[- ]the[- ]shoulder|\bOTS\b|qua vai|từ vai|肩越し/i;
+
+/** Staging where two figures are meant to touch or overlap: a hug, a lap, a shoulder, being carried; and over-the-shoulder framing. */
+export const TOGETHER_WORDS = /\b(hug\w*|embrac\w*|cuddl\w*|lap|carr(?:y|ies|ied|ying)|piggyback|on (?:\w+'s |his |her |their )?shoulders?|leans? (?:on|against)|leaning (?:on|against)|in (?:\w+'s |his |her |their )?arms)\b|ôm|bế|cõng|tựa vào|gục|lòng bà|膝|抱|背負|寄り添/i;
+
+/**
+ * D86 (c): two kit figures overlapping by more than GATE.maxFigureOverlap of the smaller one's visible box
+ * (one standing "on" or "inside" the other) — unless the plan has them touch (a hug, a lap, a shoulder) or
+ * frames over a shoulder with the foreground figure cut by a side of the frame. Boxes in [0,1] of the frame.
+ */
+export function figureOverlaps(figures: ReadonlyArray<{ id: string; box: Box }>, planText: string): Array<{ a: string; b: string; share: number }> {
+  if (TOGETHER_WORDS.test(planText)) return [];
+  // over-the-shoulder framing only when the foreground figure IS cut by a side of the frame (tegami take 3 shot 4 said
+  // "over-the-shoulder" and stacked two whole figures)
+  const sideCut = (b: Box) => b.x0 <= 0.01 || b.x1 >= 0.99;
+  const ots = OVER_SHOULDER.test(planText);
+  const area = (b: Box) => Math.max(0, b.x1 - b.x0) * Math.max(0, b.y1 - b.y0);
+  const out: Array<{ a: string; b: string; share: number }> = [];
+  for (let i = 0; i < figures.length; i++) {
+    for (let j = i + 1; j < figures.length; j++) {
+      const p = figures[i].box;
+      const q = figures[j].box;
+      const inter = Math.max(0, Math.min(p.x1, q.x1) - Math.max(p.x0, q.x0)) * Math.max(0, Math.min(p.y1, q.y1) - Math.max(p.y0, q.y0));
+      const small = Math.min(area(p), area(q));
+      const share = small > 0 ? inter / small : 0;
+      if (share > GATE.maxFigureOverlap && !(ots && (sideCut(p) || sideCut(q)))) out.push({ a: figures[i].id, b: figures[j].id, share: Math.round(share * 100) / 100 });
+    }
+  }
+  return out;
+}
 
 export type EdgeSide = "left" | "right" | "bottom";
 

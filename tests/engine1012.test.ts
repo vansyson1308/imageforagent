@@ -1175,8 +1175,11 @@ describe("D84 · single-shot redo: only the named shots are redrawn, on the take
     // the redo of shot 2, as the route builds it
     const takeRun = await prisma.directorRun.findUniqueOrThrow({ where: { id: t.runId } });
     const calls: string[] = [];
+    const artistAsks: string[] = [];
     const redoCrew: MockHandler = (m, o, i) => {
-      calls.push(m[0].content.match(/^ROLE: (\w+)/)?.[1] ?? "?");
+      const role = m[0].content.match(/^ROLE: (\w+)/)?.[1] ?? "?";
+      calls.push(role);
+      if (role === "ARTIST") artistAsks.push(m[m.length - 1].content);
       return take(m, o, i);
     };
     const r = await run(
@@ -1189,12 +1192,15 @@ describe("D84 · single-shot redo: only the named shots are redrawn, on the take
         research: false,
         maxShots: 1,
         castFrom: await loadCastFromRun(t.runId),
-        redo: { sourceRunId: t.runId, shots: [2], plan: planSchema.parse(JSON.parse(takeRun.bible!)), summary: JSON.parse(takeRun.summary!) },
+        redo: { sourceRunId: t.runId, shots: [2], plan: planSchema.parse(JSON.parse(takeRun.bible!)), summary: JSON.parse(takeRun.summary!), notes: { 2: "only the wind chime, nobody else in the shot" } },
       },
       { ...d, provider: new MockLlmProvider(redoCrew) },
     );
     expect(r.summary.status).toBe("done");
     expect(r.summary.redoOf).toEqual({ sourceRunId: t.runId, shots: [2] });
+    // D86 (a): QC's by-eye note is the Artist's first issue
+    expect(artistAsks.length).toBeGreaterThan(0);
+    expect(artistAsks[0]).toMatch(/FIX THIS[\s\S]*QC \(by eye, owner \+ QC\) on the take's version of this shot — get this right first: only the wind chime, nobody else in the shot/);
     expect(new Set(calls)).not.toContain("DIRECTOR");
     expect(new Set(calls)).not.toContain("CAST");
     expect(new Set(calls)).not.toContain("NAME_OBJECT");
@@ -1251,4 +1257,81 @@ describe("D85 · a film under its floor holds every shot longer, measured on the
     // long enough already → nothing to do
     expect(floorHold(frames, fx.playbackSpeed, 41)).toBeNull();
   });
+});
+
+/* ---------- D86 (owner + QC by-eye notes, 2026-10-13 evening) ---------- */
+
+describe("D86 (c) · two figures overlapping read as one standing on or inside the other — a measured gate", () => {
+  it("figureOverlaps: stacked figures fail; side by side, a hug/lap, or a true over-the-shoulder (cut by a side) pass", async () => {
+    const { figureOverlaps } = await import("@/lib/services/director/frameGates");
+    const a = { id: "haru", box: { x0: 0.15, y0: 0.2, x1: 0.85, y1: 0.95 } };
+    const b = { id: "gent", box: { x0: 0.2, y0: 0.35, x1: 0.8, y1: 1 } };
+    expect(figureOverlaps([a, b], "Medium shot two-shot at the counter")).toEqual([{ a: "haru", b: "gent", share: expect.any(Number) }]);
+    expect(figureOverlaps([{ ...a, box: { x0: 0.05, y0: 0.2, x1: 0.45, y1: 0.95 } }, { ...b, box: { x0: 0.55, y0: 0.3, x1: 0.95, y1: 1 } }], "Medium shot")).toEqual([]);
+    expect(figureOverlaps([a, b], "An's head rests on Grandma's lap")).toEqual([]);
+    expect(figureOverlaps([a, b], "Over-the-shoulder from behind Haru-san")).toHaveLength(1); // two whole figures stacked
+    expect(figureOverlaps([{ ...a, box: { ...a.box, x0: 0 } }, b], "Over-the-shoulder from behind Haru-san")).toEqual([]); // the foreground figure cut by the frame
+  });
+
+  it("tegami take 3 shot 5: the drawing that stacked the gentleman and Haru now fails with a hint to spread them", async () => {
+    const t3 = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-tegami-cmv6gh0pd00a52ao42yvsog59/trace.json", "utf8")) as { bible: Plan; library: string; kits: string; steps: Array<{ action: string; role: string; shotIndex: number | null; output: string | null }> };
+    const { kitsFromJson } = await import("@/lib/services/director/series");
+    const stacked = t3.steps.filter((s) => s.shotIndex === 5 && s.role === "artist" && s.output).map((s) => s.output!).find((o) => /elderly-gentleman--hold-sad" x="156" y="100"/.test(o))!;
+    expect(stacked).toBeTruthy();
+    const d = await validateDrawing(stacked, {
+      castDefs: t3.library,
+      symbols: t3.bible.cast.map((c) => c.id),
+      aspectRatio: "9:16",
+      shot: t3.bible.shots[4],
+      index: 5,
+      canvas: { w: 1080, h: 1920 },
+      fps: 12,
+      characters: t3.bible.cast.filter((c) => c.kind === "character").map((c) => c.id),
+      props: t3.bible.cast.filter((c) => c.kind === "prop").map((c) => c.id),
+      kits: kitsFromJson(t3.kits),
+      strict: false,
+    });
+    expect(d.checks!.problems.join(" ")).toMatch(/#elderly-gentleman and #haru overlap \(\d+% of the smaller one's box\).*spread them left and right/);
+  }, 60_000);
+});
+
+describe("D86 (b) · a kite up in the sky with nobody holding it: the flyer holds the string (kite take 2, shot 9)", () => {
+  const k2 = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-kite-cmv6fvwbe00012ao49z3wfu27/trace.json", "utf8")) as { bible: Plan; library: string; kits: string; steps: Array<{ action: string; role: string; shotIndex: number | null; output: string | null }> };
+  it("Maya, planned to walk, is posed hold; a shot with a holder or without the kite up is left alone; the string is drawn from her hand and the kite stays in the sky", async () => {
+    const { kitsFromJson } = await import("@/lib/services/director/series");
+    const { holdAirborne, airborneProps, flyingIn, variantDefs } = await import("@/lib/services/director/acting");
+    const kits = kitsFromJson(k2.kits);
+    const air = airborneProps(k2.bible.cast);
+    expect(air).toEqual(["kite"]);
+    const s9 = k2.bible.shots[8];
+    expect(s9.acting).toEqual([{ who: "maya", pose: "walk", expression: "laugh" }]);
+    expect(flyingIn(s9, air)).toEqual(["kite"]);
+    const { plan, posed } = holdAirborne(k2.bible, kits, air);
+    expect(posed).toContainEqual({ shot: 9, who: "maya", was: "walk" });
+    expect(plan.shots[8].acting).toEqual([{ who: "maya", pose: "hold", expression: "laugh" }]);
+    // shot 2 (the kite alone slams into the railings) has nobody to pose
+    expect(posed.map((p) => p.shot)).not.toContain(2);
+    expect(holdAirborne(plan, kits, air).posed).toEqual([]); // idempotent
+    // the take's shot-9 drawing with Maya in the hold pose: a string from her hand, the kite NOT pulled into her hands
+    const defs = `${k2.library}\n${variantDefs(plan, kits, k2.library)}`;
+    const drawn = k2.steps.filter((s) => s.shotIndex === 9 && s.role === "artist" && s.output).at(-1)!.output!.replace("#maya--walk_a-laugh", "#maya--hold-laugh");
+    const d = await validateDrawing(drawn, {
+      castDefs: defs,
+      symbols: k2.bible.cast.map((c) => c.id),
+      aspectRatio: "16:9",
+      shot: plan.shots[8],
+      index: 9,
+      canvas,
+      fps: 12,
+      characters: ["maya", "grandfather"],
+      props: ["kite"],
+      kits,
+      airborne: air,
+      strict: false,
+    });
+    expect(d.svg).toMatch(/data-tether="kite"/);
+    expect(d.checks!.facts.join(" ")).toMatch(/string drawn from #maya's hand to #kite/);
+    expect(d.checks!.facts.join(" ")).not.toMatch(/put in #maya's hands/);
+    expect(d.svg).toMatch(/<use href="#kite--starred" x="800" y="150"/);
+  }, 60_000);
 });
