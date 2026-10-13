@@ -106,7 +106,8 @@ export async function POST(req: Request, ctx: RouteContext): Promise<Response> {
     if (body.castEdits?.length && !body.castFromRun) throw new AppError("VALIDATION", "castEdits need castFromRun (they edit an approved cast).");
     const project = await prisma.project.findUnique({ where: { id } });
     if (!project) throw new AppError("NOT_FOUND", "Không tìm thấy project.");
-    if (cfg.enabled && project.demoSession !== sid) throw new AppError("UNAUTHORIZED", "This demo project belongs to another session.");
+    // D84: an operator's redo may redraw shots of a take from an earlier operator session (each showcase run unlocks its own); nothing else crosses sessions
+    if (cfg.enabled && project.demoSession !== sid && !(body.redoRun && isOperatorRequest(req, cfg))) throw new AppError("UNAUTHORIZED", "This demo project belongs to another session.");
 
     await reapOrphanRuns();
     const running = await prisma.directorRun.findMany({ where: { status: "running" }, select: { id: true, projectId: true } });

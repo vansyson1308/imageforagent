@@ -369,3 +369,38 @@ describe("demo mode", () => {
     delete process.env.DEMO_DAILY_TOKEN_BUDGET;
   });
 });
+
+describe("D84 · an operator's redo crosses demo sessions; nothing else does", () => {
+  const PASS = "judge-2026";
+  const OP = "operator-passcode-long-enough-0001";
+  beforeAll(() => {
+    process.env.DEMO_MODE = "true";
+    process.env.DEMO_PASSCODE = PASS;
+    process.env.DEMO_OPERATOR_PASSCODE = OP;
+  });
+  afterAll(() => {
+    delete process.env.DEMO_MODE;
+    delete process.env.DEMO_PASSCODE;
+    delete process.env.DEMO_OPERATOR_PASSCODE;
+  });
+
+  it("a take from operator session A: session B gets 401, except for the operator's redo (which then needs a real take)", async () => {
+    const p = await prisma.project.create({ data: { name: "redo-session", demoSession: "sessionAAAA" } });
+    created.push(p.id);
+    const cookieB = { cookie: `${DEMO_COOKIE}=${encodeURIComponent(signSession("sessionBBBB", PASS))}` };
+    const story = "A girl mends a kite with her grandfather, and it flies again.";
+    const start = (body: Record<string, unknown>, headers: Record<string, string>) => startDirector(json(`http://t/api/projects/${p.id}/director`, { story, ...body }, headers), ctx({ id: p.id }));
+    // a judge's session: never another session's project, and never a redo
+    expect((await start({}, cookieB)).status).toBe(401);
+    expect((await start({ redoRun: "cmv6fvwbe00012ao49z3wfu27", redoShots: [4] }, cookieB)).status).toBe(401);
+    // the operator without a redo: still another session's project
+    const plain = await start({}, { ...cookieB, "x-operator-passcode": OP });
+    expect(plain.status).toBe(401);
+    expect((await plain.json()).error.message).toMatch(/belongs to another session/);
+    // the operator's redo passes the session check and is then held to a real finished take on THIS project
+    (globalThis as unknown as { __rateLimit?: Map<string, unknown> }).__rateLimit?.clear();
+    const redo = await start({ redoRun: "cmv6fvwbe00012ao49z3wfu27", redoShots: [4] }, { ...cookieB, "x-operator-passcode": OP });
+    expect(redo.status).toBe(404);
+    expect((await redo.json()).error.message).toMatch(/No such take on this project/);
+  });
+});

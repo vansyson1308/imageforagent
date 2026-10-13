@@ -1219,5 +1219,36 @@ describe("D84 · single-shot redo: only the named shots are redrawn, on the take
     const redoRun = await prisma.directorRun.findUniqueOrThrow({ where: { id: r.runId } });
     expect(redoRun.bible && redoRun.library && redoRun.summary).toBeTruthy();
     expect(Object.keys(r.summary.shotScores ?? {}).map(Number).sort()).toEqual([1, 2, 3, 4]);
-  }, 240_000);
+    // D85: a redo with a floor above the cut film holds every shot longer — re-rendered, measured on the real timeline
+    const floor = Math.round((r.summary.durationSec + 2) * 10) / 10;
+    const redoRun2 = await prisma.directorRun.findUniqueOrThrow({ where: { id: r.runId } });
+    const r2 = await run(
+      { projectId: p.id, story, language: "en", style: "storybook", critic: true, research: false, maxShots: 1, minFilmSec: floor, castFrom: await loadCastFromRun(r.runId), redo: { sourceRunId: r.runId, shots: [3], plan: planSchema.parse(JSON.parse(redoRun2.bible!)), summary: JSON.parse(redoRun2.summary!) } },
+      { ...d, provider: new MockLlmProvider(redoCrew) },
+    );
+    expect(r2.summary.durationSec).toBeGreaterThanOrEqual(floor);
+    expect((await prisma.directorStep.findFirst({ where: { runId: r2.runId, action: "hold-to-floor" } }))?.outputSummary).toMatch(/every shot holds 0\.\d s longer \(\d clip\(s\) re-rendered/);
+  }, 300_000);
+});
+
+describe("D85 · a film under its floor holds every shot longer, measured on the real timeline (bánh chưng take 2: 41.4 s)", () => {
+  it("the fixture reproduces the take's length; the smallest extra hold per shot brings it to the 46 s floor", async () => {
+    const { buildTimeline, timelineDuration, timelineInputOf, floorHold, MAX_FLOOR_HOLD } = await import("@/lib/services/timeline");
+    const fx = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-banh-chung-cmv6g4rbd005g2ao4tni0bq5r/timeline-frames.json", "utf8")) as { playbackSpeed: number; frames: Parameters<typeof timelineInputOf>[0][] };
+    const take = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-banh-chung-cmv6g4rbd005g2ao4tni0bq5r/trace.json", "utf8")) as { summary: { durationSec: number }; steps: Array<{ action: string; outputSummary?: string | null }> };
+    const frames = fx.frames.map((f) => timelineInputOf(f));
+    // the take: 41.4 s cut, though padHolds (D79) projected 45.5 s — the projection missed the dissolves' overlap
+    expect(timelineDuration(buildTimeline(frames, fx.playbackSpeed))).toBeCloseTo(take.summary.durationSec, 3);
+    expect(take.steps.find((s) => s.action === "pad-holds")?.outputSummary).toMatch(/45\.5s, under its 46s floor/);
+    const fit = floorHold(frames, fx.playbackSpeed, 46)!;
+    expect(fit.before).toBeCloseTo(41.42, 1);
+    expect(fit.after).toBeGreaterThanOrEqual(46);
+    expect(fit.extra).toBeLessThanOrEqual(MAX_FLOOR_HOLD);
+    // the smallest such hold
+    const lengthened = (extra: number) => timelineDuration(buildTimeline(frames.map((f) => (f.clip ? { ...f, clip: { ...f.clip, frameCount: f.clip.frameCount + Math.round(extra * f.clip.fps), duration: f.clip.duration + extra } } : f)), fx.playbackSpeed + extra));
+    expect(lengthened(fit.extra - 0.1)).toBeLessThan(46);
+    expect(lengthened(fit.extra)).toBe(fit.after);
+    // long enough already → nothing to do
+    expect(floorHold(frames, fx.playbackSpeed, 41)).toBeNull();
+  });
 });

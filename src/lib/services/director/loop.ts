@@ -16,7 +16,8 @@ import { actingBrief, neededVariants, variantDefs } from "@/lib/services/directo
 import { variantId } from "@/lib/services/director/dollKit";
 import { symbolIds } from "@/lib/services/director/svgTools";
 import { renderScoreBed } from "@/lib/services/director/scoreBed";
-import { buildTimeline, timelineDuration, timelineInputOf } from "@/lib/services/timeline";
+import { buildTimeline, floorHold, timelineDuration, timelineInputOf } from "@/lib/services/timeline";
+import { writeFrameMotion } from "@/lib/services/frameWrites";
 import { saveBuffer, toPosix } from "@/lib/services/storage";
 import { commitShot, drawShot, padHolds, type Drawing } from "@/lib/services/director/artist";
 import { critiqueShot, fixesText } from "@/lib/services/director/critic";
@@ -216,7 +217,8 @@ export async function executeRun(
   let propRecognition: Recognition[] = [];
   let castSetTimes: Record<string, string> | undefined;
   try {
-    await prisma.project.update({ where: { id: req.projectId }, data: { aspectRatio, resolution: "1K", playbackSpeed: 3 } });
+    // a redo keeps the take's still hold (D85); a new film starts at 3 s per still
+    await prisma.project.update({ where: { id: req.projectId }, data: { aspectRatio, resolution: "1K", ...(req.redo ? {} : { playbackSpeed: 3 }) } });
     for (const n of deps.modelNotes) await recordStep(ctx, { role: "system", model: "catalog", action: "models", summary: n });
     if (deps.floorRedraw && !deps.floorRedraw.enabled) await recordStep(ctx, { role: "system", model: "policy", action: "stop-rule", summary: `Floor redraw off for this run (${deps.floorRedraw.reason ?? "demo policy"})` });
 
@@ -423,17 +425,18 @@ export async function executeRun(
     };
     await runPool(redo ? frames.filter((f) => redo.shots.includes(f.index)) : frames, Math.max(1, Math.min(6, deps.concurrency ?? 1)), doShot);
 
-    // a redo changes only its shots: the take's edit, continuity notes and score stay
+    // a redo changes only its shots: the take's edit, continuity notes and score stay (the score is redone only when the film's length changes)
     if (!redo) {
       // 7 · Editor (Nano): lint fixes + continuity
       emit({ type: "status", message: "Editor is checking timing and continuity…" });
       // narrated films: the lines are fixed (the Editor may move a voice or a transition, never rewrite a line)
       await runEditor(ctx, plan, req.series?.voices ?? {}, Boolean(narration));
       continuity = await runContinuity(ctx, plan);
-
-      // 8 · Original score bed from the engine's own synth (WP4.6), ducked under dialogue by the film mix
-      await scoreFilm(ctx, plan);
     }
+    // D85: the film's floor, measured on the real timeline: too short → every shot holds a little longer
+    const held = req.minFilmSec ? await holdToFloor(ctx, req.minFilmSec) : false;
+    // 8 · Original score bed from the engine's own synth (WP4.6), ducked under dialogue by the film mix
+    if (!redo || held) await scoreFilm(ctx, plan);
   } catch (e) {
     if (e instanceof StopAfterCast) {
       // the preview is complete: status stays "done"
@@ -543,6 +546,35 @@ async function summarize(projectId: string, status: string, stats: Map<number, S
     continuity,
     textCritic,
   };
+}
+
+/**
+ * D85: the film's floor, measured on the timeline the film is cut from: too short → every clip is
+ * re-rendered from its own motion spec a little longer (the camera holds its last key; engine only, no
+ * model call) and every still holds as long more.
+ */
+async function holdToFloor(ctx: DirectorContext, minSec: number): Promise<boolean> {
+  const project = await prisma.project.findUniqueOrThrow({ where: { id: ctx.projectId }, include: { frames: { orderBy: { index: "asc" } } } });
+  const fit = floorHold(project.frames.map((f) => timelineInputOf(f)), project.playbackSpeed, minSec);
+  if (!fit) return false;
+  let clips = 0;
+  for (const f of project.frames) {
+    throwIfCancelled(ctx);
+    if (!f.motionSpec || !f.clipFrameCount) continue;
+    const motion = JSON.parse(f.motionSpec) as { duration: number };
+    await writeFrameMotion(f.id, { ...motion, duration: Math.round((motion.duration + fit.extra) * 1000) / 1000 });
+    clips++;
+  }
+  await prisma.project.update({ where: { id: ctx.projectId }, data: { playbackSpeed: Math.round((project.playbackSpeed + fit.extra) * 10) / 10 } });
+  const after = await prisma.project.findUniqueOrThrow({ where: { id: ctx.projectId }, include: { frames: { orderBy: { index: "asc" } } } });
+  const measured = timelineDuration(buildTimeline(after.frames.map((x) => timelineInputOf(x)), after.playbackSpeed));
+  await recordStep(ctx, {
+    role: "editor",
+    model: "engine",
+    action: "hold-to-floor",
+    summary: `The film ran ${fit.before.toFixed(1)} s, under its ${minSec} s floor: every shot holds ${fit.extra} s longer (${clips} clip(s) re-rendered from their own motion, stills ${after.playbackSpeed} s) → ${measured.toFixed(1)} s`,
+  });
+  return true;
 }
 
 /** Compose and attach the film's score (a failure only costs the music, never the film). */
