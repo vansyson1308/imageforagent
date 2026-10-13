@@ -1,0 +1,96 @@
+{
+  "slug": "v2-banh-chung",
+  "projectId": "cmv6g4r9e005f2ao49hjkdcry",
+  "runId": "cmv6g4rbd005g2ao4tni0bq5r",
+  "commit": "926c6234ca6da68f9af577d19e4935990f2176fb",
+  "filmSec": 41.416667,
+  "withCreditsSec": 44.417,
+  "summary": {
+    "status": "done",
+    "shots": 11,
+    "rendered": 11,
+    "firstPassOk": 6,
+    "repairs": 10,
+    "criticBefore": 5.36,
+    "criticAfter": 6.18,
+    "revisions": 8,
+    "gateFailures": 1,
+    "gateFailShots": [
+      2
+    ],
+    "offPlan": [
+      2,
+      4
+    ],
+    "actionNotes": {
+      "2": "hands empty, no food items, wrong lighting",
+      "6": "The key object (square parcel) is not clearly shown.",
+      "7": "grandma's foot extends beyond frame"
+    },
+    "setless": [],
+    "shotScores": {
+      "1": 7,
+      "2": 3,
+      "3": 7,
+      "4": 4,
+      "5": 7,
+      "6": 5,
+      "7": 6,
+      "8": 8,
+      "9": 7,
+      "10": 7,
+      "11": 7
+    },
+    "belowFloor": [
+      2,
+      4,
+      6,
+      7
+    ],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 0,
+    "lintWarnings": 12,
+    "durationSec": 41.416666,
+    "wallMs": 269590,
+    "tokens": 245510,
+    "costUsd": 0.16204362,
+    "continuity": [
+      "Shot 11 mentions 'ancestor altar wall' but the set description says the altar is centered on the main wall; the altar itself is not drawn, only the wall is visible, which may cause a continuity inconsistency",
+      "Shot 11 shows the bánh chưng on a small wooden table in the front room, but earlier shots place the altar centered on the main wall; moving the parcel to a table away from the altar may break spatial continuity",
+      "Shot 11 uses 'low angle' but the description says 'medium shot from low angle in the front room', which conflicts with the earlier 'low angle' label used only for Shot 10; this could cause confusion in shot labeling",
+      "Shot 11's time reference 'Sáng mùng Một' (first day of the new year) implies dawn after midnight fireworks, but the transition from night fireworks to dawn in the same shot may require a clearer time jump",
+      "Shot 11's close-up focuses on the bánh chưng on the table while the ancestor altar wall is mentioned but not shown; this could cause a continuity issue if the altar is expected to be visible in the frame",
+      "Shot 11's description says 'no altar drawn, just the table and parcel', yet the set includes an ancestor altar; omitting the altar may be a continuity error if the altar is supposed to be present in the scene"
+    ],
+    "textCritic": false,
+    "research": {
+      "notes": 6,
+      "cited": 6,
+      "castCiting": 4,
+      "shotsCiting": 11,
+      "byUse": {
+        "set": 3,
+        "customs": 1,
+        "props": 1,
+        "costume": 1
+      }
+    },
+    "propRecognition": [
+      {
+        "symbol": "banh-chung",
+        "prop": "banh-chung",
+        "state": "wrapped",
+        "ok": false,
+        "saw": "green grid pattern",
+        "redraws": 4
+      }
+    ],
+    "castSetTimes": {
+      "courtyard": "night",
+      "front-room": "day",
+      "rooftops": "night",
+      "courtyard--day": "day"
+    },
+    "castFromRun": "cmv5ckxxt00132aphiklvzwwj"
+  }
+}

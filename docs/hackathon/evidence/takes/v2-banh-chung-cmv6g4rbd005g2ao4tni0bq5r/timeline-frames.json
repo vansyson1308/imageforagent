@@ -1,0 +1,138 @@
+{
+  "projectId": "cmv6g4r9e005f2ao49hjkdcry",
+  "playbackSpeed": 3,
+  "frames": [
+    {
+      "index": 1,
+      "description": "Wide shot of the Hanoi tube house courtyard in golden afternoon light. Bé An and Bà stand near the charcoal stove, low stools and big iron pot visible, brick walls and tiled floor. An holds a dong leaf, Bà smiles.",
+      "clipFps": 12,
+      "clipFrameCount": 56,
+      "clipDuration": 4.666666666666667,
+      "voiceDuration": 3.924,
+      "voiceOffset": 0.3,
+      "transition": "cut",
+      "transitionDuration": 0.5,
+      "scene": "Chiều gói bánh"
+    },
+    {
+      "index": 2,
+      "description": "Medium shot, close on Bà's hands spreading glossy green dong leaves on a woven mat, white glutinous rice, mung bean filling and pork laid out. Afternoon light filters through courtyard bricks.",
+      "clipFps": 12,
+      "clipFrameCount": 54,
+      "clipDuration": 4.5,
+      "voiceDuration": 3.704,
+      "voiceOffset": 0.3,
+      "transition": "cut",
+      "transitionDuration": 0.5,
+      "scene": "Chiều gói bánh"
+    },
+    {
+      "index": 3,
+      "description": "Over-the-shoulder two-shot from behind An as Bà guides her small hands folding the dong leaves into a perfect square and tying four pale bamboo strings in a tight grid. The courtyard afternoon light softens.",
+      "clipFps": 12,
+      "clipFrameCount": 49,
+      "clipDuration": 4.083333333333333,
+      "voiceDuration": 2.612,
+      "voiceOffset": 0.3,
+      "transition": "cut",
+      "transitionDuration": 0.5,
+      "scene": "Chiều gói bánh"
+    },
+    {
+      "index": 4,
+      "description": "Close-up on the finished square bánh chưng resting in An's cupped palms, leaf veins and bamboo grid sharp. Bà leans in, smiling proudly, afternoon glow on their faces.",
+      "clipFps": 12,
+      "clipFrameCount": 55,
+      "clipDuration": 4.583333333333333,
+      "voiceDuration": 3.762,
+      "voiceOffset": 0.3,
+      "transition": "cut",
+      "transitionDuration": 0.5,
+      "scene": "Chiều gói bánh"
+    },
+    {
+      "index": 5,
+      "description": "Wide shot of the courtyard at night, charcoal stove glowing red, big iron pot bubbling with steam. An and Bà sit on low stools beside the fire, the wrapped bánh chưng parcels visible on a stool nearby. Night shadows, lantern glow.",
+      "clipFps": 12,
+      "clipFrameCount": 49,
+      "clipDuration": 4.083333333333333,
+      "voiceDuration": 3.053,
+      "voiceOffset": 0.3,
+      "transition": "dissolve",
+      "transitionDuration": 0.8,
+      "scene": "Đêm canh nồi"
+    },
+    {
+      "index": 6,
+      "description": "Medium two-shot, An and Bà side by side on stools watching the pot, Bà gestures toward the square parcel as she tells the legend of Lang Liêu. Night deepens, firelight dances on their faces.",
+      "clipFps": 12,
+      "clipFrameCount": 61,
+      "clipDuration": 5.083333333333333,
+      "voiceDuration": 3.541,
+      "voiceOffset": 0.3,
+      "transition": "cut",
+      "transitionDuration": 0.5,
+      "scene": "Đêm canh nồi"
+    },
+    {
+      "index": 7,
+      "description": "Close-up on Bà's finger pointing at the square bánh chưng on the stool, An's round eyes wide with wonder, firelight reflecting. Night, intimate.",
+      "clipFps": 12,
+      "clipFrameCount": 49,
+      "clipDuration": 4.083333333333333,
+      "voiceDuration": 2.879,
+      "voiceOffset": 0.3,
+      "transition": "dissolve",
+      "transitionDuration": 0.8,
+      "scene": "Đêm canh nồi"
+    },
+    {
+      "index": 8,
+      "description": "Wide shot of Hanoi old quarter rooftops under midnight sky, fireworks blooming in vivid reds and golds over terracotta tiles. An and Bà silhouetted on a rooftop, watching.",
+      "clipFps": 12,
+      "clipFrameCount": 49,
+      "clipDuration": 4.083333333333333,
+      "voiceDuration": 3.1,
+      "voiceOffset": 0.3,
+      "transition": "dissolve",
+      "transitionDuration": 0.8,
+      "scene": "Đêm giao thừa"
+    },
+    {
+      "index": 9,
+      "description": "Close-up on An asleep on Bà's lap, her small fingers still curled around a pale bamboo string from the bánh chưng. Fireworks glow softly on their faces, midnight.",
+      "clipFps": 12,
+      "clipFrameCount": 49,
+      "clipDuration": 4.083333333333333,
+      "voiceDuration": 2.543,
+      "voiceOffset": 0.3,
+      "transition": "dissolve",
+      "transitionDuration": 0.8,
+      "scene": "Đêm giao thừa"
+    },
+    {
+      "index": 10,
+      "description": "Medium shot from low angle in the front room at dawn, An darts across wooden floor toward the small wooden table centered under the ancestor altar wall. Dawn light paints the room gold.",
+      "clipFps": 12,
+      "clipFrameCount": 37,
+      "clipDuration": 3.0833333333333335,
+      "voiceDuration": 2.183,
+      "voiceOffset": 0.3,
+      "transition": "dissolve",
+      "transitionDuration": 0.8,
+      "scene": "Sáng mùng Một"
+    },
+    {
+      "index": 11,
+      "description": "Close-up detail shot of the square bánh chưng sitting on the small wooden table in the front room, leaf veins and bamboo grid perfectly clear in morning light. The ancestor altar wall behind, no altar drawn, just the table and parcel. Dawn.",
+      "clipFps": 12,
+      "clipFrameCount": 49,
+      "clipDuration": 4.083333333333333,
+      "voiceDuration": 3.216,
+      "voiceOffset": 0.3,
+      "transition": "fadeBlack",
+      "transitionDuration": 0.8,
+      "scene": "Sáng mùng Một"
+    }
+  ]
+}

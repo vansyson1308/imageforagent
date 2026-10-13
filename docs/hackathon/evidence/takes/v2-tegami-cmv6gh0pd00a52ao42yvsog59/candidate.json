@@ -1,0 +1,90 @@
+{
+  "slug": "v2-tegami",
+  "projectId": "cmv6gh0ay00a42ao45fxmyd5c",
+  "runId": "cmv6gh0pd00a52ao42yvsog59",
+  "commit": "926c6234ca6da68f9af577d19e4935990f2176fb",
+  "filmSec": 44.916667,
+  "withCreditsSec": 47.917,
+  "summary": {
+    "status": "done",
+    "shots": 7,
+    "rendered": 7,
+    "firstPassOk": 6,
+    "repairs": 2,
+    "criticBefore": 4.71,
+    "criticAfter": 5.86,
+    "revisions": 8,
+    "gateFailures": 0,
+    "gateFailShots": [],
+    "offPlan": [
+      6
+    ],
+    "actionNotes": {
+      "3": "Seal detail missing",
+      "4": "pouring action not clearly shown",
+      "5": "Envelope not visibly open with fibers; lighting not amber slanting; smile not shown; hands not on cup",
+      "6": "night scene with bright lighting"
+    },
+    "setless": [],
+    "shotScores": {
+      "1": 8,
+      "2": 7,
+      "3": 6,
+      "4": 5,
+      "5": 5,
+      "6": 3,
+      "7": 7
+    },
+    "belowFloor": [
+      3,
+      4,
+      5,
+      6
+    ],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 0,
+    "lintWarnings": 0,
+    "durationSec": 44.916667,
+    "wallMs": 188297,
+    "tokens": 165487,
+    "costUsd": 0.10557804,
+    "continuity": [],
+    "textCritic": false,
+    "research": {
+      "notes": 6,
+      "cited": 5,
+      "castCiting": 0,
+      "shotsCiting": 5,
+      "byUse": {
+        "costume": 1,
+        "set": 1,
+        "palette": 1,
+        "customs": 1,
+        "props": 1
+      }
+    },
+    "propRecognition": [
+      {
+        "symbol": "envelope",
+        "prop": "envelope",
+        "state": "sealed",
+        "ok": false,
+        "saw": "tag",
+        "redraws": 4
+      },
+      {
+        "symbol": "envelope--open",
+        "prop": "envelope",
+        "state": "open",
+        "ok": false,
+        "saw": "notebook page",
+        "redraws": 4
+      }
+    ],
+    "castSetTimes": {
+      "kissaten": "day",
+      "river-path": "dusk"
+    },
+    "castFromRun": "cmv5blc2p00012apju1cnaj3g"
+  }
+}

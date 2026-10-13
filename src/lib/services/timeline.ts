@@ -111,6 +111,37 @@ export function timelineDuration(entries: readonly TimelineEntry[]): number {
   return last ? round6(last.startSec + last.durationSec) : 0;
 }
 
+/** The most a film's floor may add to each shot (D85): a beat, not a new shot. */
+export const MAX_FLOOR_HOLD = 3;
+
+/**
+ * D85 (bánh chưng take 2, 2026-10-13): a film under its floor holds EVERY shot a little longer — measured
+ * on this timeline, the one the film is cut from (a clip lasts its frames, a still max(seconds-per-still,
+ * its line + tail), and dissolves overlap; a projection from the plan missed the overlaps: 45.5 s planned,
+ * 41.4 s cut). The smallest extra hold (0.1 s steps, ≤ MAX_FLOOR_HOLD) that brings the film to `minSec`,
+ * added to every clip's length and to the seconds-per-still; null when the film already runs that long.
+ * When even the ceiling falls short, the ceiling (the publish gate still measures the film).
+ */
+export function floorHold(frames: readonly TimelineInput[], secondsPerStill: number, minSec: number): { extra: number; before: number; after: number } | null {
+  const length = (extra: number) =>
+    timelineDuration(
+      buildTimeline(
+        frames.map((f) => (f.clip ? { ...f, clip: { ...f.clip, frameCount: f.clip.frameCount + Math.round(extra * f.clip.fps), duration: f.clip.duration + extra } } : f)),
+        secondsPerStill + extra,
+      ),
+    );
+  const before = length(0);
+  if (before >= minSec) return null;
+  let extra = MAX_FLOOR_HOLD;
+  for (let k = 1; k <= MAX_FLOOR_HOLD * 10; k++) {
+    if (length(k / 10) >= minSec) {
+      extra = k / 10;
+      break;
+    }
+  }
+  return { extra, before, after: length(extra) };
+}
+
 // ---------- assemble.sh ----------
 
 export interface AssembleShot {
