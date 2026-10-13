@@ -76,7 +76,7 @@ export const SHOWCASE_V2: readonly ShowcaseStory[] = [
       "Đêm giao thừa, pháo hoa nở rực trên những mái ngói phố cổ.",
       "An ngủ gục trên vai bà, tay vẫn nắm sợi lạt tre.",
       "Sáng mùng Một, An mở mắt và chạy ra phòng khách.",
-      "Trên bàn thờ là chiếc bánh chưng vuông vức đầu tiên do chính tay An gói.",
+      "Trên bàn là chiếc bánh chưng vuông vức đầu tiên do chính tay An gói.",
     ],
   },
   {
