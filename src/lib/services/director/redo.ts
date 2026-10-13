@@ -12,7 +12,7 @@ import type { RunSummary } from "@/lib/services/director/context";
 export const MAX_REDO_SHOTS = 4;
 
 /**
- * Each shot's camera patterns in a project's defs (`art-fN`, and the walk layers `act-fN-…`),
+ * Each shot's camera patterns in a project's defs (`art-fN`, and the walk layers `actN-<who>-sK`),
  * keyed by shot: the redo keeps every other shot's pattern exactly as committed. Nesting-aware
  * (a painting may hold its own `<pattern>`).
  */
@@ -27,7 +27,8 @@ export function shotPatterns(defs: string): Map<number, string> {
     if (!m[1]) {
       if (depth === 0) {
         start = m.index!;
-        const id = m[0].match(/\bid\s*=\s*["'](?:art|act)-f(\d+)(?:["']|-)/);
+        // `art-fN` (the painting) and the acting layers: walk steps are `actN-<who>-sK` (acting.ts); `act-fN-…` kept for safety
+        const id = m[0].match(/\bid\s*=\s*["'](?:art-f|act-f|act)(\d+)(?:["']|-)/);
         index = id ? Number(id[1]) : null;
       }
       depth++;

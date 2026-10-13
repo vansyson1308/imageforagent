@@ -1116,11 +1116,21 @@ describe("D83 · a held prop over a face moves down to the chest (tegami take 2,
 describe("D84 · single-shot redo: only the named shots are redrawn, on the take's project, plan and cast", () => {
   it("shotPatterns groups each shot's camera patterns (nested patterns included)", async () => {
     const { shotPatterns } = await import("@/lib/services/director/redo");
-    const defs = '<symbol id="hero"/>\n<pattern id="art-f1" x="0"><rect/><pattern id="f1-dots"><circle/></pattern></pattern>\n<pattern id="act-f1-hero-a"><g/></pattern>\n<pattern id="art-f12"><rect/></pattern>\n<pattern id="tile"><rect/></pattern>';
+    // the walk steps are `actN-<who>-sK` (acting.ts): a redo that missed them dropped every other shot's walker (bánh chưng redo, shot 10)
+    const defs = '<symbol id="hero"/>\n<pattern id="art-f1" x="0"><rect/><pattern id="f1-dots"><circle/></pattern></pattern>\n<pattern id="act1-hero-s0"><g/></pattern>\n<pattern id="act1-hero-s1"><g/></pattern>\n<pattern id="art-f12"><rect/></pattern>\n<pattern id="act12-elderly-gentleman-s0"><g/></pattern>\n<pattern id="tile"><rect/></pattern>';
     const m = shotPatterns(defs);
     expect([...m.keys()]).toEqual([1, 12]);
-    expect(m.get(1)).toBe('<pattern id="art-f1" x="0"><rect/><pattern id="f1-dots"><circle/></pattern></pattern>\n<pattern id="act-f1-hero-a"><g/></pattern>');
-    expect(m.get(12)).toBe('<pattern id="art-f12"><rect/></pattern>');
+    expect(m.get(1)).toBe('<pattern id="art-f1" x="0"><rect/><pattern id="f1-dots"><circle/></pattern></pattern>\n<pattern id="act1-hero-s0"><g/></pattern>\n<pattern id="act1-hero-s1"><g/></pattern>');
+    expect(m.get(12)).toBe('<pattern id="art-f12"><rect/></pattern>\n<pattern id="act12-elderly-gentleman-s0"><g/></pattern>');
+    // and the ids the engine really writes are matched (no drift between acting.ts and the redo): kite take 2 shot 9, Maya walking
+    const { actingLayer } = await import("@/lib/services/director/acting");
+    const { kitsFromJson } = await import("@/lib/services/director/series");
+    const k2 = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-kite-cmv6fvwbe00012ao49z3wfu27/trace.json", "utf8")) as { kits: string; steps: Array<{ role: string; shotIndex: number | null; output: string | null }> };
+    const walkSvg = extractSvgFragment(k2.steps.filter((x) => x.shotIndex === 9 && x.role === "artist" && x.output).at(-1)!.output!);
+    const a = actingLayer({ index: 9, svg: walkSvg, kits: kitsFromJson(k2.kits), duration: 4, fps: 12, canvas });
+    const steps = a.walks.flatMap((w) => w.patterns);
+    expect(steps.length).toBeGreaterThan(1);
+    expect(shotPatterns(`<pattern id="art-f9"><rect/></pattern>\n${steps.join("\n")}`).get(9)).toBe(`<pattern id="art-f9"><rect/></pattern>\n${steps.join("\n")}`);
   });
 
   it("mergeRedo swaps the redone shots' results into the take's summary", async () => {
