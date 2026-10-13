@@ -26,7 +26,7 @@ import { StudioClient, type SseEvent } from "./client";
 import { appendLedger, assertSpendUnder } from "./ledger";
 import sharp from "sharp";
 import { SHOWCASE_V2, setsBrief } from "./showcaseStories";
-import { checklistProblems, checklistTemplate, criticOverride, criticProblems, measuredProblems, recognitionOverride, recognitionProblems, voiceProblems } from "@/lib/services/director/publishGate";
+import { checklistProblems, checklistTemplate, criticOverride, criticProblems, durationWindow, measuredProblems, recognitionOverride, recognitionProblems, voiceProblems } from "@/lib/services/director/publishGate";
 import { loadPackage } from "./pilot";
 import { appendCredits, probe, readVoiceCredit } from "./credits";
 import { contactSheet } from "./contactSheet";
@@ -150,7 +150,7 @@ async function main() {
   for (const s of stories) {
     if (only && s.slug !== only) continue;
     assertSpendUnder();
-    const log = `docs/hackathon/evidence/showcase-${s.slug}.log`;
+    const log = `${tmpdir()}/showcase-${s.slug}-${Date.now()}.log`;
     writeFileSync(log, `# ${new Date().toISOString()} ${base} ${s.slug}\n`);
     // A dropped stream cancels the run server-side (no orphan runs): retry once on a fresh project
     let pid = "";
@@ -177,13 +177,15 @@ async function main() {
         const pilot = "pilot" in s && s.pilot ? { aspectRatio: "9:16", figure: "adult" } : {};
         // the v2 tellings send their SETS brief before the story (the published story stays the lines alone); a pilot's brief is its whole package story
         const story = "brief" in s ? ("pilot" in s && s.pilot ? s.brief : `${s.brief}\n\n${s.story}`) : s.story;
-        runId = await client.direct(pid, { story, language: s.language, style: s.style, maxUsd, critic: true, ...v2, ...pilot, ...(castFromRun && { castFromRun }), ...(castEdits.length && { castEdits }) }, (e) => {
+        // a v2 film is held to its format's floor + 1 s for the transitions' overlap (D79): 46 s for 16:9, 31 s for a 9:16 Short
+        const floor = "narration" in s ? { minFilmSec: durationWindow(aspectOf(s.slug)).min + 1 } : {};
+        runId = await client.direct(pid, { story, language: s.language, style: s.style, maxUsd, critic: true, ...v2, ...pilot, ...floor, ...(castFromRun && { castFromRun }), ...(castEdits.length && { castEdits }) }, (e) => {
           appendFileSync(log, JSON.stringify(e) + "\n");
           if (e.type === "step") {
             const st = e.step as { role: string; action: string; shotIndex: number | null; score: number | null; costUsd: number; error: string | null };
             streamed += st.costUsd;
             console.log(`  ${st.role.padEnd(10)} ${st.action.padEnd(16)} ${st.shotIndex ?? ""} ${st.score ?? ""} $${st.costUsd.toFixed(5)} ${st.error ? "⚠ " + st.error.slice(0, 80) : ""}`);
-            if (/^(cast-from-run|cast-edits|recognize:carried|plan:cast-locked)$/.test(st.action)) console.log(`    ${(e.step as { summary?: string }).summary ?? ""}`);
+            if (/^(cast-from-run|cast-edits|recognize:carried|plan:cast-locked|pad-holds)$/.test(st.action)) console.log(`    ${(e.step as { summary?: string }).summary ?? ""}`);
           }
           if (e.type === "done") done = e;
         });
@@ -207,7 +209,11 @@ async function main() {
       appendFileSync(log, `${lines.join("\n")}\n`);
       console.log(lines.map((l) => l.replace(/^# ?/, "  ")).join("\n"));
     }
-    writeFileSync(`docs/hackathon/evidence/showcase-${s.slug}-trace.json`, JSON.stringify(trace, null, 2));
+    // each take keeps its own trace and log (the published films' showcase-<slug>-trace.json are fixtures, never overwritten)
+    const takeDir = `docs/hackathon/evidence/takes/${s.slug}-${runId}`;
+    mkdirSync(takeDir, { recursive: true });
+    writeFileSync(`${takeDir}/trace.json`, JSON.stringify(trace, null, 2));
+    writeFileSync(`${takeDir}/take.log`, readFileSync(log, "utf8"));
     if (!done || trace.status !== "done") {
       console.log(`✘ ${s.slug}: status ${trace.status}. Kept the trace as evidence and skipped publishing.`);
       continue;

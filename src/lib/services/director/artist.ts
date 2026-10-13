@@ -569,6 +569,19 @@ export function shotDuration(shot: ShotPlan, frame: Pick<Frame, "voiceDuration" 
 }
 
 /**
+ * A film shorter than its format's floor (bánh chưng take 1, 2026-10-13: 11 Vietnamese lines read in 43.2 s,
+ * the showcase floor is 45 s): every shot holds a little longer, the same extra beat each (≤ 3 s), so the
+ * film reaches `minSec` without cutting or rushing a line. Pure; the caller records it.
+ */
+export function padHolds(plan: Plan, frames: ReadonlyArray<Pick<Frame, "index" | "voiceDuration" | "voiceOffset">>, minSec: number): { plan: Plan; added: number; before: number } {
+  const durs = plan.shots.map((s, i) => shotDuration(s, frames.find((f) => f.index === i + 1) ?? { voiceDuration: null, voiceOffset: 0 }));
+  const before = Math.round(durs.reduce((a, b) => a + b, 0) * 10) / 10;
+  if (!durs.length || before >= minSec) return { plan, added: 0, before };
+  const added = Math.min(3, Math.ceil(((minSec - before) / durs.length) * 10) / 10);
+  return { plan: { ...plan, shots: plan.shots.map((s, i) => ({ ...s, durationSec: Math.min(10, Math.round((durs[i] + added) * 10) / 10) })) }, added, before };
+}
+
+/**
  * Persist a drawing as an animated shot: the painting goes into the project
  * defs as `art-fN` and the motion spec (camera move + ambient layer) renders
  * the clip. Fallbacks, all recorded in the trace: ambient rejected by the

@@ -11,9 +11,11 @@ import type { Critique, Plan, ShotPlan } from "@/lib/services/director/schemas";
  * "wrong" axis caps the score below the accept bar, so the loop revises it.
  */
 
-export const NIGHT_WORDS = /\b(night|midnight|moonlit|moonlight|at dusk|evening|dark)\b|đêm|tối|trăng|夜|晩|月明|闇/i;
+// "dark" alone is not night ("dark corner folds", "dark green": bánh chưng take 1, 2026-10-13); "darkness" is
+export const NIGHT_WORDS = /\b(night|midnight|moonlit|moonlight|at dusk|evening|darkness)\b|đêm|tối|trăng|夜|晩|月明|闇/i;
 /** Daytime words. Vietnamese "sáng" alone also means "bright", so only the unambiguous phrases count. */
-export const DAY_WORDS = /\b(day|morning|noon|midday|afternoon|sunny|sunlit|sunlight|sunshine|daylight|daytime|sunrise)\b|buổi sáng|sáng sớm|ban ngày|buổi trưa|buổi chiều|朝|昼|午後|日中/i;
+// dawn is the DAY bucket (D71); bánh chưng take 1 (2026-10-13): "at dawn" read as no time at all, so a night set stayed
+export const DAY_WORDS = /\b(day|dawn|daybreak|morning|noon|midday|afternoon|sunny|sunlit|sunlight|sunshine|daylight|daytime|sunrise)\b|bình minh|rạng sáng|buổi sáng|sáng sớm|sáng mùng|ban ngày|buổi trưa|buổi chiều|夜明け|朝|昼|午後|日中/i;
 /** The plan's own mood word when it names a time (re-shoot 2026-10-11, fūrin run 4: "Summer day, bright sunlight…" with mood "day"). */
 const MOOD_TIME: Record<string, "day" | "night"> = { day: "day", daytime: "day", morning: "day", noon: "day", afternoon: "day", sunny: "day", night: "night", midnight: "night", evening: "night", nighttime: "night" };
 

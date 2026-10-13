@@ -48,6 +48,8 @@ const directorRequestSchema = z.object({
   figure: z.enum(["storybook", "adult"]).optional(),
   /** "cast" = an operator's cast-only preview (plan + library + recognition gate, no shots; owner 2026-10-12) */
   stopAfter: z.literal("cast").optional(),
+  /** the film's floor in seconds: shorter, and every shot holds a little longer (a showcase film's format window, D79) */
+  minFilmSec: z.number().min(10).max(90).optional(),
   /** an operator's full take on an APPROVED preview's cast: that run's Bible and library, verbatim (owner 2026-10-12) */
   castFromRun: z.string().regex(/^[a-z0-9]{10,40}$/).optional(),
   /** engine edits on that reused cast (D77, operator only): tear/patch a key-object state on the approved base, or keep one look */

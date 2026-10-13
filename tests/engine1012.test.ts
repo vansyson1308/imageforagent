@@ -885,3 +885,41 @@ describe("D78 · a 9:16 Short runs 30–60 s; a 16:9 showcase film 45–90 s", (
     expect(bc.brief).toMatch(/LAST shot the bánh chưng sits on a small wooden table in the front room/);
   });
 });
+
+/* ---------- D79 (take day 2026-10-13): one time-of-day reading for the Artist and the critic; a film's floor ---------- */
+
+describe("D79 · dawn is day and \"dark\" alone is not night (bánh chưng take 1, shots 10 and 11)", () => {
+  const t1 = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-banh-chung-cmv5xjlgc005t2aqt3v8r4bh8/trace.json", "utf8")) as { bible: Plan; summary: { castSetTimes: Record<string, string> } };
+  it("shot 10 (\"at dawn\") gets the day-lit courtyard; shot 11 (\"dark corner folds\", dawn light) is day, not night", async () => {
+    const { shotTime, setForShot, plannedBucket } = await import("@/lib/services/director/fidelity");
+    const times = new Map(Object.entries(t1.summary.castSetTimes));
+    const s10 = t1.bible.shots[9];
+    const s11 = t1.bible.shots[10];
+    expect(s10.description).toMatch(/at dawn/);
+    expect(s11.description).toMatch(/dark corner folds/);
+    expect(shotTime(s10)).toBe("day");
+    expect(setForShot(s10, "courtyard", times)).toBe("courtyard--day");
+    expect(shotTime(s11)).toBe("day");
+    expect(plannedBucket(s11)).toBe("day");
+    // night stays night
+    expect(shotTime({ scene: "Đêm giao thừa", description: "Fireworks over the rooftops at midnight" })).toBe("night");
+    expect(shotTime({ scene: "x", description: "the darkness of the night street" })).toBe("night");
+  });
+});
+
+describe("D79 · a film under its format's floor holds every shot a little longer (bánh chưng take 1: 43.2 s < 45 s)", () => {
+  it("padHolds spreads the missing seconds over every shot, ≤ 3 s each, and leaves a long enough film alone", async () => {
+    const { padHolds, shotDuration } = await import("@/lib/services/director/artist");
+    const p = planSchema.parse(demoPlan("One. Two. Three. Four. Five. Six. Seven. Eight. Nine. Ten. Eleven.", 11));
+    const plan = { ...p, shots: p.shots.map((s) => ({ ...s, durationSec: 2 })) };
+    const frames = plan.shots.map((_, i) => ({ index: i + 1, voiceDuration: 3.2, voiceOffset: 0.3 }));
+    const total = (pl: typeof plan) => pl.shots.reduce((a, s, i) => a + shotDuration(s, frames[i]), 0);
+    expect(total(plan)).toBeCloseTo(42.9, 1); // 11 × (0.3 + 3.2 + 0.4)
+    const out = padHolds(plan, frames, 46);
+    expect(out.before).toBeCloseTo(42.9, 1);
+    expect(out.added).toBeGreaterThan(0.2);
+    expect(out.added).toBeLessThanOrEqual(3);
+    expect(total(out.plan)).toBeGreaterThanOrEqual(46);
+    expect(padHolds(out.plan, frames, 46).added).toBe(0);
+  });
+});
