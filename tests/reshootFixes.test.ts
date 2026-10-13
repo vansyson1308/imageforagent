@@ -111,6 +111,16 @@ describe("a shot given the wrong set goes back to Ultra (re-shoot 2026-10-11, ki
       expect(misplacedShots(plan), f).toEqual([]);
     }
   });
+
+  it("a character's name in a set's name is not a place (kite take 2: \"Grandfather's kitchen\", beach shots naming Grandfather)", () => {
+    const t = JSON.parse(readFileSync("public/showcase/v2-kite/trace.json", "utf8")) as { bible: Plan };
+    expect(t.bible.cast.find((c) => c.id === "kitchen")?.name).toBe("Grandfather's kitchen");
+    expect(t.bible.shots[7].description).toMatch(/Grandfather/);
+    expect(misplacedShots(t.bible)).toEqual([]);
+    // the place words of that set still count: a beach shot that names the kitchen is flagged
+    const moved = { ...t.bible, shots: t.bible.shots.map((s, i) => (i === 7 ? { ...s, description: "Grandfather waits in the kitchen with the kite." } : s)) };
+    expect(misplacedShots(moved)).toEqual([{ shot: 8, set: "brighton-seafront", why: "it describes #kitchen" }]);
+  });
 });
 
 describe("a doll spec with colour names or missing colours still builds from the kit (re-shoot 2026-10-11, fūrin run 3: both dolls rejected → freehand blobs)", () => {
