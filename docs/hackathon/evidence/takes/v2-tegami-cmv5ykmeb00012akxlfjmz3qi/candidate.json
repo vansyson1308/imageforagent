@@ -1,0 +1,84 @@
+{
+  "slug": "v2-tegami",
+  "projectId": "cmv5ykm0s00002akxyhbyjhqv",
+  "runId": "cmv5ykmeb00012akxlfjmz3qi",
+  "commit": "450bae58c8712a6feec2e1761184a10d6f3039bc",
+  "filmSec": 46.833333,
+  "withCreditsSec": 49.833333,
+  "summary": {
+    "status": "done",
+    "shots": 7,
+    "rendered": 7,
+    "firstPassOk": 5,
+    "repairs": 12,
+    "criticBefore": 5.57,
+    "criticAfter": 5.86,
+    "revisions": 6,
+    "gateFailures": 2,
+    "offPlan": [
+      7
+    ],
+    "actionNotes": {
+      "4": "envelope obscures Haru's face, disrupting key action",
+      "5": "envelope flap covers face",
+      "6": "hands visible below robe",
+      "7": "envelope too small and background not river path with sakura trees"
+    },
+    "setless": [],
+    "shotScores": {
+      "1": 9,
+      "2": 7,
+      "3": 5,
+      "4": 3,
+      "5": 6,
+      "6": 5,
+      "7": 6
+    },
+    "belowFloor": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 0,
+    "lintWarnings": 0,
+    "durationSec": 46.833334,
+    "wallMs": 233832,
+    "tokens": 179181,
+    "costUsd": 0.11888022,
+    "continuity": [],
+    "textCritic": false,
+    "research": {
+      "notes": 6,
+      "cited": 0,
+      "castCiting": 0,
+      "shotsCiting": 0,
+      "byUse": {}
+    },
+    "propRecognition": [
+      {
+        "symbol": "envelope",
+        "prop": "envelope",
+        "state": "sealed",
+        "ok": false,
+        "saw": "tag",
+        "redraws": 4
+      },
+      {
+        "symbol": "envelope--open",
+        "prop": "envelope",
+        "state": "open",
+        "ok": false,
+        "saw": "notebook page",
+        "redraws": 4
+      }
+    ],
+    "castSetTimes": {
+      "kissaten": "day",
+      "river-path": "dusk"
+    },
+    "castFromRun": "cmv5blc2p00012apju1cnaj3g"
+  }
+}

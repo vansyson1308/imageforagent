@@ -12,6 +12,7 @@ import { actingLayer, airborneProps, attachHeldProps, speakerId, tetherAirborne 
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
 import { retimeSets, shotTime, timedSetId } from "@/lib/services/director/fidelity";
+import { restsOnTable, tableUnder } from "@/lib/services/director/restSurface";
 import { applyPlacement, badPaints, coveredShare, INSERT_PROP_AREA, INSERT_PROP_MIN_AREA, INSERT_PROP_SPAN_H, INSERT_PROP_SPAN_W, INSERT_PROP_TARGET_H, minPropArea, visibleArea, visibleBody, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
 import { closeUpProblem, edgeCuts, emptyFrameProblem, EXIT_ENTRY_WORDS, figureLight, GATE, measureFrame, OVER_SHOULDER, type EdgeSide, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
@@ -195,7 +196,30 @@ export async function validateDrawing(
     }
     checks.facts.push(...tied.notes);
   }
+  // D80 (owner + QC 2026-10-12, D78): an object the shot says rests "on a table" gets the table, drawn by the engine under it
+  const rest = await tableForProp(svg, png, opts);
+  if (rest) {
+    svg = rest.svg;
+    png = await renderArtwork(opts.castDefs, svg, opts.aspectRatio, "1K");
+    checks.facts.push(rest.note);
+  }
   return { svg, ambient, png, checks, thumb: small };
+}
+
+/** The table under the object an insert (or a close-up with nobody in it) is about, when the shot says it rests on one. */
+async function tableForProp(svg: string, png: Buffer, opts: Parameters<typeof validateDrawing>[1]): Promise<{ svg: string; note: string } | null> {
+  if (!restsOnTable(opts.shot.description)) return null;
+  const size = shotSize(opts.shot.shotType);
+  if (size !== "insert" && !(size === "close" && !opts.shot.cast.some((id) => opts.characters?.includes(id)))) return null;
+  const night = NIGHT_WORDS.test(`${opts.shot.scene} ${opts.shot.description}`);
+  for (const id of opts.shot.cast.filter((c) => opts.props?.includes(c))) {
+    const stripped = withoutUses(svg, id);
+    if (stripped === svg) continue;
+    const { body } = await visibleBody(png, await renderArtwork(opts.castDefs, stripped, opts.aspectRatio, "1K"));
+    if (!body) continue;
+    return tableUnder(svg, id, body, opts.canvas, night);
+  }
+  return null;
 }
 
 /**
