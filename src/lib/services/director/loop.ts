@@ -12,7 +12,7 @@ import { runPlan, writeScript } from "@/lib/services/director/plan";
 import { runCast, type CastLibrary } from "@/lib/services/director/cast";
 import { recognizeHeroProps, type Recognition } from "@/lib/services/director/recognize";
 import { castHashes, mergeLibraries, persistRunCast, type CastFromRun, type SeriesData } from "@/lib/services/director/series";
-import { actingBrief, airborneProps, holdAirborne, neededVariants, variantDefs } from "@/lib/services/director/acting";
+import { actingBrief, airborneProps, holdAirborne, holdCarried, neededVariants, variantDefs } from "@/lib/services/director/acting";
 import { variantId } from "@/lib/services/director/dollKit";
 import { symbolIds } from "@/lib/services/director/svgTools";
 import { renderScoreBed } from "@/lib/services/director/scoreBed";
@@ -311,6 +311,12 @@ export async function executeRun(
       if (flyers.posed.length) {
         plan = flyers.plan;
         await recordStep(ctx, { role: "director", model: "engine", action: "hold-airborne", summary: `Up in the air with nobody holding the string: ${flyers.posed.map((p) => `shot ${p.shot} #${p.who} ${p.was ?? "unposed"} → hold`).join(", ")} (D86)` });
+      }
+      // D88: a walker the shot says carries a prop holds it (a walking pose can't take it into the hands)
+      const carriers = holdCarried(plan, library.kits, airborneProps(plan.cast));
+      if (carriers.posed.length) {
+        plan = carriers.plan;
+        await recordStep(ctx, { role: "director", model: "engine", action: "hold-carried", summary: `Carries the shot's prop while walking: ${carriers.posed.map((p) => `shot ${p.shot} #${p.who} walk → hold`).join(", ")} (D88)` });
       }
     }
     // Acting variants (WP4.1): the posed/expressive symbols the plan asks for, built from the same kit specs
