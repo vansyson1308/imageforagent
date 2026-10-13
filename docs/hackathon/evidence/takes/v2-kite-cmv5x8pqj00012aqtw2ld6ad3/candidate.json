@@ -1,0 +1,115 @@
+{
+  "slug": "v2-kite",
+  "projectId": "cmv5x8pg500002aqt1kcw0q4s",
+  "runId": "cmv5x8pqj00012aqtw2ld6ad3",
+  "commit": "f6f639c4ea5b5487445374fa05323ce94a6d38e1",
+  "filmSec": 59.083333,
+  "withCreditsSec": 62.083333,
+  "summary": {
+    "status": "done",
+    "shots": 11,
+    "rendered": 11,
+    "firstPassOk": 6,
+    "repairs": 21,
+    "criticBefore": 4.82,
+    "criticAfter": 5.45,
+    "revisions": 12,
+    "gateFailures": 2,
+    "offPlan": [
+      7,
+      11
+    ],
+    "actionNotes": {
+      "3": "character not running",
+      "4": "torn kite missing",
+      "5": "The torn kite state is not clearly shown and the grandfather's face is partially hidden.",
+      "8": "kite not flying, held, no string",
+      "9": "kite without string",
+      "10": "kite not in Maya's hands",
+      "11": "kite is too small and brightness indicates day, not dusk"
+    },
+    "setless": [],
+    "shotScores": {
+      "1": 9,
+      "2": 7,
+      "3": 3,
+      "4": 6,
+      "5": 6,
+      "6": 5,
+      "7": 3,
+      "8": 4,
+      "9": 5,
+      "10": 7,
+      "11": 5
+    },
+    "belowFloor": [
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      11
+    ],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 0,
+    "lintWarnings": 3,
+    "durationSec": 59.083334,
+    "wallMs": 328379,
+    "tokens": 316925,
+    "costUsd": 0.2150445,
+    "continuity": [],
+    "textCritic": false,
+    "research": {
+      "notes": 6,
+      "cited": 6,
+      "castCiting": 5,
+      "shotsCiting": 11,
+      "byUse": {
+        "set": 4,
+        "props": 1,
+        "costume": 1
+      }
+    },
+    "propRecognition": [
+      {
+        "symbol": "kite",
+        "prop": "kite",
+        "state": "intact",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 1
+      },
+      {
+        "symbol": "kite--torn",
+        "prop": "kite",
+        "state": "torn",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 0
+      },
+      {
+        "symbol": "kite--patched",
+        "prop": "kite",
+        "state": "patched",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 0
+      },
+      {
+        "symbol": "kite--starred",
+        "prop": "kite",
+        "state": "starred",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 0
+      }
+    ],
+    "castSetTimes": {
+      "brighton-seafront": "golden",
+      "kitchen": "day"
+    },
+    "castFromRun": "cmv5ck21700012aphuliu0dto"
+  }
+}

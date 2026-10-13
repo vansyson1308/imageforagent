@@ -1,0 +1,90 @@
+{
+  "slug": "v2-banh-chung",
+  "projectId": "cmv5xjldd005s2aqttwq7y0bs",
+  "runId": "cmv5xjlgc005t2aqt3v8r4bh8",
+  "commit": "f6f639c4ea5b5487445374fa05323ce94a6d38e1",
+  "filmSec": 43.166667,
+  "withCreditsSec": 46.167,
+  "summary": {
+    "status": "done",
+    "shots": 11,
+    "rendered": 11,
+    "firstPassOk": 7,
+    "repairs": 18,
+    "criticBefore": 5.09,
+    "criticAfter": 5.64,
+    "revisions": 10,
+    "gateFailures": 0,
+    "offPlan": [
+      10,
+      11
+    ],
+    "actionNotes": {
+      "2": "the key action or object does not read",
+      "4": "The main action of tapping the corner is not emphasized as the key focus.",
+      "5": "Silhouettes against flame not shown",
+      "10": "night scene with no dawn light",
+      "11": "dawn light not visible"
+    },
+    "setless": [],
+    "shotScores": {
+      "1": 7,
+      "2": 5,
+      "3": 6,
+      "4": 5,
+      "5": 5,
+      "6": 6,
+      "7": 7,
+      "8": 7,
+      "9": 8,
+      "10": 3,
+      "11": 3
+    },
+    "belowFloor": [
+      2,
+      3,
+      4,
+      5,
+      6,
+      10,
+      11
+    ],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 0,
+    "lintWarnings": 11,
+    "durationSec": 43.166667,
+    "wallMs": 308420,
+    "tokens": 307497,
+    "costUsd": 0.2004996,
+    "continuity": [],
+    "textCritic": false,
+    "research": {
+      "notes": 6,
+      "cited": 6,
+      "castCiting": 4,
+      "shotsCiting": 0,
+      "byUse": {
+        "set": 4,
+        "costume": 1,
+        "architecture": 1
+      }
+    },
+    "propRecognition": [
+      {
+        "symbol": "banh-chung",
+        "prop": "banh-chung",
+        "state": "wrapped",
+        "ok": false,
+        "saw": "green grid pattern",
+        "redraws": 4
+      }
+    ],
+    "castSetTimes": {
+      "courtyard": "night",
+      "front-room": "day",
+      "rooftops": "night",
+      "courtyard--day": "day"
+    },
+    "castFromRun": "cmv5ckxxt00132aphiklvzwwj"
+  }
+}

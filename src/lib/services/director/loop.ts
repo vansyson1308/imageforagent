@@ -18,7 +18,7 @@ import { symbolIds } from "@/lib/services/director/svgTools";
 import { renderScoreBed } from "@/lib/services/director/scoreBed";
 import { buildTimeline, timelineDuration, timelineInputOf } from "@/lib/services/timeline";
 import { saveBuffer, toPosix } from "@/lib/services/storage";
-import { commitShot, drawShot, type Drawing } from "@/lib/services/director/artist";
+import { commitShot, drawShot, padHolds, type Drawing } from "@/lib/services/director/artist";
 import { critiqueShot, fixesText } from "@/lib/services/director/critic";
 import { shotText, shotVoice, type NarrationShot } from "@/lib/services/director/fixedNarration";
 import { actionNote, fidelityBrief, offPlanAxes } from "@/lib/services/director/fidelity";
@@ -67,6 +67,8 @@ export interface DirectorRequest {
   readonly stopAfter?: "cast";
   /** reuse an approved cast-only preview's cast verbatim (operator only): no re-plan of the cast, no Cast call, no re-check */
   readonly castFrom?: CastFromRun | null;
+  /** the film's floor (the format's minimum length + a margin for transitions): shorter, and every shot holds a little longer (padHolds) */
+  readonly minFilmSec?: number;
 }
 
 export interface DirectorDeps {
@@ -275,6 +277,13 @@ export async function executeRun(
       const voices = await runDialogue(ctx, plan, frames, req.series?.voices ?? {}, fixedVoices ?? undefined);
       frames = voices.frames;
       await persistRunCast(runId, { voices: voices.map });
+      if (req.minFilmSec) {
+        const padded = padHolds(plan, frames, req.minFilmSec);
+        if (padded.added) {
+          plan = padded.plan;
+          await recordStep(ctx, { role: "editor", model: "engine", action: "pad-holds", summary: `The film would run ${padded.before}s, under its ${req.minFilmSec}s floor: every shot holds ${padded.added}s longer` });
+        }
+      }
     }
 
     // 5 · Cast & set library (Super)
