@@ -1,0 +1,80 @@
+{
+  "slug": "v2-tegami",
+  "projectId": "cmv5zd3pc00002aqj9zv2jku5",
+  "runId": "cmv5zd43a00012aqjvcwijeov",
+  "commit": "5d233fa8fcb18450bb84f0c17b30e0795ac4bc7b",
+  "filmSec": 46.833333,
+  "withCreditsSec": 49.833333,
+  "summary": {
+    "status": "done",
+    "shots": 7,
+    "rendered": 7,
+    "firstPassOk": 5,
+    "repairs": 8,
+    "criticBefore": 6.29,
+    "criticAfter": 6.29,
+    "revisions": 3,
+    "gateFailures": 1,
+    "offPlan": [
+      5
+    ],
+    "actionNotes": {
+      "3": "envelope too large, seal not amber",
+      "5": "Envelope covers face and setting is a kitchen instead of café."
+    },
+    "setless": [],
+    "shotScores": {
+      "1": 8,
+      "2": 7,
+      "3": 4,
+      "4": 9,
+      "5": 3,
+      "6": 7,
+      "7": 6
+    },
+    "belowFloor": [
+      3,
+      5,
+      7
+    ],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 0,
+    "lintWarnings": 0,
+    "durationSec": 46.833334,
+    "wallMs": 187961,
+    "tokens": 128094,
+    "costUsd": 0.0817458,
+    "continuity": [],
+    "textCritic": false,
+    "research": {
+      "notes": 6,
+      "cited": 0,
+      "castCiting": 0,
+      "shotsCiting": 0,
+      "byUse": {}
+    },
+    "propRecognition": [
+      {
+        "symbol": "envelope",
+        "prop": "envelope",
+        "state": "sealed",
+        "ok": false,
+        "saw": "tag",
+        "redraws": 4
+      },
+      {
+        "symbol": "envelope--open",
+        "prop": "envelope",
+        "state": "open",
+        "ok": false,
+        "saw": "notebook page",
+        "redraws": 4
+      }
+    ],
+    "castSetTimes": {
+      "kissaten": "day",
+      "river-path": "dusk"
+    },
+    "castFromRun": "cmv5blc2p00012apju1cnaj3g"
+  }
+}
