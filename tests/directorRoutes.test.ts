@@ -356,6 +356,26 @@ describe("demo mode", () => {
     expect(await prisma.project.findUnique({ where: { id: keep.id } })).not.toBeNull();
   });
 
+  it("D86: an operator's take (a take on an approved cast, a redo, a cast-only preview) outlives the 24 h window, up to 7 days; a judge's project does not", async () => {
+    const { cleanupDemoProjects, OPERATOR_RETENTION_HOURS } = await import("@/lib/services/demoGuard");
+    const h = (n: number) => new Date(Date.now() - n * 3600_000);
+    const judge = await prisma.project.create({ data: { name: "judge film", demoSession: "sessionJDG1", createdAt: h(25) } });
+    const take = await prisma.project.create({ data: { name: "kite take", demoSession: "sessionOPR1", createdAt: h(25) } });
+    const redo = await prisma.project.create({ data: { name: "redone take", demoSession: "sessionOPR2", createdAt: h(30) } });
+    const ancient = await prisma.project.create({ data: { name: "old take", demoSession: "sessionOPR3", createdAt: h(OPERATOR_RETENTION_HOURS + 1) } });
+    created.push(judge.id, take.id, redo.id, ancient.id);
+    const run = (projectId: string, summary: object) => prisma.directorRun.create({ data: { projectId, story: "s", language: "en", style: "storybook", provider: "mock", models: "{}", config: "{}", status: "done", summary: JSON.stringify(summary) } });
+    await run(judge.id, { status: "done", shots: 6 });
+    await run(take.id, { status: "done", castFromRun: "cmv5ck21700012aphuliu0dto" });
+    await run(redo.id, { status: "done", redoOf: { sourceRunId: "x", shots: [4] } });
+    await run(ancient.id, { status: "done", castFromRun: "y" });
+    await cleanupDemoProjects();
+    expect(await prisma.project.findUnique({ where: { id: judge.id } })).toBeNull();
+    expect(await prisma.project.findUnique({ where: { id: take.id } })).not.toBeNull();
+    expect(await prisma.project.findUnique({ where: { id: redo.id } })).not.toBeNull();
+    expect(await prisma.project.findUnique({ where: { id: ancient.id } })).toBeNull();
+  });
+
   it("enforces the global daily token budget", async () => {
     const { dailyGate } = await import("@/lib/services/demoGuard");
     process.env.DEMO_DAILY_TOKEN_BUDGET = "1000";

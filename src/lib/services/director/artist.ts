@@ -8,13 +8,13 @@ import { MAX_SVG_BYTES } from "@/lib/config/limits";
 import { callModel, recordStep, throwIfCancelled, type DirectorContext } from "@/lib/services/director/context";
 import { artistSystem, artistUser } from "@/lib/services/director/prompts";
 import { artPattern, buildShotMotion, type AmbientLayer } from "@/lib/services/director/camera";
-import { actingLayer, airborneProps, attachHeldProps, speakerId, tetherAirborne } from "@/lib/services/director/acting";
+import { actingLayer, airborneProps, attachHeldProps, flyingIn, speakerId, tetherAirborne } from "@/lib/services/director/acting";
 import type { KitSpec } from "@/lib/services/director/cast";
 import { lipCurvesOf } from "@/lib/services/clipService";
 import { retimeSets, shotTime, timedSetId } from "@/lib/services/director/fidelity";
 import { restsOnTable, tableUnder } from "@/lib/services/director/restSurface";
 import { applyPlacement, type Placement, badPaints, coveredShare, INSERT_PROP_AREA, INSERT_PROP_MIN_AREA, INSERT_PROP_SPAN_H, INSERT_PROP_SPAN_W, INSERT_PROP_TARGET_H, minPropArea, visibleArea, visibleBody, extractJsonBlock, extractSvgFragment, fixPaints, isNearlyBlank, meanBrightness, minSubjectPct, missingRefs, NIGHT_WORDS, plainPlacement, reframePlacement, tintUnderFigures, upToUse, visibleBox, visibleExtent, withoutUses } from "@/lib/services/director/svgTools";
-import { closeUpProblem, edgeCuts, emptyFrameProblem, EXIT_ENTRY_WORDS, figureLight, GATE, measureFrame, OVER_SHOULDER, type EdgeSide, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
+import { closeUpProblem, edgeCuts, emptyFrameProblem, EXIT_ENTRY_WORDS, figureLight, figureOverlaps, GATE, measureFrame, OVER_SHOULDER, type EdgeSide, nearDuplicateProblem, readableSetProblem, similarity, thumb, withoutInherited, type Box, type FrameMeasure } from "@/lib/services/director/frameGates";
 import { zodIssues, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 import type { Frame } from "@/generated/prisma/client";
 
@@ -102,7 +102,7 @@ export async function validateDrawing(
   if (bad.length && opts.strict !== false) throw new Error(`Unresolvable paint value(s) ${bad.map((b) => `"${b}"`).join(", ")} render BLACK: write url(#gradient-id) exactly (and declare the gradient in <defs>), or use a plain #rrggbb colour.`);
   if (bad.length) svg = fixPaints(svg, "#9aa3ad");
   // a kit character in the hold pose holds the shot's prop (owner QC 2026-10-10): the engine puts it in the hands
-  const held = opts.kits && opts.props?.length ? attachHeldProps(svg, opts.shot, opts.kits, opts.props) : { svg, notes: [], held: [] as string[] };
+  const held = opts.kits && opts.props?.length ? attachHeldProps(svg, opts.shot, opts.kits, inHands(opts)) : { svg, notes: [], held: [] as string[] };
   svg = held.svg;
   try {
     sanitizeSvg(svg, "frame");
@@ -246,6 +246,7 @@ async function qualityGates(
 ): Promise<{ problems: string[]; facts: string[]; subject: { id: string; box: Box } | null; cuts: { id: string; sides: EdgeSide[] }[]; dim: string[]; small: SmallProp[]; covered: { id: string; box: Box }[] }> {
   const problems: string[] = [];
   const covered: { id: string; box: Box }[] = [];
+  const figures: { id: string; box: Box }[] = [];
   const facts: string[] = [];
   const cuts: { id: string; sides: EdgeSide[] }[] = [];
   const dim: string[] = [];
@@ -286,6 +287,7 @@ async function qualityGates(
       }
     }
     const box = pct > 0 ? await visibleBox(png, without) : null;
+    if (box && kitIds.has(id)) figures.push({ id, box });
     // the figures the framing rules are about: kit people/animals (or every character in a film without kits)
     if (box && (kitIds.has(id) || !filmHasKit)) {
       // edge crop (owner QC 2026-10-10): no character cut by the frame unless the plan has it leave or enter
@@ -313,6 +315,11 @@ async function qualityGates(
       subject = box;
       subjectId = id;
     }
+  }
+  // D86 (c): two figures that overlap read as one standing on or inside the other
+  for (const o of figureOverlaps(figures, `${opts.shot.shotType} ${opts.shot.description}`)) {
+    const hugging = (opts.shot.acting ?? []).some((a) => (a.who === o.a || a.who === o.b) && a.pose === "hug");
+    if (!hugging) problems.push(`#${o.a} and #${o.b} overlap (${Math.round(o.share * 100)}% of the smaller one's box): one reads as standing on or inside the other — spread them left and right (at least 10% of the frame apart), or put one in front, lower and larger`);
   }
   // The shot's props are in it and story-sized (owner QC 2026-10-10): measured as the pixels each one adds
   const propsInShot = opts.shot.cast.filter((id) => opts.props?.includes(id));
@@ -513,6 +520,12 @@ async function faceCoverFix(svg: string, checks: Gates, opts: GateOpts): Promise
   return { svg: out, png, checks: after };
 }
 
+/** The props a "hold" pose may take into the hands: never an airborne prop the shot has up in the air (it flies on its string, D86). */
+function inHands(opts: { shot: ShotPlan; props?: readonly string[]; airborne?: readonly string[] }): string[] {
+  const up = flyingIn(opts.shot, opts.airborne ?? []);
+  return (opts.props ?? []).filter((p) => !up.includes(p));
+}
+
 type GateOpts = Parameters<typeof qualityGates>[2] & { kits?: ReadonlyMap<string, KitSpec>; props?: readonly string[] };
 type Gates = Awaited<ReturnType<typeof qualityGates>>;
 
@@ -551,7 +564,7 @@ async function edgeAndLightFixes(svg: string, checks: Gates, opts: GateOpts): Pr
   }
   if (out === svg) return null;
   // a held prop follows its holder's hands
-  if (opts.kits && opts.props?.length) out = attachHeldProps(out, opts.shot, opts.kits, opts.props).svg;
+  if (opts.kits && opts.props?.length) out = attachHeldProps(out, opts.shot, opts.kits, inHands(opts)).svg;
   const png = await renderArtwork(opts.castDefs, out, opts.aspectRatio, "1K");
   const after = await qualityGates(out, png, opts);
   if (after.problems.length >= checks.problems.length) return null;

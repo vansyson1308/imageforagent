@@ -8,7 +8,7 @@
  *   … [--only lantern] [--max-shots 8] [--max-usd 0.6] [--set v2] [--remaster 2K@24]
  *   … --refilm v2-kite=<projectId>[,…]   # re-assemble a published film from its project (no model call; D43)
  *   … --set v2 --cast-from v2-furin=<previewRunId>[,…]   # a take on an APPROVED cast-only preview's cast (owner 2026-10-12)
- *   … --set v2 --only v2-tegami --redo v2-tegami=<projectId>:<takeRunId>:5[+7]   # redraw only those shots of a take (D84, ≤ 2 redos per shot)
+ *   … --set v2 --only v2-tegami --redo v2-tegami=<projectId>:<takeRunId>:5[+7] [--redo-notes notes.json]   # redraw only those shots of a take (D84, ≤ 2 redos per shot; QC notes D86)
  *
  * v2 (owner QC 2026-10-10): `--set v2` films the 11-line narrated tellings in
  * showcaseStories.ts with research on, checks the run against the publish gate
@@ -161,6 +161,8 @@ async function main() {
     const redoSpec = arg("--redo").split(",").map((p) => p.split("=")).find(([k]) => k === s.slug)?.[1];
     const redo = redoSpec ? (([p, r, shots]) => ({ pid: p, runId: r, shots: (shots ?? "").split("+").map(Number).filter((n) => n > 0) }))(redoSpec.split(":")) : null;
     if (redo && (!redo.pid || !redo.runId || !redo.shots.length)) throw new Error(`--redo ${s.slug}=${redoSpec}: expected <projectId>:<takeRunId>:<shot>[+<shot>]`);
+    // QC's by-eye notes for the redone shots (D86): --redo-notes <file.json> with {"<shot>": "<note>"}
+    const redoNotes = redo && arg("--redo-notes") ? (JSON.parse(readFileSync(arg("--redo-notes"), "utf8")) as Record<string, string>) : null;
     for (let attempt = 0; attempt < (redo ? 1 : 2) && !done; attempt++) {
       let streamed = 0;
       try {
@@ -185,7 +187,7 @@ async function main() {
         // a v2 film is held to its format's floor + 1 s for the transitions' overlap (D79): 46 s for 16:9, 31 s for a 9:16 Short
         const floor = "narration" in s ? { minFilmSec: durationWindow(aspectOf(s.slug)).min + 1 } : {};
         const body = redo
-          ? { story, language: s.language, style: s.style, maxUsd, critic: true, research: false, ...pilot, ...floor, redoRun: redo.runId, redoShots: redo.shots }
+          ? { story, language: s.language, style: s.style, maxUsd, critic: true, research: false, ...pilot, ...floor, redoRun: redo.runId, redoShots: redo.shots, ...(redoNotes && { redoNotes }) }
           : { story, language: s.language, style: s.style, maxUsd, critic: true, ...v2, ...pilot, ...floor, ...(castFromRun && { castFromRun }), ...(castEdits.length && { castEdits }) };
         runId = await client.direct(pid, body, (e) => {
           appendFileSync(log, JSON.stringify(e) + "\n");

@@ -12,7 +12,7 @@ import { runPlan, writeScript } from "@/lib/services/director/plan";
 import { runCast, type CastLibrary } from "@/lib/services/director/cast";
 import { recognizeHeroProps, type Recognition } from "@/lib/services/director/recognize";
 import { castHashes, mergeLibraries, persistRunCast, type CastFromRun, type SeriesData } from "@/lib/services/director/series";
-import { actingBrief, neededVariants, variantDefs } from "@/lib/services/director/acting";
+import { actingBrief, airborneProps, holdAirborne, neededVariants, variantDefs } from "@/lib/services/director/acting";
 import { variantId } from "@/lib/services/director/dollKit";
 import { symbolIds } from "@/lib/services/director/svgTools";
 import { renderScoreBed } from "@/lib/services/director/scoreBed";
@@ -76,7 +76,7 @@ export interface DirectorRequest {
    * plan and cast (castFrom = the take); no research, plan, script, voices, cast or recognition calls; the summary is the take's
    * with the redone shots swapped in
    */
-  readonly redo?: { readonly sourceRunId: string; readonly shots: readonly number[]; readonly plan: Plan; readonly summary: RunSummary } | null;
+  readonly redo?: { readonly sourceRunId: string; readonly shots: readonly number[]; readonly plan: Plan; readonly summary: RunSummary; readonly notes?: Readonly<Record<number, string>> } | null;
 }
 
 export interface DirectorDeps {
@@ -305,6 +305,14 @@ export async function executeRun(
     // 5 · Cast & set library (Super)
     emit({ type: "status", message: "Artist is designing the cast…" });
     let library = req.castFrom ? await castFromRun(ctx, plan, req.castFrom) : await castForEpisode(ctx, plan, aspectRatio, req.series ?? null);
+    // D86 (b): an airborne prop up in a shot with nobody posed to hold it: the shot's flyer holds the string
+    if (library.kits.size) {
+      const flyers = holdAirborne(plan, library.kits, airborneProps(plan.cast));
+      if (flyers.posed.length) {
+        plan = flyers.plan;
+        await recordStep(ctx, { role: "director", model: "engine", action: "hold-airborne", summary: `Up in the air with nobody holding the string: ${flyers.posed.map((p) => `shot ${p.shot} #${p.who} ${p.was ?? "unposed"} → hold`).join(", ")} (D86)` });
+      }
+    }
     // Acting variants (WP4.1): the posed/expressive symbols the plan asks for, built from the same kit specs
     if (library.kits.size) {
       const extra = variantDefs(plan, library.kits, library.defs);
@@ -343,7 +351,10 @@ export async function executeRun(
       const st: ShotStats = { firstPassOk: false, repairs: 0, before: null, after: null, revisions: 0 };
       shotStats.set(frame.index, st);
       emit({ type: "status", message: `Artist is drawing shot ${frame.index}/${frames.length}…` });
-      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits, setTimes: library.setTimes });
+      // D86 (a): a redo carries QC's by-eye note for the shot: the Artist's first issue in every round, and the critic checks it
+      const qcNote = redo?.notes?.[frame.index] ? `QC (by eye, owner + QC) on the take's version of this shot — get this right first: ${redo.notes[frame.index]}` : null;
+      const withQc = (fb: string) => (qcNote ? `${qcNote}\n${fb}` : fb);
+      const first = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round: 0, feedback: qcNote, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits, setTimes: library.setTimes });
       st.repairs += first.attempts - 1;
       st.firstPassOk = first.drawing !== null && first.attempts === 1;
       if (!first.drawing) {
@@ -357,7 +368,7 @@ export async function executeRun(
       let best: { drawing: Drawing; critique: Critique | null } = { drawing: first.drawing, critique: null };
       st.setless = !placesASet(first.drawing.svg, plan);
       if (!options.critic) return;
-      const planBrief = fidelityBrief(plan, shot, library.setTimes ?? new Map());
+      const planBrief = `${fidelityBrief(plan, shot, library.setTimes ?? new Map())}${qcNote ? ` ${qcNote}` : ""}`;
       const golden = goldenHour(shot, library.setTimes ?? new Map());
       const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0, context: planBrief, goldenHour: golden });
       best = { drawing: first.drawing, critique: c0.critique };
@@ -366,7 +377,7 @@ export async function executeRun(
       for (let round = 1; round <= budget.maxCriticRounds; round++) {
         const c = best.critique;
         if (!c || c.score >= options.acceptScore || c.verdict === "accept") break;
-        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: fixesText(c), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits, setTimes: library.setTimes });
+        const rev = await drawShot(ctx, { plan, shot, index: frame.index, castDefs: library.defs, symbols: library.symbols, aspectRatio, round, feedback: withQc(fixesText(c)), previous: best.drawing.svg, neighbours: neighbours(frame.index), actingBrief: actingBrief(shot, library.kits), kits: library.kits, setTimes: library.setTimes });
         st.repairs += Math.max(0, rev.attempts - 1);
         if (!rev.drawing) break;
         const cr = await critiqueShot(ctx, { shot, index: frame.index, drawing: rev.drawing, round, context: planBrief, goldenHour: golden });
@@ -395,7 +406,7 @@ export async function executeRun(
           symbols: library.symbols,
           aspectRatio,
           round: budget.maxCriticRounds + 1,
-          feedback: `START OVER. The best version so far scored ${fb.score}/10 (${fb.issues.slice(0, 3).join("; ") || "weak"}). Draw a NEW composition with a different approach: another camera angle or distance, a different layout of the characters, clearer staging of the action. Do not copy the earlier layout.`,
+          feedback: withQc(`START OVER. The best version so far scored ${fb.score}/10 (${fb.issues.slice(0, 3).join("; ") || "weak"}). Draw a NEW composition with a different approach: another camera angle or distance, a different layout of the characters, clearer staging of the action. Do not copy the earlier layout.`),
           neighbours: neighbours(frame.index),
           actingBrief: actingBrief(shot, library.kits),
           kits: library.kits,

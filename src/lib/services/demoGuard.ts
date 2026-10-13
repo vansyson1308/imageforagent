@@ -24,10 +24,27 @@ export async function assertProjectQuota(sid: string, cfg: DemoConfig = demoConf
   }
 }
 
-/** Delete demo projects older than the retention window (files included). */
+/**
+ * How long an operator's take is kept (owner 2026-10-13, D86): a showcase take, its single-shot redos and a
+ * cast-only preview are made with operator-only tools and must outlive the judges' 24 h window until the
+ * film is checked by eye and published.
+ */
+export const OPERATOR_RETENTION_HOURS = 168;
+
+/** The summary marks of the operator-only tools (a take on an approved cast, a redo, a cast-only preview). */
+const OPERATOR_MARKS = ['"castFromRun"', '"redoOf"', '"stopAfter":"cast"'];
+
+/** Delete demo projects older than the retention window (files included); an operator's takes keep OPERATOR_RETENTION_HOURS. */
 export async function cleanupDemoProjects(cfg: DemoConfig = demoConfig(), now = Date.now()): Promise<number> {
   const cutoff = new Date(now - cfg.retentionHours * 3600_000);
-  const old = await prisma.project.findMany({ where: { demoSession: { not: null }, createdAt: { lt: cutoff } }, select: { id: true } });
+  const operatorCutoff = new Date(now - Math.max(cfg.retentionHours, OPERATOR_RETENTION_HOURS) * 3600_000);
+  const stale = await prisma.project.findMany({ where: { demoSession: { not: null }, createdAt: { lt: cutoff } }, select: { id: true, createdAt: true } });
+  const takes = new Set(
+    stale.length
+      ? (await prisma.directorRun.findMany({ where: { projectId: { in: stale.map((p) => p.id) }, OR: OPERATOR_MARKS.map((m) => ({ summary: { contains: m } })) }, select: { projectId: true } })).map((r) => r.projectId)
+      : [],
+  );
+  const old = stale.filter((p) => !takes.has(p.id) || p.createdAt < operatorCutoff);
   for (const p of old) {
     await prisma.project.delete({ where: { id: p.id } }).catch(() => {});
     await removeDirQuiet(p.id);
