@@ -1,0 +1,119 @@
+{
+  "slug": "v2-kite",
+  "projectId": "cmv6fvw1b00002ao4yql23ywc",
+  "runId": "cmv6z9x3k00002apec9c55j9f",
+  "commit": "a2064165152a5613a07563a04c4cddef24d49203",
+  "filmSec": 58.5,
+  "withCreditsSec": 61.5,
+  "summary": {
+    "status": "done",
+    "shots": 11,
+    "rendered": 11,
+    "firstPassOk": 8,
+    "repairs": 14,
+    "criticBefore": 5.27,
+    "criticAfter": 6.55,
+    "revisions": 16,
+    "gateFailures": 0,
+    "gateFailShots": [],
+    "offPlan": [
+      2
+    ],
+    "actionNotes": {
+      "2": "sky rendered as sunset instead of bright daylight",
+      "3": "kite torn state not clearly visible",
+      "5": "Kite is held upright, not lying flat on the table.",
+      "8": "kite lacks visible string and is too small to be clearly read as starred",
+      "11": "kite not flying"
+    },
+    "setless": [],
+    "shotScores": {
+      "1": 7,
+      "2": 6,
+      "3": 6,
+      "4": 7,
+      "5": 4,
+      "6": 5,
+      "7": 9,
+      "8": 6,
+      "9": 9,
+      "10": 7,
+      "11": 6
+    },
+    "belowFloor": [
+      2,
+      3,
+      5,
+      6,
+      8,
+      11
+    ],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 0,
+    "lintWarnings": 4,
+    "durationSec": 58.5,
+    "wallMs": 73315,
+    "tokens": 35162,
+    "costUsd": 0.02144874,
+    "continuity": [],
+    "textCritic": false,
+    "propRecognition": [
+      {
+        "symbol": "kite",
+        "prop": "kite",
+        "state": "intact",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 1
+      },
+      {
+        "symbol": "kite--torn",
+        "prop": "kite",
+        "state": "torn",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 0
+      },
+      {
+        "symbol": "kite--patched",
+        "prop": "kite",
+        "state": "patched",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 0
+      },
+      {
+        "symbol": "kite--starred",
+        "prop": "kite",
+        "state": "starred",
+        "ok": true,
+        "saw": "red kite",
+        "redraws": 0
+      }
+    ],
+    "castSetTimes": {
+      "brighton-seafront": "golden",
+      "kitchen": "day"
+    },
+    "castFromRun": "cmv6tvm43003b2as8x7pl74px",
+    "research": {
+      "notes": 6,
+      "cited": 6,
+      "castCiting": 5,
+      "shotsCiting": 0,
+      "byUse": {
+        "set": 3,
+        "palette": 1,
+        "props": 1,
+        "costume": 1
+      }
+    },
+    "redoOf": {
+      "sourceRunId": "cmv6tvm43003b2as8x7pl74px",
+      "shots": [
+        10,
+        11
+      ]
+    }
+  }
+}

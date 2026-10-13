@@ -383,6 +383,117 @@
       "source": "studio-production-049c.up.railway.app",
       "version": "v2",
       "byEye": "docs/hackathon/evidence/byeye/v2-banh-chung-cmv6ul9yo00002ao09enx017d/checklist.md"
+    },
+    {
+      "slug": "v2-tegami",
+      "title": "ひだまり人生劇場・春の手紙",
+      "language": "ja",
+      "logline": "五十年越しの想いが、桜の香りと共に解き放たれる午後",
+      "story": "春の午後、喫茶ひだまりの窓から、やわらかな日が差しこみます。カランと扉が鳴って、古い封筒を手にした、老紳士が入ってきました。五十年前、好きだった人に、出せなかった手紙だといいます。ハルさんは、桜の香りの紅茶を淹れて、黙って、となりに座りました。老紳士は、手紙を、声に出して読みはじめました。読み終えると、小さく、笑いました。「やっと、言えた気がします」。帰り道、川沿いの桜が、ひとひら、封筒の上に落ちました。",
+      "film": "/showcase/v2-tegami/film.mp4",
+      "poster": "/showcase/v2-tegami/poster.jpg",
+      "aspect": "9:16",
+      "trace": "/showcase/v2-tegami/trace.json",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/nemotron-3-super-120b-a12b",
+        "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        "vision": "openbmb/MiniCPM-V-4_5"
+      },
+      "provider": "nemotron",
+      "summary": {
+        "status": "done",
+        "shots": 7,
+        "rendered": 7,
+        "firstPassOk": 6,
+        "repairs": 12,
+        "criticBefore": 4.71,
+        "criticAfter": 5.57,
+        "revisions": 21,
+        "gateFailures": 0,
+        "gateFailShots": [],
+        "offPlan": [],
+        "actionNotes": {
+          "3": "Seal detail missing",
+          "4": "action mismatch",
+          "5": "envelope state not visible",
+          "6": "face not fully visible",
+          "7": "envelope obscures face"
+        },
+        "setless": [],
+        "shotScores": {
+          "1": 8,
+          "2": 7,
+          "3": 6,
+          "4": 4,
+          "5": 6,
+          "6": 3,
+          "7": 5
+        },
+        "belowFloor": [
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+        "lintErrors": 0,
+        "lintWarnings": 0,
+        "durationSec": 44.916667,
+        "wallMs": 210569,
+        "tokens": 72632,
+        "costUsd": 0.04640628,
+        "continuity": [],
+        "textCritic": false,
+        "propRecognition": [
+          {
+            "symbol": "envelope",
+            "prop": "envelope",
+            "state": "sealed",
+            "ok": false,
+            "saw": "tag",
+            "redraws": 4
+          },
+          {
+            "symbol": "envelope--open",
+            "prop": "envelope",
+            "state": "open",
+            "ok": false,
+            "saw": "notebook page",
+            "redraws": 4
+          }
+        ],
+        "castSetTimes": {
+          "kissaten": "day",
+          "river-path": "dusk"
+        },
+        "castFromRun": "cmv6vdhnn00002an4cl8du3do",
+        "research": {
+          "notes": 6,
+          "cited": 5,
+          "castCiting": 0,
+          "shotsCiting": 5,
+          "byUse": {
+            "costume": 1,
+            "set": 1,
+            "palette": 1,
+            "customs": 1,
+            "props": 1
+          }
+        },
+        "redoOf": {
+          "sourceRunId": "cmv6vdhnn00002an4cl8du3do",
+          "shots": [
+            5,
+            7
+          ]
+        }
+      },
+      "createdAt": "2026-10-13T17:50:30.284Z",
+      "source": "studio-production-049c.up.railway.app",
+      "version": "v2",
+      "byEye": "docs/hackathon/evidence/byeye/v2-tegami-cmv6xhzbt00002anq0uc7rb4y/checklist.md"
     }
   ],
   "hero": "v2-furin"

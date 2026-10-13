@@ -21,7 +21,7 @@ What the viewer (the vision model) said, with no story, about each drawing of th
 
 The owner and QC may approve the key object past this by eye (owner decision 2026-10-12, D77): replace `none` with `APPROVED by owner <name> and QC <name>`. A by-eye approval never overrides a measured gate.
 
-Recognition override: pending — QC (Claude) approves #envelope and #envelope--open by eye (a sealed envelope with a wax seal; the open letter with written lines); owner to sign as `APPROVED by owner <name> and QC Claude`
+Recognition override: APPROVED by owner Nguyễn Văn Sơn and QC Claude
 
 ## Shot 1
 
@@ -137,6 +137,6 @@ Note: QC by eye: OK — FINAL attempt (owner exception): late dusk, violet-orang
 
 ## Verdict
 
-Reviewer: QC — Claude (by eye, every frame at full size, 2026-10-13); owner signature pending
+Reviewer: owner Nguyễn Văn Sơn + QC Claude (QC by eye, every frame at full size; owner sign-off 2026-10-14)
 
-Verdict: PENDING — QC: PASS by eye; the owner signs the Recognition override, then writes PASS here
+Verdict: PASS (Reviewer: owner Nguyễn Văn Sơn + QC Claude)
