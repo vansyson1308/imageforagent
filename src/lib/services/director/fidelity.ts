@@ -1,4 +1,4 @@
-import type { Critique, Plan, ShotPlan } from "@/lib/services/director/schemas";
+import { critiqueSchema, type Critique, type Plan, type ShotPlan } from "@/lib/services/director/schemas";
 
 /**
  * Plan-vs-render fidelity (owner QC 2026-10-10, sprint b): the time of day,
@@ -130,9 +130,67 @@ export const GOLDEN_DUSK = /\bgolden\s+(?:dusk|sunset|evening|twilight)\b|\b(?:d
  * lit "golden" is golden hour, the DAY bucket — the render and the plan agree, so the critic's
  * "brightness indicates day, not dusk" is not off-plan. Only with a golden-lit set in the shot.
  */
-export function goldenHour(shot: Pick<ShotPlan, "scene" | "description"> & { readonly cast: readonly string[] }, setTimes: ReadonlyMap<string, string>): boolean {
-  if (!GOLDEN_DUSK.test(`${shot.scene} ${shot.description}`)) return false;
-  return shot.cast.some((id) => setTimes.get(setForShot(shot, id, setTimes)) === "golden");
+export function goldenHour(
+  shot: Pick<ShotPlan, "scene" | "description"> & { readonly mood?: string | null; readonly cast: readonly string[] },
+  setTimes: ReadonlyMap<string, string>,
+  opts: { readonly approvedSet?: boolean } = {},
+): boolean {
+  if (!shot.cast.some((id) => setTimes.get(setForShot(shot, id, setTimes)) === "golden")) return false;
+  if (GOLDEN_DUSK.test(`${shot.scene} ${shot.description}`)) return true;
+  // D89 (owner + QC 2026-10-13, kite shot 2): on a golden-lit set the owner and QC approved (a take on an
+  // approved preview's cast), a DAY-bucket shot drawn in that golden light is on-plan — the critic's
+  // "sunset, not bright daylight" judges the light the owner approved, not the Artist's drawing
+  return !!opts.approvedSet && plannedBucket(shot) === "day";
+}
+
+/**
+ * D89: the critic's raw verdicts (the model's reply before the engine's fidelity rules) per shot, from
+ * the run that drew each shot LAST — a redo's verdicts replace its take's for the shots it redrew.
+ */
+export function storedVerdicts(steps: ReadonlyArray<{ readonly runId?: string; readonly role?: string; readonly action?: string; readonly shotIndex?: number | null; readonly output?: string | null }>): Map<number, Critique[]> {
+  const byShot = new Map<number, { runId: string | undefined; verdicts: Critique[] }>();
+  for (const st of steps) {
+    if (st.role !== "critic" || (st.action !== "critique" && st.action !== "re-critique") || !st.shotIndex || !st.output) continue;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(st.output);
+    } catch {
+      continue;
+    }
+    const c = critiqueSchema.safeParse(parsed);
+    if (!c.success) continue;
+    const cur = byShot.get(st.shotIndex);
+    // a later run's verdicts on the shot replace the earlier run's (steps come take first)
+    if (!cur || cur.runId !== st.runId) byShot.set(st.shotIndex, { runId: st.runId, verdicts: [c.data] });
+    else cur.verdicts.push(c.data);
+  }
+  return new Map([...byShot].map(([i, v]) => [i, v.verdicts]));
+}
+
+/**
+ * D89: a finished run's off-plan shots re-judged from the critic's STORED verdicts under today's
+ * rules — no model call. `verdicts` are the raw critiques (before the engine's fidelity rules) of
+ * the run that drew each shot last. A shot is cleared only when it has verdicts and none of them
+ * is off-plan any more (conservative: a redo that kept an earlier drawing can't hide a failure).
+ */
+export function rejudgeOffPlan(input: {
+  readonly offPlan: readonly number[];
+  readonly shots: ReadonlyArray<Pick<ShotPlan, "scene" | "description" | "cast"> & { readonly mood?: string | null }>;
+  readonly setTimes: ReadonlyMap<string, string>;
+  readonly approvedSet: boolean;
+  readonly verdicts: ReadonlyMap<number, readonly Critique[]>;
+}): { offPlan: number[]; cleared: Array<{ shot: number; note: string }> } {
+  const offPlan: number[] = [];
+  const cleared: Array<{ shot: number; note: string }> = [];
+  for (const i of input.offPlan) {
+    const shot = input.shots[i - 1];
+    const vs = input.verdicts.get(i) ?? [];
+    const golden = shot ? goldenHour(shot, input.setTimes, { approvedSet: input.approvedSet }) : false;
+    const now = vs.map((v) => enforceFidelity(v, { goldenHour: golden }));
+    if (!vs.length || now.some((c) => offPlanAxes(c).length)) offPlan.push(i);
+    else cleared.push({ shot: i, note: `re-judged from ${vs.length} stored verdict(s), no model call: ${now.map((c) => c.fidelity?.note ?? "ok").join(" | ")}`.slice(0, 400) });
+  }
+  return { offPlan, cleared };
 }
 
 /** The bucket a shot's own words plan (dusk words win over day/night ones; null = not stated); golden dusk on a golden set is day (D82). */
@@ -163,7 +221,7 @@ export function goldenHourVerdict(c: Critique): Critique {
   if (!f || f.time !== "wrong") return c;
   const buckets = bucketsNamed(f.note ?? "");
   if (buckets.has("night")) return c;
-  return { ...c, fidelity: { ...f, time: "ok", note: `${f.note} (golden dusk on a golden-lit set is golden hour, the day bucket: not off-plan, D82)`.slice(0, 240) } };
+  return { ...c, fidelity: { ...f, time: "ok", note: `${f.note} (golden light on a golden-lit set is golden hour, the day bucket: not off-plan, D82/D89)`.slice(0, 240) } };
 }
 
 export const FIDELITY_AXES = ["time", "place", "action"] as const;
@@ -209,9 +267,9 @@ export function enforceFidelity(judged: Critique, opts: { readonly goldenHour?: 
 const BUCKET_TEXT: Record<TimeBucket, string> = { day: "the DAY bucket (dawn to golden late afternoon)", dusk: "the DUSK bucket (sunset, twilight, evening)", night: "the NIGHT bucket" };
 
 /** Story context and measured facts the fidelity verdict is judged against. */
-export function fidelityBrief(plan: Pick<Plan, "title" | "logline"> & { readonly cast?: Plan["cast"] }, shot: ShotPlan, setTimes: ReadonlyMap<string, string>): string {
+export function fidelityBrief(plan: Pick<Plan, "title" | "logline"> & { readonly cast?: Plan["cast"] }, shot: ShotPlan, setTimes: ReadonlyMap<string, string>, opts: { readonly approvedSet?: boolean } = {}): string {
   const planned = plannedBucket(shot, setTimes);
-  const golden = goldenHour(shot, setTimes);
+  const golden = goldenHour(shot, setTimes, opts);
   const sets = shot.cast.filter((id) => setTimes.has(id)).map((id) => {
     const lit = setTimes.get(setForShot(shot, id, setTimes));
     return `#${id} is lit for ${lit} (${BUCKET_TEXT[setBucket(lit) ?? "day"]})`;
@@ -224,7 +282,7 @@ export function fidelityBrief(plan: Pick<Plan, "title" | "logline"> & { readonly
   return [
     `Story: "${plan.title}" — ${plan.logline}`,
     `Scene: ${shot.scene}.`,
-    planned ? `The plan's words put this shot in ${BUCKET_TEXT[planned]}${golden ? ' ("golden dusk" on a golden-lit set is golden hour: warm low sun, bright sky, long shadows)' : ""}.` : "",
+    planned ? `The plan's words put this shot in ${BUCKET_TEXT[planned]}${golden ? " (the set's golden light is golden hour, the day bucket: warm low sun, bright sky, long shadows are on-plan)" : ""}.` : "",
     sets.length ? `Set lighting (engine kit): ${sets.join("; ")}.` : "",
     states.length ? `Key object: ${states.join("; ")}.` : "",
   ]
