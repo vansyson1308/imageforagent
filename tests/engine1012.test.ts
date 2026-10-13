@@ -1053,7 +1053,7 @@ describe("D82 · \"golden dusk\" on a golden-lit set is golden hour, the day buc
     expect(goldenHour(s11, times)).toBe(true);
     expect(plannedBucket(s11, times)).toBe("day");
     expect(plannedBucket(s11)).toBe("dusk"); // without the set's light, the words alone stay dusk
-    expect(fidelityBrief(t1.bible, s11, times)).toMatch(/DAY bucket[^.]*"golden dusk" on a golden-lit set is golden hour/);
+    expect(fidelityBrief(t1.bible, s11, times)).toMatch(/DAY bucket[^.]*the set's golden light is golden hour/);
     // the take's own verdicts on shot 11: off-plan before, golden hour now
     const judged = t1.steps.filter((s) => s.action === "score" && s.shotIndex === 11).map((s) => critiqueSchema.parse(JSON.parse(s.output!)));
     expect(judged.length).toBeGreaterThan(0);
@@ -1361,5 +1361,51 @@ describe("D88 · a walker the shot says carries a prop holds it (tegami shot 7: 
     const k2 = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-kite-cmv6fvwbe00012ao49z3wfu27/trace.json", "utf8")) as { bible: Plan; kits: string };
     const kiteShots = holdCarried(k2.bible, kitsFromJson(k2.kits), airborneProps(k2.bible.cast)).posed;
     expect(kiteShots).toEqual([]);
+  });
+});
+
+/* ---------- D89 (owner + QC 2026-10-13 night) ---------- */
+
+describe("D89 · a day shot on the approved golden-lit set is golden hour; off-plan re-judged from stored verdicts, no model call (kite shot 2)", () => {
+  type T = { id: string; bible: Plan; summary: { offPlan: number[]; castSetTimes: Record<string, string>; castFromRun?: string }; steps: Array<{ runId: string; role: string; action: string; shotIndex: number | null; output: string | null }> };
+  const kite = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-kite-cmv6tvm43003b2as8x7pl74px/trace.json", "utf8")) as T;
+  const times = new Map(Object.entries(kite.summary.castSetTimes));
+  const s2 = kite.bible.shots[1];
+  it("shot 2 (\"Morning on the pier\", golden beach) is golden hour only on the approved set", async () => {
+    const { goldenHour, fidelityBrief } = await import("@/lib/services/director/fidelity");
+    expect(s2.scene).toBe("Morning on the pier");
+    expect(times.get("brighton-seafront")).toBe("golden");
+    expect(typeof kite.summary.castFromRun).toBe("string");
+    expect(goldenHour(s2, times, { approvedSet: true })).toBe(true);
+    expect(goldenHour(s2, times)).toBe(false); // a set nobody approved: D82 alone (golden dusk words) decides
+    expect(goldenHour(s2, new Map([["brighton-seafront", "day"]]), { approvedSet: true })).toBe(false); // not golden-lit
+    expect(goldenHour({ ...s2, scene: "Night on the pier" }, times, { approvedSet: true })).toBe(false); // not a day shot
+    expect(fidelityBrief(kite.bible, s2, times, { approvedSet: true })).toMatch(/DAY bucket[^.]*the set's golden light is golden hour/);
+  });
+
+  it("the take's stored verdicts on shot 2 clear under D89; a night reading, or no approval, stays off-plan", async () => {
+    const { rejudgeOffPlan, storedVerdicts } = await import("@/lib/services/director/fidelity");
+    expect(kite.summary.offPlan).toEqual([2]);
+    const verdicts = storedVerdicts(kite.steps);
+    // the redo drew shot 2 last: only its own two verdicts count, not the take's
+    expect(verdicts.get(2)?.length).toBe(kite.steps.filter((s) => s.runId === kite.id && s.shotIndex === 2 && /^(re-)?critique$/.test(s.action)).length);
+    expect(verdicts.get(2)!.every((c) => c.fidelity?.time === "wrong")).toBe(true);
+    const base = { offPlan: kite.summary.offPlan, shots: kite.bible.shots, setTimes: times, verdicts };
+    const r = rejudgeOffPlan({ ...base, approvedSet: true });
+    expect(r.offPlan).toEqual([]);
+    expect(r.cleared.map((c) => c.shot)).toEqual([2]);
+    expect(r.cleared[0].note).toMatch(/no model call.*golden hour, the day bucket: not off-plan, D82\/D89/);
+    expect(rejudgeOffPlan({ ...base, approvedSet: false }).offPlan).toEqual([2]);
+    const night = new Map([[2, verdicts.get(2)!.map((c) => ({ ...c, fidelity: { ...c.fidelity!, note: "it is night with a moon" } }))]]);
+    expect(rejudgeOffPlan({ ...base, approvedSet: true, verdicts: night }).offPlan).toEqual([2]);
+    expect(rejudgeOffPlan({ ...base, approvedSet: true, verdicts: new Map() }).offPlan).toEqual([2]); // no stored verdict: never cleared
+  });
+
+  it("tegami's shot 7 (dusk planned, read as night, no golden set) stays off-plan", async () => {
+    const { rejudgeOffPlan, storedVerdicts } = await import("@/lib/services/director/fidelity");
+    const tg = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-tegami-cmv6vdhnn00002an4cl8du3do/trace.json", "utf8")) as T;
+    expect(tg.summary.offPlan).toEqual([7]);
+    const r = rejudgeOffPlan({ offPlan: tg.summary.offPlan, shots: tg.bible.shots, setTimes: new Map(Object.entries(tg.summary.castSetTimes ?? {})), approvedSet: true, verdicts: storedVerdicts(tg.steps) });
+    expect(r.offPlan).toEqual([7]);
   });
 });

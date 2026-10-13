@@ -10,7 +10,7 @@ Look at every frame at full size. Tick each box `[x]` when it holds, or mark it 
 
 The owner and QC may approve the film past these by eye (owner decision 2026-10-11): replace `none` with `APPROVED by owner <name> and QC <name>`. A by-eye approval never overrides a measured gate.
 
-Critic override: pending — QC (Claude) approves shot 10 by eye; owner to sign as `APPROVED by owner <name> and QC Claude`
+Critic override: APPROVED by owner Nguyễn Văn Sơn and QC Claude
 
 ## Key-object recognition (a model's judgement, not a measured gate)
 
@@ -20,7 +20,7 @@ What the viewer (the vision model) said, with no story, about each drawing of th
 
 The owner and QC may approve the key object past this by eye (owner decision 2026-10-12, D77): replace `none` with `APPROVED by owner <name> and QC <name>`. A by-eye approval never overrides a measured gate.
 
-Recognition override: pending — QC (Claude) approves #banh-chung by eye (green leaf parcel, bamboo grid; the viewer said "green grid pattern"); owner to sign as `APPROVED by owner <name> and QC Claude`
+Recognition override: APPROVED by owner Nguyễn Văn Sơn and QC Claude
 
 ## Shot 1
 
@@ -200,6 +200,6 @@ Note: QC by eye: OK — the bánh chưng on the small wooden table (D80), day-li
 
 ## Verdict
 
-Reviewer: QC — Claude (by eye, every frame at full size, 2026-10-13); owner signature pending
+Reviewer: owner Nguyễn Văn Sơn + QC Claude (QC by eye, every frame at full size; owner sign-off 2026-10-13)
 
-Verdict: PENDING — QC: PASS by eye; the owner signs the two overrides, then writes PASS here
+Verdict: PASS (Reviewer: owner Nguyễn Văn Sơn + QC Claude)

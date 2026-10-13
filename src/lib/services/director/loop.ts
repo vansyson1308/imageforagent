@@ -374,8 +374,10 @@ export async function executeRun(
       let best: { drawing: Drawing; critique: Critique | null } = { drawing: first.drawing, critique: null };
       st.setless = !placesASet(first.drawing.svg, plan);
       if (!options.critic) return;
-      const planBrief = `${fidelityBrief(plan, shot, library.setTimes ?? new Map())}${qcNote ? ` ${qcNote}` : ""}`;
-      const golden = goldenHour(shot, library.setTimes ?? new Map());
+      // D89: a take on an approved preview's cast (a redo carries its take's) shoots on sets the owner and QC approved
+      const approvedSet = { approvedSet: !!req.castFrom };
+      const planBrief = `${fidelityBrief(plan, shot, library.setTimes ?? new Map(), approvedSet)}${qcNote ? ` ${qcNote}` : ""}`;
+      const golden = goldenHour(shot, library.setTimes ?? new Map(), approvedSet);
       const c0 = await critiqueShot(ctx, { shot, index: frame.index, drawing: first.drawing, round: 0, context: planBrief, goldenHour: golden });
       best = { drawing: first.drawing, critique: c0.critique };
       st.before = c0.critique?.score ?? null;

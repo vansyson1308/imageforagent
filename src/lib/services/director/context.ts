@@ -64,6 +64,8 @@ export interface RunSummary {
   readonly redoOf?: { sourceRunId: string; shots: number[] };
   /** shots whose final version Nano still judges off-plan (wrong time of day or place) */
   readonly offPlan?: number[];
+  /** D89: off-plan shots cleared by re-judging the critic's stored verdicts under a later owner rule (no model call) */
+  readonly rejudged?: Array<{ shot: number; rule: string; note: string }>;
   /** the critic's "wrong action" notes per shot: a by-eye checklist item, not a gate (owner decision 2026-10-11) */
   readonly actionNotes?: Record<number, string>;
   /** shots whose final version places none of the film's sets */

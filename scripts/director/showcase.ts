@@ -16,6 +16,7 @@
  * docs/hackathon/evidence/byeye/<slug>-<runId>/ (every frame + checklist.md).
  * Nothing is published until a person has ticked the checklist:
  *   … --set v2 --publish v2-kite=<projectId>   # publish a candidate whose checklist says PASS
+ *   … --set v2 --sheet v2-kite=<projectId>:<runId>   # a finished take's sheet (+ checklist when it passes), off-plan re-judged from stored verdicts (D89), no model call
  *
  * Refuses to run against the mock crew: showcase films must be real.
  */
@@ -34,6 +35,7 @@ import { contactSheet } from "./contactSheet";
 import { tmpdir } from "node:os";
 import { filmCredits, type CreditStep } from "@/lib/services/director/filmCredits";
 import { heroProp } from "@/lib/services/director/plan";
+import { rejudgeOffPlan, storedVerdicts } from "@/lib/services/director/fidelity";
 import type { Plan } from "@/lib/services/director/schemas";
 
 export const SHOWCASE_STORIES = [
@@ -136,7 +138,7 @@ async function main() {
     for (const pair of arg("--sheet").split(",")) {
       const [slug, ids] = pair.split("=");
       const [pid, runId] = (ids ?? "").split(":");
-      const trace = await withTakeSteps(client, pid, await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${runId}`));
+      const trace = rejudged(await withTakeSteps(client, pid, await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${runId}`)));
       const failed = [...measuredProblems(trace.status, trace.summary, aspectOf(slug)), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0])];
       console.log(`${failed.length ? "✘" : "◐"} ${slug}: ${await writeCandidate(client, slug, pid, runId, trace, criticProblems(trace.summary), failed)}/`);
     }
@@ -282,6 +284,27 @@ async function withTakeSteps<T extends { summary: Record<string, unknown>; steps
   return { ...trace, steps };
 }
 
+/**
+ * D89 (owner + QC 2026-10-13): a finished run's off-plan shots re-judged from the critic's stored verdicts
+ * under today's fidelity rules — no model call. Cleared shots leave `offPlan` and are recorded in `rejudged`.
+ */
+function rejudged<T extends { summary: Record<string, unknown>; steps?: unknown; bible?: unknown }>(trace: T): T {
+  const off = (trace.summary.offPlan ?? []) as number[];
+  const shots = (trace.bible as Plan | null)?.shots;
+  if (!off.length || !shots) return trace;
+  const r = rejudgeOffPlan({
+    offPlan: off,
+    shots,
+    setTimes: new Map(Object.entries((trace.summary.castSetTimes ?? {}) as Record<string, string>)),
+    approvedSet: typeof trace.summary.castFromRun === "string",
+    verdicts: storedVerdicts((trace.steps ?? []) as Parameters<typeof storedVerdicts>[0]),
+  });
+  if (!r.cleared.length) return trace;
+  for (const c of r.cleared) console.log(`  re-judged shot ${c.shot}: on-plan under D89 (${c.note})`);
+  const prior = (trace.summary.rejudged ?? []) as Array<{ shot: number }>;
+  return { ...trace, summary: { ...trace.summary, offPlan: r.offPlan, rejudged: [...prior.filter((p) => !r.cleared.some((c) => c.shot === p.shot)), ...r.cleared.map((c) => ({ ...c, rule: "D89" }))] } };
+}
+
 type Trace = Record<string, unknown> & { costUsd: number; tokensIn: number; tokensOut: number; bible: { title: string; logline: string } | null; summary: Record<string, unknown>; models: Record<string, string>; provider: string; status: string; id?: string };
 
 /** The by-eye candidate: every frame (JPEG, 1280 wide) and a checklist prefilled with what the run measured. */
@@ -383,10 +406,14 @@ async function publishChecked(client: StudioClient, pairs: string, base: string,
     const story = SHOWCASE_STORIES_V2.find((x) => x.slug === slug);
     if (!story || !pid) throw new Error(`--publish ${pair}: unknown slug or no project id`);
     const root = "docs/hackathon/evidence/byeye";
-    const dir = (existsSync(root) ? readdirSync(root) : []).map((d) => `${root}/${d}`).find((d) => d.split("/").pop()!.startsWith(`${slug}-`) && existsSync(`${d}/candidate.json`) && JSON.parse(readFileSync(`${d}/candidate.json`, "utf8")).projectId === pid);
+    const dirs = (existsSync(root) ? readdirSync(root) : []).map((d) => `${root}/${d}`).filter((d) => d.split("/").pop()!.startsWith(`${slug}-`) && existsSync(`${d}/candidate.json`) && JSON.parse(readFileSync(`${d}/candidate.json`, "utf8")).projectId === pid);
+    // a redo leaves several candidates on one project: the one the owner and QC signed PASS is the film
+    const passed = dirs.filter((d) => existsSync(`${d}/checklist.md`) && /^Verdict: PASS\b/m.test(readFileSync(`${d}/checklist.md`, "utf8")));
+    if (passed.length > 1) throw new Error(`--publish ${pair}: more than one PASS candidate for that project (${passed.join(", ")})`);
+    const dir = passed[0] ?? dirs[0];
     if (!dir) throw new Error(`--publish ${pair}: no by-eye candidate for that project in ${root}/`);
     const cand = JSON.parse(readFileSync(`${dir}/candidate.json`, "utf8")) as { runId: string };
-    const trace = await withTakeSteps(client, pid, await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${cand.runId}`));
+    const trace = rejudged(await withTakeSteps(client, pid, await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${cand.runId}`)));
     const md = readFileSync(`${dir}/checklist.md`, "utf8");
     // measured gates always block; the critic's scores block unless the owner and QC approved the film by eye
     const critic = criticProblems(trace.summary);
