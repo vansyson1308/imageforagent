@@ -923,3 +923,115 @@ describe("D79 · a film under its format's floor holds every shot a little longe
     expect(padHolds(out.plan, frames, 46).added).toBe(0);
   });
 });
+
+/* ---------- D80 (take day 2026-10-13): the table under the bánh chưng is the engine's (owner + QC D78) ---------- */
+
+describe("D80 · an object the shot says rests on a table gets the table, drawn by the engine (bánh chưng take 1, shot 11)", () => {
+  const t1 = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-banh-chung-cmv5xjlgc005t2aqt3v8r4bh8/trace.json", "utf8")) as {
+    bible: Plan;
+    library: string;
+    steps: Array<{ action: string; shotIndex: number | null; output: string | null }>;
+  };
+  const shot = t1.bible.shots[10];
+  const drawn = t1.steps.find((s) => s.shotIndex === 11 && s.action === "revise")!.output!;
+
+  it("reads \"on the table\" in EN, VI and JA; an altar (bàn thờ), a beach or a street is not a table", async () => {
+    const { restsOnTable } = await import("@/lib/services/director/restSurface");
+    expect(shot.description).toMatch(/insert on the small wooden table/);
+    expect(restsOnTable(shot.description)).toBe(true);
+    expect(restsOnTable("The kite lies flat on the kitchen table")).toBe(true);
+    expect(restsOnTable("Chiếc bánh chưng nằm trên bàn giữa phòng khách")).toBe(true);
+    expect(restsOnTable("手紙はテーブルの上にある")).toBe(true);
+    expect(restsOnTable("Trên bàn thờ là chiếc bánh chưng")).toBe(false);
+    expect(restsOnTable("The kite lies on the sand of the beach")).toBe(false);
+    expect(restsOnTable("Haru-san stands on the stone street")).toBe(false);
+  });
+
+  it("validateDrawing puts a wooden table under the parcel: behind it, wider than it, its top at the parcel's base; the parcel is untouched", async () => {
+    const opts = {
+      castDefs: t1.library,
+      symbols: t1.bible.cast.map((c) => c.id),
+      aspectRatio: "16:9",
+      shot,
+      index: 11,
+      canvas,
+      fps: 12,
+      characters: t1.bible.cast.filter((c) => c.kind === "character").map((c) => c.id),
+      sets: t1.bible.cast.filter((c) => c.kind === "set").map((c) => c.id),
+      props: ["banh-chung"],
+      strict: false,
+    };
+    const out = await validateDrawing(drawn, opts);
+    sanitizeSvg(out.svg, "frame");
+    expect(out.checks!.facts.join(" ")).toMatch(/#banh-chung rests on a table drawn by the engine/);
+    expect(out.svg.indexOf('data-rest="table"')).toBeGreaterThan(-1);
+    expect(out.svg.indexOf('data-rest="table"')).toBeLessThan(out.svg.indexOf('href="#banh-chung"'));
+    // a revision of the frame (it carries the engine's table) gets one table, redrawn, never two
+    const again = await validateDrawing("```svg\n" + out.svg + "\n```", opts);
+    expect(again.svg.match(/data-rest=/g)).toHaveLength(1);
+    // measured on the render: wood under the parcel's base on both sides, the parcel's own pixels unchanged
+    const { tableUnder } = await import("@/lib/services/director/restSurface");
+    const { visibleBody, withoutUses } = await import("@/lib/services/director/svgTools");
+    const bare = out.svg.replace(/<g\b[^>]*data-rest[^>]*>[\s\S]*?<\/g>/, "");
+    const before = await renderArtwork(t1.library, bare, "16:9", "1K");
+    const { body } = await visibleBody(before, await renderArtwork(t1.library, withoutUses(bare, "banh-chung"), "16:9", "1K"));
+    expect(tableUnder(bare, "banh-chung", body!, canvas)!.svg).toBe(out.svg);
+    const a = await sharp(before).raw().toBuffer({ resolveWithObject: true });
+    const b = await sharp(out.png).raw().toBuffer({ resolveWithObject: true });
+    const px = (img: typeof a, x: number, y: number) => {
+      const i = (Math.round(y * img.info.height) * img.info.width + Math.round(x * img.info.width)) * img.info.channels;
+      return [img.data[i], img.data[i + 1], img.data[i + 2]];
+    };
+    const cx = (body!.x0 + body!.x1) / 2;
+    const w = body!.x1 - body!.x0;
+    for (const x of [cx - w * 0.65, cx + w * 0.65]) {
+      const [r, g, bl] = px(b, x, body!.y1 + 0.025);
+      expect(r).toBeGreaterThan(g); // warm wood, not the green-blue floor
+      expect(g).toBeGreaterThan(bl);
+      expect(px(b, x, body!.y1 + 0.025)).not.toEqual(px(a, x, body!.y1 + 0.025));
+    }
+    expect(px(b, cx, (body!.y0 + body!.y1) / 2)).toEqual(px(a, cx, (body!.y0 + body!.y1) / 2));
+    expect(px(b, cx, 0.05)).toEqual(px(a, cx, 0.05));
+  }, 60000);
+
+  it("a shot with people in it, or a prop not said to be on a table, gets no table", async () => {
+    const opts = { castDefs: t1.library, symbols: t1.bible.cast.map((c) => c.id), aspectRatio: "16:9", index: 11, canvas, fps: 12, characters: ["an", "grandma"], props: ["banh-chung"], strict: false };
+    const plain = await validateDrawing(drawn, { ...opts, shot: { ...shot, description: "Close-up insert: the square wrapped parcel, dawn light." } });
+    expect(plain.svg).not.toMatch(/data-rest/);
+    const wide = await validateDrawing(drawn, { ...opts, shot: { ...shot, shotType: "Wide shot", cast: ["front-room", "an", "banh-chung"] } });
+    expect(wide.svg).not.toMatch(/data-rest/);
+  }, 60000);
+
+  it("a parcel nested in a transformed group gets its table before that group (in frame coordinates)", async () => {
+    const { tableUnder } = await import("@/lib/services/director/restSurface");
+    const svg = '<rect width="1920" height="1080" fill="#334"/><g transform="translate(10 0)"><g><use href="#banh-chung" x="600" y="200" width="700" height="700"/></g></g>';
+    const out = tableUnder(svg, "banh-chung", { x0: 0.32, y0: 0.18, x1: 0.68, y1: 0.83 }, canvas)!;
+    expect(out.svg.indexOf("<g data-rest")).toBe(svg.indexOf('<g transform'));
+    sanitizeSvg(out.svg, "frame");
+  });
+});
+
+/* ---------- D81 (take day 2026-10-13): a zoom on a 9:16 canvas stays on the canvas (tegami take 1, shots 2–6) ---------- */
+
+describe("D81 · every camera move keeps the painting on the canvas, whatever its aspect", () => {
+  it("drift and dolly (zoom only) centre on the canvas's own centre; the painting covers the whole frame at every key time", async () => {
+    const { buildShotMotion } = await import("@/lib/services/director/camera");
+    const { motionSpecSchema } = await import("@/lib/validation/motionSchema");
+    const { prepareMotion, evaluateMotionAt } = await import("@/lib/services/motion/evaluate");
+    for (const cv of [{ w: 1080, h: 1920 }, { w: 1920, h: 1080 }, { w: 1080, h: 1080 }, { w: 1080, h: 1350 }]) {
+      for (const [i, shotType] of [[2, "Medium shot"], [3, "Close-up"], [4, "Wide shot"], [5, "Wide shot"], [6, "Pan"], [7, "Tilt up"], [8, "Zoom out"]] as const) {
+        const motion = motionSpecSchema.parse(buildShotMotion({ index: i, shotType, duration: 6, fps: 12, canvas: cv, background: "#efe2c6" }));
+        const prep = prepareMotion(motion);
+        for (const t of [0, motion.poster ?? 3, 6]) {
+          const { place } = evaluateMotionAt(prep, t);
+          const [x, y] = place.at;
+          // the art rect (cv.w × cv.h, centred on place.at, scaled) covers [0, w] × [0, h]
+          expect(x - (cv.w / 2) * place.scale, `${cv.w}×${cv.h} ${shotType} t=${t}`).toBeLessThanOrEqual(0.5);
+          expect(x + (cv.w / 2) * place.scale).toBeGreaterThanOrEqual(cv.w - 0.5);
+          expect(y - (cv.h / 2) * place.scale).toBeLessThanOrEqual(0.5);
+          expect(y + (cv.h / 2) * place.scale).toBeGreaterThanOrEqual(cv.h - 0.5);
+        }
+      }
+    }
+  });
+});

@@ -179,6 +179,9 @@ export function buildShotMotion(opts: {
     poster: Math.round(duration * 0.5 * 1000) / 1000,
     scene: {
       version: 1,
+      // the construct's place defaults to the 16:9 centre (960, 540): a zoom-only move on any other canvas would push the
+      // painting off-centre (tegami take 1, 9:16, D81), so the camera always starts on THIS canvas's centre
+      place: { at: [canvas.w / 2, canvas.h / 2] },
       shapes: [{ id: "art", type: "rect", w: canvas.w, h: canvas.h, fill: `url(#${artPatternId(opts.index)})` }, ...ambient.shapes],
     },
     tracks: [...cameraTracks(move, duration, canvas), ...ambient.tracks],
