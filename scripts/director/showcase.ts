@@ -130,6 +130,18 @@ async function main() {
     return;
   }
 
+  // --sheet slug=projectId:runId[,…]: the contact sheet + credit frame (and checklist when it passes) of a finished take, no model call
+  if (arg("--sheet")) {
+    for (const pair of arg("--sheet").split(",")) {
+      const [slug, ids] = pair.split("=");
+      const [pid, runId] = (ids ?? "").split(":");
+      const trace = await client.json<Trace>("GET", `/api/projects/${pid}/director/runs/${runId}`);
+      const failed = [...measuredProblems(trace.status, trace.summary, aspectOf(slug)), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0])];
+      console.log(`${failed.length ? "✘" : "◐"} ${slug}: ${await writeCandidate(client, slug, pid, runId, trace, criticProblems(trace.summary), failed)}/`);
+    }
+    return;
+  }
+
   if (arg("--publish")) {
     await publishChecked(client, arg("--publish"), base, index, indexPath);
     return;
@@ -204,7 +216,8 @@ async function main() {
       // v2: the measured gates block; critic shortfalls go to the by-eye candidate (owner + QC may approve past them); nothing is published from here
       const problems = [...measuredProblems(trace.status, trace.summary, aspectOf(s.slug)), ...voiceProblems((trace.steps ?? []) as Parameters<typeof voiceProblems>[0])];
       if (problems.length) {
-        console.log(`✘ ${s.slug}: ${problems.join("; ")}. Kept the trace as evidence and skipped publishing.`);
+        const dir = await writeCandidate(client, s.slug, pid, runId, trace, criticProblems(trace.summary), problems);
+        console.log(`✘ ${s.slug}: ${problems.join("; ")}. Kept the trace as evidence and skipped publishing; contact sheet + credit frame for QC in ${dir}/`);
         continue;
       }
       const critic = criticProblems(trace.summary);
@@ -240,8 +253,9 @@ function narrationOf(slug: string, lines: readonly string[]): { narration: reado
 type Trace = Record<string, unknown> & { costUsd: number; tokensIn: number; tokensOut: number; bible: { title: string; logline: string } | null; summary: Record<string, unknown>; models: Record<string, string>; provider: string; status: string; id?: string };
 
 /** The by-eye candidate: every frame (JPEG, 1280 wide) and a checklist prefilled with what the run measured. */
-async function writeCandidate(client: StudioClient, slug: string, pid: string, runId: string, trace: Trace, critic: readonly string[] = []): Promise<string> {
-  const dir = `docs/hackathon/evidence/byeye/${slug}-${runId}`;
+async function writeCandidate(client: StudioClient, slug: string, pid: string, runId: string, trace: Trace, critic: readonly string[] = [], failed: readonly string[] = []): Promise<string> {
+  // a take that fails a measured gate still gets its contact sheet + credit frame for QC (owner 2026-10-12), never a checklist
+  const dir = failed.length ? `docs/hackathon/evidence/takes/${slug}-${runId}` : `docs/hackathon/evidence/byeye/${slug}-${runId}`;
   mkdirSync(dir, { recursive: true });
   const project = await client.json<{ frames: Array<{ index: number; imageUrl: string | null; dialogue: string | null; shotType: string | null; description: string | null }> }>("GET", `/api/projects/${pid}`);
   const health = await client.json<{ commit: string }>("GET", "/api/health");
@@ -263,7 +277,8 @@ async function writeCandidate(client: StudioClient, slug: string, pid: string, r
   // what the viewer said about each drawing of the key object stays on the checklist (D77), recognised or not
   const seen = ((trace.summary.propRecognition ?? []) as Array<{ symbol: string; ok: boolean | null; saw: string }>).map((r) => `#${r.symbol}: ${r.ok === true ? "recognised" : r.ok === false ? "NOT recognised" : "not checked"} — the viewer said "${r.saw}"`);
   const recognition = recognitionProblems(trace.summary).length ? seen : [];
-  writeFileSync(`${dir}/checklist.md`, checklistTemplate({ slug, projectId: pid, runId, commit: health.commit.slice(0, 7), hero: plan ? heroProp(plan) : null, shots, critic, recognition }));
+  if (failed.length) writeFileSync(`${dir}/problems.md`, [`# ${slug} · run ${runId} · NOT a candidate (measured gates)`, "", ...failed.map((x) => `- ${x}`), ...critic.map((x) => `- critic: ${x}`), ...seen.map((x) => `- recognition: ${x}`), ""].join("\n"));
+  else writeFileSync(`${dir}/checklist.md`, checklistTemplate({ slug, projectId: pid, runId, commit: health.commit.slice(0, 7), hero: plan ? heroProp(plan) : null, shots, critic, recognition }));
   // the contact sheet: every shot on one image, for the owner's by-eye QC
   const tiles = shots.filter((sh) => existsSync(`${dir}/${sh.image}`)).map((sh) => ({ image: `${dir}/${sh.image}`, label: `${String(sh.index).padStart(2, "0")} · ${sh.measured.split(" · ")[0]} · critic ${scores[sh.index] ?? "n/a"}/10` }));
   writeFileSync(`${dir}/contact.jpg`, await contactSheet(tiles, { aspect: aspectOf(slug), title: `${slug} · ${plan?.title ?? ""} · run ${runId} · ${health.commit.slice(0, 7)}` }));
