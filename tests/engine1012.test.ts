@@ -1345,3 +1345,21 @@ describe("D86 (b) · a kite up in the sky with nobody holding it: the flyer hold
     expect(d.svg).toMatch(/<use href="#kite--starred" x="800" y="150"/);
   }, 60_000);
 });
+
+describe("D88 · a walker the shot says carries a prop holds it (tegami shot 7: \"envelope in hand\")", () => {
+  it("the gentleman walking with the envelope in hand is posed hold; kites, walkers with nothing to carry, and held props elsewhere are untouched", async () => {
+    const t = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-tegami-cmv6up56t000r2ao031ikajcv/trace.json", "utf8")) as { bible: Plan; kits: string };
+    const { kitsFromJson } = await import("@/lib/services/director/series");
+    const { holdCarried, airborneProps } = await import("@/lib/services/director/acting");
+    const kits = kitsFromJson(t.kits);
+    expect(t.bible.shots[6].description).toMatch(/walks away from us, envelope in hand/);
+    const { plan, posed } = holdCarried(t.bible, kits, airborneProps(t.bible.cast));
+    expect(posed).toContainEqual({ shot: 7, who: "elderly-gentleman" });
+    expect(plan.shots[6].acting).toEqual([{ who: "elderly-gentleman", pose: "hold", expression: "smile" }]);
+    expect(holdCarried(plan, kits, airborneProps(t.bible.cast)).posed).toEqual([]); // idempotent
+    // the kite (airborne) is never "carried" into the hands by this rule
+    const k2 = JSON.parse(readFileSync("docs/hackathon/evidence/takes/v2-kite-cmv6fvwbe00012ao49z3wfu27/trace.json", "utf8")) as { bible: Plan; kits: string };
+    const kiteShots = holdCarried(k2.bible, kitsFromJson(k2.kits), airborneProps(k2.bible.cast)).posed;
+    expect(kiteShots).toEqual([]);
+  });
+});

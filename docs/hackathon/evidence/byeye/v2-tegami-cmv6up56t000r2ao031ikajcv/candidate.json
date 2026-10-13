@@ -1,0 +1,96 @@
+{
+  "slug": "v2-tegami",
+  "projectId": "cmv6gh0ay00a42ao45fxmyd5c",
+  "runId": "cmv6up56t000r2ao031ikajcv",
+  "commit": "88c9ce7e2b52829d11838c1cfda5fd204c2bc549",
+  "filmSec": 44.916667,
+  "withCreditsSec": 47.917,
+  "summary": {
+    "status": "done",
+    "shots": 7,
+    "rendered": 7,
+    "firstPassOk": 6,
+    "repairs": 7,
+    "criticBefore": 4.71,
+    "criticAfter": 5,
+    "revisions": 16,
+    "gateFailures": 0,
+    "gateFailShots": [],
+    "offPlan": [],
+    "actionNotes": {
+      "3": "Seal detail missing",
+      "4": "action mismatch",
+      "5": "The envelope is not clearly visible and the lighting lacks amber depth.",
+      "6": "face not fully visible",
+      "7": "gentleman not walking away"
+    },
+    "setless": [],
+    "shotScores": {
+      "1": 8,
+      "2": 7,
+      "3": 6,
+      "4": 4,
+      "5": 3,
+      "6": 3,
+      "7": 4
+    },
+    "belowFloor": [
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+    "lintErrors": 0,
+    "lintWarnings": 0,
+    "durationSec": 44.916667,
+    "wallMs": 55490,
+    "tokens": 18606,
+    "costUsd": 0.01072398,
+    "continuity": [],
+    "textCritic": false,
+    "propRecognition": [
+      {
+        "symbol": "envelope",
+        "prop": "envelope",
+        "state": "sealed",
+        "ok": false,
+        "saw": "tag",
+        "redraws": 4
+      },
+      {
+        "symbol": "envelope--open",
+        "prop": "envelope",
+        "state": "open",
+        "ok": false,
+        "saw": "notebook page",
+        "redraws": 4
+      }
+    ],
+    "castSetTimes": {
+      "kissaten": "day",
+      "river-path": "dusk"
+    },
+    "castFromRun": "cmv6twvsf003s2as8udur27q4",
+    "research": {
+      "notes": 6,
+      "cited": 5,
+      "castCiting": 0,
+      "shotsCiting": 5,
+      "byUse": {
+        "costume": 1,
+        "set": 1,
+        "palette": 1,
+        "customs": 1,
+        "props": 1
+      }
+    },
+    "redoOf": {
+      "sourceRunId": "cmv6twvsf003s2as8udur27q4",
+      "shots": [
+        7
+      ]
+    }
+  }
+}

@@ -237,6 +237,32 @@ export function holdAirborne(plan: Plan, kits: ReadonlyMap<string, KitSpec>, air
   return { plan: posed.length ? { ...plan, shots } : plan, posed };
 }
 
+/** "envelope in hand", "holding", "clutching", "carries", 手に, 抱え, cầm: a character carries the shot's prop. */
+export const CARRY_WORDS = /\b(in (?:his|her|their|one|both) hands?|in hand|holds?|holding|held|clutch\w*|carr(?:y|ies|ying|ied)|grips?|gripping|cradl\w*)\b|cầm|ôm|xách|手に|手にし|抱え|握り|持って|持ち/iu;
+
+/**
+ * D88 (owner + QC 2026-10-13, tegami shot 7: "The gentleman walks away from us, envelope in hand" — two redos
+ * left the envelope floating beside him): a walker cannot hold a prop (only the "hold" pose takes one into the
+ * hands), so when a shot says a walking kit character carries one of the shot's (non-airborne) props, that
+ * character is posed "hold" (the engine then puts the prop in the hands); the walk is traded for the held object.
+ * The carrier: the walker the description names, else the first walker. Expression kept.
+ */
+export function holdCarried(plan: Plan, kits: ReadonlyMap<string, KitSpec>, airborne: readonly string[]): { plan: Plan; posed: Array<{ shot: number; who: string }> } {
+  const posed: Array<{ shot: number; who: string }> = [];
+  const name = (id: string) => (plan.cast.find((c) => c.id === id)?.name ?? id).split(/[\s(,]/)[0].toLowerCase();
+  const props = new Set(plan.cast.filter((c) => c.kind === "prop" && !airborne.includes(c.id)).map((c) => c.id));
+  const shots = plan.shots.map((shot, i) => {
+    if (!shot.cast.some((c) => props.has(c)) || !CARRY_WORDS.test(shot.description)) return shot;
+    const walkers = (shot.acting ?? []).filter((a) => a.pose === "walk" && kits.has(a.who) && shot.cast.includes(a.who));
+    if (!walkers.length) return shot;
+    const text = shot.description.toLowerCase();
+    const carrier = walkers.find((a) => text.includes(name(a.who))) ?? walkers[0];
+    posed.push({ shot: i + 1, who: carrier.who });
+    return { ...shot, acting: (shot.acting ?? []).map((a) => (a.who === carrier.who ? { ...a, pose: "hold" as const } : a)) };
+  });
+  return { plan: posed.length ? { ...plan, shots } : plan, posed };
+}
+
 /**
  * C (owner 2026-10-12, kite shots 1, 9, 10 had no string and nobody holding it): an airborne prop
  * that flies ABOVE a kit character of the shot gets a thin string from that character's hand to the
