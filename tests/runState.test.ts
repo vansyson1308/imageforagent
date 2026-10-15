@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { emptyRun, modelLabel, reduceAll, reduceRun, statusLine, type DirectorEventLike } from "@/lib/director/runState";
-import { dueEvents, traceToEvents, type Trace } from "@/lib/director/traceReplay";
+import { dueEvents, filmTotals, TAKE_GAP_MS, traceTakes, traceToEvents, type Trace } from "@/lib/director/traceReplay";
 import { SAMPLE_STORIES } from "@/lib/director/sampleStories";
 
 const step = (seq: number, extra: Record<string, unknown> = {}) => ({
@@ -100,6 +100,54 @@ describe("showcase replay", () => {
     expect(a.batch[0].type).toBe("run");
     const b = dueEvents(ev, a.next, ev.at(-1)!.at);
     expect(a.batch.length + b.batch.length).toBe(ev.length);
+  });
+});
+
+describe("replay of a film made in several takes (2026-10-15: the kite replay ended in 7 s and showed only its last take's $0.021)", () => {
+  const read = (slug: string) => JSON.parse(readFileSync(path.join(process.cwd(), `public/showcase/${slug}/trace.json`), "utf8")) as Trace;
+  const kite = read("v2-kite");
+  const index = JSON.parse(readFileSync(path.join(process.cwd(), "public/showcase/index.json"), "utf8")) as { films: Array<{ slug: string; stills?: Record<string, string>; totals?: unknown; summary: { shots: number } }> };
+
+  it("finds every take in run order; the totals are the sum of the takes", () => {
+    const takes = traceTakes(kite);
+    expect(takes.map((t) => t.runId)).toEqual(["cmv6fvwbe00012ao49z3wfu27", "cmv6tmikq00002as8u3uwsquz", "cmv6tvm43003b2as8x7pl74px", "cmv6z9x3k00002apec9c55j9f"]);
+    expect(takes.at(-1)!.runId).toBe(kite.id);
+    const t = filmTotals(kite);
+    expect(t.takes).toBe(4);
+    expect(t.tokens).toBe(kite.steps.reduce((a, s) => a + s.tokensIn + s.tokensOut, 0));
+    expect(t.costUsd).toBeCloseTo(kite.steps.reduce((a, s) => a + s.costUsd, 0), 6);
+    expect(t.costUsd).toBeGreaterThan(10 * (kite as unknown as { costUsd: number }).costUsd);
+  });
+
+  it("plays every take on one clock, idle time between takes cut to a short pause, and ends on the film's totals", () => {
+    const ev = traceToEvents(kite, { shots: { 1: "/s/F01.jpg" } });
+    expect(ev.map((e) => e.at)).toEqual([...ev.map((e) => e.at)].sort((a, b) => a - b));
+    const spans = traceTakes(kite).reduce((a, t) => a + t.end - t.start, 0);
+    expect(ev.at(-1)!.at).toBeGreaterThanOrEqual(spans);
+    expect(ev.at(-1)!.at).toBeLessThanOrEqual(spans + 4 * TAKE_GAP_MS + 10);
+    const state = reduceAll(ev.map((e) => e.event));
+    // no step is lost to a seq collision between takes
+    expect(state.steps.length).toBe(kite.steps.length);
+    expect(state.totals.costUsd).toBeCloseTo(filmTotals(kite).costUsd, 6);
+    expect(state.summary).toMatchObject({ takes: 4, costUsd: filmTotals(kite).costUsd, tokens: filmTotals(kite).tokens, wallMs: filmTotals(kite).wallMs });
+    // the steps of take 1 start at the beginning, not all at once
+    const firstTake = ev.filter((e) => e.event.type === "step").slice(0, 50).map((e) => e.at);
+    expect(new Set(firstTake).size).toBeGreaterThan(40);
+  });
+
+  it("a single-take trace replays as before", () => {
+    const tea = read("tea-house");
+    expect(traceTakes(tea)).toHaveLength(1);
+    const done = traceToEvents(tea).at(-1)!.event as unknown as { summary: unknown };
+    expect(done.summary).toEqual(tea.summary);
+  });
+
+  it("every v2 showcase film ships a still per shot and its whole-film totals", () => {
+    for (const f of index.films.filter((x) => ["v2-kite", "v2-banh-chung", "v2-tegami"].includes(x.slug))) {
+      expect(Object.keys(f.stills ?? {}), f.slug).toHaveLength(f.summary.shots);
+      for (const u of Object.values(f.stills!)) expect(existsSync(path.join(process.cwd(), "public", u)), u).toBe(true);
+      expect(f.totals, f.slug).toEqual(filmTotals(read(f.slug)));
+    }
   });
 });
 

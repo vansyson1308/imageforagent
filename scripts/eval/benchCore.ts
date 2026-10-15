@@ -205,6 +205,15 @@ export function upliftOf(rows: readonly Row[], judges: readonly string[]): numbe
   return meanOrNull(per);
 }
 
+/** n, mean, sample SD and range of the scored values (owner 2026-10-14: every mean is reported with its n and spread). */
+export function spread(xs: ReadonlyArray<number | null | undefined>): { n: number; mean: number | null; sd: number | null; min: number | null; max: number | null } {
+  const v = xs.filter((x): x is number => typeof x === "number" && Number.isFinite(x));
+  if (!v.length) return { n: 0, mean: null, sd: null, min: null, max: null };
+  const m = v.reduce((a, b) => a + b, 0) / v.length;
+  const sd = v.length > 1 ? Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / (v.length - 1)) : null;
+  return { n: v.length, mean: r2(m), sd: sd === null ? null : r2(sd), min: r2(Math.min(...v)), max: r2(Math.max(...v)) };
+}
+
 export function aggregate(config: string, rows: readonly Row[], judges: readonly string[]): Agg {
   const rs = rows.filter((r) => r.config === config);
   const self = rs.filter((r) => r.criticBefore !== null && r.criticAfter !== null);
@@ -248,6 +257,8 @@ export interface ResultsInput {
   /** v2 rows (main + pilot) and the reused v1 crew rows */
   readonly rows: readonly Row[];
   readonly configs: readonly string[];
+  /** the exact command that produced the rows (no passcode), printed under "Reproduce" */
+  readonly command?: string;
 }
 
 /** EVAL_RESULTS.md for v2 (numbers only from the rows; the honest reading is written by a person). */
@@ -318,6 +329,29 @@ export function resultsMarkdown(x: ResultsInput): string {
     "",
     "![Director benchmark v2 chart](eval/v2/chart.png)",
     "",
+    "## Spread, failures, time and cost",
+    "",
+    "Per config and judge: n = runs that judge scored, mean ± sample SD and the range of the per-run means. A failed run is any run whose status is not `done`.",
+    "",
+    `| Config | Judge | n | Mean | SD | Min–max |`,
+    "|---|---|---|---|---|---|",
+    ...configs.flatMap((c) =>
+      x.judges.map((j) => {
+        const s = spread(main.filter((r) => r.config === c).map((r) => r.judges[j]));
+        return `| ${c} | ${short(j)}${j === primary ? " (headline)" : ""} | ${s.n} | ${fmt(s.mean)} | ${fmt(s.sd)} | ${s.min === null ? "—" : `${s.min}–${s.max}`} |`;
+      }),
+    ),
+    "",
+    "| Config | Runs | Done | Failed (status) | Wall s mean | Wall s total | USD total |",
+    "|---|---|---|---|---|---|---|",
+    ...configs.map((c) => {
+      const rs = main.filter((r) => r.config === c);
+      const failed = rs.filter((r) => r.status !== "done");
+      const wall = rs.reduce((t, r) => t + r.wallSec, 0);
+      return `| ${c} | ${rs.length} | ${rs.length - failed.length} | ${failed.length}${failed.length ? ` (${failed.map((r) => `${r.prompt}: ${r.status}`).join("; ")})` : ""} | ${rs.length ? r2(wall / rs.length) : "—"} | ${r2(wall)} | $${rs.reduce((t, r) => t + r.usd, 0).toFixed(3)} |`;
+    }),
+    "",
+    ...(x.command ? ["## Reproduce", "", "```bash", x.command, "```", "", "The bench refuses to start unless the server reports the eval commit, stops if it changes, and on resume keeps only rows made on that commit.", ""] : []),
   ];
   const pairTable = (title: string, p: PairStats, la: string, lb: string, note: string) =>
     p.n

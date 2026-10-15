@@ -8,8 +8,8 @@ import { logger } from "@/lib/services/logger";
 import { BudgetExceededError, BudgetTracker, CancelledError, clampBudget, type DirectorBudget } from "@/lib/services/director/budget";
 import { recordStep, throwIfCancelled, type DirectorContext, type DirectorEvent, type DirectorOptions, type RunSummary } from "@/lib/services/director/context";
 import { decideResearch, measureResearchUse, researchMode, runResearch, type ResearchUse } from "@/lib/services/director/research";
-import { runPlan, writeScript } from "@/lib/services/director/plan";
-import { runCast, type CastLibrary } from "@/lib/services/director/cast";
+import { runPlan, stateMembers, writeScript } from "@/lib/services/director/plan";
+import { ensureRenderableLibrary, runCast, type CastLibrary } from "@/lib/services/director/cast";
 import { recognizeHeroProps, type Recognition } from "@/lib/services/director/recognize";
 import { castHashes, mergeLibraries, persistRunCast, type CastFromRun, type SeriesData } from "@/lib/services/director/series";
 import { actingBrief, airborneProps, holdAirborne, holdCarried, neededVariants, variantDefs } from "@/lib/services/director/acting";
@@ -330,12 +330,24 @@ export async function executeRun(
         await recordStep(ctx, { role: "cast", model: "engine", action: "acting-variants", summary: `Posed ${v.length} variant(s) from the kit: ${v.map((x) => `${x.who} ${x.pose}/${x.expression}`).join(", ")}` });
       }
     }
+    // the whole library must still render after every step that adds to it (bench 2026-10-15: a malformed
+    // symbol killed two runs in the recognition render); only the broken symbol(s) are replaced
+    const guardLibrary = async (after: string) => {
+      const fixed = await ensureRenderableLibrary(library.defs, [...plan.cast, ...stateMembers(plan)], ctx.canvas, aspectRatio);
+      if (!fixed) return;
+      for (const id of fixed.broken) library.kits.delete(id);
+      library = { ...library, defs: fixed.defs, symbols: symbolIds(fixed.defs) };
+      await prisma.project.update({ where: { id: req.projectId }, data: { artworkDefs: fixed.defs } });
+      await recordStep(ctx, { role: "cast", model: "engine", action: "defs:salvaged", summary: `The library no longer rendered after ${after}; replaced only the broken symbol(s): ${fixed.broken.map((x) => `#${x}`).join(", ")}`, error: `library did not render after ${after}` });
+    };
+    await guardLibrary("the cast and its variants");
     // A · the story's key object must be recognisable on its own, every state (owner 2026-10-12)
     const recognized = redo
       ? { library, results: [...(redo.summary.propRecognition ?? [])] as Recognition[] }
       : await recognizeHeroProps(ctx, plan, library, aspectRatio, req.castFrom?.recognition, new Set(req.castFrom?.edits?.changed ?? []));
     library = recognized.library;
     propRecognition = recognized.results;
+    if (!redo) await guardLibrary("the key-object recognition");
     castSetTimes = library.setTimes ? Object.fromEntries(library.setTimes) : undefined;
     await persistRunCast(runId, { library: library.defs, kits: library.kits });
     if (req.stopAfter === "cast") {

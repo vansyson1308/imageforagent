@@ -139,6 +139,26 @@ export async function validateLibrary(defs: string, cast: readonly CastMember[],
  * (a prop state or set lighting variant, `<id>--…`), or dropped. Gradients only the broken symbols
  * used are dropped with them. Pure apart from the renders.
  */
+/**
+ * The library as a whole still renders (bench 2026-10-15 on 394a797: two crew runs died in the hero-prop
+ * recognition on a library that no longer parsed: "Opening and ending tag mismatch: defs and svg",
+ * "Couldn't find end of Start Tag ellipse"). Checked after every step that adds to the library; when it
+ * does not render, only the broken symbol(s) are replaced (salvageLibrary), and if even that fails, every
+ * member gets a placeholder. null = the library renders as it is.
+ */
+export async function ensureRenderableLibrary(defs: string, members: readonly CastMember[], canvas: { w: number; h: number }, aspectRatio: string): Promise<{ defs: string; broken: string[] } | null> {
+  const renders = (d: string) =>
+    renderArtwork(d, `<rect width="${canvas.w}" height="${canvas.h}" fill="#ffffff"/>`, aspectRatio, "1K").then(
+      () => true,
+      () => false,
+    );
+  if (await renders(defs)) return null;
+  const { symbols, extras } = splitLibrary(defs);
+  const salvaged = await salvageLibrary([...new Set(symbols.values())], extras, members, canvas, aspectRatio);
+  if (await renders(salvaged.defs)) return salvaged;
+  return { defs: placeholderLibrary(members.filter((m) => !m.id.includes("--")), canvas), broken: members.map((m) => m.id) };
+}
+
 export async function salvageLibrary(symbols: readonly string[], extras: ReadonlyMap<string, string>, members: readonly CastMember[], canvas: { w: number; h: number }, aspectRatio: string): Promise<{ defs: string; broken: string[] }> {
   const kept: string[] = [];
   const broken: string[] = [];

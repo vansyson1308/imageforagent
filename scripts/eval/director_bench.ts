@@ -307,7 +307,9 @@ async function main() {
   writeFileSync(`${dir}/runs.csv`, toCsv(all, judgeNames));
   const shown = Object.values(CONFIGS).map((c) => c.name).filter((n) => rows.some((r) => r.config === n));
   await writeChart(`${dir}/chart.png`, [...shown, ...(v1.length ? ["crew v1"] : [])].map((c) => aggregate(c, all.filter((r) => r.set === "main"), judgeNames)), mock);
-  let md = resultsMarkdown({ generatedAt: new Date().toISOString(), base, provider: meta.director.provider, mock, judges: judgeNames, rows: all, configs: shown });
+  // the exact command, without the passcode (it is read from DEMO_PASSCODE, never printed)
+  const command = `npm run director:bench -- ${process.argv.slice(2).filter((a, i, all) => a !== "--passcode" && all[i - 1] !== "--passcode").join(" ")}`;
+  let md = resultsMarkdown({ generatedAt: new Date().toISOString(), base, provider: meta.director.provider, mock, judges: judgeNames, rows: all, configs: shown, command });
   const target = `${out}/EVAL_RESULTS.md`;
   const prev = existsSync(target) ? readFileSync(target, "utf8") : "";
   const reading = prev.startsWith("# Director benchmark v2") ? prev.match(/## Reading the results \(honest\)\n[\s\S]*?(?=\nNotes: )/)?.[0] : null;

@@ -38,6 +38,8 @@ interface ShowcaseFilm {
     costUsd: number;
     textCritic: boolean;
   };
+  /** a film made in several takes: what all of them took together (traceReplay.filmTotals); summary covers the last take only */
+  totals?: { takes: number; tokens: number; costUsd: number; wallMs: number };
   createdAt: string;
   version?: string;
 }
@@ -96,8 +98,8 @@ export default async function ShowcasePage() {
                   <Stat k="first-pass" v={`${f.summary.firstPassOk}/${f.summary.shots}`} />
                   <Stat k="repairs" v={String(f.summary.repairs)} />
                   <Stat k={f.summary.textCritic ? "critic (text)" : "critic"} v={f.summary.criticBefore !== null ? `${f.summary.criticBefore} → ${f.summary.criticAfter}` : "—"} />
-                  <Stat k="tokens" v={f.summary.tokens.toLocaleString("en")} />
-                  <Stat k="cost" v={`$${f.summary.costUsd.toFixed(3)}`} />
+                  <Stat k="tokens" v={(f.totals ?? f.summary).tokens.toLocaleString("en")} />
+                  <Stat k={f.totals && f.totals.takes > 1 ? `cost · ${f.totals.takes} takes` : "cost"} v={`$${(f.totals ?? f.summary).costUsd.toFixed(3)}`} />
                 </dl>
                 <details className="mt-4 text-xs text-muted">
                   <summary className="cursor-pointer">Story · crew · trace</summary>
@@ -112,7 +114,7 @@ export default async function ShowcasePage() {
                   <a href={f.trace} className="mt-2 inline-block text-violet-300 underline">
                     trace.json
                   </a>{" "}
-                  · {Math.round(f.summary.durationSec)} s film · {Math.round(f.summary.wallMs / 1000)} s to make
+                  · {Math.round(f.summary.durationSec)} s film · {Math.round((f.totals ?? f.summary).wallMs / 1000)} s to make{f.totals && f.totals.takes > 1 ? ` (${f.totals.takes} takes)` : ""}
                 </details>
               </div>
             </article>

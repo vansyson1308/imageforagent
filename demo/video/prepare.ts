@@ -39,7 +39,7 @@ const REPO = "github.com/vansyson1308/imageforagent";
 
 function frame(inner: string): string {
   const stamp = dry
-    ? `<rect x="0" y="${H - 64}" width="${W}" height="64" fill="#b8441b"/><text x="${W / 2}" y="${H - 22}" font-size="30" font-weight="700" fill="#fff" text-anchor="middle">DRY RUN: scripted mock crew. NOT FOR UPLOAD</text>`
+    ? `<rect x="0" y="${H - 64}" width="${W}" height="64" fill="#b8441b"/><text x="${W / 2}" y="${H - 22}" font-size="30" font-weight="700" fill="#fff" text-anchor="middle">DRY RUN: open slots or test inputs. NOT FOR UPLOAD</text>`
     : "";
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="DejaVu Sans, Helvetica, Arial, sans-serif"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b5cf6"/><stop offset="1" stop-color="#ec4899"/></linearGradient></defs><rect width="${W}" height="${H}" fill="#0d0d0f"/>${inner}${stamp}</svg>`;
 }
@@ -69,7 +69,7 @@ async function main() {
     .png()
     .toFile(`${WORK}/cards/arch.png`);
 
-  const chartPath = "docs/hackathon/eval/chart.png";
+  const chartPath = process.argv.includes("--chart") ? process.argv[process.argv.indexOf("--chart") + 1] : "docs/hackathon/eval/chart.png";
   if (existsSync(chartPath)) {
     const chart = await sharp(chartPath).resize({ width: 1800 }).png().toBuffer();
     const meta = await sharp(chart).metadata();
@@ -97,7 +97,9 @@ async function main() {
   const report: string[] = [];
   for (const s of narration.segments) {
     const override = `${DIR}/voice/${s.id}.wav`;
-    const wav = existsSync(override) ? readFileSync(override) : await synthesizeSpeech(s.text.includes("{{PENDING") ? "Pending." : s.text, narration.voice, narration.speed);
+    // an open slot (dry run only) is read by espeak-ng, so a dry run needs no Piper voice installed
+    const pendingSlot = s.text.includes("{{PENDING");
+    const wav = existsSync(override) && !pendingSlot ? readFileSync(override) : await synthesizeSpeech(pendingSlot ? "Pending." : s.text, pendingSlot ? "en" : narration.voice, narration.speed);
     const audio = decodeWav(wav);
     const d = audioDuration(audio);
     const room = s.end - s.start;

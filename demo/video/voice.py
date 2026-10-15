@@ -8,6 +8,7 @@ Piper (MIT, offline, CPU). prepare.ts picks these files up as per-segment overri
   curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/high/en_US-lessac-high.onnx
   curl -LO https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/lessac/high/en_US-lessac-high.onnx.json
   python3 demo/video/voice.py --model en_US-lessac-high.onnx [--length-scale 1.0]
+  python3 demo/video/voice.py --model en_US-john-medium.onnx --narration narration.v2.json   # video v2 (public-domain voice, D32)
 """
 import argparse
 import json
@@ -23,13 +24,17 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--model", required=True)
     ap.add_argument("--length-scale", default="1.0")
+    ap.add_argument("--narration", default="narration.json")
     args = ap.parse_args()
-    narration = json.loads((DIR / "narration.json").read_text(encoding="utf-8"))
+    narration = json.loads((DIR / args.narration).read_text(encoding="utf-8"))
     out_dir = DIR / "voice"
     out_dir.mkdir(exist_ok=True)
     over = False
     for seg in narration["segments"]:
         out = out_dir / f"{seg['id']}.wav"
+        if "{{PENDING" in seg["text"]:
+            print(f"{seg['id']}: pending, skipped")
+            continue
         # argv only, text on stdin: never a shell
         subprocess.run(
             [sys.executable, "-m", "piper", "-m", args.model, "-f", str(out), "--length-scale", args.length_scale, "--sentence-silence", "0.25"],

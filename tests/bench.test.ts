@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { aggregate, fromV1, judgeProblems, pairStats, parseJudgeScore, resultsMarkdown, revisedShots, toCsv, upliftOf, V1_JUDGE, type Row } from "../scripts/eval/benchCore";
+import { aggregate, fromV1, spread, judgeProblems, pairStats, parseJudgeScore, resultsMarkdown, revisedShots, toCsv, upliftOf, V1_JUDGE, type Row } from "../scripts/eval/benchCore";
 
 const J2 = "moonshotai/Kimi-K3";
 const row = (o: Partial<Row>): Row => ({
@@ -135,5 +135,21 @@ describe("bench v2 core (WP7)", () => {
     expect(md).toContain("| ≥ 6.5 | 5.9 | ❌ missed |");
     expect(md).toContain("| ≤ $0.40 | $0.550 | ❌ missed |");
     expect(md).toContain("| Critic uplift, independently judged | ≥ +0.5 | — | not measured |");
+  });
+
+  it("every mean comes with its n and spread; failed runs and wall time are listed per config; the command is printed without a passcode (owner 2026-10-14)", () => {
+    expect(spread([4, 6, null, 8])).toEqual({ n: 3, mean: 6, sd: 2, min: 4, max: 8 });
+    expect(spread([5])).toEqual({ n: 1, mean: 5, sd: null, min: 5, max: 5 });
+    expect(spread([])).toEqual({ n: 0, mean: null, sd: null, min: null, max: null });
+    const rows = [
+      row({ prompt: "a", judges: { [V1_JUDGE]: 6 }, wallSec: 100, usd: 0.1 }),
+      row({ prompt: "b", judges: { [V1_JUDGE]: 8 }, wallSec: 200, usd: 0.2 }),
+      row({ prompt: "c", status: "failed", judges: { [V1_JUDGE]: null }, wallSec: 30, usd: 0.05 }),
+    ];
+    const md = resultsMarkdown({ generatedAt: "t", base: "b", provider: "nemotron", mock: false, judges: [V1_JUDGE], rows, configs: ["crew v2"], command: "npm run director:bench -- --base b --eval-commit abc" });
+    expect(md).toContain("| crew v2 | gemma-3-27b-it (headline) | 2 | 7 | 1.41 | 6–8 |");
+    expect(md).toContain("| crew v2 | 3 | 2 | 1 (c: failed) | 110 | 330 | $0.350 |");
+    expect(md).toContain("## Reproduce");
+    expect(md).toContain("npm run director:bench -- --base b --eval-commit abc");
   });
 });
