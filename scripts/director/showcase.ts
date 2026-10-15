@@ -37,6 +37,7 @@ import { filmCredits, type CreditStep } from "@/lib/services/director/filmCredit
 import { heroProp } from "@/lib/services/director/plan";
 import { rejudgeOffPlan, storedVerdicts } from "@/lib/services/director/fidelity";
 import type { Plan } from "@/lib/services/director/schemas";
+import { filmTotals, type Trace as ReplayTrace } from "@/lib/director/traceReplay";
 
 export const SHOWCASE_STORIES = [
   {
@@ -375,6 +376,16 @@ async function publish(client: StudioClient, s: { slug: string; language: string
   }
   spawnSync("ffmpeg", ["-loglevel", "error", "-y", "-ss", "2", "-i", `${dir}/film.mp4`, "-frames:v", "1", "-q:v", "3", `${dir}/poster.jpg`]);
   writeFileSync(`${dir}/trace.json`, JSON.stringify(trace, null, 2));
+  // one public still per shot: the replay's shot cards (frame images on the server are demo-gated)
+  rmSync(`${dir}/shots`, { recursive: true, force: true });
+  mkdirSync(`${dir}/shots`, { recursive: true });
+  const stills: Record<string, string> = {};
+  for (const f of (await client.json<{ frames: Array<{ index: number; imageUrl: string | null }> }>("GET", `/api/projects/${pid}`)).frames) {
+    if (!f.imageUrl) continue;
+    const name = `F${String(f.index).padStart(2, "0")}.jpg`;
+    writeFileSync(`${dir}/shots/${name}`, await sharp(await client.download(f.imageUrl)).resize(aspectOf(s.slug) === "9:16" ? { height: 640 } : { width: 640 }).jpeg({ quality: 80 }).toBuffer());
+    stills[String(f.index)] = `/showcase/${s.slug}/shots/${name}`;
+  }
   const entry = {
     slug: s.slug,
     title: trace.bible?.title ?? s.slug,
@@ -388,6 +399,9 @@ async function publish(client: StudioClient, s: { slug: string; language: string
     models: trace.models,
     provider: trace.provider,
     summary: trace.summary,
+    // the trace holds every take of the project; summary covers the last take only
+    totals: filmTotals(trace as unknown as ReplayTrace),
+    stills,
     createdAt: new Date().toISOString(),
     source: path.basename(base),
     version: set,

@@ -12,6 +12,8 @@ import type { DirectorEventLike } from "@/lib/director/runState";
  */
 
 export interface TraceStep {
+  /** the run that recorded the step: a published film's trace holds every take of its project */
+  runId?: string;
   seq: number;
   shotIndex: number | null;
   role: string;
@@ -57,18 +59,81 @@ export interface TimedEvent {
   readonly event: DirectorEventLike;
 }
 
+/** Real time between two takes is idle (people looking at a contact sheet); the replay keeps a short pause instead. */
+export const TAKE_GAP_MS = 3000;
+
+export interface Take {
+  readonly runId: string;
+  /** ms since epoch */
+  readonly start: number;
+  readonly end: number;
+  readonly steps: number;
+  readonly tokens: number;
+  readonly costUsd: number;
+}
+
+/**
+ * The takes of a film, in the order they ran. A film made in several takes
+ * (a first run, then redos of some shots, D77/D81) stores every take's steps
+ * in one trace, while `startedAt`/`finishedAt`/`summary` describe only the
+ * last one. A take spans its first to last step; the trace's own run uses
+ * its recorded start and finish.
+ */
+export function traceTakes(trace: Trace): Take[] {
+  const by = new Map<string, { start: number; end: number; steps: number; tokens: number; costUsd: number }>();
+  for (const s of trace.steps) {
+    const id = s.runId ?? trace.id;
+    const t = Date.parse(s.createdAt);
+    const r = by.get(id) ?? { start: t, end: t, steps: 0, tokens: 0, costUsd: 0 };
+    r.start = Math.min(r.start, t);
+    r.end = Math.max(r.end, t);
+    r.steps++;
+    r.tokens += s.tokensIn + s.tokensOut;
+    r.costUsd = Math.round((r.costUsd + s.costUsd) * 1e8) / 1e8;
+    by.set(id, r);
+  }
+  const own = by.get(trace.id) ?? { start: Date.parse(trace.startedAt), end: Date.parse(trace.startedAt), steps: 0, tokens: 0, costUsd: 0 };
+  own.start = Math.min(own.start, Date.parse(trace.startedAt));
+  if (trace.finishedAt) own.end = Math.max(own.end, Date.parse(trace.finishedAt));
+  by.set(trace.id, own);
+  return [...by.entries()].map(([runId, r]) => ({ runId, ...r })).sort((a, b) => a.start - b.start || a.runId.localeCompare(b.runId));
+}
+
+/** What making the whole film took: every take's tokens and cost, and the sum of the takes' run times (idle time between takes excluded). */
+export function filmTotals(trace: Trace): { takes: number; tokens: number; costUsd: number; wallMs: number } {
+  const takes = traceTakes(trace);
+  return {
+    takes: takes.length,
+    tokens: takes.reduce((a, t) => a + t.tokens, 0),
+    costUsd: Math.round(takes.reduce((a, t) => a + t.costUsd, 0) * 1e8) / 1e8,
+    wallMs: takes.reduce((a, t) => a + (t.end - t.start), 0),
+  };
+}
+
 export function traceToEvents(trace: Trace, assets: ReplayAssets = {}): TimedEvent[] {
-  const t0 = Date.parse(trace.startedAt);
-  const at = (iso: string) => Math.max(0, Date.parse(iso) - t0);
+  // one clock over every take, in order, with a short pause between takes
+  const takes = traceTakes(trace);
+  const offset = new Map<string, { start: number; at: number }>();
+  let cursor = 0;
+  for (const t of takes) {
+    offset.set(t.runId, { start: t.start, at: cursor });
+    cursor += t.end - t.start + TAKE_GAP_MS;
+  }
+  const own = offset.get(trace.id)!;
+  const take = (s: TraceStep) => s.runId ?? trace.id;
+  const at = (iso: string, runId: string = trace.id) => {
+    const o = offset.get(runId) ?? own;
+    return o.at + Math.max(0, Date.parse(iso) - o.start);
+  };
   const out: TimedEvent[] = [];
   out.push({ at: 0, event: { type: "run", runId: trace.id, projectId: trace.projectId, provider: trace.provider, models: trace.models, notes: trace.config?.modelNotes ?? [], startedAt: trace.startedAt } });
 
   const planStep = trace.steps.find((s) => s.role === "director" && s.action === "plan");
   const refStep = trace.steps.find((s) => s.role === "researcher" && s.action === "references");
-  if (trace.bible?.references?.length) out.push({ at: refStep ? at(refStep.createdAt) : 0, event: { type: "research", references: trace.bible.references } });
+  if (trace.bible?.references?.length) out.push({ at: refStep ? at(refStep.createdAt, take(refStep)) : 0, event: { type: "research", references: trace.bible.references } });
   if (trace.bible?.shots) {
     out.push({
-      at: planStep ? at(planStep.createdAt) + 1 : 0,
+      at: planStep ? at(planStep.createdAt, take(planStep)) + 1 : 0,
       event: {
         type: "plan",
         title: trace.bible.title ?? "",
@@ -80,16 +145,25 @@ export function traceToEvents(trace: Trace, assets: ReplayAssets = {}): TimedEve
 
   let tokens = 0;
   let costUsd = 0;
-  for (const s of [...trace.steps].sort((a, b) => a.seq - b.seq)) {
+  // each take numbers its steps from 0; the replay numbers them across takes (the reducer keys steps by seq)
+  const order = new Map(takes.map((t, i) => [t.runId, i]));
+  const base = new Map<string, number>();
+  let next = 0;
+  for (const t of takes) {
+    base.set(t.runId, next);
+    next += Math.max(-1, ...trace.steps.filter((x) => take(x) === t.runId).map((x) => x.seq)) + 1;
+  }
+  for (const s of [...trace.steps].sort((a, b) => order.get(take(a))! - order.get(take(b))! || a.seq - b.seq)) {
     tokens += s.tokensIn + s.tokensOut;
     costUsd = Math.round((costUsd + s.costUsd) * 1e8) / 1e8;
     const imageUrl = s.imagePath ? (assets.snapshots?.[s.imagePath] ?? null) : null;
+    const when = at(s.createdAt, take(s));
     out.push({
-      at: at(s.createdAt),
+      at: when,
       event: {
         type: "step",
         step: {
-          seq: s.seq,
+          seq: base.get(take(s))! + s.seq,
           role: s.role,
           model: s.model,
           action: s.action,
@@ -109,12 +183,14 @@ export function traceToEvents(trace: Trace, assets: ReplayAssets = {}): TimedEve
     });
     if (s.shotIndex && (s.action === "render-clip" || s.action === "render-still")) {
       const still = assets.shots?.[s.shotIndex] ?? null;
-      out.push({ at: at(s.createdAt) + 1, event: { type: "frame", index: s.shotIndex, imageUrl: still, clipUrl: null, score: null, status: "done" } });
+      out.push({ at: when + 1, event: { type: "frame", index: s.shotIndex, imageUrl: still, clipUrl: null, score: null, status: "done" } });
     }
   }
-  const end = trace.finishedAt ? at(trace.finishedAt) : (out.at(-1)?.at ?? 0) + 1;
+  const end = Math.max(trace.finishedAt ? at(trace.finishedAt) : 0, (out.at(-1)?.at ?? 0) + 1);
   if (trace.error) out.push({ at: end, event: { type: "error", message: trace.error } });
-  out.push({ at: end + 1, event: { type: "done", status: trace.status, summary: trace.summary } });
+  // a film made in several takes: the finished card shows what the whole film took, not the last take
+  const summary = takes.length > 1 && trace.summary ? { ...trace.summary, ...filmTotals(trace) } : trace.summary;
+  out.push({ at: end + 1, event: { type: "done", status: trace.status, summary } });
   return out.sort((a, b) => a.at - b.at);
 }
 

@@ -320,7 +320,26 @@
       "createdAt": "2026-10-13T16:58:21.273Z",
       "source": "studio-production-049c.up.railway.app",
       "version": "v2",
-      "byEye": "docs/hackathon/evidence/byeye/v2-banh-chung-cmv6ul9yo00002ao09enx017d/checklist.md"
+      "byEye": "docs/hackathon/evidence/byeye/v2-banh-chung-cmv6ul9yo00002ao09enx017d/checklist.md",
+      "totals": {
+        "takes": 3,
+        "tokens": 316717,
+        "costUsd": 0.20321208,
+        "wallMs": 465039
+      },
+      "stills": {
+        "1": "/showcase/v2-banh-chung/shots/F01.jpg",
+        "2": "/showcase/v2-banh-chung/shots/F02.jpg",
+        "3": "/showcase/v2-banh-chung/shots/F03.jpg",
+        "4": "/showcase/v2-banh-chung/shots/F04.jpg",
+        "5": "/showcase/v2-banh-chung/shots/F05.jpg",
+        "6": "/showcase/v2-banh-chung/shots/F06.jpg",
+        "7": "/showcase/v2-banh-chung/shots/F07.jpg",
+        "8": "/showcase/v2-banh-chung/shots/F08.jpg",
+        "9": "/showcase/v2-banh-chung/shots/F09.jpg",
+        "10": "/showcase/v2-banh-chung/shots/F10.jpg",
+        "11": "/showcase/v2-banh-chung/shots/F11.jpg"
+      }
     },
     {
       "slug": "v2-tegami",
@@ -431,7 +450,22 @@
       "createdAt": "2026-10-13T17:50:30.284Z",
       "source": "studio-production-049c.up.railway.app",
       "version": "v2",
-      "byEye": "docs/hackathon/evidence/byeye/v2-tegami-cmv6xhzbt00002anq0uc7rb4y/checklist.md"
+      "byEye": "docs/hackathon/evidence/byeye/v2-tegami-cmv6xhzbt00002anq0uc7rb4y/checklist.md",
+      "totals": {
+        "takes": 6,
+        "tokens": 439364,
+        "costUsd": 0.27549534,
+        "wallMs": 838249
+      },
+      "stills": {
+        "1": "/showcase/v2-tegami/shots/F01.jpg",
+        "2": "/showcase/v2-tegami/shots/F02.jpg",
+        "3": "/showcase/v2-tegami/shots/F03.jpg",
+        "4": "/showcase/v2-tegami/shots/F04.jpg",
+        "5": "/showcase/v2-tegami/shots/F05.jpg",
+        "6": "/showcase/v2-tegami/shots/F06.jpg",
+        "7": "/showcase/v2-tegami/shots/F07.jpg"
+      }
     },
     {
       "slug": "v2-kite",
@@ -569,7 +603,26 @@
       "createdAt": "2026-10-13T18:37:52.393Z",
       "source": "studio-production-049c.up.railway.app",
       "version": "v2",
-      "byEye": "docs/hackathon/evidence/byeye/v2-kite-cmv6z9x3k00002apec9c55j9f/checklist.md"
+      "byEye": "docs/hackathon/evidence/byeye/v2-kite-cmv6z9x3k00002apec9c55j9f/checklist.md",
+      "totals": {
+        "takes": 4,
+        "tokens": 355434,
+        "costUsd": 0.2378073,
+        "wallMs": 484456
+      },
+      "stills": {
+        "1": "/showcase/v2-kite/shots/F01.jpg",
+        "2": "/showcase/v2-kite/shots/F02.jpg",
+        "3": "/showcase/v2-kite/shots/F03.jpg",
+        "4": "/showcase/v2-kite/shots/F04.jpg",
+        "5": "/showcase/v2-kite/shots/F05.jpg",
+        "6": "/showcase/v2-kite/shots/F06.jpg",
+        "7": "/showcase/v2-kite/shots/F07.jpg",
+        "8": "/showcase/v2-kite/shots/F08.jpg",
+        "9": "/showcase/v2-kite/shots/F09.jpg",
+        "10": "/showcase/v2-kite/shots/F10.jpg",
+        "11": "/showcase/v2-kite/shots/F11.jpg"
+      }
     }
   ],
   "hero": "v2-kite"

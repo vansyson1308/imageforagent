@@ -69,6 +69,8 @@ export function RunView({ state, lang, mode, reconnecting, onCancel, filmSrc, do
   if (!state.runId) return null;
   const line = statusLine(state, lang === "ja" ? "ja" : lang === "vi" ? "vi" : "en");
   const rendered = state.shots.filter((s) => s.imageUrl).length;
+  // a replay shows the critic's before/after only with the recorded snapshots; the shot's final still is not the "after" of an earlier take
+  const showUplift = !!state.lastUplift && (mode !== "replay" || !!state.lastUplift.beforeImageUrl);
 
   return (
     <section className="mt-6 space-y-5" aria-live="polite">
@@ -103,12 +105,12 @@ export function RunView({ state, lang, mode, reconnecting, onCancel, filmSrc, do
           <LivePreview shot={latest} lang={lang} title={state.title} logline={state.logline} />
           <div className="space-y-4">
             <CrewCard state={state} />
-            {state.lastUplift ? <UpliftCard state={state} lang={lang} compact /> : null}
+            {showUplift ? <UpliftCard state={state} lang={lang} compact /> : null}
           </div>
         </div>
       )}
 
-      {state.lastUplift && state.finished ? <UpliftCard state={state} lang={lang} /> : null}
+      {showUplift && state.finished ? <UpliftCard state={state} lang={lang} /> : null}
 
       {state.shots.length > 0 && <Filmstrip shots={state.shots} lang={lang} refs={state.references.length} />}
 
@@ -340,7 +342,7 @@ function FinishedFilm({ state, lang, filmSrc, downloads, onSaveSeries }: { state
         <Stat label={t(lang, "firstPass")} value={`${s.firstPassOk}/${s.shots}`} />
         <Stat label={t(lang, "repairs")} value={String(s.repairs)} />
         <Stat label={t(lang, "uplift")} value={s.criticBefore !== null ? `${s.criticBefore} → ${s.criticAfter}` : "—"} />
-        <Stat label={t(lang, "wall")} value={fmtTime(Math.round(s.wallMs / 1000))} />
+        <Stat label={s.takes && s.takes > 1 ? `${t(lang, "wall")} · ${s.takes} ${t(lang, "takes")}` : t(lang, "wall")} value={fmtTime(Math.round(s.wallMs / 1000))} />
         <Stat label={t(lang, "cost")} value={`$${s.costUsd.toFixed(3)}`} />
       </dl>
       {models.length > 0 && (
