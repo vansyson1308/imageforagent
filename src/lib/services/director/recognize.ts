@@ -164,7 +164,15 @@ export async function recognizeHeroProps(ctx: DirectorContext, plan: Plan, libra
     let lastRank = -1;
     for (let k = 0; ; k++) {
       if (fresh) {
-        const png = await renderAlone(defs, t.symbol, aspectRatio, ctx.canvas);
+        // a library that does not render is the run's guard to repair, never a reason to fail the run (bench 2026-10-15)
+        const png = await renderAlone(defs, t.symbol, aspectRatio, ctx.canvas).catch(async (e: unknown) => {
+          await recordStep(ctx, { role: "critic", model: "engine", action: "recognize:error", attempt: k, summary: `#${t.symbol} could not be rendered alone; not checked`, error: errText(e) });
+          return null;
+        });
+        if (!png) {
+          ok = null;
+          break;
+        }
         const { uri, jpeg } = await toJpegDataUri(png, 768);
         const imagePath = snapshotPath(ctx.projectId, ctx.runId, `recognize-${t.symbol}-${k}.jpg`);
         await saveBuffer(imagePath, jpeg);
