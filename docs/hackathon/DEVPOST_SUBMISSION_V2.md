@@ -1,6 +1,6 @@
 # Devpost submission v2: paste-ready (DRAFT)
 
-_Status 2026-10-09: draft. The **feedback answers** are complete and drawn only from [FEEDBACK_LOG.md](FEEDBACK_LOG.md), the eval files and DECISIONS. Every number that needs a live v2 run is a visible `{{PENDING: …}}` slot. Nothing gets pasted while a slot is open. The final pass is at M3 (2026-10-23). The v1 text stays in [DEVPOST_SUBMISSION.md](DEVPOST_SUBMISSION.md). Ratings are **proposed** from the evidence; the owner confirms them before pasting._
+_Status 2026-10-15: draft 2 ("What it does" and "How we built it" written for the three published v2 films; no new numbers). Status 2026-10-09: draft. The **feedback answers** are complete and drawn only from [FEEDBACK_LOG.md](FEEDBACK_LOG.md), the eval files and DECISIONS. Every number that needs a live v2 run is a visible `{{PENDING: …}}` slot. Nothing gets pasted while a slot is open. The final pass is at M3 (2026-10-23). The v1 text stays in [DEVPOST_SUBMISSION.md](DEVPOST_SUBMISSION.md). Ratings are **proposed** from the evidence; the owner confirms them before pasting._
 
 ## Project name
 Storyboard Studio Director
@@ -27,10 +27,18 @@ nemotron, nebius-token-factory, next.js, react, typescript, prisma, sqlite, shar
 {{PENDING: v1 text + the Hidamari pilot (only real data from PILOT.md)}}
 
 ### What it does
-{{PENDING: final at M3. Content: story → Ultra plans shots with coverage → Super designs the cast as engine kits and draws every frame as SVG → the engine renders, measures (render gates, near-duplicates) and repairs → a VLM looks, Nano scores, revise/floor → characters act (poses, blinks, lip-sync, walks) → Piper voices, score bed, dissolves → MP4 + full trace. Series mode keeps a host pixel-identical across episodes.}}
+Type a story in English, Vietnamese or Japanese and press **Make my film**. A crew of NVIDIA Nemotron models on Nebius Token Factory makes it: **Ultra** (the Director) plans the shots with real coverage and writes a cast & set bible in strict JSON; **Super** designs the characters as engine kits and writes every frame as SVG code; the deterministic engine renders each frame and *measures* it (subject size, framing, empty or flat sets, faces covered, figures stacked, near-duplicate shots) and sends any failure back as a measured fix; then a vision model describes what it sees and **Nano** scores the shot against the plan, and a revision replaces a frame only when it scores higher. Characters act (poses, blinks, lip sync, walks), the engine adds voices, dissolves and an original synth score, and you get an MP4 plus the full trace: every model call with its role, model, tokens, cost and latency.
+
+A shot that still misses is redone on its own, on the same plan and cast, while every other shot stays byte-identical (D84). The public showcase holds three v2 films (English, Vietnamese, Japanese 9:16), each of which passed the measured gates and a by-eye checklist signed by the owner and QC, and each can be replayed step by step from its stored trace without spending a token.
 
 ### How we built it
-{{PENDING}}
+- **One rule: the model writes, the engine measures.** Every model output passes the same validators a person's would (zod schemas → an SVG sanitizer → the engine's construct and motion schemas) before it can touch the film; then the render is measured, and numbers are never left to a model's arithmetic.
+- **Engine:** Next.js 16 + TypeScript, Prisma 7 on SQLite, sharp/librsvg for rendering, ffmpeg for the cut. The construct engine (hand-written 3D math, CSG, exact depth sort) and the motion engine (time as a pure function of the spec, a no-slip walk rig, IK, lip sync) are pure and deterministic, so a remaster re-renders the same drawing at another resolution or frame rate with no model call.
+- **Crew:** one OpenAI-compatible client for every role on Token Factory; strict `json_schema` replies; thinking switched off per call where latency matters; the live `/v1/models` catalog resolves each role and is reported by the public health endpoint.
+- **Runs** stream to the browser over SSE inside the request (no job queue); every model call is a recorded step, and the showcase replays those steps on a virtual clock (a film made in several takes plays all of them, D92).
+- **Kits instead of free drawing where identity matters:** people, animals and sets are small JSON specs the engine builds, so a character is pixel-identical in every shot by construction.
+- **Publishing is gated:** measured gates first, then a by-eye checklist (owner + QC) per film; the gates, the checklist and every decision are in the repo ([DECISIONS.md](DECISIONS.md)).
+- **Tests:** {{PENDING: the test count at the submission commit, from `npm test`}} vitest tests, including a sanitizer bypass-vector suite, byte-identical double compiles of the construct examples and the Khronos glTF validator.
 
 ### Results (real runs, `docs/hackathon/EVAL_RESULTS.md`)
 {{PENDING: from the bench v2 only: judge means (both judges), paired wins vs super-only v2, independently judged critic uplift, USD per finished minute, gate failures; crew v1 → v2 on the same judge. A missed target is stated as missed.}}

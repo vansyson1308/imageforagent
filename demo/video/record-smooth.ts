@@ -5,10 +5,15 @@
  * (≈25 fps, repaint-driven) + wheel steps + setpts looked jerky.
  *
  *   npx tsx demo/video/record-smooth.ts --base http://localhost:3100 [--showcase https://<host>/showcase] [--out demo/video/_work]
+ *   npx tsx demo/video/record-smooth.ts --only replay [--replay https://<host>/showcase/replay/v2-kite]   # video v2: no run, no tokens
  *
  * Writes _work/live.mp4 + _work/live.json ({fps, a, b, c} frame counts:
  * A = typing (1×), B = the run (time-lapsed by build.sh), C = the result tour (1×))
  * and _work/showcase.mp4. 1920×1080 at 30 fps (viewport 1280×720 × DPR 1.5).
+ * `--only replay` writes _work/replay.mp4 + replay.json: a published film's real
+ * run, replayed from its stored trace at 10× on Playwright's virtual clock (each
+ * output frame advances the page's clock exactly 1/30 s, however long the
+ * screenshot took), then a slow move to the finished card.
  */
 import "../../scripts/director/env";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
@@ -35,6 +40,7 @@ interface Page {
   on(ev: "dialog", fn: (d: { accept(): Promise<void> }) => void): void;
   evaluate<T>(fn: string): Promise<T>;
   screenshot(o: { type: "jpeg"; quality: number }): Promise<Buffer>;
+  clock: { install(o?: { time?: number }): Promise<void>; pauseAt(time: number): Promise<void>; runFor(ms: number): Promise<void> };
 }
 interface Browser {
   newContext(o: Record<string, unknown>): Promise<{ newPage(): Promise<Page>; close(): Promise<void> }>;
@@ -189,6 +195,50 @@ async function recordShowcase(browser: Browser, url: string, out: string) {
   console.log(`showcase: ${frames} frames`);
 }
 
+const FINISHED = `(() => {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (/^\\s*time to make/i.test(n.textContent || "")) return { y: n.parentElement.getBoundingClientRect().top + scrollY, max: document.documentElement.scrollHeight - innerHeight };
+  }
+  return { y: null, max: document.documentElement.scrollHeight - innerHeight };
+})()`;
+
+async function recordReplay(browser: Browser, url: string, out: string) {
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1.5 });
+  const page = await ctx.newPage();
+  // time stands still except when a frame advances it (install alone lets it flow)
+  const T0 = Date.parse("2026-10-15T00:00:00Z");
+  await page.clock.install({ time: T0 });
+  await page.clock.pauseAt(T0 + 1000);
+  await page.goto(url);
+  await page.waitForSelector("text=Replay:", { timeout: 60_000 });
+  const sink = new FrameSink(path.join(out, "replay.mp4"));
+  const step = 1000 / FPS;
+  // screenshots straight after runFor(): the rAF wait in shoot() would hang on the paused page clock
+  // A · the run at 10× (the page's own speed), camera on the stage and the crew
+  let run = 0;
+  for (; run < 120 * FPS; run++) {
+    await page.clock.runFor(step);
+    await sink.push(await page.screenshot({ type: "jpeg", quality: 92 }));
+    if (run % 15 === 0 && (await page.evaluate<boolean>(`/\\bDone\\b/.test(document.body.innerText.slice(0, 2000))`))) break;
+  }
+  await sink.push(await page.screenshot({ type: "jpeg", quality: 92 }), FPS); // a beat on "Done"
+  // B · ease down to the finished card (shots, first pass, repairs, critic, time to make, cost) and hold
+  const fin = await page.evaluate<{ y: number | null; max: number }>(FINISHED);
+  const target = Math.min(fin.max, Math.max(0, (fin.y ?? fin.max) - 520));
+  const cam = new Camera(14);
+  for (let f = 0; f < 4 * FPS; f++) {
+    await page.clock.runFor(step);
+    await page.evaluate(`window.scrollTo(0, ${cam.step(target)})`);
+    await sink.push(await page.screenshot({ type: "jpeg", quality: 92 }));
+  }
+  await sink.push(await page.screenshot({ type: "jpeg", quality: 92 }), 6 * FPS);
+  await sink.close();
+  await ctx.close();
+  writeFileSync(path.join(out, "replay.json"), JSON.stringify({ fps: FPS, url, run: run + FPS, total: sink.count }, null, 2));
+  console.log(`replay: ${sink.count} frames (run ${run} frames)`);
+}
+
 async function main() {
   const base = arg("--base", "http://localhost:3100").replace(/\/+$/, "");
   const showcase = arg("--showcase", "https://studio-production-049c.up.railway.app/showcase");
@@ -199,6 +249,13 @@ async function main() {
   const remote = (u: string) => !/^https?:\/\/(localhost|127\.0\.0\.1)(:|\/|$)/.test(u);
   // Chromium ignores HTTPS_PROXY; pass it for remote hosts only (sandboxed recorders)
   const launch = async (u: string) => chromium.launch(process.env.HTTPS_PROXY && remote(u) ? { proxy: { server: process.env.HTTPS_PROXY } } : {});
+  if (only === "replay") {
+    const replay = arg("--replay", "https://studio-production-049c.up.railway.app/showcase/replay/v2-kite");
+    const b = await launch(replay);
+    await recordReplay(b, replay, out);
+    await b.close();
+    return;
+  }
   if (only !== "showcase") {
     const b = await launch(base);
     await recordLive(b, base, out);
