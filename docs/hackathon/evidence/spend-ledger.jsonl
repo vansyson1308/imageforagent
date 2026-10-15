@@ -235,3 +235,16 @@
 {"at":"2026-10-15T01:03:59.700Z","script":"bench-judge","label":"A:en-robot-garden#1","model":"google/gemma-3-27b-it","tokensIn":417,"tokensOut":45,"costUsd":0.0003582}
 {"at":"2026-10-15T01:04:00.931Z","script":"bench-judge","label":"A:en-robot-garden#1","model":"moonshotai/Kimi-K3","tokensIn":1065,"tokensOut":119,"costUsd":0.0009246}
 {"at":"2026-10-15T01:04:01.046Z","script":"bench","label":"A:en-robot-garden","model":"super-only v2","tokensIn":73191,"tokensOut":0,"costUsd":0.0517101}
+{"at":"2026-10-15T01:10:13.108Z","script":"bench-judge","label":"B:en-robot-garden#1","model":"google/gemma-3-27b-it","tokensIn":410,"tokensOut":35,"costUsd":0.00033}
+{"at":"2026-10-15T01:10:14.995Z","script":"bench-judge","label":"B:en-robot-garden#1","model":"moonshotai/Kimi-K3","tokensIn":1058,"tokensOut":217,"costUsd":0.0011556}
+{"at":"2026-10-15T01:10:16.088Z","script":"bench-judge","label":"B:en-robot-garden#2","model":"google/gemma-3-27b-it","tokensIn":405,"tokensOut":38,"costUsd":0.0003342}
+{"at":"2026-10-15T01:10:17.538Z","script":"bench-judge","label":"B:en-robot-garden#2","model":"moonshotai/Kimi-K3","tokensIn":1053,"tokensOut":142,"costUsd":0.0009726}
+{"at":"2026-10-15T01:10:18.709Z","script":"bench-judge","label":"B:en-robot-garden#3","model":"google/gemma-3-27b-it","tokensIn":410,"tokensOut":51,"costUsd":0.0003684}
+{"at":"2026-10-15T01:10:20.068Z","script":"bench-judge","label":"B:en-robot-garden#3","model":"moonshotai/Kimi-K3","tokensIn":1058,"tokensOut":157,"costUsd":0.0010116}
+{"at":"2026-10-15T01:10:21.175Z","script":"bench-judge","label":"B:en-robot-garden#4","model":"google/gemma-3-27b-it","tokensIn":409,"tokensOut":44,"costUsd":0.000351}
+{"at":"2026-10-15T01:10:22.258Z","script":"bench-judge","label":"B:en-robot-garden#4","model":"moonshotai/Kimi-K3","tokensIn":1056,"tokensOut":96,"costUsd":0.000864}
+{"at":"2026-10-15T01:10:23.168Z","script":"bench-judge","label":"B:en-robot-garden#5","model":"google/gemma-3-27b-it","tokensIn":408,"tokensOut":37,"costUsd":0.0003336}
+{"at":"2026-10-15T01:10:24.492Z","script":"bench-judge","label":"B:en-robot-garden#5","model":"moonshotai/Kimi-K3","tokensIn":1058,"tokensOut":121,"costUsd":0.0009252}
+{"at":"2026-10-15T01:10:25.503Z","script":"bench-judge","label":"B:en-robot-garden#6","model":"google/gemma-3-27b-it","tokensIn":412,"tokensOut":48,"costUsd":0.0003624}
+{"at":"2026-10-15T01:10:26.751Z","script":"bench-judge","label":"B:en-robot-garden#6","model":"moonshotai/Kimi-K3","tokensIn":1060,"tokensOut":143,"costUsd":0.0009792}
+{"at":"2026-10-15T01:10:26.951Z","script":"bench","label":"B:en-robot-garden","model":"crew v2","tokensIn":257604,"tokensOut":0,"costUsd":0.17883156}
