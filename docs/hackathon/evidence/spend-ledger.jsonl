@@ -358,3 +358,14 @@
 {"at":"2026-10-15T02:28:15.143Z","script":"bench-judge","label":"C:vi-ao-dai#6","model":"google/gemma-3-27b-it","tokensIn":419,"tokensOut":47,"costUsd":0.0003642}
 {"at":"2026-10-15T02:28:24.726Z","script":"bench-judge","label":"C:vi-ao-dai#6","model":"moonshotai/Kimi-K3","tokensIn":1062,"tokensOut":109,"costUsd":0.0008988}
 {"at":"2026-10-15T02:28:24.953Z","script":"bench","label":"C:vi-ao-dai","model":"crew v2+tavily","tokensIn":396243,"tokensOut":0,"costUsd":0.2537103}
+{"at":"2026-10-15T02:31:15.363Z","script":"bench-judge","label":"A:vi-trau-vang#1","model":"google/gemma-3-27b-it","tokensIn":418,"tokensOut":44,"costUsd":0.0003564}
+{"at":"2026-10-15T02:31:17.379Z","script":"bench-judge","label":"A:vi-trau-vang#1","model":"moonshotai/Kimi-K3","tokensIn":1065,"tokensOut":220,"costUsd":0.001167}
+{"at":"2026-10-15T02:31:18.496Z","script":"bench-judge","label":"A:vi-trau-vang#2","model":"google/gemma-3-27b-it","tokensIn":414,"tokensOut":40,"costUsd":0.0003444}
+{"at":"2026-10-15T02:31:19.827Z","script":"bench-judge","label":"A:vi-trau-vang#2","model":"moonshotai/Kimi-K3","tokensIn":1060,"tokensOut":113,"costUsd":0.0009072}
+{"at":"2026-10-15T02:31:21.101Z","script":"bench-judge","label":"A:vi-trau-vang#3","model":"google/gemma-3-27b-it","tokensIn":410,"tokensOut":51,"costUsd":0.0003684}
+{"at":"2026-10-15T02:31:22.434Z","script":"bench-judge","label":"A:vi-trau-vang#3","model":"moonshotai/Kimi-K3","tokensIn":1055,"tokensOut":112,"costUsd":0.0009018}
+{"at":"2026-10-15T02:31:23.532Z","script":"bench-judge","label":"A:vi-trau-vang#4","model":"google/gemma-3-27b-it","tokensIn":409,"tokensOut":43,"costUsd":0.0003486}
+{"at":"2026-10-15T02:31:25.266Z","script":"bench-judge","label":"A:vi-trau-vang#4","model":"moonshotai/Kimi-K3","tokensIn":1055,"tokensOut":201,"costUsd":0.0011154}
+{"at":"2026-10-15T02:31:26.539Z","script":"bench-judge","label":"A:vi-trau-vang#5","model":"google/gemma-3-27b-it","tokensIn":412,"tokensOut":39,"costUsd":0.0003408}
+{"at":"2026-10-15T02:31:28.753Z","script":"bench-judge","label":"A:vi-trau-vang#5","model":"moonshotai/Kimi-K3","tokensIn":1060,"tokensOut":271,"costUsd":0.0012864}
+{"at":"2026-10-15T02:31:28.853Z","script":"bench","label":"A:vi-trau-vang","model":"super-only v2","tokensIn":68081,"tokensOut":0,"costUsd":0.0451389}
