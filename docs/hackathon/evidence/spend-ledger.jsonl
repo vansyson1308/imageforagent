@@ -282,3 +282,6 @@
 {"at":"2026-10-15T01:42:16.751Z","script":"bench-judge","label":"C:en-paper-boat#1:before","model":"moonshotai/Kimi-K3","tokensIn":1067,"tokensOut":577,"costUsd":0.002025}
 {"at":"2026-10-15T01:42:18.103Z","script":"bench-judge","label":"C:en-paper-boat#1:after","model":"moonshotai/Kimi-K3","tokensIn":1067,"tokensOut":128,"costUsd":0.0009474}
 {"at":"2026-10-15T01:42:18.544Z","script":"bench","label":"C:en-paper-boat","model":"crew v2+tavily","tokensIn":277798,"tokensOut":0,"costUsd":0.19198164}
+{"at":"2026-10-15T01:45:26.567Z","script":"bench-judge","label":"A:en-moon-bakery#1","model":"google/gemma-3-27b-it","tokensIn":405,"tokensOut":48,"costUsd":0.0003582}
+{"at":"2026-10-15T01:45:27.812Z","script":"bench-judge","label":"A:en-moon-bakery#1","model":"moonshotai/Kimi-K3","tokensIn":1051,"tokensOut":157,"costUsd":0.0010074}
+{"at":"2026-10-15T01:45:27.919Z","script":"bench","label":"A:en-moon-bakery","model":"super-only v2","tokensIn":59433,"tokensOut":0,"costUsd":0.0402519}
