@@ -415,3 +415,23 @@
 {"at":"2026-10-15T02:50:39.341Z","script":"bench-judge","label":"B:vi-cho-noi#1","model":"google/gemma-3-27b-it","tokensIn":415,"tokensOut":43,"costUsd":0.0003522}
 {"at":"2026-10-15T02:51:09.438Z","script":"bench-judge","label":"B:vi-cho-noi#1","model":"moonshotai/Kimi-K3","tokensIn":1105,"tokensOut":214,"costUsd":0.0011766}
 {"at":"2026-10-15T02:51:10.696Z","script":"bench-judge","label":"B:vi-cho-noi#2","model":"google/gemma-3-27b-it","tokensIn":414,"tokensOut":35,"costUsd":0.0003324}
+{"at":"2026-10-15T02:51:14.110Z","script":"bench-judge","label":"B:vi-cho-noi#2","model":"moonshotai/Kimi-K3","tokensIn":1107,"tokensOut":247,"costUsd":0.001257}
+{"at":"2026-10-15T02:51:15.429Z","script":"bench-judge","label":"B:vi-cho-noi#3","model":"google/gemma-3-27b-it","tokensIn":410,"tokensOut":42,"costUsd":0.0003468}
+{"at":"2026-10-15T02:51:17.310Z","script":"bench-judge","label":"B:vi-cho-noi#3","model":"moonshotai/Kimi-K3","tokensIn":1079,"tokensOut":134,"costUsd":0.000969}
+{"at":"2026-10-15T02:51:18.637Z","script":"bench-judge","label":"B:vi-cho-noi#4","model":"google/gemma-3-27b-it","tokensIn":417,"tokensOut":46,"costUsd":0.0003606}
+{"at":"2026-10-15T02:51:20.486Z","script":"bench-judge","label":"B:vi-cho-noi#4","model":"moonshotai/Kimi-K3","tokensIn":1101,"tokensOut":149,"costUsd":0.0010182}
+{"at":"2026-10-15T02:51:21.909Z","script":"bench-judge","label":"B:vi-cho-noi#5","model":"google/gemma-3-27b-it","tokensIn":410,"tokensOut":41,"costUsd":0.0003444}
+{"at":"2026-10-15T02:51:23.585Z","script":"bench-judge","label":"B:vi-cho-noi#5","model":"moonshotai/Kimi-K3","tokensIn":1084,"tokensOut":107,"costUsd":0.0009072}
+{"at":"2026-10-15T02:51:25.111Z","script":"bench-judge","label":"B:vi-cho-noi#6","model":"google/gemma-3-27b-it","tokensIn":411,"tokensOut":52,"costUsd":0.0003714}
+{"at":"2026-10-15T02:51:27.001Z","script":"bench-judge","label":"B:vi-cho-noi#6","model":"moonshotai/Kimi-K3","tokensIn":1087,"tokensOut":131,"costUsd":0.0009666}
+{"at":"2026-10-15T02:51:28.237Z","script":"bench-judge","label":"B:vi-cho-noi#7","model":"google/gemma-3-27b-it","tokensIn":423,"tokensOut":47,"costUsd":0.0003666}
+{"at":"2026-10-15T02:51:30.439Z","script":"bench-judge","label":"B:vi-cho-noi#7","model":"moonshotai/Kimi-K3","tokensIn":1107,"tokensOut":122,"costUsd":0.000957}
+{"at":"2026-10-15T02:51:31.998Z","script":"bench-judge","label":"B:vi-cho-noi#4:before","model":"google/gemma-3-27b-it","tokensIn":417,"tokensOut":46,"costUsd":0.0003606}
+{"at":"2026-10-15T02:51:33.311Z","script":"bench-judge","label":"B:vi-cho-noi#4:after","model":"google/gemma-3-27b-it","tokensIn":417,"tokensOut":46,"costUsd":0.0003606}
+{"at":"2026-10-15T02:51:35.458Z","script":"bench-judge","label":"B:vi-cho-noi#4:before","model":"moonshotai/Kimi-K3","tokensIn":1101,"tokensOut":117,"costUsd":0.0009414}
+{"at":"2026-10-15T02:51:37.481Z","script":"bench-judge","label":"B:vi-cho-noi#4:after","model":"moonshotai/Kimi-K3","tokensIn":1101,"tokensOut":106,"costUsd":0.000915}
+{"at":"2026-10-15T02:51:38.578Z","script":"bench-judge","label":"B:vi-cho-noi#5:before","model":"google/gemma-3-27b-it","tokensIn":410,"tokensOut":37,"costUsd":0.0003348}
+{"at":"2026-10-15T02:51:39.788Z","script":"bench-judge","label":"B:vi-cho-noi#5:after","model":"google/gemma-3-27b-it","tokensIn":410,"tokensOut":39,"costUsd":0.0003396}
+{"at":"2026-10-15T02:51:41.071Z","script":"bench-judge","label":"B:vi-cho-noi#5:before","model":"moonshotai/Kimi-K3","tokensIn":1084,"tokensOut":107,"costUsd":0.0009072}
+{"at":"2026-10-15T02:51:42.713Z","script":"bench-judge","label":"B:vi-cho-noi#5:after","model":"moonshotai/Kimi-K3","tokensIn":1084,"tokensOut":104,"costUsd":0.0009}
+{"at":"2026-10-15T02:51:42.914Z","script":"bench","label":"B:vi-cho-noi","model":"crew v2","tokensIn":171721,"tokensOut":0,"costUsd":0.119199}
