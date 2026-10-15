@@ -306,3 +306,9 @@
 {"at":"2026-10-15T01:52:15.198Z","script":"bench-judge","label":"B:en-moon-bakery#6:before","model":"google/gemma-3-27b-it","tokensIn":401,"tokensOut":38,"costUsd":0.0003318}
 {"at":"2026-10-15T01:52:16.355Z","script":"bench-judge","label":"B:en-moon-bakery#6:after","model":"google/gemma-3-27b-it","tokensIn":401,"tokensOut":45,"costUsd":0.0003486}
 {"at":"2026-10-15T01:52:20.313Z","script":"bench-judge","label":"B:en-moon-bakery#6:before","model":"moonshotai/Kimi-K3","tokensIn":1047,"tokensOut":118,"costUsd":0.0009114}
+{"at":"2026-10-15T01:52:21.717Z","script":"bench-judge","label":"B:en-moon-bakery#6:after","model":"moonshotai/Kimi-K3","tokensIn":1047,"tokensOut":139,"costUsd":0.0009618}
+{"at":"2026-10-15T01:52:22.896Z","script":"bench-judge","label":"B:en-moon-bakery#7:before","model":"google/gemma-3-27b-it","tokensIn":406,"tokensOut":35,"costUsd":0.0003276}
+{"at":"2026-10-15T01:52:24.093Z","script":"bench-judge","label":"B:en-moon-bakery#7:after","model":"google/gemma-3-27b-it","tokensIn":406,"tokensOut":51,"costUsd":0.000366}
+{"at":"2026-10-15T01:52:25.592Z","script":"bench-judge","label":"B:en-moon-bakery#7:before","model":"moonshotai/Kimi-K3","tokensIn":1051,"tokensOut":167,"costUsd":0.0010314}
+{"at":"2026-10-15T01:52:27.399Z","script":"bench-judge","label":"B:en-moon-bakery#7:after","model":"moonshotai/Kimi-K3","tokensIn":1051,"tokensOut":224,"costUsd":0.0011682}
+{"at":"2026-10-15T01:52:27.604Z","script":"bench","label":"B:en-moon-bakery","model":"crew v2","tokensIn":220407,"tokensOut":0,"costUsd":0.14271144}
