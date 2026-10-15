@@ -104,6 +104,11 @@ describe("bench v2 core (WP7)", () => {
     expect(md).toContain("| USD per finished minute, crew v2 | ≤ $0.40 | $0.150 | ✅ met |");
     expect(md).toMatch(/Paired: crew v2 vs crew v1 \(judge gemma-3-27b-it only, as in v1\)/);
     expect(md).not.toContain("MOCK");
+    // the two-judge average is labelled v2-only and never sits beside v1's gemma-only number (owner + QC 2026-10-16)
+    expect(md).not.toMatch(/Judge \(mean\)/);
+    expect(md).toContain("| Config | Runs (done) | Mean of both judges (v2 only) |");
+    expect(md).toMatch(/\| crew v1 \| 10 \(10\) \| — \|\s+5\.49 \|/);
+    expect(md).toMatch(/\| crew v2 \| 10 \(10\) \| 6\.5 \|\s+7 \| 6 \|/);
     const csv = toCsv([...v2, ...v1], [V1_JUDGE, J2]);
     expect(csv.split("\n")[0]).toContain(`judge:${J2}`);
     expect(csv.trim().split("\n")).toHaveLength(21);
