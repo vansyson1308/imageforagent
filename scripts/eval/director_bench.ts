@@ -322,7 +322,8 @@ async function main() {
 async function writeChart(file: string, agg: ReturnType<typeof aggregate>[], mock: boolean) {
   const colors = ["#2a78d6", "#eb6834", "#1baf7a", "#8a8984"];
   const panels = [
-    { title: "Independent judges (0–10, mean)", v: agg.map((a) => a.judge ?? NaN), max: 10, fmt: (x: number) => `${x}` },
+    // the v1 judge only, so every bar (crew v1 included) is the same judge (owner + QC 2026-10-16); the second judge is in EVAL_RESULTS.md
+    { title: `Judge ${V1_JUDGE.split("/").pop()} (0–10, mean)`, v: agg.map((a) => a.judges[V1_JUDGE] ?? NaN), max: 10, fmt: (x: number) => `${x}` },
     { title: "First-pass render %", v: agg.map((a) => a.firstPass), max: 100, fmt: (x: number) => `${x}%` },
     { title: "USD per finished minute", v: agg.map((a) => a.usdPerMin ?? NaN), max: null, fmt: (x: number) => `$${x}` },
     { title: "Wall time per film (s)", v: agg.map((a) => a.wall), max: null, fmt: (x: number) => `${Math.round(x)}` },
@@ -348,7 +349,7 @@ async function writeChart(file: string, agg: ReturnType<typeof aggregate>[], moc
       svg += `<text x="${bx + bw / 2}" y="${top + ph - h - 8}" font-size="14" text-anchor="middle" fill="#0b0b0b">${esc(Number.isFinite(v) ? p.fmt(v) : "n/a")}</text>`;
     });
   });
-  svg += `<text x="${left}" y="${H - 24}" font-size="13" fill="#52514e">crew v1 is judged by gemma only (v1 frames were not kept). Costs are estimated from list prices (pricing.ts).</text></svg>`;
+  svg += `<text x="${left}" y="${H - 24}" font-size="13" fill="#52514e">Judge panel: the v1 judge (gemma) for every config, as in v1; the second judge (Kimi) is reported separately in EVAL_RESULTS.md. Costs are estimated from list prices (pricing.ts).</text></svg>`;
   await sharp(Buffer.from(svg)).png().toFile(file);
 }
 

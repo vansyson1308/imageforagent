@@ -313,7 +313,7 @@ export function resultsMarkdown(x: ResultsInput): string {
     "",
     "Same 10 prompts and the same judge prompt as v1. Configs: **super-only v2** = every role on Nemotron Super, no critic · **crew v2** = Ultra plans, Super draws, the hybrid critic (a VLM looks, Nemotron Nano scores, D33) with the floor, Nano edits · **crew v2+tavily** = crew v2 plus research (only when the server has a Tavily key) · **crew v1** = the v1 rows, reused, not re-run (judged by gemma only).",
     "",
-    `**Independent judges** (blind to config, both different from the critic and from every crew model, checked per run): ${x.judges.length ? x.judges.map((j) => `\`${j}\``).join(" and ") : "**off** (no judge configured)"}. Each scores every final frame 0–10 against its shot description. The headline judge is \`${V1_JUDGE}\`, the v1 judge, so v2 compares with v1 like for like; the second judge is reported in its own column and its own paired table. "Judge (mean)" in the tables is the mean of both. **Critic uplift** is judged independently too: for every shot where a revision replaced the first version, both judges score the pre-revision snapshot and the accepted one, and the uplift is the mean (after − before).`,
+    `**Independent judges** (blind to config, both different from the critic and from every crew model, checked per run): ${x.judges.length ? x.judges.map((j) => `\`${j}\``).join(" and ") : "**off** (no judge configured)"}. Each scores every final frame 0–10 against its shot description. The headline judge is \`${V1_JUDGE}\`, the v1 judge, so v2 compares with v1 like for like; the second judge is reported in its own column and its own paired table. The "mean of both judges (v2 only)" columns average the two judges for v2 runs; they are never compared with v1, which had one judge (shown "—" for v1), and every v1 comparison uses gemma only. **Critic uplift** is judged independently too: for every shot where a revision replaced the first version, both judges score the pre-revision snapshot and the accepted one, and the uplift is the mean (after − before).`,
     "",
     "## Targets (SPEC v2 WP7)",
     "",
@@ -323,9 +323,9 @@ export function resultsMarkdown(x: ResultsInput): string {
     "",
     "## By config",
     "",
-    `| Config | Runs (done) | Judge (mean) | ${judgeCols.map((c) => ` ${c} |`).join("")} First-pass % | Repairs / shot | Critic self-score | Uplift (judged) [shots] | Gate failures | Below floor | Wall s | Tokens / run | USD total | USD / finished min |`,
+    `| Config | Runs (done) | Mean of both judges (v2 only) | ${judgeCols.map((c) => ` ${c} |`).join("")} First-pass % | Repairs / shot | Critic self-score | Uplift (judged) [shots] | Gate failures | Below floor | Wall s | Tokens / run | USD total | USD / finished min |`,
     `|---|---|---|${judgeCols.map(() => "---|").join("")}---|---|---|---|---|---|---|---|---|---|`,
-    ...agg.map((a) => `| ${a.config} | ${a.runs} (${a.done}) | ${fmt(a.judge)} | ${x.judges.map((j) => ` ${fmt(a.judges[j])} |`).join("")} ${fmt(a.firstPass)} | ${fmt(a.repairs)} | ${a.criticSelf} | ${a.uplift === null ? "—" : signed(a.uplift)} [${a.upliftShots}] | ${a.gateFailures} | ${a.belowFloor} | ${fmt(a.wall)} | ${a.tokens.toLocaleString("en")} | $${a.usd.toFixed(3)} | ${a.usdPerMin === null ? "—" : `$${a.usdPerMin.toFixed(3)}`} |`),
+    ...agg.map((a) => `| ${a.config} | ${a.runs} (${a.done}) | ${a.config === "crew v1" ? "—" : fmt(a.judge)} | ${x.judges.map((j) => ` ${fmt(a.judges[j])} |`).join("")} ${fmt(a.firstPass)} | ${fmt(a.repairs)} | ${a.criticSelf} | ${a.uplift === null ? "—" : signed(a.uplift)} [${a.upliftShots}] | ${a.gateFailures} | ${a.belowFloor} | ${fmt(a.wall)} | ${a.tokens.toLocaleString("en")} | $${a.usd.toFixed(3)} | ${a.usdPerMin === null ? "—" : `$${a.usdPerMin.toFixed(3)}`} |`),
     "",
     "![Director benchmark v2 chart](eval/v2/chart.png)",
     "",
@@ -376,7 +376,7 @@ export function resultsMarkdown(x: ResultsInput): string {
     lines.push(
       "## Hidamari pilot prompts (separate; not part of the comparison)",
       "",
-      `| Prompt | Config | Status | Shots | Judge (mean) | ${judgeCols.map((c) => ` ${c} |`).join("")} Gate failures | Wall s | USD |`,
+      `| Prompt | Config | Status | Shots | Mean of both judges (v2 only) | ${judgeCols.map((c) => ` ${c} |`).join("")} Gate failures | Wall s | USD |`,
       `|---|---|---|---|---|${judgeCols.map(() => "---|").join("")}---|---|---|`,
       ...pilot.map((r) => `| ${r.prompt} | ${r.config} | ${r.status} | ${r.rendered}/${r.shots} | ${fmt(r.judge)} | ${x.judges.map((j) => ` ${fmt(r.judges[j])} |`).join("")} ${r.gateFailures} | ${r.wallSec} | $${r.usd.toFixed(4)} |`),
       "",
@@ -385,11 +385,11 @@ export function resultsMarkdown(x: ResultsInput): string {
   lines.push(
     "## Per run",
     "",
-    `| Version | Config | Prompt | Status | Shots | Judge | ${judgeCols.map((c) => ` ${c} |`).join("")} First-pass % | Repairs/shot | Critic self | Uplift [shots] | Gates | Wall s | USD |`,
+    `| Version | Config | Prompt | Status | Shots | Mean of both judges (v2 only) | ${judgeCols.map((c) => ` ${c} |`).join("")} First-pass % | Repairs/shot | Critic self | Uplift [shots] | Gates | Wall s | USD |`,
     `|---|---|---|---|---|---|${judgeCols.map(() => "---|").join("")}---|---|---|---|---|---|---|`,
     ...main.map(
       (r) =>
-        `| ${r.version} | ${r.config} | ${r.prompt} | ${r.status} | ${r.rendered}/${r.shots} | ${fmt(r.judge)} | ${x.judges.map((j) => ` ${fmt(r.judges[j])} |`).join("")} ${r.firstPassPct} | ${r.repairsPerShot} | ${fmt(r.criticBefore)} → ${fmt(r.criticAfter)} | ${upliftOf([r], x.judges) === null ? "—" : signed(upliftOf([r], x.judges)!)} [${r.upliftShots}] | ${r.gateFailures} | ${r.wallSec} | $${r.usd.toFixed(4)} |`,
+        `| ${r.version} | ${r.config} | ${r.prompt} | ${r.status} | ${r.rendered}/${r.shots} | ${r.version === "v1" ? "—" : fmt(r.judge)} | ${x.judges.map((j) => ` ${fmt(r.judges[j])} |`).join("")} ${r.firstPassPct} | ${r.repairsPerShot} | ${fmt(r.criticBefore)} → ${fmt(r.criticAfter)} | ${upliftOf([r], x.judges) === null ? "—" : signed(upliftOf([r], x.judges)!)} [${r.upliftShots}] | ${r.gateFailures} | ${r.wallSec} | $${r.usd.toFixed(4)} |`,
     ),
     "",
     "## Reading the results (honest)",
