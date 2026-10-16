@@ -1,6 +1,6 @@
 # Director benchmark v2: results
 
-Generated 2026-10-15T03:15:18.628Z against `https://studio-production-049c.up.railway.app` · provider **nemotron** · eval commit `394a797` · 23 v2 runs · raw data: [eval/v2/runs.csv](eval/v2/runs.csv), [eval/v2/runs.jsonl](eval/v2/runs.jsonl). v1 results: [EVAL_RESULTS_V1.md](EVAL_RESULTS_V1.md).
+Generated 2026-10-16T02:17:58.253Z against `https://studio-production-049c.up.railway.app` · provider **nemotron** · eval commit `394a797` · 30 v2 runs · raw data: [eval/v2/runs.csv](eval/v2/runs.csv), [eval/v2/runs.jsonl](eval/v2/runs.jsonl). v1 results: [EVAL_RESULTS_V1.md](EVAL_RESULTS_V1.md).
 
 Same 10 prompts and the same judge prompt as v1. Configs: **super-only v2** = every role on Nemotron Super, no critic · **crew v2** = Ultra plans, Super draws, the hybrid critic (a VLM looks, Nemotron Nano scores, D33) with the floor, Nano edits · **crew v2+tavily** = crew v2 plus research (only when the server has a Tavily key) · **crew v1** = the v1 rows, reused, not re-run (judged by gemma only).
 
@@ -10,19 +10,19 @@ Same 10 prompts and the same judge prompt as v1. Configs: **super-only v2** = ev
 
 | Target | Goal | Measured | |
 |---|---|---|---|
-| Judge mean, crew v2 (gemma-3-27b-it, the v1 judge; crew v1 = 5.49) | ≥ 6.5 | 6.17 | ❌ missed |
-| Second judge, crew v2 (Kimi-K3, reported separately) | — | 4.21 | for information |
-| Crew v2 wins vs super-only v2 (paired, gemma-3-27b-it, ±0.25 = tie) | ≥ 8/10 | 5/7 | ❌ missed |
-| Critic uplift, independently judged | ≥ +0.5 | +0.44 | ❌ missed |
-| USD per finished minute, crew v2 | ≤ $0.40 | $0.583 | ❌ missed |
+| Judge mean, crew v2 (gemma-3-27b-it, the v1 judge; crew v1 = 5.49) | ≥ 6.5 | 6.22 | ❌ missed |
+| Second judge, crew v2 (Kimi-K3, reported separately) | — | 4.38 | for information |
+| Crew v2 wins vs super-only v2 (paired, gemma-3-27b-it, ±0.25 = tie) | ≥ 8/10 | 7/9 | ❌ missed |
+| Critic uplift, independently judged | ≥ +0.5 | +0.5 | ✅ met |
+| USD per finished minute, crew v2 | ≤ $0.40 | $0.569 | ❌ missed |
 
 ## By config
 
 | Config | Runs (done) | Mean of both judges (v2 only) |  Judge gemma-3-27b-it | Judge Kimi-K3 | First-pass % | Repairs / shot | Critic self-score | Uplift (judged) [shots] | Gate failures | Below floor | Wall s | Tokens / run | USD total | USD / finished min |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| super-only v2 | 8 (8) | 5.26 |  5.98 | 4.55 | 25 | 1.85 | — | — [0] | 6 | 0 | 170.49 | 60,467 | $0.328 | $0.445 |
-| crew v2 | 8 (7) | 5.19 |  6.17 | 4.21 | 47.56 | 1.71 | 4.91 → 5.48 | +0.44 [9] | 8 | 25 | 449.02 | 245,818 | $1.282 | $0.583 |
-| crew v2+tavily | 7 (5) | 5.19 |  6.13 | 4.25 | 36.48 | 2.38 | 4.76 → 5.44 | +0.42 [12] | 11 | 21 | 607.5 | 334,146 | $1.561 | $0.734 |
+| super-only v2 | 10 (10) | 4.96 |  5.68 | 4.24 | 30 | 1.58 | — | — [0] | 6 | 0 | 160.42 | 56,076 | $0.379 | $0.423 |
+| crew v2 | 10 (9) | 5.3 |  6.22 | 4.38 | 51.62 | 1.47 | 5.27 → 5.81 | +0.5 [13] | 8 | 28 | 446.74 | 245,588 | $1.595 | $0.569 |
+| crew v2+tavily | 10 (7) | 4.83 |  5.65 | 4.01 | 31.52 | 2.55 | 4.32 → 4.97 | +0.41 [16] | 15 | 30 | 634.92 | 348,583 | $2.263 | $0.749 |
 | crew v1 | 10 (10) | — |  5.49 | — | 56.8 | 1.53 | 6.92 → 7.07 | — [0] | 0 | 0 | 212.68 | 124,066 | $0.864 | $0.234 |
 
 ![Director benchmark v2 chart](eval/v2/chart.png)
@@ -33,20 +33,20 @@ Per config and judge: n = runs that judge scored, mean ± sample SD and the rang
 
 | Config | Judge | n | Mean | SD | Min–max |
 |---|---|---|---|---|---|
-| super-only v2 | gemma-3-27b-it (headline) | 8 | 5.98 | 1.58 | 4–8 |
-| super-only v2 | Kimi-K3 | 8 | 4.55 | 1.52 | 2.4–7 |
-| crew v2 | gemma-3-27b-it (headline) | 7 | 6.17 | 0.62 | 5–6.75 |
-| crew v2 | Kimi-K3 | 7 | 4.21 | 0.82 | 2.5–4.86 |
-| crew v2+tavily | gemma-3-27b-it (headline) | 6 | 6.13 | 0.49 | 5.6–6.8 |
-| crew v2+tavily | Kimi-K3 | 6 | 4.25 | 0.43 | 3.5–4.71 |
+| super-only v2 | gemma-3-27b-it (headline) | 10 | 5.68 | 1.68 | 3–8 |
+| super-only v2 | Kimi-K3 | 10 | 4.24 | 1.56 | 2–7 |
+| crew v2 | gemma-3-27b-it (headline) | 9 | 6.22 | 0.54 | 5–6.75 |
+| crew v2 | Kimi-K3 | 9 | 4.38 | 0.79 | 2.5–5 |
+| crew v2+tavily | gemma-3-27b-it (headline) | 9 | 5.65 | 1.1 | 3.5–6.8 |
+| crew v2+tavily | Kimi-K3 | 9 | 4.01 | 0.87 | 2–4.83 |
 | crew v1 | gemma-3-27b-it (headline) | 10 | 5.49 | 0.89 | 4–7 |
 | crew v1 | Kimi-K3 | 0 | — | — | — |
 
 | Config | Runs | Done | Failed (status) | Wall s mean | Wall s total | USD total |
 |---|---|---|---|---|---|---|
-| super-only v2 | 8 | 8 | 0 | 170.49 | 1363.91 | $0.328 |
-| crew v2 | 8 | 7 | 1 (vi-ao-dai: failed) | 449.02 | 3592.18 | $1.282 |
-| crew v2+tavily | 7 | 5 | 2 (en-robot-garden: failed; vi-ao-dai: budget_exceeded) | 607.5 | 4252.48 | $1.561 |
+| super-only v2 | 10 | 10 | 0 | 160.42 | 1604.19 | $0.379 |
+| crew v2 | 10 | 9 | 1 (vi-ao-dai: failed) | 446.74 | 4467.41 | $1.595 |
+| crew v2+tavily | 10 | 7 | 3 (en-robot-garden: failed; vi-ao-dai: budget_exceeded; ja-sakura: budget_exceeded) | 634.92 | 6349.18 | $2.263 |
 | crew v1 | 10 | 10 | 0 | 212.68 | 2126.79 | $0.864 |
 
 ## Reproduce
@@ -59,7 +59,7 @@ The bench refuses to start unless the server reports the eval commit, stops if i
 
 ## Paired: crew v2 vs super-only v2 (judge gemma-3-27b-it)
 
-crew v2 − super-only v2 on the same prompt: mean **+0.34**; crew v2 is better on **5**, worse on **2**, and ties (±0.25) on **0** of 7 prompts. 
+crew v2 − super-only v2 on the same prompt: mean **+0.68**; crew v2 is better on **7**, worse on **2**, and ties (±0.25) on **0** of 9 prompts. 
 
 | Prompt | super-only v2 | crew v2 | Δ |
 |---|---|---|---|
@@ -70,10 +70,12 @@ crew v2 − super-only v2 on the same prompt: mean **+0.34**; crew v2 is better 
 | vi-trau-vang | 5.6 | 6.2 | +0.6 |
 | vi-cho-noi | 8 | 6.71 | -1.29 |
 | ja-umbrella | 6 | 6.75 | +0.75 |
+| ja-tanuki | 6 | 6.33 | +0.33 |
+| ja-sakura | 3 | 6.43 | +3.43 |
 
 ## Paired: crew v2 vs super-only v2 (second judge Kimi-K3, reported separately)
 
-crew v2 − super-only v2 on the same prompt: mean **-0.28**; crew v2 is better on **2**, worse on **3**, and ties (±0.25) on **2** of 7 prompts. 
+crew v2 − super-only v2 on the same prompt: mean **+0.23**; crew v2 is better on **4**, worse on **3**, and ties (±0.25) on **2** of 9 prompts. 
 
 | Prompt | super-only v2 | crew v2 | Δ |
 |---|---|---|---|
@@ -84,10 +86,12 @@ crew v2 − super-only v2 on the same prompt: mean **-0.28**; crew v2 is better 
 | vi-trau-vang | 4 | 4.2 | +0.2 |
 | vi-cho-noi | 5 | 4.86 | -0.14 |
 | ja-umbrella | 6 | 4.5 | -1.5 |
+| ja-tanuki | 4 | 5 | +1 |
+| ja-sakura | 2 | 5 | +3 |
 
 ## Paired: crew v2 vs crew v1 (judge gemma-3-27b-it only, as in v1)
 
-crew v2 − crew v1 on the same prompt: mean **+0.64**; crew v2 is better on **4**, worse on **2**, and ties (±0.25) on **1** of 7 prompts. Same prompts, same judge, same judge prompt; v1 frames were not kept, so the second judge can't score v1.
+crew v2 − crew v1 on the same prompt: mean **+0.77**; crew v2 is better on **6**, worse on **2**, and ties (±0.25) on **1** of 9 prompts. Same prompts, same judge, same judge prompt; v1 frames were not kept, so the second judge can't score v1.
 
 | Prompt | crew v1 | crew v2 | Δ |
 |---|---|---|---|
@@ -98,6 +102,8 @@ crew v2 − crew v1 on the same prompt: mean **+0.64**; crew v2 is better on **4
 | vi-trau-vang | 7 | 6.2 | -0.8 |
 | vi-cho-noi | 4.71 | 6.71 | +2 |
 | ja-umbrella | 5.5 | 6.75 | +1.25 |
+| ja-tanuki | 4.83 | 6.33 | +1.5 |
+| ja-sakura | 5.5 | 6.43 | +0.93 |
 
 ## Per run
 
@@ -126,6 +132,13 @@ crew v2 − crew v1 on the same prompt: mean **+0.64**; crew v2 is better on **4
 | v2 | crew v2+tavily | vi-cho-noi | done | 7/7 | 5.64 |  6.57 | 4.71 | 42.86 | 3.57 | 5.29 → 6.43 | +0.5 [4] | 2 | 552 | $0.2967 |
 | v2 | super-only v2 | ja-umbrella | done | 1/1 | 6 |  6 | 6 | 0 | 3 | — → — | — [0] | 0 | 153.88 | $0.0343 |
 | v2 | crew v2 | ja-umbrella | done | 4/4 | 5.63 |  6.75 | 4.5 | 100 | 0 | 5.75 → 6.25 | +0.5 [1] | 0 | 573.46 | $0.1448 |
+| v2 | crew v2+tavily | ja-umbrella | done | 4/4 | 4 |  4.25 | 3.75 | 25 | 4.5 | 3 → 3.75 | +1 [2] | 1 | 677.16 | $0.2236 |
+| v2 | super-only v2 | ja-tanuki | done | 1/1 | 5 |  6 | 4 | 0 | 1 | — → — | — [0] | 0 | 133.42 | $0.0286 |
+| v2 | crew v2 | ja-tanuki | done | 6/6 | 5.67 |  6.33 | 5 | 50 | 0.5 | 7.33 → 7.67 | +0.5 [1] | 0 | 317.33 | $0.1156 |
+| v2 | crew v2+tavily | ja-tanuki | done | 6/6 | 5.58 |  6.33 | 4.83 | 16.67 | 4 | 5.33 → 5.83 | +0 [1] | 2 | 528.33 | $0.2133 |
+| v2 | super-only v2 | ja-sakura | done | 1/1 | 2.5 |  3 | 2 | 100 | 0 | — → — | — [0] | 0 | 106.86 | $0.0220 |
+| v2 | crew v2 | ja-sakura | done | 7/7 | 5.72 |  6.43 | 5 | 85.71 | 0.57 | 5.71 → 6.29 | +0.67 [3] | 0 | 557.9 | $0.1978 |
+| v2 | crew v2+tavily | ja-sakura | budget_exceeded | 2/11 | 2.75 |  3.5 | 2 | 18.18 | 0.36 | 2 → 2.5 | -0.5 [1] | 1 | 891.21 | $0.2658 |
 | v1 | crew v1 | en-lighthouse | done | 5/5 | — |  5.6 | — | 40 | 3.6 | 5 → 5 | — [0] | 0 | 253.91 | $0.1251 |
 | v1 | crew v1 | en-robot-garden | done | 6/6 | — |  6.67 | — | 0 | 7 | 3.33 → 3.83 | — [0] | 0 | 484.53 | $0.2288 |
 | v1 | crew v1 | en-paper-boat | done | 4/4 | — |  4 | — | 75 | 0.75 | 7.75 → 7.75 | — [0] | 0 | 152.01 | $0.0520 |
