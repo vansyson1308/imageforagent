@@ -19,7 +19,7 @@ for t in ffmpeg ffprobe node; do command -v $t >/dev/null || { echo "missing: $t
 [ -f "$W/replay.mp4" ] || { echo "missing $W/replay.mp4: npx tsx demo/video/record-smooth.ts --only replay"; exit 1; }
 for f in v2-kite v2-banh-chung v2-tegami; do [ -f "$S/$f/film.mp4" ] || { echo "missing $S/$f/film.mp4"; exit 1; }; done
 
-npx tsx demo/video/prepare.ts --narration narration.v2.json --chart docs/hackathon/eval/v2/chart.png $DRY || [ $? -eq 2 ]
+npx tsx demo/video/prepare.ts --narration narration.v2.json --eval-card demo/video/eval-card.v2.json $DRY || [ $? -eq 2 ]
 
 dur() { node -e "const p=require('./$W/plan.json');console.log(p.scenes.filter(s=>s.scene==='$1').reduce((a,s)=>a+s.duration,0))"; }
 len() { ffprobe -v error -show_entries format=duration -of csv=p=0 "$1"; }
