@@ -1,6 +1,6 @@
-# YouTube upload: Storyboard Studio Director v2 (DRAFT 2, 2026-10-15)
+# YouTube upload: Storyboard Studio Director v2 (FINAL for QC, 2026-10-18)
 
-_The owner uploads. Every `{{PENDING}}` is filled only after QC approves the number (bench table first, then the film totals of D92). The chapters follow `narration.v2.json`; re-check them against the final cut. No passcode anywhere: not in the video, the description or the comments._
+_The owner uploads. The results line is the owner + QC approved text (2026-10-18). The chapters follow `narration.v2.json` (164 s cut). No passcode anywhere: not in the video, the description or the comments. A web copy of the video: https://studio-production-049c.up.railway.app/showcase/demo-video-v2.mp4_
 
 **File:** `demo/video/out/director_demo_v2.mp4` (1920×1080, ≤ 2:55, built by `sh demo/video/build-v2.sh`) · **Subtitles:** upload `demo/video/out/director_demo_v2.en.srt` as English · **Thumbnail:** `demo/video/out/thumbnail_v2.png` (1280×720, a frame of the kite film)
 
@@ -17,7 +17,7 @@ The video opens on "The Mended Kite", one of three published films, then replays
 - The engine measures every render; a vision model looks and Nemotron Nano scores; Nano edits
 - A shot that still misses is redone on its own; every published film passed the measured checks and a check by eye
 
-Real results: {{PENDING: one line from EVAL_RESULTS.md, after QC}}
+Real results (10 fixed prompts, blind independent judges, frozen commit 394a797): crew v2 scored 6.22/10 vs v1's 5.49 on the v1 judge (gemma-3-27b-it, n=9, SD 0.54) and beat Nemotron Super alone on 7 of 9 prompts. A second judge (Kimi-K3) scores harsher (4.38) and is reported in full: https://github.com/vansyson1308/imageforagent/blob/main/docs/hackathon/EVAL_RESULTS.md
 
 ▶ Try it: https://studio-production-049c.up.railway.app (the showcase and the replays need no passcode: https://studio-production-049c.up.railway.app/showcase)
 ▶ The kite's run, replayed: https://studio-production-049c.up.railway.app/showcase/replay/v2-kite
@@ -29,9 +29,9 @@ Chapters
 0:40 Super draws, the engine measures
 0:57 The critic looks and scores
 1:09 Redoing only the shots that miss
-1:21 Two more films: bánh chưng and a Hidamari story
-1:38 Under the hood: Token Factory tiers
-2:00 Real results
+1:22 Two more films: bánh chưng and a Hidamari story
+1:39 Under the hood: Token Factory tiers
+2:01 Real results
 2:26 Try it
 
 Voice-over: Piper `en_US-john-medium` (public domain, LibriVox). The films' music: the engine's own synth. Japanese narration in the Hidamari film: AivisSpeech / morioki (ACML 1.0), as credited at the end of that film. Built for the Nebius × NVIDIA hackathon.

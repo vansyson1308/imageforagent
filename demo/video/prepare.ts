@@ -69,8 +69,28 @@ async function main() {
     .png()
     .toFile(`${WORK}/cards/arch.png`);
 
+  // v2: a stats card from an owner/QC-approved data file (--eval-card), instead of the chart
+  const evalCardPath = process.argv.includes("--eval-card") ? process.argv[process.argv.indexOf("--eval-card") + 1] : null;
+  if (evalCardPath) {
+    const c = JSON.parse(readFileSync(evalCardPath, "utf8")) as { title: string; headline: { value: string; label: string; sub: string; was: string; wasLabel: string }; rows: Array<[string, string]>; link: string };
+    await card(
+      "eval",
+      frame(
+        `<text x="160" y="190" font-size="38" fill="#8b8b98">${esc(c.title)}</text>` +
+          `<text x="160" y="420" font-size="200" font-weight="700" fill="#ececf1">${esc(c.headline.value)}</text>` +
+          `<text x="760" y="330" font-size="40" fill="#8b8b98">vs</text>` +
+          `<text x="840" y="420" font-size="120" font-weight="700" fill="#8b8b98">${esc(c.headline.was)}</text>` +
+          `<text x="160" y="490" font-size="36" fill="#ececf1">${esc(c.headline.label)}</text>` +
+          `<text x="160" y="540" font-size="32" fill="#8b8b98">${esc(c.headline.sub)} · ${esc(c.headline.was)} = ${esc(c.headline.wasLabel)}</text>` +
+          c.rows.map(([v, l], i) => `<text x="160" y="${660 + i * 90}" font-size="56" font-weight="700" fill="#76b900">${esc(v)}</text><text x="420" y="${660 + i * 90}" font-size="38" fill="#ececf1">${esc(l)}</text>`).join("") +
+          `<text x="160" y="${660 + c.rows.length * 90 + 30}" font-size="30" fill="#8b8b98">${esc(c.link)}</text>`,
+      ),
+    );
+  }
   const chartPath = process.argv.includes("--chart") ? process.argv[process.argv.indexOf("--chart") + 1] : "docs/hackathon/eval/chart.png";
-  if (existsSync(chartPath)) {
+  if (evalCardPath) {
+    // the stats card above is the eval card
+  } else if (existsSync(chartPath)) {
     const chart = await sharp(chartPath).resize({ width: 1800 }).png().toBuffer();
     const meta = await sharp(chart).metadata();
     await sharp({ create: { width: W, height: H, channels: 4, background: "#fcfcfb" } })

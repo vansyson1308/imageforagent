@@ -42,6 +42,8 @@ interface ShowcaseFilm {
   totals?: { takes: number; tokens: number; costUsd: number; wallMs: number };
   createdAt: string;
   version?: string;
+  /** shown on the card when a film is not a current, gate-checked showcase film (e.g. an early draft) */
+  label?: string;
 }
 
 async function loadFilms(): Promise<ShowcaseFilm[]> {
@@ -86,8 +88,9 @@ export default async function ShowcasePage() {
                   <span className="rounded-full border border-line px-2 py-0.5">{LANG[f.language] ?? f.language}</span>
                   <span>{new Date(f.createdAt).toISOString().slice(0, 10)}</span>
                   <span>· {f.provider}</span>
-                  {f.version ? <span className="rounded-full border border-line px-2 py-0.5">{f.version}</span> : null}
+                  {f.version ? <span className="rounded-full border border-line px-2 py-0.5">{f.label ? `${f.version} draft` : f.version}</span> : null}
                 </div>
+                {f.label ? <p className="mt-2 rounded-lg border border-amber-400/40 bg-amber-400/10 px-2 py-1 text-xs text-amber-200">{f.label}</p> : null}
                 <h2 className="mt-2 text-lg font-bold">{f.title}</h2>
                 <p className="mt-1 text-sm text-muted">{f.logline}</p>
                 <Link href={`/showcase/replay/${f.slug}`} className="mt-3 inline-flex items-center gap-2 rounded-xl border border-accent/60 bg-accent/10 px-3 py-1.5 text-sm font-semibold text-ink hover:bg-accent/20">

@@ -157,60 +157,6 @@
       "version": "v1"
     },
     {
-      "slug": "v2-furin",
-      "title": "夏休みの風鈴",
-      "language": "ja",
-      "logline": "古い風鈴が再び鳴る夜、願いが結ぶ家族の物語。",
-      "story": "夏休み、ゆいは京都のおばあちゃんの家に遊びに来ました。縁側には古い江戸風鈴がひとつ下がっていますが、もう音が鳴りません。夜、二人は浴衣を着て祇園祭の宵山へ出かけ、屋台で新しい風鈴の短冊を選びました。家に帰ってゆいが短冊に願いごとを書いて結ぶと、夜風が吹いて、風鈴がひさしぶりにちりんと鳴りました。おばあちゃんはそっと涙をふきました。",
-      "film": "/showcase/v2-furin/film.mp4",
-      "poster": "/showcase/v2-furin/poster.jpg",
-      "trace": "/showcase/v2-furin/trace.json",
-      "models": {
-        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
-        "mid": "nvidia/nemotron-3-super-120b-a12b",
-        "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
-        "vision": "openbmb/MiniCPM-V-4_5"
-      },
-      "provider": "nemotron",
-      "summary": {
-        "status": "done",
-        "shots": 7,
-        "rendered": 7,
-        "firstPassOk": 3,
-        "repairs": 16,
-        "criticBefore": 6.43,
-        "criticAfter": 7,
-        "revisions": 3,
-        "gateFailures": 0,
-        "belowFloor": [
-          6,
-          7
-        ],
-        "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
-        "lintErrors": 0,
-        "lintWarnings": 0,
-        "durationSec": 23.083333,
-        "wallMs": 340894,
-        "tokens": 206796,
-        "costUsd": 0.14828406,
-        "continuity": [],
-        "textCritic": false
-      },
-      "createdAt": "2026-10-10T03:16:08.579Z",
-      "source": "studio-production-049c.up.railway.app",
-      "version": "v2",
-      "remastered": "2048×1152 @ 24 fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call; re-assembled 2026-10-10, D43)",
-      "stills": {
-        "1": "/showcase/v2-furin/shots/F01.jpg",
-        "2": "/showcase/v2-furin/shots/F02.jpg",
-        "3": "/showcase/v2-furin/shots/F03.jpg",
-        "4": "/showcase/v2-furin/shots/F04.jpg",
-        "5": "/showcase/v2-furin/shots/F05.jpg",
-        "6": "/showcase/v2-furin/shots/F06.jpg",
-        "7": "/showcase/v2-furin/shots/F07.jpg"
-      }
-    },
-    {
       "slug": "v2-banh-chung",
       "title": "Bánh Chưng Tết: Ký Ức Của An",
       "language": "vi",
@@ -623,6 +569,61 @@
         "10": "/showcase/v2-kite/shots/F10.jpg",
         "11": "/showcase/v2-kite/shots/F11.jpg"
       }
+    },
+    {
+      "slug": "v2-furin",
+      "title": "夏休みの風鈴",
+      "language": "ja",
+      "logline": "古い風鈴が再び鳴る夜、願いが結ぶ家族の物語。",
+      "story": "夏休み、ゆいは京都のおばあちゃんの家に遊びに来ました。縁側には古い江戸風鈴がひとつ下がっていますが、もう音が鳴りません。夜、二人は浴衣を着て祇園祭の宵山へ出かけ、屋台で新しい風鈴の短冊を選びました。家に帰ってゆいが短冊に願いごとを書いて結ぶと、夜風が吹いて、風鈴がひさしぶりにちりんと鳴りました。おばあちゃんはそっと涙をふきました。",
+      "film": "/showcase/v2-furin/film.mp4",
+      "poster": "/showcase/v2-furin/poster.jpg",
+      "trace": "/showcase/v2-furin/trace.json",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/nemotron-3-super-120b-a12b",
+        "fast": "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
+        "vision": "openbmb/MiniCPM-V-4_5"
+      },
+      "provider": "nemotron",
+      "summary": {
+        "status": "done",
+        "shots": 7,
+        "rendered": 7,
+        "firstPassOk": 3,
+        "repairs": 16,
+        "criticBefore": 6.43,
+        "criticAfter": 7,
+        "revisions": 3,
+        "gateFailures": 0,
+        "belowFloor": [
+          6,
+          7
+        ],
+        "criticModel": "openbmb/MiniCPM-V-4_5 looks · nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B scores",
+        "lintErrors": 0,
+        "lintWarnings": 0,
+        "durationSec": 23.083333,
+        "wallMs": 340894,
+        "tokens": 206796,
+        "costUsd": 0.14828406,
+        "continuity": [],
+        "textCritic": false
+      },
+      "createdAt": "2026-10-10T03:16:08.579Z",
+      "source": "studio-production-049c.up.railway.app",
+      "version": "v2",
+      "remastered": "2048×1152 @ 24 fps film (shots re-rendered at 2K @ 24 fps from the same SVG, no model call; re-assembled 2026-10-10, D43)",
+      "stills": {
+        "1": "/showcase/v2-furin/shots/F01.jpg",
+        "2": "/showcase/v2-furin/shots/F02.jpg",
+        "3": "/showcase/v2-furin/shots/F03.jpg",
+        "4": "/showcase/v2-furin/shots/F04.jpg",
+        "5": "/showcase/v2-furin/shots/F05.jpg",
+        "6": "/showcase/v2-furin/shots/F06.jpg",
+        "7": "/showcase/v2-furin/shots/F07.jpg"
+      },
+      "label": "early v2 draft (2026-10-10), before the measured+by-eye publish gate"
     }
   ],
   "hero": "v2-kite"
