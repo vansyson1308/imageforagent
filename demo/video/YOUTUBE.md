@@ -1,6 +1,6 @@
-# YouTube upload: Storyboard Studio Director v2 (rebuild for QC, 2026-10-19)
+# YouTube upload: Storyboard Studio Director v2 (PUBLISHED 2026-10-19: https://youtu.be/aNHZgw2Jo80)
 
-_The owner uploads. The results line is the owner + QC approved text (2026-10-19 accuracy rebuild: the Super-alone comparison is out of the video). The chapters follow the scenes in `narration.v2.json` (154 s cut, rebuilt 2026-10-19 after the owner + QC video QC; no model calls). No passcode anywhere: not in the video, the description or the comments. A web copy of the video: https://studio-production-049c.up.railway.app/showcase/demo-video-v2.mp4_
+_Published by the owner on 2026-10-19: https://youtu.be/aNHZgw2Jo80. This file is the text as uploaded. The results line is the owner + QC approved text (2026-10-19 accuracy rebuild: the Super-alone comparison is out of the video). The chapters follow the scenes in `narration.v2.json` (154 s cut, rebuilt 2026-10-19 after the owner + QC video QC; no model calls). No passcode anywhere: not in the video, the description or the comments. A web copy of the video: https://studio-production-049c.up.railway.app/showcase/demo-video-v2.mp4_
 
 **File:** `demo/video/out/director_demo_v2.mp4` (1920×1080, ≤ 2:55, built by `sh demo/video/build-v2.sh`) · **Subtitles:** upload `demo/video/out/director_demo_v2.en.srt` as English · **Thumbnail:** `demo/video/out/thumbnail_v2.png` (1280×720, a frame of the kite film)
 
@@ -31,8 +31,7 @@ Chapters
 1:08 Redrawing only the shots that miss
 1:19 Two more films: bánh chưng and a Hidamari story
 1:39 Under the hood: Token Factory tiers
-2:01 Real results
-2:26 Try it
+2:01 Real results and try it
 
 Voice-over: Piper `en_US-john-medium`; its model card lists the training dataset as LibriVox recordings, "License: public domain" (fine-tuned from Piper's `kristin` voice, also LibriVox, public domain). Vietnamese narration: Piper vi_VN-vais1000-medium (VAIS-1000 dataset, CC BY 4.0; fine-tuned from Piper's en_US-lessac voice, whose training data is under the Blizzard 2013 licence), used for this non-commercial demo. Japanese narration in the Hidamari film: AivisSpeech / morioki (ACML 1.0), as credited at the end of that film. The films' music: the engine's own synth. Built for the Nebius × NVIDIA hackathon.
 

@@ -143,9 +143,9 @@ function main() {
   const filled = fillTemplate(md, {
     passcode,
     contact: process.env.DEMO_CONTACT_EMAIL?.trim() || null,
-    maxConcurrentRuns: process.env.DEMO_MAX_CONCURRENT_RUNS || "2",
+    maxConcurrentRuns: process.env.DEMO_MAX_CONCURRENT_RUNS || "3",
     maxProjects: process.env.DEMO_MAX_PROJECTS_PER_SESSION || "3",
-    retentionHours: process.env.DEMO_RETENTION_HOURS || "24",
+    retentionHours: process.env.DEMO_RETENTION_HOURS || "72",
   });
   const outDir = path.join(root, "out", "judge-access");
   mkdirSync(outDir, { recursive: true });
