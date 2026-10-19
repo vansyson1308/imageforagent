@@ -15,12 +15,12 @@ NVIDIA Nemotron models on Nebius Token Factory write the whole film as code; a d
 
 Testing is free: every model call is paid by the team's Token Factory account, inside a daily budget sized for the judging period.
 
-## Test it in 4 steps (≈ 5 minutes)
+## Test it in 4 steps
 
 1. Open the demo and enter the passcode above.
 2. On the landing page, click **Make this film** under one of the three sample stories (English, Tiếng Việt, 日本語). One click starts the crew.
 3. Watch the run view: the plain-language status line, the latest frame, the filmstrip filling in, the critic's **before → after** when a revision wins, and **The crew** card (which Nemotron model did what, tokens and cost). Open **Crew timeline** to see every model call.
-4. When it finishes (about 3–6 minutes), play the film, then download the **MP4** or the **production package** (frames, clips, subtitles, EDL/OTIO, glTF, `assemble.sh`).
+4. When it finishes (about 6–12 minutes), play the film, then download the **MP4** or the **production package** (frames, clips, subtitles, EDL/OTIO, glTF, `assemble.sh`).
 
 You can close the tab at any time: the film keeps rendering on the server, and reopening the studio page continues where it is.
 
@@ -42,7 +42,7 @@ Or write your own story in any language (at least 20 characters).
 
 ## Limits (honest)
 
-- A film takes about 3–6 minutes. Up to {{MAX_CONCURRENT_RUNS}} films render at the same time; if the demo says it is busy, try again in a few minutes.
+- A film takes about 6–12 minutes. Up to {{MAX_CONCURRENT_RUNS}} films render at the same time; if the demo says it is busy, try again in a few minutes.
 - Each judge session can keep up to {{MAX_PROJECTS}} films; demo films are deleted after {{RETENTION_HOURS}} hours.
 - A daily token budget protects the demo. If it is used up, the demo says so; the showcase and replays always work.
 - Films are 1K / 12 fps on the demo (the showcase films are rendered at higher settings).
