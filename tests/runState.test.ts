@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { emptyRun, modelLabel, reduceAll, reduceRun, statusLine, type DirectorEventLike } from "@/lib/director/runState";
-import { dueEvents, filmTotals, TAKE_GAP_MS, traceTakes, traceToEvents, type Trace } from "@/lib/director/traceReplay";
+import { dueEvents, filmTotals, runsLabel, TAKE_GAP_MS, traceTakes, traceToEvents, type Trace } from "@/lib/director/traceReplay";
 import { SAMPLE_STORIES } from "@/lib/director/sampleStories";
 
 const step = (seq: number, extra: Record<string, unknown> = {}) => ({
@@ -113,7 +113,12 @@ describe("replay of a film made in several takes (2026-10-15: the kite replay en
     expect(takes.map((t) => t.runId)).toEqual(["cmv6fvwbe00012ao49z3wfu27", "cmv6tmikq00002as8u3uwsquz", "cmv6tvm43003b2as8x7pl74px", "cmv6z9x3k00002apec9c55j9f"]);
     expect(takes.at(-1)!.runId).toBe(kite.id);
     const t = filmTotals(kite);
-    expect(t.takes).toBe(4);
+    expect(t.runs).toBe(4);
+    // 1 take + 3 single-shot redos (D84): each redo run records a `redo` step
+    expect(t.redos).toBe(3);
+    expect(runsLabel("en", t.runs, t.redos)).toBe("4 runs (1 take + 3 single-shot redos)");
+    expect(filmTotals(read("v2-banh-chung"))).toMatchObject({ runs: 3, redos: 2 });
+    expect(filmTotals(read("v2-tegami"))).toMatchObject({ runs: 6, redos: 5 });
     expect(t.tokens).toBe(kite.steps.reduce((a, s) => a + s.tokensIn + s.tokensOut, 0));
     expect(t.costUsd).toBeCloseTo(kite.steps.reduce((a, s) => a + s.costUsd, 0), 6);
     expect(t.costUsd).toBeGreaterThan(10 * (kite as unknown as { costUsd: number }).costUsd);
@@ -129,7 +134,7 @@ describe("replay of a film made in several takes (2026-10-15: the kite replay en
     // no step is lost to a seq collision between takes
     expect(state.steps.length).toBe(kite.steps.length);
     expect(state.totals.costUsd).toBeCloseTo(filmTotals(kite).costUsd, 6);
-    expect(state.summary).toMatchObject({ takes: 4, costUsd: filmTotals(kite).costUsd, tokens: filmTotals(kite).tokens, wallMs: filmTotals(kite).wallMs });
+    expect(state.summary).toMatchObject({ runs: 4, redos: 3, costUsd: filmTotals(kite).costUsd, tokens: filmTotals(kite).tokens, wallMs: filmTotals(kite).wallMs });
     // the steps of take 1 start at the beginning, not all at once
     const firstTake = ev.filter((e) => e.event.type === "step").slice(0, 50).map((e) => e.at);
     expect(new Set(firstTake).size).toBeGreaterThan(40);

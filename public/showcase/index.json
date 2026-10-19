@@ -268,7 +268,8 @@
       "version": "v2",
       "byEye": "docs/hackathon/evidence/byeye/v2-banh-chung-cmv6ul9yo00002ao09enx017d/checklist.md",
       "totals": {
-        "takes": 3,
+        "runs": 3,
+        "redos": 2,
         "tokens": 316717,
         "costUsd": 0.20321208,
         "wallMs": 465039
@@ -398,7 +399,8 @@
       "version": "v2",
       "byEye": "docs/hackathon/evidence/byeye/v2-tegami-cmv6xhzbt00002anq0uc7rb4y/checklist.md",
       "totals": {
-        "takes": 6,
+        "runs": 6,
+        "redos": 5,
         "tokens": 439364,
         "costUsd": 0.27549534,
         "wallMs": 838249
@@ -551,7 +553,8 @@
       "version": "v2",
       "byEye": "docs/hackathon/evidence/byeye/v2-kite-cmv6z9x3k00002apec9c55j9f/checklist.md",
       "totals": {
-        "takes": 4,
+        "runs": 4,
+        "redos": 3,
         "tokens": 355434,
         "costUsd": 0.2378073,
         "wallMs": 484456
