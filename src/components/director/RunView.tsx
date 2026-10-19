@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { modelLabel, statusLine, type RunShot, type RunState, type RunStep } from "@/lib/director/runState";
 import { t, type Lang } from "@/lib/i18n";
+import { runsLabel } from "@/lib/director/traceReplay";
 
 /* eslint-disable @next/next/no-img-element */
 
@@ -342,7 +343,7 @@ function FinishedFilm({ state, lang, filmSrc, downloads, onSaveSeries }: { state
         <Stat label={t(lang, "firstPass")} value={`${s.firstPassOk}/${s.shots}`} />
         <Stat label={t(lang, "repairs")} value={String(s.repairs)} />
         <Stat label={t(lang, "uplift")} value={s.criticBefore !== null ? `${s.criticBefore} → ${s.criticAfter}` : "—"} />
-        <Stat label={s.takes && s.takes > 1 ? `${t(lang, "wall")} · ${s.takes} ${t(lang, "takes")}` : t(lang, "wall")} value={fmtTime(Math.round(s.wallMs / 1000))} />
+        <Stat label={s.runs && s.runs > 1 ? `${t(lang, "wall")} · ${runsLabel(lang === "vi" ? "vi" : lang === "ja" ? "ja" : "en", s.runs, s.redos ?? 0)}` : t(lang, "wall")} value={fmtTime(Math.round(s.wallMs / 1000))} />
         <Stat label={t(lang, "cost")} value={`$${s.costUsd.toFixed(3)}`} />
       </dl>
       {models.length > 0 && (

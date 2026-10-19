@@ -59,8 +59,9 @@ export interface RunSummary {
   textCritic: boolean;
   criticModel?: string | null;
   belowFloor?: number[];
-  /** a showcase film made in several takes: tokens, cost and wallMs then cover every take (traceReplay.filmTotals) */
-  takes?: number;
+  /** a showcase film made in several runs (a take + single-shot redos): tokens, cost and wallMs then cover every run (traceReplay.filmTotals) */
+  runs?: number;
+  redos?: number;
 }
 
 export interface RunReference {

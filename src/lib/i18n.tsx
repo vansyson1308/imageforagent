@@ -159,7 +159,6 @@ const DICT = {
   uplift: { en: "critic score", vi: "điểm critic", ja: "批評スコア" },
   lint: { en: "lint left", vi: "lint còn lại", ja: "残りの指摘" },
   wall: { en: "time to make", vi: "thời gian làm", ja: "制作時間" },
-  takes: { en: "takes", vi: "lượt quay", ja: "テイク" },
   cost: { en: "cost", vi: "chi phí", ja: "費用" },
   references: { en: "Research", vi: "Tra cứu", ja: "リサーチ" },
   referencesSub: {

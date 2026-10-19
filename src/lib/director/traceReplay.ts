@@ -99,15 +99,30 @@ export function traceTakes(trace: Trace): Take[] {
   return [...by.entries()].map(([runId, r]) => ({ runId, ...r })).sort((a, b) => a.start - b.start || a.runId.localeCompare(b.runId));
 }
 
-/** What making the whole film took: every take's tokens and cost, and the sum of the takes' run times (idle time between takes excluded). */
-export function filmTotals(trace: Trace): { takes: number; tokens: number; costUsd: number; wallMs: number } {
+/**
+ * What making the whole film took: every run's tokens and cost, and the sum of
+ * the runs' times (idle time between runs excluded). A run that records a
+ * `redo` step is a single-shot redo (D84: only the named shots are redrawn on
+ * the take's plan and cast); every other run is a take.
+ */
+export function filmTotals(trace: Trace): { runs: number; redos: number; tokens: number; costUsd: number; wallMs: number } {
   const takes = traceTakes(trace);
+  const redoRuns = new Set(trace.steps.filter((s) => s.role === "system" && s.action === "redo").map((s) => s.runId ?? trace.id));
   return {
-    takes: takes.length,
+    runs: takes.length,
+    redos: takes.filter((t) => redoRuns.has(t.runId)).length,
     tokens: takes.reduce((a, t) => a + t.tokens, 0),
     costUsd: Math.round(takes.reduce((a, t) => a + t.costUsd, 0) * 1e8) / 1e8,
     wallMs: takes.reduce((a, t) => a + (t.end - t.start), 0),
   };
+}
+
+/** "4 runs (1 take + 3 single-shot redos)" in the viewer's language. */
+export function runsLabel(lang: "en" | "vi" | "ja", runs: number, redos: number): string {
+  const takes = runs - redos;
+  if (lang === "vi") return `${runs} lượt chạy (${takes} lượt quay + ${redos} lượt làm lại từng cảnh)`;
+  if (lang === "ja") return `${runs}回の実行（本番${takes}回＋ショット単位のやり直し${redos}回）`;
+  return `${runs} runs (${takes} take${takes === 1 ? "" : "s"} + ${redos} single-shot redo${redos === 1 ? "" : "s"})`;
 }
 
 export function traceToEvents(trace: Trace, assets: ReplayAssets = {}): TimedEvent[] {

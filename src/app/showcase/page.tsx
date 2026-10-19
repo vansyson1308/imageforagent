@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import Link from "next/link";
+import { runsLabel } from "@/lib/director/traceReplay";
 
 /**
  * Showcase gallery: films made end-to-end by the Nemotron crew, each with
@@ -38,8 +39,8 @@ interface ShowcaseFilm {
     costUsd: number;
     textCritic: boolean;
   };
-  /** a film made in several takes: what all of them took together (traceReplay.filmTotals); summary covers the last take only */
-  totals?: { takes: number; tokens: number; costUsd: number; wallMs: number };
+  /** a film made in several runs (a take + single-shot redos): what all of them took together (traceReplay.filmTotals); summary covers the last run only */
+  totals?: { runs: number; redos: number; tokens: number; costUsd: number; wallMs: number };
   createdAt: string;
   version?: string;
   /** shown on the card when a film is not a current, gate-checked showcase film (e.g. an early draft) */
@@ -102,8 +103,9 @@ export default async function ShowcasePage() {
                   <Stat k="repairs" v={String(f.summary.repairs)} />
                   <Stat k={f.summary.textCritic ? "critic (text)" : "critic"} v={f.summary.criticBefore !== null ? `${f.summary.criticBefore} → ${f.summary.criticAfter}` : "—"} />
                   <Stat k="tokens" v={(f.totals ?? f.summary).tokens.toLocaleString("en")} />
-                  <Stat k={f.totals && f.totals.takes > 1 ? `cost · ${f.totals.takes} takes` : "cost"} v={`$${(f.totals ?? f.summary).costUsd.toFixed(3)}`} />
+                  <Stat k={f.totals && f.totals.runs > 1 ? "cost, all runs" : "cost"} v={`$${(f.totals ?? f.summary).costUsd.toFixed(3)}`} />
                 </dl>
+                {f.totals && f.totals.runs > 1 ? <p className="mt-2 text-xs text-muted">Made in {runsLabel("en", f.totals.runs, f.totals.redos)}</p> : null}
                 <details className="mt-4 text-xs text-muted">
                   <summary className="cursor-pointer">Story · crew · trace</summary>
                   <p className="mt-2 whitespace-pre-wrap text-ink/80">{f.story}</p>
@@ -117,7 +119,7 @@ export default async function ShowcasePage() {
                   <a href={f.trace} className="mt-2 inline-block text-violet-300 underline">
                     trace.json
                   </a>{" "}
-                  · {Math.round(f.summary.durationSec)} s film · {Math.round((f.totals ?? f.summary).wallMs / 1000)} s to make{f.totals && f.totals.takes > 1 ? ` (${f.totals.takes} takes)` : ""}
+                  · {Math.round(f.summary.durationSec)} s film · {Math.round((f.totals ?? f.summary).wallMs / 1000)} s to make{f.totals && f.totals.runs > 1 ? ` (${f.totals.runs} runs)` : ""}
                 </details>
               </div>
             </article>
