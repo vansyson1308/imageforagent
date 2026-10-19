@@ -1,5 +1,5 @@
 {
-  "note": "Approved by owner + QC 2026-10-18 (recomputed from docs/hackathon/eval/v2/runs.jsonl and the v1 rows). Numbers only from EVAL_RESULTS.md; do not edit without QC.",
+  "note": "Approved by owner + QC 2026-10-18; rows replaced 2026-10-19 (the Super-alone row left the video: Super alone planned 1 shot in 8/10 runs, not like for like; the v1 paired row is EVAL_RESULTS.md 'Paired: crew v2 vs crew v1', ±0.25 = tie). Numbers only from EVAL_RESULTS.md; do not edit without QC.",
   "title": "Benchmark v2 · 10 fixed prompts · blind independent judges · frozen commit 394a797",
   "headline": {
     "value": "6.22",
@@ -10,8 +10,8 @@
   },
   "rows": [
     [
-      "7 / 9",
-      "paired wins vs Nemotron Super alone (gemma-3-27b-it)"
+      "6 / 9",
+      "paired wins vs v1 (same prompts, same judge)"
     ],
     [
       "4.38",
@@ -27,7 +27,7 @@
     "segment": "09-eval",
     "at": [
       "the full crew scored",
-      "and beat Nemotron",
+      "and beat version one",
       "A second, stricter judge",
       "Every published film"
     ]

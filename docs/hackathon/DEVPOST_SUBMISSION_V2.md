@@ -43,7 +43,7 @@ A shot that still misses is redone on its own, on the same plan and cast, while 
 ### Results (real runs, `docs/hackathon/EVAL_RESULTS.md`)
 Bench v2: 30 runs on one frozen commit (`394a797`), with 10 fixed prompts and three configs. It used the same prompts and judge prompt as v1. The judges were blind to the config, and neither is part of the crew. The full table, the per-run rows and the command to reproduce are in [EVAL_RESULTS.md](EVAL_RESULTS.md).
 
-- **Against v1, on the v1 judge (`gemma-3-27b-it`):** the full crew scored **6.22 / 10** (n = 9, SD 0.54), up from v1's **5.49**. Paired on the same 9 prompts, it is +0.77: better on 6, worse on 2, tied on 1.
+- **Against v1, on the v1 judge (`gemma-3-27b-it`):** the full crew scored **6.22 / 10** (n = 9, SD 0.54), up from v1's **5.49**. Paired on the same 9 prompts, it is +0.77: better on 6, worse on 2, tied on 1 (a tie is within ±0.25).
 - **Against Nemotron Super alone (paired, gemma):** the crew was better on **7 of 9** prompts (mean +0.68). One caveat: Super alone planned a single shot in 8 of its 10 runs, so this comparison is not like for like.
 - **A second, stricter judge (`Kimi-K3`), reported in full:** it gives the crew **4.38** (n = 9, SD 0.79) and Super alone 4.24. Paired, the crew is better on 4, worse on 3 and tied on 2. On this judge the gap to Super alone is not clear.
 - **Critic uplift, judged independently:** **+0.5** over 13 revised shots. ✅ Target met.
@@ -62,7 +62,7 @@ _(Draft for QC, 2026-10-19.)_
 - **Composition, not code.** Super's SVG passed the sanitizer almost every time. The problems were framing, subject size and night shots lit bright. Prose rules didn't fix these. Measured feedback with the exact numbers did, and so did new measured gates: edge crop, night readability, faces covered and figures stacked inside each other (D83, D86).
 - **The hero object has to read.** A kite or a letter that looks like a blob ruins the story. The hero object is now checked on its own by a vision model, by its visible features. After several rounds, the owner decided that the engine draws the object's states on the approved drawing (D74–D77).
 - **Time of day.** The critic called golden dusk "day" and dawn "night". Time is now judged in buckets, and a finished run is re-judged from its stored verdicts with no new model call (D71, D79, D82, D89).
-- **Finishing a film without starting over.** A single-shot redo redraws only the named shots on the take's plan and cast, and every other shot stays byte-identical (D84). QC by eye still found things the gates missed, such as a vanished walker and a floating envelope. Each became an engine fix with a test (D86–D88).
+- **Finishing a film without starting over.** A redo run redraws only the named shots on the take's plan and cast, and every other shot stays byte-identical (D84). QC by eye still found things the gates missed, such as a vanished walker and a floating envelope. Each became an engine fix with a test (D86–D88).
 - **Measuring honestly.** We ran the bench on one frozen server commit. When a merge deployed a new commit mid-bench, we rolled the server back so all 30 rows came from the same code. The replay had shown only a film's last run and its cost, until we fixed it to show every run (D92, D94).
 
 **Accomplishments**
@@ -81,21 +81,21 @@ _(Draft for QC, 2026-10-19.)_
 - **Hidamari Shorts:** make the episodes from the owner's narration WAVs as a series that reuses the same host pixel for pixel.
 
 ### Real users (Potential impact)
-_(Draft for QC, 2026-10-19. Facts from PILOT.md, STATUS and the published trace; PILOT.md's own status line still reads 10-10 and needs updating.)_ The first real user is the owner's Japanese YouTube channel 「ひだまり人生劇場」 (Hidamari), which publishes narrated stories for senior viewers. Its first package, PILOT01 「出せなかった手紙」 (the letter that was never sent), became the Japanese showcase film 「ひだまり人生劇場・春の手紙」:
+_(Draft for QC, 2026-10-19. Facts from PILOT.md (updated 2026-10-19), STATUS and the published trace.)_ The first real user is the owner's Japanese YouTube channel 「ひだまり人生劇場」 (Hidamari), which publishes narrated stories for senior viewers. Its first package, PILOT01 「出せなかった手紙」 (the letter that was never sent), became the Japanese showcase film 「ひだまり人生劇場・春の手紙」:
 - **Format:** 9:16, 7 shots, 47.9 s with credits.
 - **Narration:** made in fixed-narration mode. The owner's AivisSpeech pipeline rendered every line before the run, and the Director timed each shot to those WAVs without rewriting a line.
-- **What it took:** 6 runs (1 take + 5 single-shot redos), $0.275 of model calls and 13:58 of model time across those runs.
+- **What it took:** 6 runs (1 take + 5 redo runs), $0.275 of model calls and 13:58 of model time across those runs.
 - **What a person had to fix:** QC's redo notes on shots 4–7, covering adult scale, the envelope in hand and a dusk sky with no moon. The owner and QC also signed the critic and recognition overrides.
 - **Status:** published on our showcase on 2026-10-14, **not yet published on the channel**. There are no views or audience numbers to report.
 
-The other two packages (PILOT02 梅しごと and PILOT03 同じ月) are written and wait for the owner's WAVs.
+The other two packages (PILOT02 梅しごと and PILOT03 同じ月) have the owner's narration WAVs (delivered 2026-10-10), but no film has been made from them yet, and no Short has been made for the channel.
 
 ## Existing project: how we significantly updated it
 _(Draft for QC, 2026-10-19; regenerate the counts at the final commit.)_ v1 was submitted on 2026-09-27 (`a0bcd46`). Since then:
 - **Volume:** 152 commits through 54 merged pull requests. In `src`, `scripts` and `tests`, 152 files changed (+19,458 / −1,257 lines).
 - **Decisions:** 94 decisions in total are recorded in [DECISIONS.md](DECISIONS.md). The v2 ones carry their evidence and tests.
 - **Judge access:** runs detached from the browser, a reconnecting event stream, a public replay of every showcase run and a health endpoint (WP1).
-- **Film quality:** acting characters, neural voices, a vision critic (a VLM looks, Nano scores), shot coverage, an original score, measured gates, a hero-object check, single-shot redos and a publish gate with a signed by-eye checklist (WP4 and the take-day fixes).
+- **Film quality:** acting characters, neural voices, a vision critic (a VLM looks, Nano scores), shot coverage, an original score, measured gates, a hero-object check, redo runs and a publish gate with a signed by-eye checklist (WP4 and the take-day fixes).
 - **Fixed narration** from the owner's WAVs, for the Hidamari pilot (WP5).
 - **A new bench:** 30 runs on a frozen commit with two blind judges, reported with its misses (WP7).
 
@@ -146,6 +146,8 @@ The comparison we can back with data is **within the family**. A mixed crew (Ult
 ## Credits
 
 音声合成：AivisSpeech / morioki（ボイス提供：もりおき、モデル制作：yuki、ACML 1.0）. Japanese narration of the published films comes from the channel owner's AivisSpeech pipeline. The live demo's Japanese Piper voice is a non-commercial demo voice, used only for judges' own runs.
+
+Vietnamese narration: Piper vi_VN-vais1000-medium (VAIS-1000 dataset, CC BY 4.0; fine-tuned from Piper's en_US-lessac voice, whose training data is under the Blizzard 2013 licence), used for this non-commercial demo.
 
 ## Testing instructions (private field)
 See the Judge Access PDF (generated by `npm run judge:pdf` from [JUDGE_ACCESS.md](JUDGE_ACCESS.md); the passcode is filled in only at export time, never in the repo).

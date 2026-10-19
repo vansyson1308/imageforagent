@@ -117,12 +117,12 @@ export function filmTotals(trace: Trace): { runs: number; redos: number; tokens:
   };
 }
 
-/** "4 runs (1 take + 3 single-shot redos)" in the viewer's language. */
+/** "4 runs (1 take + 3 redo runs)" in the viewer's language (owner + QC 2026-10-19). */
 export function runsLabel(lang: "en" | "vi" | "ja", runs: number, redos: number): string {
   const takes = runs - redos;
-  if (lang === "vi") return `${runs} lượt chạy (${takes} lượt quay + ${redos} lượt làm lại từng cảnh)`;
-  if (lang === "ja") return `${runs}回の実行（本番${takes}回＋ショット単位のやり直し${redos}回）`;
-  return `${runs} runs (${takes} take${takes === 1 ? "" : "s"} + ${redos} single-shot redo${redos === 1 ? "" : "s"})`;
+  if (lang === "vi") return `${runs} lượt chạy (${takes} lượt quay + ${redos} lượt làm lại)`;
+  if (lang === "ja") return `${runs}回の実行（本番${takes}回＋やり直し${redos}回）`;
+  return `${runs} runs (${takes} take${takes === 1 ? "" : "s"} + ${redos} redo run${redos === 1 ? "" : "s"})`;
 }
 
 export function traceToEvents(trace: Trace, assets: ReplayAssets = {}): TimedEvent[] {

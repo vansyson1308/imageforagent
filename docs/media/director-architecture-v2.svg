@@ -89,5 +89,5 @@
   <text x="286" y="530" text-anchor="middle" class="s">by-eye checklist signed by owner + QC</text>
   <path d="M520 508 H480" class="l"/>
 
-  <text x="32" y="600" class="s">Every model output passes the same validators a person's would (zod schemas → SVG sanitizer → engine schemas). A shot that still misses is redone on its own, on the same plan and cast.</text>
+  <text x="32" y="600" class="s">Every model output passes the same validators a person's would (zod schemas → SVG sanitizer → engine schemas). Only the shots that still miss are redrawn, on the same plan and cast.</text>
 </svg>

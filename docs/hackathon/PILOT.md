@@ -1,6 +1,8 @@
 # Real-user pilot: 「ひだまり人生劇場」 (Hidamari)
 
-_Status (2026-10-10): **narration packages written, waiting for the owner's AivisSpeech WAVs** (BLOCKERS O4). The Haru-san / kissaten look is waiting for the owner's approval before any episode is made. No episode made yet. This file holds real data only; nothing below is filled in until it happens._
+_Status (2026-10-19): **PILOT01 is made: it became the published Japanese showcase film 「ひだまり人生劇場・春の手紙」 (2026-10-14), narrated with the owner's own AivisSpeech WAVs in fixed-narration mode. No Short has been made yet, and nothing has been posted on the channel.** The owner's WAVs for all four packages arrived on 2026-10-10 (PR #23); PILOT02 and PILOT03 have no film yet. This file holds real data only; nothing below is filled in until it happens._
+
+_Earlier status (2026-10-10): narration packages written, waiting for the owner's AivisSpeech WAVs (BLOCKERS O4); no episode made yet._
 
 ## What this is (and isn't)
 
@@ -15,10 +17,13 @@ The Director makes **animated companion Shorts for a real daily channel, with th
 
 ## Before / after (owner's own words): _pending_
 
-## Episodes: _none yet_
+## Episodes
 
 | # | Story | Wall time | USD | Owner edits | What the owner had to fix | Published (URL, date) |
 |---|---|---|---|---|---|---|
+| PILOT01 | 出せなかった手紙 → film 「ひだまり人生劇場・春の手紙」 (9:16, 7 shots, 47.9 s with credits; final run `cmv6xhzbt00002anq0uc7rb4y`) | 13:58 of model time over 6 runs (1 take + 5 redo runs) | $0.275 (all 6 runs) | None to the narration: fixed-narration mode, every line is the owner's WAV, no line rewritten | QC by-eye notes led to redos of shots 4–7 (adult scale, the envelope in hand, a floating envelope); the owner + QC signed the critic and recognition overrides (STATUS 2026-10-13/14) | Our showcase only: https://studio-production-049c.up.railway.app/showcase (2026-10-14). **Not on the channel; no Short made yet; no views to report.** |
+| PILOT02 | 梅しごと | — | — | — | — | WAVs delivered (PR #23); no film yet |
+| PILOT03 | 同じ月 | — | — | — | — | WAVs delivered (PR #23); no film yet |
 
 ## Limitations: _to be written from the episodes_
 

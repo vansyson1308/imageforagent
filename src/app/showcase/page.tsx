@@ -39,7 +39,7 @@ interface ShowcaseFilm {
     costUsd: number;
     textCritic: boolean;
   };
-  /** a film made in several runs (a take + single-shot redos): what all of them took together (traceReplay.filmTotals); summary covers the last run only */
+  /** a film made in several runs (a take + redo runs): what all of them took together (traceReplay.filmTotals); summary covers the last run only */
   totals?: { runs: number; redos: number; tokens: number; costUsd: number; wallMs: number };
   createdAt: string;
   version?: string;
