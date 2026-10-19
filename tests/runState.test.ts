@@ -116,7 +116,7 @@ describe("replay of a film made in several takes (2026-10-15: the kite replay en
     expect(t.runs).toBe(4);
     // 1 take + 3 single-shot redos (D84): each redo run records a `redo` step
     expect(t.redos).toBe(3);
-    expect(runsLabel("en", t.runs, t.redos)).toBe("4 runs (1 take + 3 single-shot redos)");
+    expect(runsLabel("en", t.runs, t.redos)).toBe("4 runs (1 take + 3 redo runs)");
     expect(filmTotals(read("v2-banh-chung"))).toMatchObject({ runs: 3, redos: 2 });
     expect(filmTotals(read("v2-tegami"))).toMatchObject({ runs: 6, redos: 5 });
     expect(t.tokens).toBe(kite.steps.reduce((a, s) => a + s.tokensIn + s.tokensOut, 0));
