@@ -3,7 +3,15 @@
   "voice": "piper:en_US-john-medium",
   "speed": 160,
   "srt": "out/director_demo_v2.en.srt",
-  "note": "FINAL TEXT 2026-10-18 (06-takes and 09-eval approved verbatim by owner + QC after recomputing every number from eval/v2/runs.jsonl). Was DRAFT 2 (2026-10-15): kite-first cut, ≤ 2:55, no live run (the how-it-works part is the kite's real run replayed from its trace, D92; no tokens spent). Scenes: kite = public/showcase/v2-kite/film.mp4 from 0 s; replay = _work/replay.mp4 (record-smooth.ts --only replay); films = bánh chưng + tegami side by side; arch/eval/end = cards from prepare.ts. Every {{PENDING}} is filled only after QC approves the number (owner 2026-10-14: the bench table first; QC checks it before any number goes into the video). prepare.ts refuses a final build while one is open.",
+  "note": "REBUILD 2026-10-19 (owner + QC video QC: hook highlight, v2 architecture, 3 s finished card, films get the freed seconds, staged results card, 8 s end card; scenes are laid out explicitly in \"scenes\"; 06-takes and 09-eval unchanged). FINAL TEXT 2026-10-18 (06-takes and 09-eval approved verbatim by owner + QC after recomputing every number from eval/v2/runs.jsonl). Was DRAFT 2 (2026-10-15): kite-first cut, ≤ 2:55, no live run (the how-it-works part is the kite's real run replayed from its trace, D92; no tokens spent). Scenes: kite = public/showcase/v2-kite/film.mp4 from 0 s; replay = _work/replay.mp4 (record-smooth.ts --only replay); films = bánh chưng + tegami side by side; arch/eval/end = cards from prepare.ts. Every {{PENDING}} is filled only after QC approves the number (owner 2026-10-14: the bench table first; QC checks it before any number goes into the video). prepare.ts refuses a final build while one is open.",
+  "scenes": [
+    {"scene": "kite", "duration": 24},
+    {"scene": "replay", "duration": 55},
+    {"scene": "films", "duration": 20},
+    {"scene": "arch", "duration": 22},
+    {"scene": "eval", "duration": 25},
+    {"scene": "end", "duration": 8}
+  ],
   "segments": [
     {"id": "01-hook", "scene": "kite", "start": 0, "end": 12.5, "text": "This film was typed, not drawn. NVIDIA Nemotron models on Nebius Token Factory wrote every frame as code, and our engine rendered and measured each one."},
     {"id": "02-what", "scene": "kite", "start": 12.5, "end": 24, "text": "Type a story in any language and get a short film: characters who act, voices, and an original score. There is no image generator anywhere."},
@@ -14,6 +22,6 @@
     {"id": "07-films", "scene": "films", "start": 82.5, "end": 99, "text": "The same crew made a Vietnamese New Year film about bánh chưng, and a Japanese story for Hidamari, a storytelling channel, narrated with the channel's own voice track. Every published film passed the same measured checks, then a check by eye."},
     {"id": "08-arch", "scene": "arch", "start": 99, "end": 121, "text": "Under the hood: one OpenAI compatible endpoint on Token Factory, strict JSON schemas, and each Nemotron tier sized to its job. Ultra plans, Super does the heavy drawing, and Nano makes the fast, cheap calls. Every model output passes the same validators a person's would."},
     {"id": "09-eval", "scene": "eval", "start": 121, "end": 146, "text": "We measured it honestly. On ten fixed prompts, judged blind by the same independent model as version one, the full crew scored 6.2 out of 10, up from 5.5, and beat Nemotron Super alone on seven of nine prompts. A second, stricter judge scores lower, and we publish both. Every published film then passed a check by eye."},
-    {"id": "10-end", "scene": "end", "start": 146, "end": 164, "text": "Try it at the link below. The showcase replays every real run, step by step, without spending a token. Storyboard Studio Director: built with NVIDIA Nemotron on Nebius Token Factory, and MIT licensed."}
+    {"id": "10-end", "scene": "end", "start": 146, "end": 154, "text": "Try it at the link below. The showcase replays every real run without spending a token."}
   ]
 }

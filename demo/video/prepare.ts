@@ -27,7 +27,7 @@ interface Segment {
   text: string;
 }
 const narrationFile = process.argv.includes("--narration") ? process.argv[process.argv.indexOf("--narration") + 1] : "narration.json";
-const narration = JSON.parse(readFileSync(`${DIR}/${narrationFile}`, "utf8")) as { voice: string; speed: number; srt?: string; segments: Segment[] };
+const narration = JSON.parse(readFileSync(`${DIR}/${narrationFile}`, "utf8")) as { voice: string; speed: number; srt?: string; segments: Segment[]; scenes?: Array<{ scene: string; duration: number }> };
 const pending = narration.segments.filter((s) => s.text.includes("{{PENDING"));
 if (pending.length && !dry) throw new Error(`${narrationFile}: ${pending.map((s) => s.id).join(", ")} still have {{PENDING}} text. Fill them from EVAL_RESULTS.md / PILOT.md first.`);
 
@@ -63,29 +63,37 @@ async function main() {
     ),
   );
 
-  const arch = await sharp(readFileSync("docs/media/director-architecture.svg")).resize(1800).png().toBuffer();
+  const archSvg = process.argv.includes("--arch") ? process.argv[process.argv.indexOf("--arch") + 1] : "docs/media/director-architecture.svg";
+  const arch = await sharp(readFileSync(archSvg)).resize(1800).png().toBuffer();
   await sharp({ create: { width: W, height: H, channels: 4, background: "#fcfcfb" } })
     .composite([{ input: arch, top: Math.round((H - (arch.length ? (await sharp(arch).metadata()).height! : 0)) / 2), left: 60 }, ...(dry ? [{ input: Buffer.from(frame("").replace('<rect width="1920" height="1080" fill="#0d0d0f"/>', "")), top: 0, left: 0 }] : [])])
     .png()
     .toFile(`${WORK}/cards/arch.png`);
 
   // v2: a stats card from an owner/QC-approved data file (--eval-card), instead of the chart
+  let evalReveal: { segment: string; at: string[] } | null = null;
   const evalCardPath = process.argv.includes("--eval-card") ? process.argv[process.argv.indexOf("--eval-card") + 1] : null;
   if (evalCardPath) {
-    const c = JSON.parse(readFileSync(evalCardPath, "utf8")) as { title: string; headline: { value: string; label: string; sub: string; was: string; wasLabel: string }; rows: Array<[string, string]>; link: string };
-    await card(
-      "eval",
-      frame(
-        `<text x="160" y="190" font-size="38" fill="#8b8b98">${esc(c.title)}</text>` +
-          `<text x="160" y="420" font-size="200" font-weight="700" fill="#ececf1">${esc(c.headline.value)}</text>` +
-          `<text x="760" y="330" font-size="40" fill="#8b8b98">vs</text>` +
-          `<text x="840" y="420" font-size="120" font-weight="700" fill="#8b8b98">${esc(c.headline.was)}</text>` +
-          `<text x="160" y="490" font-size="36" fill="#ececf1">${esc(c.headline.label)}</text>` +
-          `<text x="160" y="540" font-size="32" fill="#8b8b98">${esc(c.headline.sub)} · ${esc(c.headline.was)} = ${esc(c.headline.wasLabel)}</text>` +
-          c.rows.map(([v, l], i) => `<text x="160" y="${660 + i * 90}" font-size="56" font-weight="700" fill="#76b900">${esc(v)}</text><text x="420" y="${660 + i * 90}" font-size="38" fill="#ececf1">${esc(l)}</text>`).join("") +
-          `<text x="160" y="${660 + c.rows.length * 90 + 30}" font-size="30" fill="#8b8b98">${esc(c.link)}</text>`,
-      ),
-    );
+    const c = JSON.parse(readFileSync(evalCardPath, "utf8")) as { title: string; headline: { value: string; label: string; sub: string; was: string; wasLabel: string }; rows: Array<[string, string]>; link: string; reveal?: { segment: string; at: string[] } };
+    // stage k shows: 0 the title · 1 + the headline · 2.. + one row each · last + the link (QC 2026-10-19: revealed with the narration)
+    const stages = 2 + c.rows.length;
+    for (let k = 0; k < stages; k++) {
+      const head =
+        k >= 1
+          ? `<text x="160" y="420" font-size="200" font-weight="700" fill="#ececf1">${esc(c.headline.value)}</text>` +
+            `<text x="760" y="330" font-size="40" fill="#8b8b98">vs</text>` +
+            `<text x="840" y="420" font-size="120" font-weight="700" fill="#8b8b98">${esc(c.headline.was)}</text>` +
+            `<text x="160" y="490" font-size="36" fill="#ececf1">${esc(c.headline.label)}</text>` +
+            `<text x="160" y="540" font-size="32" fill="#8b8b98">${esc(c.headline.sub)} · ${esc(c.headline.was)} = ${esc(c.headline.wasLabel)}</text>`
+          : "";
+      const rows = c.rows
+        .slice(0, Math.max(0, k - 1))
+        .map(([v, l], i) => `<text x="160" y="${660 + i * 90}" font-size="56" font-weight="700" fill="#76b900">${esc(v)}</text><text x="420" y="${660 + i * 90}" font-size="38" fill="#ececf1">${esc(l)}</text>`)
+        .join("");
+      const link = k === stages - 1 ? `<text x="160" y="${660 + c.rows.length * 90 + 30}" font-size="30" fill="#8b8b98">${esc(c.link)}</text>` : "";
+      await card(k === stages - 1 ? "eval" : `eval-${k}`, frame(`<text x="160" y="190" font-size="38" fill="#8b8b98">${esc(c.title)}</text>` + head + rows + link));
+    }
+    evalReveal = c.reveal ?? null;
   }
   const chartPath = process.argv.includes("--chart") ? process.argv[process.argv.indexOf("--chart") + 1] : "docs/hackathon/eval/chart.png";
   if (evalCardPath) {
@@ -114,6 +122,7 @@ async function main() {
 
   // Voice-over: one WAV per segment (override: demo/video/voice/<id>.wav), placed at its start time
   const clips: Array<{ audio: AudioBuffer; start: number; role: "dialogue"; end: number }> = [];
+  const durations = new Map<string, number>();
   const report: string[] = [];
   for (const s of narration.segments) {
     const override = `${DIR}/voice/${s.id}.wav`;
@@ -122,6 +131,7 @@ async function main() {
     const wav = existsSync(override) && !pendingSlot ? readFileSync(override) : await synthesizeSpeech(pendingSlot ? "Pending." : s.text, pendingSlot ? "en" : narration.voice, narration.speed);
     const audio = decodeWav(wav);
     const d = audioDuration(audio);
+    durations.set(s.id, d);
     const room = s.end - s.start;
     report.push(`${s.id}: ${d.toFixed(1)}s of ${room}s${d > room ? "  ⚠ OVERRUNS: shorten the line or the speed" : ""}`);
     clips.push({ audio, start: s.start + 0.3, role: "dialogue", end: s.end });
@@ -133,10 +143,29 @@ async function main() {
   writeFileSync(`${DIR}/${narration.srt ?? "director_demo.en.srt"}`, buildTimedSrt(narration.segments.map((s) => ({ description: s.text, startSec: s.start + 0.3, durationSec: s.end - s.start - 0.5 }))));
 
   const scenes: Array<{ scene: string; duration: number }> = [];
-  for (const s of narration.segments) {
-    const last = scenes[scenes.length - 1];
-    if (last && last.scene === s.scene) last.duration += s.end - s.start;
-    else scenes.push({ scene: s.scene, duration: s.end - s.start });
+  if (narration.scenes) {
+    // an explicit layout: scene cuts need not fall on narration boundaries (the voice keeps its own timing)
+    scenes.push(...narration.scenes.map((x) => ({ ...x })));
+    const sum = scenes.reduce((a, x) => a + x.duration, 0);
+    if (Math.abs(sum - total) > 1e-6) throw new Error(`scenes add up to ${sum}s, the narration to ${total}s`);
+  } else {
+    for (const s of narration.segments) {
+      const last = scenes[scenes.length - 1];
+      if (last && last.scene === s.scene) last.duration += s.end - s.start;
+      else scenes.push({ scene: s.scene, duration: s.end - s.start });
+    }
+  }
+  // the eval card's reveal times, from the narration: each phrase's position in its line × the line's spoken length
+  if (evalReveal) {
+    const seg = narration.segments.find((x) => x.id === evalReveal!.segment)!;
+    const spoken = durations.get(seg.id) ?? seg.end - seg.start;
+    const sceneStart = scenes.slice(0, scenes.findIndex((x) => x.scene === "eval")).reduce((a, x) => a + x.duration, 0);
+    const at = evalReveal.at.map((phrase) => {
+      const i = seg.text.indexOf(phrase);
+      if (i < 0) throw new Error(`eval reveal: "${phrase}" is not in ${seg.id}`);
+      return Math.round((seg.start + 0.3 + (spoken * i) / seg.text.length - sceneStart) * 100) / 100;
+    });
+    writeFileSync(`${WORK}/eval-stages.json`, JSON.stringify({ starts: [0, ...at] }, null, 2));
   }
   writeFileSync(`${WORK}/plan.json`, JSON.stringify({ total, scenes }, null, 2));
   console.log(report.join("\n"));

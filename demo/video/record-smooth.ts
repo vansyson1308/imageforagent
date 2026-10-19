@@ -214,29 +214,37 @@ async function recordReplay(browser: Browser, url: string, out: string) {
   await page.waitForSelector("text=Replay:", { timeout: 60_000 });
   const sink = new FrameSink(path.join(out, "replay.mp4"));
   const step = 1000 / FPS;
+  const shot = () => page.screenshot({ type: "jpeg", quality: 92 });
   // screenshots straight after runFor(): the rAF wait in shoot() would hang on the paused page clock
-  // A · the run at 10× (the page's own speed), camera on the stage and the crew
+  // A · the run at 10× (the page's own speed), camera on the stage and the crew. Frames start when the
+  // first drawing lands (QC 2026-10-19: no "the first frame appears here" stretch); the clock still runs.
   let run = 0;
-  for (; run < 120 * FPS; run++) {
+  let started = false;
+  for (let f = 0; f < 120 * FPS; f++) {
     await page.clock.runFor(step);
-    await sink.push(await page.screenshot({ type: "jpeg", quality: 92 }));
-    if (run % 15 === 0 && (await page.evaluate<boolean>(`/\\bDone\\b/.test(document.body.innerText.slice(0, 2000))`))) break;
+    if (!started) started = await page.evaluate<boolean>(`document.querySelectorAll("main img").length > 0`);
+    if (started) {
+      await sink.push(await shot());
+      run++;
+    }
+    if (f % 15 === 0 && (await page.evaluate<boolean>(`/\\bDone\\b/.test(document.body.innerText.slice(0, 2000))`))) break;
   }
-  await sink.push(await page.screenshot({ type: "jpeg", quality: 92 }), FPS); // a beat on "Done"
-  // B · ease down to the finished card (shots, first pass, repairs, critic, time to make, cost) and hold
+  await sink.push(await shot(), FPS / 2); // a beat on "Done"
+  // B · ease down to the finished card (shots, first pass, repairs, critic, time to make, cost) and hold 3 s
   const fin = await page.evaluate<{ y: number | null; max: number }>(FINISHED);
   const target = Math.min(fin.max, Math.max(0, (fin.y ?? fin.max) - 520));
-  const cam = new Camera(14);
-  for (let f = 0; f < 4 * FPS; f++) {
+  const cam = new Camera(18);
+  for (let f = 0; f < 2 * FPS; f++) {
     await page.clock.runFor(step);
     await page.evaluate(`window.scrollTo(0, ${cam.step(target)})`);
-    await sink.push(await page.screenshot({ type: "jpeg", quality: 92 }));
+    await sink.push(await shot());
   }
-  await sink.push(await page.screenshot({ type: "jpeg", quality: 92 }), 6 * FPS);
+  await sink.push(await shot(), 3 * FPS);
   await sink.close();
   await ctx.close();
-  writeFileSync(path.join(out, "replay.json"), JSON.stringify({ fps: FPS, url, run: run + FPS, total: sink.count }, null, 2));
-  console.log(`replay: ${sink.count} frames (run ${run} frames)`);
+  // run = frames of A (the build time-fits them); the rest (beat, move, hold) plays at 1×
+  writeFileSync(path.join(out, "replay.json"), JSON.stringify({ fps: FPS, url, run, tail: sink.count - run, total: sink.count }, null, 2));
+  console.log(`replay: ${sink.count} frames (run ${run} frames, tail ${sink.count - run})`);
 }
 
 async function main() {
