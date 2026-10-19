@@ -1,6 +1,6 @@
-# YouTube upload: Storyboard Studio Director v2 (FINAL for QC, 2026-10-18)
+# YouTube upload: Storyboard Studio Director v2 (rebuild for QC, 2026-10-19)
 
-_The owner uploads. The results line is the owner + QC approved text (2026-10-18). The chapters follow `narration.v2.json` (164 s cut). No passcode anywhere: not in the video, the description or the comments. A web copy of the video: https://studio-production-049c.up.railway.app/showcase/demo-video-v2.mp4_
+_The owner uploads. The results line is the owner + QC approved text (2026-10-18). The chapters follow the scenes in `narration.v2.json` (154 s cut, rebuilt 2026-10-19 after the owner + QC video QC; no model calls). No passcode anywhere: not in the video, the description or the comments. A web copy of the video: https://studio-production-049c.up.railway.app/showcase/demo-video-v2.mp4_
 
 **File:** `demo/video/out/director_demo_v2.mp4` (1920×1080, ≤ 2:55, built by `sh demo/video/build-v2.sh`) · **Subtitles:** upload `demo/video/out/director_demo_v2.en.srt` as English · **Thumbnail:** `demo/video/out/thumbnail_v2.png` (1280×720, a frame of the kite film)
 
@@ -29,12 +29,12 @@ Chapters
 0:40 Super draws, the engine measures
 0:57 The critic looks and scores
 1:09 Redoing only the shots that miss
-1:22 Two more films: bánh chưng and a Hidamari story
+1:19 Two more films: bánh chưng and a Hidamari story
 1:39 Under the hood: Token Factory tiers
 2:01 Real results
 2:26 Try it
 
-Voice-over: Piper `en_US-john-medium` (public domain, LibriVox). The films' music: the engine's own synth. Japanese narration in the Hidamari film: AivisSpeech / morioki (ACML 1.0), as credited at the end of that film. Built for the Nebius × NVIDIA hackathon.
+Voice-over: Piper `en_US-john-medium`; its model card lists the training dataset as LibriVox recordings, "License: public domain" (fine-tuned from Piper's `kristin` voice, also LibriVox, public domain). Vietnamese narration in the bánh chưng film: Piper vi_VN-vais1000-medium, trained on the VAIS-1000 dataset (CC BY 4.0). Japanese narration in the Hidamari film: AivisSpeech / morioki (ACML 1.0), as credited at the end of that film. The films' music: the engine's own synth. Built for the Nebius × NVIDIA hackathon.
 
 ## Tags
 nvidia nemotron, nebius, token factory, ai agents, ai film, storyboard, svg, generative video, text to film, llm, open models, hackathon

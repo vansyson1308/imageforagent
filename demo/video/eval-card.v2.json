@@ -1,11 +1,35 @@
 {
   "note": "Approved by owner + QC 2026-10-18 (recomputed from docs/hackathon/eval/v2/runs.jsonl and the v1 rows). Numbers only from EVAL_RESULTS.md; do not edit without QC.",
   "title": "Benchmark v2 · 10 fixed prompts · blind independent judges · frozen commit 394a797",
-  "headline": { "value": "6.22", "label": "crew v2, judged by gemma-3-27b-it (the v1 judge)", "sub": "n = 9 · SD 0.54", "was": "5.49", "wasLabel": "crew v1, same judge" },
+  "headline": {
+    "value": "6.22",
+    "label": "crew v2, judged by gemma-3-27b-it (the v1 judge)",
+    "sub": "n = 9 · SD 0.54",
+    "was": "5.49",
+    "wasLabel": "crew v1, same judge"
+  },
   "rows": [
-    ["7 / 9", "paired wins vs Nemotron Super alone (gemma-3-27b-it)"],
-    ["4.38", "Kimi-K3, a second, stricter judge (reported separately)"],
-    ["+0.5", "critic uplift, judged independently"]
+    [
+      "7 / 9",
+      "paired wins vs Nemotron Super alone (gemma-3-27b-it)"
+    ],
+    [
+      "4.38",
+      "Kimi-K3, a second, stricter judge (reported separately)"
+    ],
+    [
+      "+0.5",
+      "critic uplift, judged independently"
+    ]
   ],
-  "link": "github.com/vansyson1308/imageforagent/blob/main/docs/hackathon/EVAL_RESULTS.md"
+  "link": "github.com/vansyson1308/imageforagent/blob/main/docs/hackathon/EVAL_RESULTS.md",
+  "reveal": {
+    "segment": "09-eval",
+    "at": [
+      "the full crew scored",
+      "and beat Nemotron",
+      "A second, stricter judge",
+      "Every published film"
+    ]
+  }
 }

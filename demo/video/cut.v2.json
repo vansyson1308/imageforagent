@@ -1,0 +1,15 @@
+{
+  "note": "Video v2 cut (owner + QC 2026-10-19). Shot times were found by matching film frames to each published shot still (public/showcase/<slug>/shots); [from, to] in seconds of the published film.mp4.",
+  "hook": { "film": "public/showcase/v2-kite/film.mp4", "xfade": 0.4, "clips": [
+    { "shot": 1, "from": 0.5, "to": 5.0, "why": "flying" },
+    { "shot": 2, "from": 6.6, "to": 10.8, "why": "torn" },
+    { "shot": 5, "from": 23.0, "to": 27.2, "why": "mending" },
+    { "shot": 7, "from": 34.0, "to": 38.2, "why": "gold star close-up" },
+    { "shot": 9, "from": 43.5, "to": 48.5, "why": "flying again on Maya's string" },
+    { "shot": 10, "from": 49.2, "to": 53.2, "why": "the string handed to Grandfather" }
+  ] },
+  "films": {
+    "left": { "film": "public/showcase/v2-banh-chung/film.mp4", "clips": [[10.3, 19.4], [28.8, 32.5], [36.3, 39.5], [42.3, 45.8]], "shots": "3+4, 7, 9, 11" },
+    "right": { "film": "public/showcase/v2-tegami/film.mp4", "clips": [[0.4, 7.0], [19.8, 26.5], [38.0, 44.5]], "shots": "1, 4, 7" }
+  }
+}

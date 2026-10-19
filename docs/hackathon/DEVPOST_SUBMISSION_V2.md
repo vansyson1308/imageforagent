@@ -24,7 +24,7 @@ nemotron, nebius-token-factory, next.js, react, typescript, prisma, sqlite, shar
 ## Description
 
 ### Inspiration
-{{PENDING: v1 text + the Hidamari pilot (only real data from PILOT.md)}}
+_(Draft for QC, 2026-10-19.)_ Daily storytelling creators, teachers and small NGOs need short animated films in their own language every day. Image generators give inconsistent characters, unclear rights and output you can't edit. So we asked: what if the model didn't paint pixels at all, but **wrote the film as code** for a deterministic engine, and then **checked the rendered result** the way a director would? In v2 the question got a concrete user. The owner runs a Japanese YouTube channel, 「ひだまり人生劇場」 (Hidamari): narrated stories (朗読) for senior viewers, hosted by Haru-san in a Showa-era kissaten. A daily show needs the same host in the same set every day, in the channel's own look, narrated by the channel's own voice track.
 
 ### What it does
 Type a story in English, Vietnamese or Japanese and press **Make my film**. A crew of NVIDIA Nemotron models on Nebius Token Factory makes it: **Ultra** (the Director) plans the shots with real coverage and writes a cast & set bible in strict JSON; **Super** designs the characters as engine kits and writes every frame as SVG code; the deterministic engine renders each frame and *measures* it (subject size, framing, empty or flat sets, faces covered, figures stacked, near-duplicate shots) and sends any failure back as a measured fix; then a vision model describes what it sees and **Nano** scores the shot against the plan, and a revision replaces a frame only when it scores higher. Characters act (poses, blinks, lip sync, walks), the engine adds voices, dissolves and an original synth score, and you get an MP4 plus the full trace: every model call with its role, model, tokens, cost and latency.
@@ -56,13 +56,48 @@ Bench v2: 30 runs on one frozen commit (`394a797`), with 10 fixed prompts and th
 - **Every published film then passed a check by eye**, signed by the owner and QC.
 
 ### Challenges / Accomplishments / What we learned / What's next
-{{PENDING}}
+_(Draft for QC, 2026-10-19.)_
+
+**Challenges**
+- **Composition, not code.** Super's SVG passed the sanitizer almost every time. The problems were framing, subject size and night shots lit bright. Prose rules didn't fix these. Measured feedback with the exact numbers did, and so did new measured gates: edge crop, night readability, faces covered and figures stacked inside each other (D83, D86).
+- **The hero object has to read.** A kite or a letter that looks like a blob ruins the story. The hero object is now checked on its own by a vision model, by its visible features. After several rounds, the owner decided that the engine draws the object's states on the approved drawing (D74–D77).
+- **Time of day.** The critic called golden dusk "day" and dawn "night". Time is now judged in buckets, and a finished run is re-judged from its stored verdicts with no new model call (D71, D79, D82, D89).
+- **Finishing a film without starting over.** A single-shot redo redraws only the named shots on the take's plan and cast, and every other shot stays byte-identical (D84). QC by eye still found things the gates missed, such as a vanished walker and a floating envelope. Each became an engine fix with a test (D86–D88).
+- **Measuring honestly.** We ran the bench on one frozen server commit. When a merge deployed a new commit mid-bench, we rolled the server back so all 30 rows came from the same code. The replay had shown only a film's last run and its cost, until we fixed it to show every run (D92, D94).
+
+**Accomplishments**
+- **Three published v2 films**, in English, Vietnamese and Japanese (9:16). Each passed every measured gate and a by-eye checklist signed by the owner and QC. Each can be replayed step by step from its stored trace without spending a token.
+- **A 30-run bench on a frozen commit with two blind judges.** It reports its missed targets as missed.
+- **833 tests**, including a sanitizer bypass-vector suite.
+
+**What we learned**
+- Numbers belong in the engine, not in the prompt.
+- A second judge can change the story: Kimi-K3 shows no clear gap where gemma shows 7 wins in 9.
+- A film is finished when a person signs it, not when the critic's score clears a line.
+
+**What's next**
+- **Cost:** get under the $0.40 per finished minute we missed.
+- **Vision:** move the looking step to a Nemotron VLM once one is served.
+- **Hidamari Shorts:** make the episodes from the owner's narration WAVs as a series that reuses the same host pixel for pixel.
 
 ### Real users (Potential impact)
-{{PENDING: PILOT.md facts only (episodes made, wall time, USD, owner edits). Publication URL/date only if the owner published. No views or testimonials.}}
+_(Draft for QC, 2026-10-19. Facts from PILOT.md, STATUS and the published trace; PILOT.md's own status line still reads 10-10 and needs updating.)_ The first real user is the owner's Japanese YouTube channel 「ひだまり人生劇場」 (Hidamari), which publishes narrated stories for senior viewers. Its first package, PILOT01 「出せなかった手紙」 (the letter that was never sent), became the Japanese showcase film 「ひだまり人生劇場・春の手紙」:
+- **Format:** 9:16, 7 shots, 47.9 s with credits.
+- **Narration:** made in fixed-narration mode. The owner's AivisSpeech pipeline rendered every line before the run, and the Director timed each shot to those WAVs without rewriting a line.
+- **What it took:** 6 runs (1 take + 5 single-shot redos), $0.275 of model calls and 13:58 of model time across those runs.
+- **What a person had to fix:** QC's redo notes on shots 4–7, covering adult scale, the envelope in hand and a dusk sky with no moon. The owner and QC also signed the critic and recognition overrides.
+- **Status:** published on our showcase on 2026-10-14, **not yet published on the channel**. There are no views or audience numbers to report.
+
+The other two packages (PILOT02 梅しごと and PILOT03 同じ月) are written and wait for the owner's WAVs.
 
 ## Existing project: how we significantly updated it
-{{PENDING: regenerate at the end. `git log --oneline 28d07d0^..HEAD | wc -l` and `git diff --stat <v1-submission-commit>..HEAD | tail -1`, then a concise list: detached runs + replay + health (WP1), acting/voices/vision critic/coverage/score (WP4), series mode (WP5), eval v2 (WP7).}}
+_(Draft for QC, 2026-10-19; regenerate the counts at the final commit.)_ v1 was submitted on 2026-09-27 (`a0bcd46`). Since then:
+- **Volume:** 152 commits through 54 merged pull requests. In `src`, `scripts` and `tests`, 152 files changed (+19,458 / −1,257 lines).
+- **Decisions:** 94 decisions in total are recorded in [DECISIONS.md](DECISIONS.md). The v2 ones carry their evidence and tests.
+- **Judge access:** runs detached from the browser, a reconnecting event stream, a public replay of every showcase run and a health endpoint (WP1).
+- **Film quality:** acting characters, neural voices, a vision critic (a VLM looks, Nano scores), shot coverage, an original score, measured gates, a hero-object check, single-shot redos and a publish gate with a signed by-eye checklist (WP4 and the take-day fixes).
+- **Fixed narration** from the owner's WAVs, for the Hidamari pilot (WP5).
+- **A new bench:** 30 runs on a frozen commit with two blind judges, reported with its misses (WP7).
 
 ---
 
