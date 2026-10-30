@@ -63,13 +63,22 @@ export interface RequestTuning {
  * past the 12k-token cap by default (23 of 52 artist calls returned no SVG on the
  * first successor take) and, with reasoning off alone, loops on repeated paths in
  * 3 of 11 shots; reasoning off + frequency_penalty 0.3 gave a sanitizer-clean
- * fragment for 11 of 11 (evidence/probe-artist-thinking-*.json). Keyed by exact
- * id, so another mid model (e.g. the Ultra fallback) keeps its defaults.
+ * fragment for 11 of 11 (evidence/probe-artist-thinking-*.json), but on the three
+ * landing samples the penalty broke JSON/XML syntax (repeated quotes and tags)
+ * and no sample reached the judge bar. The fallback Artist is Ultra
+ * (NEMOTRON_MID_MODEL, owner + QC 2026-10-31): it also reasons ~10k tokens per
+ * frame by default, and with reasoning off draws a clean fragment in 2–3 s, so
+ * its Artist/Cast calls run with reasoning off and no penalty. Keyed by exact id
+ * AND role: Ultra as the Director keeps its defaults.
  */
 export const MODEL_TUNING: Readonly<Record<string, Readonly<Record<string, RequestTuning>>>> = {
   "nvidia/Nemotron-3.5-Super-VL": {
     artist: { thinking: false, frequencyPenalty: 0.3 },
     cast: { thinking: false, frequencyPenalty: 0.3 },
+  },
+  "nvidia/Nemotron-3-Ultra-550b-a55b": {
+    artist: { thinking: false },
+    cast: { thinking: false },
   },
 };
 

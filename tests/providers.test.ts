@@ -66,8 +66,12 @@ describe("NemotronProvider", () => {
     expect(requestTuning("NVIDIA/nemotron-3.5-super-vl", "cast")).toEqual({ thinking: false, frequencyPenalty: 0.3 });
     expect(requestTuning("nvidia/Nemotron-3.5-Super-VL", "critic")).toEqual({});
     expect(requestTuning("nvidia/Nemotron-3_5-Lightning", "editor")).toEqual({});
-    expect(requestTuning("nvidia/Nemotron-3-Ultra-550b-a55b", "artist")).toEqual({});
-    expect(Object.keys(MODEL_TUNING)).toEqual(["nvidia/Nemotron-3.5-Super-VL"]);
+    // the Ultra fallback Artist: reasoning off, no penalty; Ultra as the Director is untouched
+    expect(requestTuning("nvidia/Nemotron-3-Ultra-550b-a55b", "artist")).toEqual({ thinking: false });
+    expect(requestTuning("nvidia/Nemotron-3-Ultra-550b-a55b", "cast")).toEqual({ thinking: false });
+    expect(requestTuning("nvidia/Nemotron-3-Ultra-550b-a55b", "director")).toEqual({});
+    expect(requestTuning("nvidia/Nemotron-3_5-Lightning", "artist")).toEqual({});
+    expect(Object.keys(MODEL_TUNING)).toEqual(["nvidia/Nemotron-3.5-Super-VL", "nvidia/Nemotron-3-Ultra-550b-a55b"]);
   });
 
   it("sends images as image_url content parts and rejects non-data URIs", async () => {

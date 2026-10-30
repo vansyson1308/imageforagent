@@ -6,7 +6,7 @@
  * completion/reasoning tokens, latency, finish reason and whether the reply
  * holds an ```svg fragment that passes `sanitizeSvg`. Needs NEBIUS_API_KEY and
  * a local run in the dev database.
- *   [VARIANTS=default,no-think] npx tsx scripts/director/probe-artist-thinking.ts <runId> <shot> [<shot>…]
+ *   [PROBE_MODEL=<id>] [VARIANTS=default,no-think] npx tsx scripts/director/probe-artist-thinking.ts <runId> <shot> [<shot>…]
  * Writes docs/hackathon/evidence/probe-artist-thinking-<timestamp>.json.
  */
 import "./env";
@@ -19,7 +19,7 @@ import { LOGICAL_CANVAS, sanitizeSvg } from "@/lib/services/svgRenderer";
 import type { Plan } from "@/lib/services/director/schemas";
 import { appendLedger, assertSpendUnder } from "./ledger";
 
-const MODEL = "nvidia/Nemotron-3.5-Super-VL";
+const MODEL = process.env.PROBE_MODEL || "nvidia/Nemotron-3.5-Super-VL";
 
 /** Request variants (raw body, so sampling penalties can be tried); pick with VARIANTS=a,b. */
 const VARIANTS: ReadonlyArray<{ readonly label: string; readonly body: Record<string, unknown> }> = [

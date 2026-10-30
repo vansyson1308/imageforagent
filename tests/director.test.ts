@@ -431,9 +431,16 @@ describe("director loop (mock crew)", () => {
     for (const c of rest) expect(c.options.frequencyPenalty).toBeUndefined();
     const steps = await prisma.directorStep.findMany({ where: { runId, role: "artist", action: "draw" } });
     expect(steps.every((s) => /tuned: thinking false, frequency_penalty 0\.3/.test(s.outputSummary ?? ""))).toBe(true);
-    // another mid model (e.g. the Ultra fallback) is not tuned
+    // the Ultra fallback Artist (NEMOTRON_MID_MODEL): reasoning off, no penalty; Ultra as the Director keeps its defaults
+    const ULTRA = "nvidia/Nemotron-3-Ultra-550b-a55b";
+    const ultra = new MockLlmProvider(demoHandler({ criticScores: [8, 8, 8] }));
+    await run(demoHandler(), { provider: ultra, models: { ...MOCK_MODELS, strong: ULTRA, mid: ULTRA } });
+    for (const c of ultra.calls) expect(c.options.frequencyPenalty).toBeUndefined();
+    expect(ultra.calls.filter((c) => roleOf(c) === "ARTIST" || roleOf(c) === "CAST").every((c) => c.options.thinking === false)).toBe(true);
+    expect(ultra.calls.filter((c) => roleOf(c) === "DIRECTOR").every((c) => c.options.thinking === undefined)).toBe(true);
+    // any other mid model is not tuned
     const plain = new MockLlmProvider(demoHandler({ criticScores: [8, 8, 8] }));
-    await run(demoHandler(), { provider: plain, models: { ...MOCK_MODELS, mid: "nvidia/Nemotron-3-Ultra-550b-a55b" } });
+    await run(demoHandler(), { provider: plain, models: { ...MOCK_MODELS, mid: "some/other-model" } });
     for (const c of plain.calls) expect(c.options.frequencyPenalty).toBeUndefined();
     expect(plain.calls.filter((c) => roleOf(c) === "ARTIST").every((c) => c.options.thinking === undefined)).toBe(true);
   }, 120_000);

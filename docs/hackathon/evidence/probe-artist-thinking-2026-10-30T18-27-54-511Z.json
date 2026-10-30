@@ -1,0 +1,45 @@
+{
+  "at": "2026-10-30T18:27:54.511Z",
+  "model": "nvidia/Nemotron-3-Ultra-550b-a55b",
+  "runId": "cmvvanxu900aim97dmo6k7olb",
+  "variants": [
+    {
+      "label": "default",
+      "body": {}
+    }
+  ],
+  "results": [
+    {
+      "shot": 2,
+      "variant": "default",
+      "ms": 7008,
+      "usage": {
+        "promptTokens": 1456,
+        "completionTokens": 2085,
+        "reasoningTokens": 1818
+      },
+      "finishReason": "stop",
+      "contentChars": 550,
+      "contentTail": "e href=\"#grandma\" x=\"0\" y=\"0\" width=\"480\" height=\"720\"/>\n</g>\n<circle cx=\"150\" cy=\"950\" r=\"30\" fill=\"#a8c8b8\" fill-opacity=\"0.8\"/>\n<circle cx=\"1700\" cy=\"950\" r=\"30\" fill=\"#a8c8b8\" fill-opacity=\"0.8\"/>",
+      "svgFragment": false,
+      "sanitize": null,
+      "costUsd": 0.0058776
+    },
+    {
+      "shot": 5,
+      "variant": "default",
+      "ms": 38650,
+      "usage": {
+        "promptTokens": 1600,
+        "completionTokens": 10700,
+        "reasoningTokens": 10209
+      },
+      "finishReason": "stop",
+      "contentChars": 1102,
+      "contentTail": "fill=\"url(#paperGlow)\"/>\n<use href=\"#yui\" x=\"60\" y=\"0\" width=\"900\" height=\"1350\"/>\n<g transform=\"translate(1920 0) scale(-1 1)\">\n  <use href=\"#grandma\" x=\"0\" y=\"0\" width=\"900\" height=\"1350\"/>\n</g>\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.02664
+    }
+  ]
+}
