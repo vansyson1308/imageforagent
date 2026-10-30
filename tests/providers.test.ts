@@ -197,7 +197,7 @@ describe("crew models", () => {
 
   it("resolves against the live catalog: exact, case-insensitive, tier pattern, missing vision → text critic", () => {
     const listed = ["nvidia/nemotron-3-ultra-550b-a55b", "nvidia/nemotron-3-super-120b-a12b", "nvidia/Nemotron-3-Nano-30B", "meta/llama"];
-    const r = resolveAgainstCatalog({ ...DEFAULT_MODELS, fast: "nvidia/gone" }, listed);
+    const r = resolveAgainstCatalog({ ...DEFAULT_MODELS, mid: "nvidia/Nemotron-3-Super-120b-a12b", fast: "nvidia/gone" }, listed);
     expect(r.models.strong).toBe("nvidia/nemotron-3-ultra-550b-a55b");
     expect(r.models.mid).toBe("nvidia/nemotron-3-super-120b-a12b");
     expect(r.models.fast).toBe("nvidia/Nemotron-3-Nano-30B");
@@ -222,16 +222,17 @@ describe("crew models", () => {
   });
 
   it("pins the 2026-11-09 successors (D96): every tier resolves exactly against the post-retirement catalog", () => {
-    expect(DEFAULT_MODELS).toEqual({ strong: "nvidia/Nemotron-3-Ultra-550b-a55b", mid: "nvidia/Nemotron-3.5-Super-VL", fast: "nvidia/Nemotron-3_5-Lightning", vision: "nvidia/Nemotron-3.5-Super-VL" });
+    // owner + QC 2026-10-31: Ultra plans AND draws, Super-VL looks, Lightning scores/edits
+    expect(DEFAULT_MODELS).toEqual({ strong: "nvidia/Nemotron-3-Ultra-550b-a55b", mid: "nvidia/Nemotron-3-Ultra-550b-a55b", fast: "nvidia/Nemotron-3_5-Lightning", vision: "nvidia/Nemotron-3.5-Super-VL" });
     expect(VISION_FALLBACKS).toEqual(["nvidia/Nemotron-3.5-Super-VL"]);
     const after = ["nvidia/Nemotron-3-Ultra-550b-a55b", "nvidia/Nemotron-3.5-Super-VL", "nvidia/Nemotron-3_5-Lightning", "google/gemma-3-27b-it", "moonshotai/Kimi-K3"];
     const r = resolveAgainstCatalog(configuredModels({} as unknown as NodeJS.ProcessEnv), after);
     expect(r.models).toEqual(DEFAULT_MODELS);
     expect(r.notes).toEqual([]);
     expect(r.visionAvailable).toBe(true);
-    // an old id left in NEMOTRON_*_MODEL after the retirement falls back to the successor of the same tier
+    // an old id left in NEMOTRON_*_MODEL after the retirement falls back to a listed model of the same tier
     const stale = resolveAgainstCatalog({ ...DEFAULT_MODELS, mid: "nvidia/nemotron-3-super-120b-a12b", fast: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B", vision: "openbmb/MiniCPM-V-4_5" }, after);
-    expect(stale.models).toEqual(DEFAULT_MODELS);
+    expect(stale.models).toEqual({ ...DEFAULT_MODELS, mid: "nvidia/Nemotron-3.5-Super-VL" });
     expect(stale.notes).toHaveLength(3);
     // the critic's eyes are never an eval judge
     expect(JUDGE_MODELS).not.toContain(r.models.vision);

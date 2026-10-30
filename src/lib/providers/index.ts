@@ -13,14 +13,14 @@ export { NemotronProvider } from "@/lib/providers/nemotronProvider";
  * Without any vision model the critic runs in text mode and the trace says so.
  *
  * Token Factory retires Nemotron 3 Super / Nano and MiniCPM-V on 2026-11-09
- * (docs.tokenfactory.nebius.com/model-deprecations-november-2026), so mid and
- * fast are pinned to the successors and Super-VL is also the critic's eyes
- * (D96, probed live in docs/hackathon/evidence/probe-successors-*.json).
- * The showcase films and the bench were made with the original models.
+ * (docs.tokenfactory.nebius.com/model-deprecations-november-2026). D96 (owner +
+ * QC 2026-10-31, after the judge-path verification): Ultra is also the mid tier
+ * (Artist + Cast, reasoning off), Super-VL is the critic's eyes, Lightning the
+ * fast tier. The showcase films and the bench were made with the original models.
  */
 export const DEFAULT_MODELS: Readonly<Record<ModelTier, string>> = {
   strong: "nvidia/Nemotron-3-Ultra-550b-a55b",
-  mid: "nvidia/Nemotron-3.5-Super-VL",
+  mid: "nvidia/Nemotron-3-Ultra-550b-a55b",
   fast: "nvidia/Nemotron-3_5-Lightning",
   vision: "nvidia/Nemotron-3.5-Super-VL",
 };
@@ -65,8 +65,8 @@ export interface RequestTuning {
  * 3 of 11 shots; reasoning off + frequency_penalty 0.3 gave a sanitizer-clean
  * fragment for 11 of 11 (evidence/probe-artist-thinking-*.json), but on the three
  * landing samples the penalty broke JSON/XML syntax (repeated quotes and tags)
- * and no sample reached the judge bar. The fallback Artist is Ultra
- * (NEMOTRON_MID_MODEL, owner + QC 2026-10-31): it also reasons ~10k tokens per
+ * and no sample reached the judge bar; kept (tested) for NEMOTRON_MID_MODEL =
+ * Super-VL, not the default. The Artist is Ultra (owner + QC 2026-10-31): it also reasons ~10k tokens per
  * frame by default, and with reasoning off draws a clean fragment in 2–3 s, so
  * its Artist/Cast calls run with reasoning off and no penalty. Keyed by exact id
  * AND role: Ultra as the Director keeps its defaults.
