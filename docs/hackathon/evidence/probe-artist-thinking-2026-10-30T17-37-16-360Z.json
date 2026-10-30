@@ -1,0 +1,91 @@
+{
+  "at": "2026-10-30T17:37:16.360Z",
+  "model": "nvidia/Nemotron-3.5-Super-VL",
+  "runId": "cmvv83d1q00019l7dryp9sccs",
+  "variants": [
+    {
+      "label": "no-think+freq0.3",
+      "body": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "frequency_penalty": 0.3
+      }
+    },
+    {
+      "label": "no-think+rep1.1",
+      "body": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "repetition_penalty": 1.1
+      }
+    }
+  ],
+  "results": [
+    {
+      "shot": 2,
+      "variant": "no-think+freq0.3",
+      "ms": 6510,
+      "usage": {
+        "promptTokens": 1645,
+        "completionTokens": 960,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 1861,
+      "contentTail": "\"-?\" width=\"\" height=\"\" />\n\n<use href=\"#grandfather--hold-neutral\" x=\"\" width=\"\" height=\"\" />\n\n<g transform=\"\">\n</g>\n\n<rect width=\"\" height=\"\" fill-opacity=\"\" />\n\n```json{\"shapes\":[], \"tracks\":[]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0013575
+    },
+    {
+      "shot": 2,
+      "variant": "no-think+rep1.1",
+      "ms": 174760,
+      "usage": {
+        "promptTokens": 1645,
+        "completionTokens": 12000,
+        "reasoningTokens": 0
+      },
+      "finishReason": "length",
+      "contentChars": 2278,
+      "contentTail": "se\": \"inOut\"}, { \"t\": 3, \"v\": -8 }]},\n    { \"target\": \"shapes.grassBlade1.fill\", \"keys\": [{ \"t\": 0, \"v\": \"#8FBDAA\"}, { \"t\": 1.5, \"v\": \"#CCAA88\", \"ease\": \"inOut\"}, { \"t\": 3, \"v\": \"#8FBDAA\"}]}\n  ]\n}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0112935
+    },
+    {
+      "shot": 6,
+      "variant": "no-think+freq0.3",
+      "ms": 5094,
+      "usage": {
+        "promptTokens": 1731,
+        "completionTokens": 649,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 1336,
+      "contentTail": "y\": [{\"t\":1,\"v\":0.7},{\"t\":4,\"v\":0}]},\n    {\"target\":\"shapes.steam3.at\",\"keys\":[{\"t\":2,\"v\":[1428,576]},{\"t\":4,\"v\":[1428,360],\"ease\":\"inOut\"}], \"fill-opacity\": [{\"t\":2,\"v\":0.7},{\"t\":4,\"v\":0}]}\n  ]\n}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0011034
+    },
+    {
+      "shot": 6,
+      "variant": "no-think+rep1.1",
+      "ms": 8635,
+      "usage": {
+        "promptTokens": 1731,
+        "completionTokens": 1061,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 2638,
+      "contentTail": "{\"t\":2,\"v\":[0,6]},{\"t\":4,\"v\":[0,-6]},{\"ease\":\"inOut\"}]},\n    {\"target\":\"shapes.curtainRight.at\",\"keys\":[{\"t\":0,\"v\":[1680,6]},{\"t\":2,\"v\":[1680,-6]},{\"t\":4,\"v\":[1680,6]},{\"ease\":\"inOut\"}]}\n  ]\n}\n```\n```",
+      "svgFragment": true,
+      "sanitize": "SVG frame rejected: <script> is not allowed.",
+      "costUsd": 0.0014742
+    }
+  ]
+}
