@@ -1,0 +1,261 @@
+{
+  "at": "2026-10-30T17:03:59.548Z",
+  "baseUrl": "https://api.tokenfactory.nebius.com/v1",
+  "catalog": {
+    "count": 30,
+    "successors": {
+      "nvidia/Nemotron-3.5-Super-VL": true,
+      "nvidia/Nemotron-3_5-Lightning": true
+    },
+    "unaffected": {
+      "nvidia/Nemotron-3-Ultra-550b-a55b": true,
+      "google/gemma-3-27b-it": true,
+      "moonshotai/Kimi-K3": true
+    },
+    "retiredStillListed": {
+      "nvidia/nemotron-3-super-120b-a12b": true,
+      "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B": true,
+      "openbmb/MiniCPM-V-4_5": true
+    },
+    "verbose": {
+      "nvidia/Nemotron-3_5-Lightning": {
+        "id": "nvidia/Nemotron-3_5-Lightning",
+        "name": "Nemotron-3.5-Lightning",
+        "created": 1786406400,
+        "description": "NVIDIA's 30B-parameter hybrid MoE model with 3B active parameters per token, designed for efficient agentic reasoning, tool use, coding, and long-context workflows.",
+        "context_length": 1048576,
+        "architecture": {
+          "modality": "text->text",
+          "tokenizer": "Other"
+        },
+        "quantization": "bf16",
+        "pricing": {
+          "prompt": "0.00000006",
+          "input_cache_read": "0.00000003",
+          "completion": "0.00000024",
+          "image": "0",
+          "price_per_video_second": "0",
+          "request": "0",
+          "price_per_minute": "0"
+        },
+        "per_request_limits": {
+          "tokens_per_minute": 2000000,
+          "requests_per_minute": 1000,
+          "burst_ratio": 1
+        },
+        "object": "model",
+        "owned_by": "system",
+        "regions": [
+          {
+            "country_code": "FI",
+            "name": "eu-north1"
+          }
+        ],
+        "supported_features": [
+          "tools",
+          "reasoning"
+        ],
+        "supported_sampling_parameters": [
+          "temperature",
+          "top_p",
+          "top_k",
+          "repetition_penalty",
+          "frequency_penalty",
+          "presence_penalty"
+        ]
+      },
+      "nvidia/Nemotron-3.5-Super-VL": {
+        "id": "nvidia/Nemotron-3.5-Super-VL",
+        "name": "Nemotron 3.5 Super VL",
+        "created": 1791841710,
+        "description": "NVIDIA's multimodal model for visual understanding, coding, reasoning, and tool use. It processes text, images, and video to generate text responses.",
+        "context_length": 1048576,
+        "architecture": {
+          "modality": "text+image->text",
+          "tokenizer": "Other"
+        },
+        "quantization": "bf16",
+        "pricing": {
+          "prompt": "0.0000003",
+          "input_cache_read": "0.00000006",
+          "completion": "0.0000009",
+          "image": "0",
+          "price_per_video_second": "0",
+          "request": "0",
+          "price_per_minute": "0"
+        },
+        "per_request_limits": {
+          "tokens_per_minute": 2000000,
+          "requests_per_minute": 1000,
+          "burst_ratio": 1
+        },
+        "object": "model",
+        "owned_by": "system",
+        "regions": [
+          {
+            "country_code": "US",
+            "name": "us-north1"
+          }
+        ],
+        "supported_features": [
+          "tools",
+          "reasoning"
+        ],
+        "supported_sampling_parameters": []
+      }
+    }
+  },
+  "results": [
+    {
+      "model": "nvidia/Nemotron-3_5-Lightning",
+      "label": "json_schema",
+      "ok": true,
+      "ms": 361,
+      "text": "{\"ok\": true, \"role\": \"assistant\"}",
+      "valid": true,
+      "formatFallback": false,
+      "finishReason": "stop",
+      "usage": {
+        "promptTokens": 37,
+        "completionTokens": 13
+      },
+      "latencyMs": 359,
+      "costUsd": 0.00000534
+    },
+    {
+      "model": "nvidia/Nemotron-3_5-Lightning",
+      "label": "thinking:false",
+      "ok": true,
+      "ms": 285,
+      "latencyMs": 284,
+      "usage": {
+        "promptTokens": 56,
+        "completionTokens": 8,
+        "details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": null
+        }
+      },
+      "reasoningChars": 0,
+      "thinkTagInContent": false,
+      "contentTail": "{\"minutes\": 88}",
+      "answer": 88,
+      "correct": true,
+      "finishReason": "stop",
+      "costUsd": 0.00000528
+    },
+    {
+      "model": "nvidia/Nemotron-3_5-Lightning",
+      "label": "thinking:true",
+      "ok": true,
+      "ms": 1298,
+      "latencyMs": 1298,
+      "usage": {
+        "promptTokens": 56,
+        "completionTokens": 334,
+        "details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 325,
+          "rejected_prediction_tokens": null
+        }
+      },
+      "reasoningChars": 847,
+      "thinkTagInContent": false,
+      "contentTail": "{\"minutes\": 88}",
+      "answer": 88,
+      "correct": true,
+      "finishReason": "stop",
+      "costUsd": 0.00008352
+    },
+    {
+      "model": "nvidia/Nemotron-3.5-Super-VL",
+      "label": "json_schema",
+      "ok": true,
+      "ms": 508,
+      "text": "{\"ok\":true,\"role\":\"assistant\"}",
+      "valid": true,
+      "formatFallback": false,
+      "finishReason": "stop",
+      "usage": {
+        "promptTokens": 37,
+        "completionTokens": 11
+      },
+      "latencyMs": 508,
+      "costUsd": 0.000021
+    },
+    {
+      "model": "nvidia/Nemotron-3.5-Super-VL",
+      "label": "thinking:false",
+      "ok": true,
+      "ms": 301,
+      "latencyMs": 301,
+      "usage": {
+        "promptTokens": 56,
+        "completionTokens": 8,
+        "details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 0,
+          "rejected_prediction_tokens": null
+        }
+      },
+      "reasoningChars": 0,
+      "thinkTagInContent": false,
+      "contentTail": "{\"minutes\": 88}",
+      "answer": 88,
+      "correct": true,
+      "finishReason": "stop",
+      "costUsd": 0.000024
+    },
+    {
+      "model": "nvidia/Nemotron-3.5-Super-VL",
+      "label": "thinking:true",
+      "ok": true,
+      "ms": 800,
+      "latencyMs": 800,
+      "usage": {
+        "promptTokens": 56,
+        "completionTokens": 154,
+        "details": {
+          "accepted_prediction_tokens": null,
+          "audio_tokens": null,
+          "reasoning_tokens": 145,
+          "rejected_prediction_tokens": null
+        }
+      },
+      "reasoningChars": 318,
+      "thinkTagInContent": false,
+      "contentTail": "{\"minutes\": 88}",
+      "answer": 88,
+      "correct": true,
+      "finishReason": "stop",
+      "costUsd": 0.0001554
+    },
+    {
+      "model": "nvidia/Nemotron-3.5-Super-VL",
+      "label": "image:red-disc",
+      "ok": true,
+      "ms": 811,
+      "text": "{\n  \"color\": \"red\"\n}",
+      "formatFallback": false,
+      "usage": {
+        "promptTokens": 291,
+        "completionTokens": 10
+      },
+      "latencyMs": 810,
+      "costUsd": 0.0000963
+    },
+    {
+      "model": "nvidia/Nemotron-3_5-Lightning",
+      "label": "image:refused",
+      "ok": true,
+      "ms": 176,
+      "accepted": false,
+      "error": "Token Factory 400: {\"error\":{\"type\":\"invalid_request_error\",\"message\":\"This model does not support image input\",\"param\":\"messages\",\"code\":null},\"detail\":\"Invalid request. Please check the parameters a"
+    }
+  ],
+  "spentUsd": 0.000391
+}

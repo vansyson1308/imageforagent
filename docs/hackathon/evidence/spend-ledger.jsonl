@@ -579,3 +579,10 @@
 {"at":"2026-10-16T02:17:53.726Z","script":"bench-judge","label":"C:ja-sakura#1:before","model":"moonshotai/Kimi-K3","tokensIn":1076,"tokensOut":211,"costUsd":0.001152}
 {"at":"2026-10-16T02:17:57.162Z","script":"bench-judge","label":"C:ja-sakura#1:after","model":"moonshotai/Kimi-K3","tokensIn":1076,"tokensOut":155,"costUsd":0.0010176}
 {"at":"2026-10-16T02:17:57.373Z","script":"bench","label":"C:ja-sakura","model":"crew v2+tavily","tokensIn":420425,"tokensOut":0,"costUsd":0.26581668}
+{"at":"2026-10-30T17:03:55.367Z","script":"probe-successors","label":"nvidia/Nemotron-3_5-Lightning:json_schema","model":"nvidia/Nemotron-3_5-Lightning","tokensIn":37,"tokensOut":13,"costUsd":0.00000534}
+{"at":"2026-10-30T17:03:55.652Z","script":"probe-successors","label":"nvidia/Nemotron-3_5-Lightning:thinking:false","model":"nvidia/Nemotron-3_5-Lightning","tokensIn":56,"tokensOut":8,"costUsd":0.00000528}
+{"at":"2026-10-30T17:03:56.950Z","script":"probe-successors","label":"nvidia/Nemotron-3_5-Lightning:thinking:true","model":"nvidia/Nemotron-3_5-Lightning","tokensIn":56,"tokensOut":334,"costUsd":0.00008352}
+{"at":"2026-10-30T17:03:57.459Z","script":"probe-successors","label":"nvidia/Nemotron-3.5-Super-VL:json_schema","model":"nvidia/Nemotron-3.5-Super-VL","tokensIn":37,"tokensOut":11,"costUsd":0.000021}
+{"at":"2026-10-30T17:03:57.759Z","script":"probe-successors","label":"nvidia/Nemotron-3.5-Super-VL:thinking:false","model":"nvidia/Nemotron-3.5-Super-VL","tokensIn":56,"tokensOut":8,"costUsd":0.000024}
+{"at":"2026-10-30T17:03:58.560Z","script":"probe-successors","label":"nvidia/Nemotron-3.5-Super-VL:thinking:true","model":"nvidia/Nemotron-3.5-Super-VL","tokensIn":56,"tokensOut":154,"costUsd":0.0001554}
+{"at":"2026-10-30T17:03:59.371Z","script":"probe-successors","label":"nvidia/Nemotron-3.5-Super-VL:image:red-disc","model":"nvidia/Nemotron-3.5-Super-VL","tokensIn":291,"tokensOut":10,"costUsd":0.0000963}
