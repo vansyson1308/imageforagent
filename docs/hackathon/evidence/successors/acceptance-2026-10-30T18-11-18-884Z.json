@@ -1,0 +1,57 @@
+{
+  "at": "2026-10-30T18:11:18.884Z",
+  "base": "http://localhost:3000",
+  "capTokens": 500000,
+  "bar": {
+    "wallSec": 720,
+    "hardWallSec": 900,
+    "capShare": 0.75,
+    "gateFailures": 0,
+    "firstCallValid": 0.9,
+    "critic": 5.8,
+    "usdPerMin": 0.7
+  },
+  "rows": [
+    {
+      "projectId": "cmvva9k8d0000m97d83oyozi6",
+      "runId": "cmvva9krs0001m97dxcfcqn8h",
+      "language": "en",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/Nemotron-3.5-Super-VL",
+        "fast": "nvidia/Nemotron-3_5-Lightning",
+        "vision": "nvidia/Nemotron-3.5-Super-VL"
+      },
+      "status": "done",
+      "shots": 7,
+      "rendered": 6,
+      "firstPassOk": 3,
+      "wallSec": 299,
+      "tokens": 256520,
+      "capShare": 0.513,
+      "gateFailures": 1,
+      "gateFailShots": [
+        5
+      ],
+      "artistFirstCallValidSvg": 0.857,
+      "artistCallsValidSvg": 0.78,
+      "artistCalls": 41,
+      "criticBefore": 4.17,
+      "criticAfter": 4.33,
+      "costUsd": 0.12546,
+      "filmSec": 23.333333,
+      "usdPerMin": 0.323,
+      "checks": {
+        "done": true,
+        "allRendered": false,
+        "wall": true,
+        "hardWall": true,
+        "gates": false,
+        "firstCallValid": false,
+        "critic": false,
+        "cost": true
+      },
+      "pass": false
+    }
+  ]
+}
