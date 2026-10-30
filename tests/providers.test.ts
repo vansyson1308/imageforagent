@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NemotronProvider, stripReasoning } from "@/lib/providers/nemotronProvider";
 import { MockLlmProvider } from "@/lib/providers/mockLlmProvider";
-import { configuredModels, resolveAgainstCatalog, DEFAULT_MODELS, VISION_FALLBACKS } from "@/lib/providers";
+import { configuredModels, resolveAgainstCatalog, DEFAULT_MODELS, MODEL_TUNING, requestTuning, VISION_FALLBACKS } from "@/lib/providers";
 import { JUDGE_MODELS } from "@/lib/services/evalJudges";
 import { LlmError } from "@/lib/providers/types";
 import { costOf, EXACT_PRICES, priceOf, priceOverrides } from "@/lib/providers/pricing";
@@ -52,6 +52,22 @@ describe("NemotronProvider", () => {
     expect(r.usage).toEqual({ promptTokens: 100, completionTokens: 50 });
     expect(r.attempts).toBe(1);
     expect(r.costUsd).toBeCloseTo((100 * 0.3 + 50 * 0.9) / 1e6, 10);
+  });
+
+  it("sends frequency_penalty only when asked (model-keyed tuning, D96)", async () => {
+    const { impl, requests } = fakeFetch([ok("a"), ok("b")]);
+    const p = new NemotronProvider({ apiKey: "k", fetchImpl: impl, sleep: noSleep });
+    await p.chat([{ role: "user", content: "x" }], { model: "m", frequencyPenalty: 0.3, thinking: false });
+    await p.chat([{ role: "user", content: "x" }], { model: "m" });
+    expect(requests[0].body).toMatchObject({ frequency_penalty: 0.3, chat_template_kwargs: { enable_thinking: false } });
+    expect(requests[1].body).not.toHaveProperty("frequency_penalty");
+    expect(requests[1].body).not.toHaveProperty("chat_template_kwargs");
+    expect(requestTuning("nvidia/Nemotron-3.5-Super-VL", "artist")).toEqual({ thinking: false, frequencyPenalty: 0.3 });
+    expect(requestTuning("NVIDIA/nemotron-3.5-super-vl", "cast")).toEqual({ thinking: false, frequencyPenalty: 0.3 });
+    expect(requestTuning("nvidia/Nemotron-3.5-Super-VL", "critic")).toEqual({});
+    expect(requestTuning("nvidia/Nemotron-3_5-Lightning", "editor")).toEqual({});
+    expect(requestTuning("nvidia/Nemotron-3-Ultra-550b-a55b", "artist")).toEqual({});
+    expect(Object.keys(MODEL_TUNING)).toEqual(["nvidia/Nemotron-3.5-Super-VL"]);
   });
 
   it("sends images as image_url content parts and rejects non-data URIs", async () => {

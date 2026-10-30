@@ -204,8 +204,10 @@ export function reduceAll(events: readonly DirectorEventLike[], start: RunState 
 export function modelLabel(model: string): string {
   const m = model.toLowerCase();
   if (m.includes("ultra")) return "Nemotron Ultra";
+  // the successors (D96), named so judges can map them to the Judge Access PDF's Super / Nano
+  if (m.includes("super-vl")) return "Nemotron Super-VL (Super 3.5)";
   if (m.includes("super")) return "Nemotron Super";
-  if (m.includes("lightning")) return "Nemotron Lightning";
+  if (m.includes("lightning")) return "Nemotron Lightning (Nano 3.5)";
   if (m.includes("nano")) return "Nemotron Nano";
   if (m.includes("omni")) return "Nemotron Omni";
   if (m === "engine" || m === "catalog") return "Engine";

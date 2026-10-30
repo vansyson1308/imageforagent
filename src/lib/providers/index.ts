@@ -52,6 +52,32 @@ const TIER_PATTERNS: Record<ModelTier, RegExp> = {
  */
 export const VISION_FALLBACKS = ["nvidia/Nemotron-3.5-Super-VL"] as const;
 
+/** Per-request settings a model needs for one crew role (sent only to that exact model id). */
+export interface RequestTuning {
+  readonly thinking?: boolean;
+  readonly frequencyPenalty?: number;
+}
+
+/**
+ * Model-keyed request tuning (D96). Nemotron-3.5-Super-VL as Artist/Cast reasons
+ * past the 12k-token cap by default (23 of 52 artist calls returned no SVG on the
+ * first successor take) and, with reasoning off alone, loops on repeated paths in
+ * 3 of 11 shots; reasoning off + frequency_penalty 0.3 gave a sanitizer-clean
+ * fragment for 11 of 11 (evidence/probe-artist-thinking-*.json). Keyed by exact
+ * id, so another mid model (e.g. the Ultra fallback) keeps its defaults.
+ */
+export const MODEL_TUNING: Readonly<Record<string, Readonly<Record<string, RequestTuning>>>> = {
+  "nvidia/Nemotron-3.5-Super-VL": {
+    artist: { thinking: false, frequencyPenalty: 0.3 },
+    cast: { thinking: false, frequencyPenalty: 0.3 },
+  },
+};
+
+export function requestTuning(model: string, role: string): RequestTuning {
+  const key = Object.keys(MODEL_TUNING).find((id) => id.toLowerCase() === model.toLowerCase());
+  return (key && MODEL_TUNING[key][role]) || {};
+}
+
 export interface ResolvedModels {
   readonly models: CrewModels;
   /** Human-readable notes: substitutions, missing tiers (go into the trace). */

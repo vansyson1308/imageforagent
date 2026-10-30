@@ -416,6 +416,28 @@ async function run(handler: MockHandler, over: Partial<DirectorDeps> = {}, reqOv
 }
 
 describe("director loop (mock crew)", () => {
+  it("tunes only Super-VL's Artist and Cast calls: reasoning off + frequency_penalty 0.3 (D96)", async () => {
+    const roleOf = (c: { messages: readonly { content: string }[] }) => c.messages[0]?.content.match(/^ROLE: (\w+)/)?.[1];
+    const tuned = new MockLlmProvider(demoHandler({ criticScores: [8, 8, 8] }));
+    const SVL = "nvidia/Nemotron-3.5-Super-VL";
+    const { runId, summary } = await run(demoHandler(), { provider: tuned, models: { ...MOCK_MODELS, mid: SVL, vision: SVL } });
+    expect(summary.status).toBe("done");
+    const art = tuned.calls.filter((c) => roleOf(c) === "ARTIST" || roleOf(c) === "CAST");
+    expect(art.length).toBeGreaterThan(0);
+    for (const c of art) expect(c.options).toMatchObject({ model: SVL, thinking: false, frequencyPenalty: 0.3 });
+    // the same model as the critic's eyes, and every other role, keep their own settings
+    const rest = tuned.calls.filter((c) => !art.includes(c));
+    expect(rest.some((c) => c.options.model === SVL)).toBe(true);
+    for (const c of rest) expect(c.options.frequencyPenalty).toBeUndefined();
+    const steps = await prisma.directorStep.findMany({ where: { runId, role: "artist", action: "draw" } });
+    expect(steps.every((s) => /tuned: thinking false, frequency_penalty 0\.3/.test(s.outputSummary ?? ""))).toBe(true);
+    // another mid model (e.g. the Ultra fallback) is not tuned
+    const plain = new MockLlmProvider(demoHandler({ criticScores: [8, 8, 8] }));
+    await run(demoHandler(), { provider: plain, models: { ...MOCK_MODELS, mid: "nvidia/Nemotron-3-Ultra-550b-a55b" } });
+    for (const c of plain.calls) expect(c.options.frequencyPenalty).toBeUndefined();
+    expect(plain.calls.filter((c) => roleOf(c) === "ARTIST").every((c) => c.options.thinking === undefined)).toBe(true);
+  }, 120_000);
+
   it("plans, casts, draws, critiques, revises, voices and lints a film", async () => {
     const { projectId, runId, summary, events } = await run(demoHandler({ criticScores: [5, 8, 8] }));
     expect(summary.status).toBe("done");

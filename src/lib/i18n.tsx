@@ -86,9 +86,9 @@ const DICT = {
   // ── Director panel ──
   directorTitle: { en: "AI Director: the Nemotron crew", vi: "Đạo diễn AI: đội Nemotron", ja: "AI 監督: Nemotron クルー" },
   directorSub: {
-    en: "Tell a story in any language. Ultra plans the shots, Super draws every frame as code, the engine measures each render, the critic scores it and asks for fixes, and Lightning edits dialogue and timing.",
-    vi: "Kể một câu chuyện, bất kỳ ngôn ngữ nào. Ultra lên phân cảnh, Super vẽ từng khung bằng code, engine đo bản render, critic chấm điểm và yêu cầu sửa, Lightning biên tập thoại + nhịp.",
-    ja: "どの言語でも物語を書いてください。Ultra がショットを計画し、Super が全フレームをコードで描き、エンジンが描画を計測し、批評家が採点して修正を求め、Lightning が台詞とタイミングを編集します。",
+    en: "Tell a story in any language. Ultra plans the shots, Super-VL (Super 3.5) draws every frame as code, the engine measures each render, the critic scores it and asks for fixes, and Lightning (Nano 3.5) edits dialogue and timing.",
+    vi: "Kể một câu chuyện, bất kỳ ngôn ngữ nào. Ultra lên phân cảnh, Super-VL (Super 3.5) vẽ từng khung bằng code, engine đo bản render, critic chấm điểm và yêu cầu sửa, Lightning (Nano 3.5) biên tập thoại + nhịp.",
+    ja: "どの言語でも物語を書いてください。Ultra がショットを計画し、Super-VL (Super 3.5) が全フレームをコードで描き、エンジンが描画を計測し、批評家が採点して修正を求め、Lightning (Nano 3.5) が台詞とタイミングを編集します。",
   },
   storyLabel: { en: "Your story", vi: "Câu chuyện", ja: "あなたの物語" },
   storyPlaceholder: {
@@ -118,9 +118,9 @@ const DICT = {
     ja: "リサーチは任意で、このサーバーでは無効です (Tavily キーなし)。",
   },
   researchAuto: {
-    en: "Auto: Lightning decides whether the story needs real-world references.",
-    vi: "Tự động: Lightning quyết định truyện có cần tham chiếu thực tế không.",
-    ja: "自動: 実在の資料が必要かどうかを Lightning が判断します。",
+    en: "Auto: Lightning (Nano 3.5) decides whether the story needs real-world references.",
+    vi: "Tự động: Lightning (Nano 3.5) quyết định truyện có cần tham chiếu thực tế không.",
+    ja: "自動: 実在の資料が必要かどうかを Lightning (Nano 3.5) が判断します。",
   },
   make: { en: "🎬 Make my film", vi: "🎬 Làm phim của tôi", ja: "🎬 映画をつくる" },
   cancel: { en: "Cancel the film", vi: "Dừng làm phim", ja: "制作を中止" },

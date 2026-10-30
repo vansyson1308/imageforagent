@@ -36,6 +36,8 @@ export interface ChatOptions {
    * Undefined = model default.
    */
   readonly thinking?: boolean;
+  /** `frequency_penalty` (OpenAI semantics). Undefined = not sent (model default). */
+  readonly frequencyPenalty?: number;
   /** Per-attempt timeout (ms). */
   readonly timeoutMs?: number;
   /** Cancels in-flight requests and pending retries. */
