@@ -2,14 +2,27 @@
  * Token pricing (USD per 1M tokens, [input, output]) used for per-step cost
  * accounting and budget enforcement.
  *
- * The defaults are ESTIMATES from public price listings, matched by model
- * family. They have not been checked against a Token Factory invoice (see
- * docs/hackathon/STATUS.md "Unverified"). Override exact ids with
- * `NEBIUS_PRICES_JSON='{"model-id":[in,out],…}'`. Unknown models fall back
- * to the most expensive family, so budgets stay conservative.
+ * Lookup order: `NEBIUS_PRICES_JSON='{"model-id":[in,out],…}'` overrides →
+ * `EXACT_PRICES` (ids read off the Token Factory catalog) → family ESTIMATES
+ * from public price listings. None of them has been checked against a Token
+ * Factory invoice (see docs/hackathon/STATUS.md "Unverified"). Unknown models
+ * fall back to the most expensive family, so budgets stay conservative.
  */
 
 export type PricePair = readonly [number, number];
+
+/**
+ * Exact catalog prices (non-cached input, output), read off the Token Factory
+ * model catalog pages on 2026-10-30 (capture: docs/hackathon/evidence/
+ * catalog-successors-2026-10-30.txt, D96):
+ *   https://tokenfactory.nebius.com/models/catalog/image2text/nvidia%2FNemotron-3.5-Super-VL
+ *   https://tokenfactory.nebius.com/models/catalog/text2text/nvidia%2FNemotron-3_5-Lightning
+ * Cached input ($0.06 / $0.03) is not modelled: costs stay an upper bound.
+ */
+export const EXACT_PRICES: Readonly<Record<string, PricePair>> = {
+  "nvidia/Nemotron-3.5-Super-VL": [0.3, 0.9],
+  "nvidia/Nemotron-3_5-Lightning": [0.06, 0.24],
+};
 
 /** Family estimates, first match wins (order matters: "omni" before "nano"). */
 export const FAMILY_PRICES: ReadonlyArray<{ readonly pattern: RegExp; readonly price: PricePair }> = [
@@ -40,7 +53,7 @@ export function priceOverrides(env: NodeJS.ProcessEnv = process.env): Record<str
 }
 
 export function priceOf(model: string, overrides: Record<string, PricePair> = priceOverrides()): PricePair {
-  return overrides[model] ?? FAMILY_PRICES.find((f) => f.pattern.test(model))?.price ?? FALLBACK;
+  return overrides[model] ?? EXACT_PRICES[model] ?? FAMILY_PRICES.find((f) => f.pattern.test(model))?.price ?? FALLBACK;
 }
 
 export function costOf(model: string, promptTokens: number, completionTokens: number, overrides?: Record<string, PricePair>): number {

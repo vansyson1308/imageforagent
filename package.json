@@ -14,6 +14,7 @@
     "master:dcp": "tsx scripts/master-dcp.ts",
     "director:models": "tsx scripts/director/models.ts",
     "director:smoke": "tsx scripts/director/smoke.ts",
+    "director:probe-successors": "tsx scripts/director/probe-successors.ts",
     "director:showcase": "tsx scripts/director/showcase.ts",
     "director:preview": "tsx scripts/director/preview.ts",
     "director:bench": "tsx scripts/eval/director_bench.ts",

@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { NemotronProvider, stripReasoning } from "@/lib/providers/nemotronProvider";
 import { MockLlmProvider } from "@/lib/providers/mockLlmProvider";
-import { configuredModels, resolveAgainstCatalog, DEFAULT_MODELS } from "@/lib/providers";
+import { configuredModels, resolveAgainstCatalog, DEFAULT_MODELS, VISION_FALLBACKS } from "@/lib/providers";
+import { JUDGE_MODELS } from "@/lib/services/evalJudges";
 import { LlmError } from "@/lib/providers/types";
-import { costOf, priceOf, priceOverrides } from "@/lib/providers/pricing";
+import { costOf, EXACT_PRICES, priceOf, priceOverrides } from "@/lib/providers/pricing";
 
 // No network: every test injects a fake fetch.
 type Req = { url: string; init: RequestInit; body: Record<string, unknown> };
@@ -155,6 +156,11 @@ describe("pricing", () => {
     expect(priceOf("nvidia/Nemotron-3-Ultra-550b-a55b")).toEqual([0.6, 2.4]);
     expect(priceOf("nvidia/Nemotron-3-Nano-Omni-30B")).toEqual([0.1, 0.4]);
     expect(priceOf("nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B")).toEqual([0.06, 0.24]);
+    // the successors (D96): exact catalog prices, never a family guess
+    expect(priceOf("nvidia/Nemotron-3.5-Super-VL")).toEqual([0.3, 0.9]);
+    expect(priceOf("nvidia/Nemotron-3_5-Lightning")).toEqual([0.06, 0.24]);
+    expect(EXACT_PRICES["nvidia/Nemotron-3.5-Super-VL"]).toEqual([0.3, 0.9]);
+    expect(priceOf("nvidia/Nemotron-3.5-Super-VL", { "nvidia/Nemotron-3.5-Super-VL": [1, 1] })).toEqual([1, 1]);
     expect(priceOf("who-knows")).toEqual([0.6, 2.4]);
     expect(priceOf("mock-fast")).toEqual([0, 0]);
     const o = priceOverrides({ NEBIUS_PRICES_JSON: '{"x":[1,2],"bad":[1]}' } as unknown as NodeJS.ProcessEnv);
@@ -184,13 +190,30 @@ describe("crew models", () => {
 
   it("no NVIDIA VLM: an open VLM looks (labelled), never the eval judge; an NVIDIA VLM always wins (D33)", () => {
     const crew = ["nvidia/Nemotron-3-Ultra-550b-a55b", "nvidia/nemotron-3-super-120b-a12b", "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B"];
-    const open = resolveAgainstCatalog(DEFAULT_MODELS, [...crew, "google/gemma-3-27b-it", "openbmb/MiniCPM-V-4_5"]);
+    const old = { ...DEFAULT_MODELS, vision: "" };
+    const open = resolveAgainstCatalog(old, [...crew, "google/gemma-3-27b-it", "openbmb/MiniCPM-V-4_5"], { visionFallbacks: ["openbmb/MiniCPM-V-4_5"] });
     expect(open.models.vision).toBe("openbmb/MiniCPM-V-4_5");
     expect(open.visionAvailable).toBe(true);
-    expect(open.notes.join(" ")).toMatch(/vision critic: openbmb\/MiniCPM-V-4_5; Nemotron crew: Ultra\/Super\/Nano/);
-    const judgeOnly = resolveAgainstCatalog(DEFAULT_MODELS, [...crew, "google/gemma-3-27b-it"]);
+    expect(open.notes.join(" ")).toMatch(/vision critic: openbmb\/MiniCPM-V-4_5/);
+    const judgeOnly = resolveAgainstCatalog(old, [...crew, "google/gemma-3-27b-it", "moonshotai/Kimi-K3"]);
     expect(judgeOnly.models.vision).toBe("");
-    const nv = resolveAgainstCatalog(DEFAULT_MODELS, [...crew, "openbmb/MiniCPM-V-4_5", "nvidia/Nemotron-Nano-12B-v2-VL"]);
+    const nv = resolveAgainstCatalog(old, [...crew, "openbmb/MiniCPM-V-4_5", "nvidia/Nemotron-Nano-12B-v2-VL"]);
     expect(nv.models.vision).toBe("nvidia/Nemotron-Nano-12B-v2-VL");
+  });
+
+  it("pins the 2026-11-09 successors (D96): every tier resolves exactly against the post-retirement catalog", () => {
+    expect(DEFAULT_MODELS).toEqual({ strong: "nvidia/Nemotron-3-Ultra-550b-a55b", mid: "nvidia/Nemotron-3.5-Super-VL", fast: "nvidia/Nemotron-3_5-Lightning", vision: "nvidia/Nemotron-3.5-Super-VL" });
+    expect(VISION_FALLBACKS).toEqual(["nvidia/Nemotron-3.5-Super-VL"]);
+    const after = ["nvidia/Nemotron-3-Ultra-550b-a55b", "nvidia/Nemotron-3.5-Super-VL", "nvidia/Nemotron-3_5-Lightning", "google/gemma-3-27b-it", "moonshotai/Kimi-K3"];
+    const r = resolveAgainstCatalog(configuredModels({} as unknown as NodeJS.ProcessEnv), after);
+    expect(r.models).toEqual(DEFAULT_MODELS);
+    expect(r.notes).toEqual([]);
+    expect(r.visionAvailable).toBe(true);
+    // an old id left in NEMOTRON_*_MODEL after the retirement falls back to the successor of the same tier
+    const stale = resolveAgainstCatalog({ ...DEFAULT_MODELS, mid: "nvidia/nemotron-3-super-120b-a12b", fast: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B", vision: "openbmb/MiniCPM-V-4_5" }, after);
+    expect(stale.models).toEqual(DEFAULT_MODELS);
+    expect(stale.notes).toHaveLength(3);
+    // the critic's eyes are never an eval judge
+    expect(JUDGE_MODELS).not.toContain(r.models.vision);
   });
 });

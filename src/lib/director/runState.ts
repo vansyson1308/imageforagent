@@ -205,7 +205,8 @@ export function modelLabel(model: string): string {
   const m = model.toLowerCase();
   if (m.includes("ultra")) return "Nemotron Ultra";
   if (m.includes("super")) return "Nemotron Super";
-  if (m.includes("nano") || m.includes("lightning")) return "Nemotron Nano";
+  if (m.includes("lightning")) return "Nemotron Lightning";
+  if (m.includes("nano")) return "Nemotron Nano";
   if (m.includes("omni")) return "Nemotron Omni";
   if (m === "engine" || m === "catalog") return "Engine";
   // the Japanese Piper voice is CC BY-NC-SA: labelled in the demo so nobody mistakes it for a publishable voice (owner decision A1)

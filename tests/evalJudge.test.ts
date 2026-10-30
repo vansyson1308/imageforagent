@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { POST as judge } from "@/app/api/eval/judge/route";
-import { JUDGE_MODELS, V1_JUDGE } from "@/lib/services/evalJudges";
+import { CRITIC_MODELS, JUDGE_MODELS, V1_JUDGE } from "@/lib/services/evalJudges";
 
 /**
  * Operator-only judge route (D48): the benchmark's judges run on the server,
@@ -35,12 +35,13 @@ describe("POST /api/eval/judge (D48)", () => {
   });
 
   it("calls only judge models, with one data-URI image", async () => {
-    for (const model of ["nvidia/nemotron-3-super-120b-a12b", "openbmb/MiniCPM-V-4_5"]) {
+    for (const model of ["nvidia/nemotron-3-super-120b-a12b", "openbmb/MiniCPM-V-4_5", "nvidia/Nemotron-3.5-Super-VL", "nvidia/Nemotron-3_5-Lightning"]) {
       expect((await judge(req({ model, prompt: "Shot 1", image: IMG }, OP))).status).toBe(400);
     }
     expect((await judge(req({ model: V1_JUDGE, prompt: "Shot 1", image: "https://example.com/x.jpg" }, OP))).status).toBe(400);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(JUDGE_MODELS).not.toContain("openbmb/MiniCPM-V-4_5");
+    for (const critic of CRITIC_MODELS) expect(JUDGE_MODELS).not.toContain(critic);
   });
 
   it("returns the judge's reply with usage and cost for the client's ledger", async () => {

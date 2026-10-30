@@ -74,7 +74,7 @@ export interface RunSummary {
   readonly shotScores?: Record<number, number | null>;
   /** shots whose final version still scores below the floor (7) */
   readonly belowFloor?: number[];
-  /** "openbmb/MiniCPM-V-4_5 looks · Nemotron Nano scores" when a vision model was used */
+  /** "nvidia/Nemotron-3.5-Super-VL looks · nvidia/Nemotron-3_5-Lightning scores" when a vision model was used */
   readonly criticModel?: string | null;
   readonly lintErrors: number;
   readonly lintWarnings: number;

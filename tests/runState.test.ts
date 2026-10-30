@@ -63,7 +63,9 @@ describe("run state reducer", () => {
     expect(statusLine(reduceAll([RUN, PLAN, step(0, { action: "draw:invalid", error: "too small" })]), "vi")).toMatch(/Engine đo thấy lỗi ở shot 1/);
     expect(statusLine(reduceAll([RUN, PLAN, step(0, { role: "critic", action: "critique" })]), "ja")).toMatch(/ショット 1/);
     expect(statusLine(reduceAll([RUN, PLAN, { type: "done", status: "done", summary: null }]), "en")).toBe("");
-    expect(modelLabel("nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B")).toBe("Nemotron Nano");
+    expect(modelLabel("nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B")).toBe("Nemotron Nano"); // stored traces keep their label
+    expect(modelLabel("nvidia/Nemotron-3_5-Lightning")).toBe("Nemotron Lightning");
+    expect(modelLabel("nvidia/Nemotron-3.5-Super-VL")).toBe("Nemotron Super");
     expect(modelLabel("google/gemma-3-27b-it")).toBe("gemma-3-27b-it");
     // owner decision A1: the JA Piper voice is visibly a non-commercial demo voice; the owner's recordings are named
     expect(modelLabel("piper:ja_JP-hi_fi_captain-medium#0")).toBe("Piper voice (non-commercial demo voice)");
