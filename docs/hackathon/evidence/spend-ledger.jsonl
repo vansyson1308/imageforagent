@@ -616,3 +616,4 @@
 {"at":"2026-10-30T17:41:22.968Z","script":"probe-artist-thinking","label":"shot11:no-think","model":"nvidia/Nemotron-3.5-Super-VL","tokensIn":1734,"tokensOut":1245,"costUsd":0.0016407}
 {"at":"2026-10-30T17:41:28.439Z","script":"probe-artist-thinking","label":"shot11:no-think+freq0.3","model":"nvidia/Nemotron-3.5-Super-VL","tokensIn":1734,"tokensOut":924,"costUsd":0.0013518}
 {"at":"2026-10-30T18:10:55.926Z","script":"hosted-run","label":"en-kite:cmvva9krs0001m97dxcfcqn8h","model":"crew","tokensIn":256520,"tokensOut":0,"costUsd":0.12546018}
+{"at":"2026-10-30T18:16:55.646Z","script":"hosted-run","label":"vi-banh-chung:cmvvag8dh005bm97d6zfs0mhk","model":"crew","tokensIn":250038,"tokensOut":0,"costUsd":0.11374986}
