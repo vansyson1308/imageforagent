@@ -623,3 +623,4 @@
 {"at":"2026-10-30T18:28:05.498Z","script":"probe-artist-thinking","label":"shot2:no-think","model":"nvidia/Nemotron-3-Ultra-550b-a55b","tokensIn":1456,"tokensOut":360,"costUsd":0.0017376}
 {"at":"2026-10-30T18:28:08.457Z","script":"probe-artist-thinking","label":"shot5:no-think","model":"nvidia/Nemotron-3-Ultra-550b-a55b","tokensIn":1600,"tokensOut":897,"costUsd":0.0031128}
 {"at":"2026-10-30T18:42:42.607Z","script":"hosted-run","label":"en-kite:cmvvbcka70001jj7dvpe9n2us","model":"crew","tokensIn":162536,"tokensOut":0,"costUsd":0.16544448}
+{"at":"2026-10-30T18:53:52.094Z","script":"hosted-run","label":"vi-banh-chung:cmvvbl588003kjj7dva1zpkje","model":"crew","tokensIn":313679,"tokensOut":0,"costUsd":0.34461018}
