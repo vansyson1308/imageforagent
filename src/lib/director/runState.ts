@@ -204,8 +204,11 @@ export function reduceAll(events: readonly DirectorEventLike[], start: RunState 
 export function modelLabel(model: string): string {
   const m = model.toLowerCase();
   if (m.includes("ultra")) return "Nemotron Ultra";
+  // the successors (D96), named so judges can map them to the Judge Access PDF's Super / Nano
+  if (m.includes("super-vl")) return "Nemotron Super-VL (Super 3.5)";
   if (m.includes("super")) return "Nemotron Super";
-  if (m.includes("nano") || m.includes("lightning")) return "Nemotron Nano";
+  if (m.includes("lightning")) return "Nemotron Lightning (Nano 3.5)";
+  if (m.includes("nano")) return "Nemotron Nano";
   if (m.includes("omni")) return "Nemotron Omni";
   if (m === "engine" || m === "catalog") return "Engine";
   // the Japanese Piper voice is CC BY-NC-SA: labelled in the demo so nobody mistakes it for a publishable voice (owner decision A1)
@@ -223,9 +226,9 @@ const LINES: Record<string, Record<UiLang, (n: { shot?: number | null; count?: n
   researching: { en: () => "The Researcher is looking up real-world references…", vi: () => "Researcher đang tra cứu tham chiếu thực tế…", ja: () => "リサーチャーが実在の資料を調べています…" },
   planning: { en: (n) => `${n.model ?? "Ultra"} is planning the shots…`, vi: (n) => `${n.model ?? "Ultra"} đang lên phân cảnh…`, ja: (n) => `${n.model ?? "Ultra"} がショットを計画しています…` },
   planned: { en: (n) => `${n.count} shots planned. Recording the voices…`, vi: (n) => `Đã lên ${n.count} shot. Đang thu giọng…`, ja: (n) => `${n.count} ショットを計画。声を録音しています…` },
-  casting: { en: (n) => `${n.model ?? "Super"} is designing the cast and the sets…`, vi: (n) => `${n.model ?? "Super"} đang thiết kế nhân vật và bối cảnh…`, ja: (n) => `${n.model ?? "Super"} がキャストとセットをデザインしています…` },
-  drawing: { en: (n) => `${n.model ?? "Super"} is drawing shot ${n.shot}…`, vi: (n) => `${n.model ?? "Super"} đang vẽ shot ${n.shot}…`, ja: (n) => `${n.model ?? "Super"} がショット ${n.shot} を描いています…` },
-  repairing: { en: (n) => `The engine measured a problem in shot ${n.shot}; ${n.model ?? "Super"} is fixing it…`, vi: (n) => `Engine đo thấy lỗi ở shot ${n.shot}; ${n.model ?? "Super"} đang sửa…`, ja: (n) => `エンジンがショット ${n.shot} の問題を測定。${n.model ?? "Super"} が修正中…` },
+  casting: { en: (n) => `${n.model ?? "Ultra"} is designing the cast and the sets…`, vi: (n) => `${n.model ?? "Ultra"} đang thiết kế nhân vật và bối cảnh…`, ja: (n) => `${n.model ?? "Ultra"} がキャストとセットをデザインしています…` },
+  drawing: { en: (n) => `${n.model ?? "Ultra"} is drawing shot ${n.shot}…`, vi: (n) => `${n.model ?? "Ultra"} đang vẽ shot ${n.shot}…`, ja: (n) => `${n.model ?? "Ultra"} がショット ${n.shot} を描いています…` },
+  repairing: { en: (n) => `The engine measured a problem in shot ${n.shot}; ${n.model ?? "Ultra"} is fixing it…`, vi: (n) => `Engine đo thấy lỗi ở shot ${n.shot}; ${n.model ?? "Ultra"} đang sửa…`, ja: (n) => `エンジンがショット ${n.shot} の問題を測定。${n.model ?? "Ultra"} が修正中…` },
   critiquing: { en: (n) => `The critic is scoring shot ${n.shot}…`, vi: (n) => `Critic đang chấm shot ${n.shot}…`, ja: (n) => `批評家がショット ${n.shot} を採点しています…` },
   editing: { en: () => "The Editor is checking timing and continuity…", vi: () => "Editor đang kiểm tra nhịp và tính liên tục…", ja: () => "編集者がタイミングと連続性を確認しています…" },
   rendering: { en: (n) => `The engine is rendering shot ${n.shot}…`, vi: (n) => `Engine đang render shot ${n.shot}…`, ja: (n) => `エンジンがショット ${n.shot} をレンダリング中…` },

@@ -86,9 +86,9 @@ const DICT = {
   // ── Director panel ──
   directorTitle: { en: "AI Director: the Nemotron crew", vi: "Đạo diễn AI: đội Nemotron", ja: "AI 監督: Nemotron クルー" },
   directorSub: {
-    en: "Tell a story in any language. Ultra plans the shots, Super draws every frame as code, the engine measures each render, the critic scores it and asks for fixes, and Nano edits dialogue and timing.",
-    vi: "Kể một câu chuyện, bất kỳ ngôn ngữ nào. Ultra lên phân cảnh, Super vẽ từng khung bằng code, engine đo bản render, critic chấm điểm và yêu cầu sửa, Nano biên tập thoại + nhịp.",
-    ja: "どの言語でも物語を書いてください。Ultra がショットを計画し、Super が全フレームをコードで描き、エンジンが描画を計測し、批評家が採点して修正を求め、Nano が台詞とタイミングを編集します。",
+    en: "Tell a story in any language. Ultra plans the shots and draws every frame as code, the engine measures each render, Super-VL (Super 3.5) looks at it, and Lightning (Nano 3.5) scores it, asks for fixes and edits dialogue and timing.",
+    vi: "Kể một câu chuyện, bất kỳ ngôn ngữ nào. Ultra lên phân cảnh và vẽ từng khung bằng code, engine đo bản render, Super-VL (Super 3.5) nhìn khung hình, Lightning (Nano 3.5) chấm điểm, yêu cầu sửa và biên tập thoại + nhịp.",
+    ja: "どの言語でも物語を書いてください。Ultra がショットを計画して全フレームをコードで描き、エンジンが描画を計測し、Super-VL (Super 3.5) が画面を見て、Lightning (Nano 3.5) が採点・修正指示と台詞・タイミングの編集をします。",
   },
   storyLabel: { en: "Your story", vi: "Câu chuyện", ja: "あなたの物語" },
   storyPlaceholder: {
@@ -118,9 +118,9 @@ const DICT = {
     ja: "リサーチは任意で、このサーバーでは無効です (Tavily キーなし)。",
   },
   researchAuto: {
-    en: "Auto: Nano decides whether the story needs real-world references.",
-    vi: "Tự động: Nano quyết định truyện có cần tham chiếu thực tế không.",
-    ja: "自動: 実在の資料が必要かどうかを Nano が判断します。",
+    en: "Auto: Lightning (Nano 3.5) decides whether the story needs real-world references.",
+    vi: "Tự động: Lightning (Nano 3.5) quyết định truyện có cần tham chiếu thực tế không.",
+    ja: "自動: 実在の資料が必要かどうかを Lightning (Nano 3.5) が判断します。",
   },
   make: { en: "🎬 Make my film", vi: "🎬 Làm phim của tôi", ja: "🎬 映画をつくる" },
   cancel: { en: "Cancel the film", vi: "Dừng làm phim", ja: "制作を中止" },

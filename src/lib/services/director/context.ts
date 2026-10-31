@@ -1,6 +1,6 @@
 import type { z } from "zod";
 import { prisma } from "@/lib/db";
-import type { CrewModels } from "@/lib/providers";
+import { requestTuning, type CrewModels } from "@/lib/providers";
 import { LlmError, type ChatMessage, type LlmProvider, type ModelTier } from "@/lib/providers/types";
 import { BudgetTracker, CancelledError, type DirectorBudget } from "@/lib/services/director/budget";
 import { extractJson, jsonSchemaOf, zodIssues } from "@/lib/services/director/schemas";
@@ -74,7 +74,7 @@ export interface RunSummary {
   readonly shotScores?: Record<number, number | null>;
   /** shots whose final version still scores below the floor (7) */
   readonly belowFloor?: number[];
-  /** "openbmb/MiniCPM-V-4_5 looks · Nemotron Nano scores" when a vision model was used */
+  /** "nvidia/Nemotron-3.5-Super-VL looks · nvidia/Nemotron-3_5-Lightning scores" when a vision model was used */
   readonly criticModel?: string | null;
   readonly lintErrors: number;
   readonly lintWarnings: number;
@@ -235,13 +235,17 @@ export async function callModel(ctx: DirectorContext, spec: CallSpec, format?: {
     { role: "user", content: spec.user, ...(spec.images?.length ? { images: spec.images } : {}) },
   ];
   const promptHash = hashPrompt([model, spec.system, spec.user]);
+  // model-keyed tuning (D96): only fills what the call site left unset
+  const tune = requestTuning(model, spec.role);
+  const thinking = spec.thinking ?? tune.thinking;
   try {
     const r = await ctx.provider.chat(messages, {
       model,
       signal: ctx.signal,
       maxTokens: spec.maxTokens,
       temperature: spec.temperature,
-      thinking: spec.thinking,
+      thinking,
+      ...(tune.frequencyPenalty !== undefined && { frequencyPenalty: tune.frequencyPenalty }),
       responseFormat: format ? { type: "json_schema", name: format.name, schema: jsonSchemaOf(format.schema) } : undefined,
     });
     ctx.budget.add(r.usage.promptTokens, r.usage.completionTokens, r.costUsd);
@@ -252,7 +256,7 @@ export async function callModel(ctx: DirectorContext, spec: CallSpec, format?: {
       shotIndex: spec.shotIndex,
       attempt: spec.attempt,
       promptHash,
-      summary: `${spec.action}${r.formatFallback ? " (json_object fallback)" : ""}${r.attempts > 1 ? ` after ${r.attempts} attempts` : ""}`,
+      summary: `${spec.action}${r.formatFallback ? " (json_object fallback)" : ""}${r.attempts > 1 ? ` after ${r.attempts} attempts` : ""}${tune.frequencyPenalty !== undefined || tune.thinking !== undefined ? ` (tuned: thinking ${thinking ?? "default"}, frequency_penalty ${tune.frequencyPenalty ?? "default"})` : ""}`,
       output: r.text,
       latencyMs: r.latencyMs,
       tokensIn: r.usage.promptTokens,

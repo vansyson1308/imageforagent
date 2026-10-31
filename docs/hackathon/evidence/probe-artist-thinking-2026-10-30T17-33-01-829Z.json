@@ -1,0 +1,39 @@
+{
+  "at": "2026-10-30T17:33:01.829Z",
+  "model": "nvidia/Nemotron-3.5-Super-VL",
+  "runId": "cmvv83d1q00019l7dryp9sccs",
+  "results": [
+    {
+      "shot": 2,
+      "thinking": "default",
+      "ms": 79427,
+      "usage": {
+        "promptTokens": 1645,
+        "completionTokens": 12000
+      },
+      "finishReason": "length",
+      "contentChars": 551,
+      "contentHead": "```svg\n<g id=\"shot2\">\n  <use href=\"#brighton-seafront\" x=\"0\" y=\"0\" width=\"1920\" height=\"1080\"/>\n  <path d=\"M0 700 L 600 680 L 1200 710 L 1920 730\" fill=\"none\" stroke=\"#8B7355\" stroke-width=\"12\" stroke-linecap=\"round\"/>\n  <path d=\"M0 720 L 600 700 L 1200 730 L 1920 750\" fill=\"none\" stroke=\"#8B7355\" s",
+      "contentTail": "00 730 L 1920 750\" fill=\"none\" stroke=\"#8B7355\" stroke-width=\"7\" stroke-linecap=\"round\"/>\n  <rect x=\"180\" y=\"700\" width=\"10\" height=\"160\" fill=\"#8B7355\"/>\n  <rect x=\"850\" y=\"700\" width=\"10\" height=\"160\" fill=\"#8B7355\"/>\n  <rect x=\"1520\" y=\"700\" width=\"10\" height=\"160\" fill=\"#8B7355\"/>\n  <use href=\"#",
+      "svgFragment": false,
+      "sanitize": null,
+      "costUsd": 0.0112935
+    },
+    {
+      "shot": 2,
+      "thinking": false,
+      "ms": 56975,
+      "usage": {
+        "promptTokens": 1645,
+        "completionTokens": 12000
+      },
+      "finishReason": "length",
+      "contentChars": 23242,
+      "contentHead": "```svg\n<defs>\n  <linearGradient id=\"skyGrad\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n    <stop offset=\"0\" stop-color=\"#A8D0E6\"/>\n    <stop offset=\"1\" stop-color=\"#F5E6C8\"/>\n  </linearGradient>\n  <linearGradient id=\"seaGrad\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n    <stop offset=\"0\" stop-color=\"#6BAFAA\"/>\n    <stop offs",
+      "contentTail": "ll=\"none\" stroke=\"#E86C6C\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n<path d=\"M 840 1080 Q 840 1080 840 1080\" fill=\"none\" stroke=\"#E86C6C\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n<path d=\"M 820 1080 Q 840 1080 860 1080\" fill=\"none\" stroke=\"#E86C6C\" stroke-width=\"2\" stroke-linecap=\"round\"/>\n<path d",
+      "svgFragment": false,
+      "sanitize": null,
+      "costUsd": 0.0112935
+    }
+  ]
+}

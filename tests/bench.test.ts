@@ -47,7 +47,7 @@ describe("bench v2 core (WP7)", () => {
   it("judges must differ from the critic, every crew model and each other", () => {
     const crew = ["nvidia/Nemotron-3-Ultra-550b-a55b", "nvidia/nemotron-3-super-120b-a12b", "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B", "openbmb/MiniCPM-V-4_5"];
     expect(judgeProblems([V1_JUDGE, J2], crew)).toEqual([]);
-    expect(judgeProblems([V1_JUDGE, "openbmb/MiniCPM-V-4_5"], [])[0]).toMatch(/MiniCPM.*can't judge/); // the critic's eyes, even if the run didn't list it
+    expect(judgeProblems([V1_JUDGE, "nvidia/Nemotron-3.5-Super-VL"], [])[0]).toMatch(/Super-VL.*can't judge/); // the critic's eyes (D96), even if the run didn't list it
     expect(judgeProblems([V1_JUDGE, "nvidia/nemotron-3-super-120b-a12b"], crew)[0]).toMatch(/super.*can't judge/);
     expect(judgeProblems([V1_JUDGE, V1_JUDGE], crew)[0]).toMatch(/distinct/);
   });

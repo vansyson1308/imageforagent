@@ -1,0 +1,314 @@
+{
+  "at": "2026-10-30T17:41:28.440Z",
+  "model": "nvidia/Nemotron-3.5-Super-VL",
+  "runId": "cmvv83d1q00019l7dryp9sccs",
+  "variants": [
+    {
+      "label": "no-think",
+      "body": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        }
+      }
+    },
+    {
+      "label": "no-think+freq0.3",
+      "body": {
+        "chat_template_kwargs": {
+          "enable_thinking": false
+        },
+        "frequency_penalty": 0.3
+      }
+    }
+  ],
+  "results": [
+    {
+      "shot": 1,
+      "variant": "no-think",
+      "ms": 11039,
+      "usage": {
+        "promptTokens": 1691,
+        "completionTokens": 1736,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 3334,
+      "contentTail": " {\"target\":\"shapes.leaf5.at\",\"keys\":[{\"t\":0,\"v\":[900,180]},{\"t\":4,\"v\":[900,920],\"ease\":\"linear\"}],\n    {\"target\":\"shapes.leaf5.rotate\",\"keys\":[{\"t\":0,\"v\":25},{\"t\":4,\"v\":-25,\"ease\":\"linear\"}]\n  ]\n}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0020697
+    },
+    {
+      "shot": 1,
+      "variant": "no-think+freq0.3",
+      "ms": 5184,
+      "usage": {
+        "promptTokens": 1691,
+        "completionTokens": 742,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 1674,
+      "contentTail": ":\"shapes.leaf2.at\",\"keys\":[{\"t\":0,\"v\":[34,-5]},{\"t\":4,\"v\":[34,215]},{\"t\":4,\"v\":[34,-5]}]},\n    {\"target\":\"shapes.leaf3.at\",\"keys\":[{\"t\":0,\"v\":[9,-3]},{\"t\":4,\"v\":[9,195]},{\"t\":4,\"v\":[9,-3]}]}\n  ]\n}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0011751
+    },
+    {
+      "shot": 3,
+      "variant": "no-think",
+      "ms": 8514,
+      "usage": {
+        "promptTokens": 1681,
+        "completionTokens": 1393,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 2734,
+      "contentTail": "get\":\"shapes.grass8.at\",\"keys\":[{\"t\":0,\"v\":[1600,960]},{\"t\":4,\"v\":[1600,900],\"ease\":\"inOut\"}]},{\"target\":\"shapes.grass9.at\",\"keys\":[{\"t\":0,\"v\":[1750,970]},{\"t\":4,\"v\":[1750,910],\"ease\":\"inOut\"}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.001758
+    },
+    {
+      "shot": 3,
+      "variant": "no-think+freq0.3",
+      "ms": 5198,
+      "usage": {
+        "promptTokens": 1681,
+        "completionTokens": 506,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 1030,
+      "contentTail": "\"target\":\"shapes.grass2.at\",\"keys\":[{\"t\":0,\"v\":[375,998]},{\"t\":4,\"v\":[380,972],\"ease\":\"inOut\"}], {\"target\":\"shapes.grass3.at\",\"keys\":[{\"t\":0,\"v\":[415,992]},{\"t\":4,\"v\":[420,968],\"ease\":\"inOut\"}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0009597
+    },
+    {
+      "shot": 4,
+      "variant": "no-think",
+      "ms": 60158,
+      "usage": {
+        "promptTokens": 1613,
+        "completionTokens": 12000,
+        "reasoningTokens": 0
+      },
+      "finishReason": "length",
+      "contentChars": 22534,
+      "contentTail": "\n<rect x=\"1440\" y=\"-1740\" width=\"120\" height=\"20\" rx=\"4\" fill=\"#D9C9B8\"/>\n<rect x=\"1460\" y=\"-1760\" width=\"80\" height=\"20\" rx=\"4\" fill=\"#A8D0E6\"/>\n<rect x=\"1480\" y=\"-1780\" width=\"40\" height=\"20\" rx=\"4\"",
+      "svgFragment": false,
+      "sanitize": null,
+      "costUsd": 0.0112839
+    },
+    {
+      "shot": 4,
+      "variant": "no-think+freq0.3",
+      "ms": 3207,
+      "usage": {
+        "promptTokens": 1613,
+        "completionTokens": 432,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 867,
+      "contentTail": ",{\"target\":\"shapes.steam2.at\",\"keys\":[{\"t\":0,\"v\":[975,275]},{\"t\":3,\"v\":[992,135],\"ease\":\"inOut\"}],{\"target\":\"shapes.steam3.at\",\"keys\":[{\"t\":0,\"v\":[945,235]},{\"t\":3,\"v\":[960,88],\"ease\":\"inOut\"}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0008727
+    },
+    {
+      "shot": 5,
+      "variant": "no-think",
+      "ms": 5905,
+      "usage": {
+        "promptTokens": 1681,
+        "completionTokens": 1027,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 2114,
+      "contentTail": "rget\":\"shapes.dust2.at\",\"keys\":[{\"t\":0,\"v\":[1450,450]},{\"t\":3,\"v\":[1450,300],\"ease\":\"linear\"}],{\"target\":\"shapes.dust3.at\",\"keys\":[{\"t\":0,\"v\":[1250,500]},{\"t\":3,\"v\":[1250,350],\"ease\":\"linear\"}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0014286
+    },
+    {
+      "shot": 5,
+      "variant": "no-think+freq0.3",
+      "ms": 4177,
+      "usage": {
+        "promptTokens": 1681,
+        "completionTokens": 590,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 1140,
+      "contentTail": "ll:\"#E86C6C\"},{\"id\":\"leaf\",\"type\":\"ellipse\",\"at\":[134,34],rx:16,ry:12,fill:\"#E86C6C\"}], \"tracks\":[{\"target\":\"shapes.steam.at\",\"keys\":[{\"t\":0,\"v\":[830,64]},{\"t\":3,\"v\":[830,-34], \"ease\":\"inOut\"}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0010353
+    },
+    {
+      "shot": 7,
+      "variant": "no-think",
+      "ms": 6126,
+      "usage": {
+        "promptTokens": 1675,
+        "completionTokens": 1059,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 2231,
+      "contentTail": "t\":0,\"v\":1},{\"t\":1.5,\"v\":0.4},{\"t\":3,\"v\":1}]},{\"target\":\"shapes.sparkle2.rotate\",\"keys\":[{\"t\":0,\"v\":0},{\"t\":3,\"v\":72}]},{\"target\":\"shapes.sparkle3.rotate\",\"keys\":[{\"t\":0,\"v\":0},{\"t\":3,\"v\":-72}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0014556
+    },
+    {
+      "shot": 7,
+      "variant": "no-think+freq0.3",
+      "ms": 5967,
+      "usage": {
+        "promptTokens": 1675,
+        "completionTokens": 856,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 1800,
+      "contentTail": "ease\":\"inOut\"},{\"target\":\"shapes.steam.at\",\"keys\":[{\"t\":0,\"v\":[78,97]},{\"t\":3,\"v\":[78, -4]}], \"ease\":\"linear\"},{\"target\":\"shapes.steam.scale\",\"keys\":[{\"t\":0,\"v\":1},{\"t\":3,\"v\":2}], \"ease\":\"out\"}]}}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0012729
+    },
+    {
+      "shot": 8,
+      "variant": "no-think",
+      "ms": 72293,
+      "usage": {
+        "promptTokens": 1734,
+        "completionTokens": 12000,
+        "reasoningTokens": 0
+      },
+      "finishReason": "length",
+      "contentChars": 21123,
+      "contentTail": "\"/>\n<path d=\"M 630 400 Q 630 500 630 540\" fill=\"none\" stroke=\"#E86C6C\" stroke-width=\"2\"/>\n<path d=\"M 550 260 Q 630 340 710 260\" fill=\"none\" stroke=\"#E86C6C\" stroke-width=\"2\"/>\n<path d=\"M 550 260 Q 630",
+      "svgFragment": false,
+      "sanitize": null,
+      "costUsd": 0.0113202
+    },
+    {
+      "shot": 8,
+      "variant": "no-think+freq0.3",
+      "ms": 5147,
+      "usage": {
+        "promptTokens": 1734,
+        "completionTokens": 748,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 1508,
+      "contentTail": ", \"target\":\"shapes.wave2.at\",\"keys\":[{\"t\":0,\"v\":[132,772]},{\"t\":4,\"v\":[202,772],\"ease\":\"inOut\"}], \"target\":\"shapes.wave3.at\",\"keys\":[{\"t\":0,\"v\":[1788,772]},{\"t\":4,\"v\":[1858,772],\"ease\":\"inOut\"}]}}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0011934
+    },
+    {
+      "shot": 9,
+      "variant": "no-think",
+      "ms": 12967,
+      "usage": {
+        "promptTokens": 1678,
+        "completionTokens": 1944,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 3679,
+      "contentTail": "],\"ease\":\"inOut\"},{\"t\":4,\"v\":[1100,920],\"ease\":\"inOut\"}]},{\"target\":\"shapes.wave3.at\",\"keys\":[{\"t\":0,\"v\":[1700,890]},{\"t\":2,\"v\":[1820,890],\"ease\":\"inOut\"},{\"t\":4,\"v\":[1700,890],\"ease\":\"inOut\"}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.002253
+    },
+    {
+      "shot": 9,
+      "variant": "no-think+freq0.3",
+      "ms": 3237,
+      "usage": {
+        "promptTokens": 1678,
+        "completionTokens": 632,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 1288,
+      "contentTail": "rget\":\"shapes.grass4.at\",\"keys\":[{\"t\":0,\"v\":[1050,985]},{\"t\":4,\"v\":[1050,965],\"ease\":\"inOut\"}],{\"target\":\"shapes.grass5.at\",\"keys\":[{\"t\":0,\"v\":[1340,940]},{\"t\":4,\"v\":[1340,920],\"ease\":\"inOut\"}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0010722
+    },
+    {
+      "shot": 10,
+      "variant": "no-think",
+      "ms": 10360,
+      "usage": {
+        "promptTokens": 1718,
+        "completionTokens": 1803,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 4372,
+      "contentTail": "\"shapes.bird1.at\",\"keys\":[{\"t\":0,\"v\":[600,250]},{\"t\":3,\"v\":[720,250],\"ease\":\"linear\"}],\n    {\"target\":\"shapes.bird2.at\",\"keys\":[{\"t\":0,\"v\":[1100,220]},{\"t\":3,\"v\":[1220,220],\"ease\":\"linear\"}]\n  ]\n}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0021381
+    },
+    {
+      "shot": 10,
+      "variant": "no-think+freq0.3",
+      "ms": 3192,
+      "usage": {
+        "promptTokens": 1718,
+        "completionTokens": 498,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 1019,
+      "contentTail": "\"}], \"target\":\"shapes.bow2.at\",\"keys\":[{\"t\":0,\"v\":[775,135]},{\"t\":3,\"v\":[778,145],\"ease\":\"inOut\"}], \"target\":\"shapes.bow3.at\",\"keys\":[{\"t\":0,\"v\":[835,195]},{\"t\":3,\"v\":[840,205],\"ease\":\"inOut\"}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0009636
+    },
+    {
+      "shot": 11,
+      "variant": "no-think",
+      "ms": 7617,
+      "usage": {
+        "promptTokens": 1734,
+        "completionTokens": 1245,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 2496,
+      "contentTail": "}],\"target\":\"shapes.leaf4.at\",\"keys\":[{\"t\":0,\"v\":[900,180]},{\"t\":4,\"v\":[900,900],\"ease\":\"linear\"}],\"target\":\"shapes.leaf5.at\",\"keys\":[{\"t\":0,\"v\":[600,220]},{\"t\":4,\"v\":[600,900],\"ease\":\"linear\"}]}}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0016407
+    },
+    {
+      "shot": 11,
+      "variant": "no-think+freq0.3",
+      "ms": 5471,
+      "usage": {
+        "promptTokens": 1734,
+        "completionTokens": 924,
+        "reasoningTokens": 0
+      },
+      "finishReason": "stop",
+      "contentChars": 2305,
+      "contentTail": "       \n           \n           4,\n           \"\n           v\":\n           [-\n            -3,\n             -\n             -3],\n            \"\n            ease\":\n             \"\n            inOut\"}]}]}\n```",
+      "svgFragment": true,
+      "sanitize": "ok",
+      "costUsd": 0.0013518
+    }
+  ]
+}

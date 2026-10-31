@@ -18,10 +18,11 @@ export interface CritiqueOutcome {
 /**
  * Critic (D33): when a vision model is available it LOOKS at the render first
  * (with the engine's measured checks) and reports what is visible; then
- * Nemotron Nano SCORES the frame from those observations + the measurements +
- * the SVG. Nemotron keeps the critic role; the vision model adds eyes. Token
- * Factory serves no NVIDIA vision model today (D15), so the eyes are an open
- * VLM, labelled in the trace and UI. Without one, Nano scores in text mode.
+ * the fast-tier Nemotron (Lightning since D96, Nano before) SCORES the frame
+ * from those observations + the measurements + the SVG. Nemotron keeps the
+ * critic role; the vision model adds eyes: Nemotron-3.5-Super-VL since D96
+ * (an open VLM, MiniCPM-V, before: D15/D33), labelled in the trace and UI.
+ * Without one, the fast tier scores in text mode.
  * If the vision model rejects image input, the run switches to text mode and
  * records that switch. A critic failure never blocks the film (critique: null).
  */

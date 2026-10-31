@@ -7,18 +7,22 @@ export { MockLlmProvider } from "@/lib/providers/mockLlmProvider";
 export { NemotronProvider } from "@/lib/providers/nemotronProvider";
 
 /**
- * Crew model ids per tier (SPEC §3). The defaults come from public listings
- * of the Token Factory catalog and are NOT verified by this repo — at run
- * start `resolveCrewModels` checks them against `GET /v1/models` and falls
- * back to the closest listed Nemotron of the same tier. An empty VISION
- * model means "auto-detect a Nemotron Omni"; when none is listed, the critic
- * runs in text mode and the trace says so.
+ * Crew model ids per tier (SPEC §3). At run start `resolveCrewModels`
+ * checks them against `GET /v1/models` and falls back to the closest listed
+ * Nemotron of the same tier; an empty VISION model means "auto-detect".
+ * Without any vision model the critic runs in text mode and the trace says so.
+ *
+ * Token Factory retires Nemotron 3 Super / Nano and MiniCPM-V on 2026-11-09
+ * (docs.tokenfactory.nebius.com/model-deprecations-november-2026). D96 (owner +
+ * QC 2026-10-31, after the judge-path verification): Ultra is also the mid tier
+ * (Artist + Cast, reasoning off), Super-VL is the critic's eyes, Lightning the
+ * fast tier. The showcase films and the bench were made with the original models.
  */
 export const DEFAULT_MODELS: Readonly<Record<ModelTier, string>> = {
   strong: "nvidia/Nemotron-3-Ultra-550b-a55b",
-  mid: "nvidia/nemotron-3-super-120b-a12b",
-  fast: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B",
-  vision: "",
+  mid: "nvidia/Nemotron-3-Ultra-550b-a55b",
+  fast: "nvidia/Nemotron-3_5-Lightning",
+  vision: "nvidia/Nemotron-3.5-Super-VL",
 };
 
 export type CrewModels = Record<ModelTier, string>;
@@ -40,12 +44,48 @@ const TIER_PATTERNS: Record<ModelTier, RegExp> = {
 };
 
 /**
- * Open VLMs on Token Factory that can LOOK at renders when no NVIDIA vision
- * model is served (SPEC v2 WP4.4 option 2, DECISIONS D33). They only describe
- * what they see; a Nemotron model still scores. `google/gemma-3-27b-it` is
- * deliberately absent: it is the independent eval judge (the critic must differ).
+ * Vision models that can LOOK at renders when the configured one is not
+ * served and no other NVIDIA vision model matches (SPEC v2 WP4.4 option 2,
+ * DECISIONS D33, D96). They only describe what they see; a Nemotron model
+ * still scores. `google/gemma-3-27b-it` and the Kimi judges are deliberately
+ * absent: they are the independent eval judges (the critic must differ).
  */
-export const VISION_FALLBACKS = ["openbmb/MiniCPM-V-4_5"] as const;
+export const VISION_FALLBACKS = ["nvidia/Nemotron-3.5-Super-VL"] as const;
+
+/** Per-request settings a model needs for one crew role (sent only to that exact model id). */
+export interface RequestTuning {
+  readonly thinking?: boolean;
+  readonly frequencyPenalty?: number;
+}
+
+/**
+ * Model-keyed request tuning (D96). Nemotron-3.5-Super-VL as Artist/Cast reasons
+ * past the 12k-token cap by default (23 of 52 artist calls returned no SVG on the
+ * first successor take) and, with reasoning off alone, loops on repeated paths in
+ * 3 of 11 shots; reasoning off + frequency_penalty 0.3 gave a sanitizer-clean
+ * fragment for 11 of 11 (evidence/probe-artist-thinking-*.json), but on the three
+ * landing samples the penalty broke JSON/XML syntax (repeated quotes and tags)
+ * and no sample reached the judge bar; kept (tested) for NEMOTRON_MID_MODEL =
+ * Super-VL, not the default. The Artist is Ultra (owner + QC 2026-10-31): it also reasons ~10k tokens per
+ * frame by default, and with reasoning off draws a clean fragment in 2–3 s, so
+ * its Artist/Cast calls run with reasoning off and no penalty. Keyed by exact id
+ * AND role: Ultra as the Director keeps its defaults.
+ */
+export const MODEL_TUNING: Readonly<Record<string, Readonly<Record<string, RequestTuning>>>> = {
+  "nvidia/Nemotron-3.5-Super-VL": {
+    artist: { thinking: false, frequencyPenalty: 0.3 },
+    cast: { thinking: false, frequencyPenalty: 0.3 },
+  },
+  "nvidia/Nemotron-3-Ultra-550b-a55b": {
+    artist: { thinking: false },
+    cast: { thinking: false },
+  },
+};
+
+export function requestTuning(model: string, role: string): RequestTuning {
+  const key = Object.keys(MODEL_TUNING).find((id) => id.toLowerCase() === model.toLowerCase());
+  return (key && MODEL_TUNING[key][role]) || {};
+}
 
 export interface ResolvedModels {
   readonly models: CrewModels;
@@ -76,7 +116,7 @@ export function resolveAgainstCatalog(configured: CrewModels, listed: readonly s
       const open = fallbacks.find((f) => listed.some((id) => id.toLowerCase() === f.toLowerCase()));
       if (open) {
         models.vision = listed.find((id) => id.toLowerCase() === open.toLowerCase())!;
-        notes.push(`vision: no NVIDIA vision model in the catalog, so ${models.vision} LOOKS at each render and Nemotron Nano still scores it (vision critic: ${models.vision}; Nemotron crew: Ultra/Super/Nano).`);
+        notes.push(`vision: no auto-detected vision model, so the fallback ${models.vision} LOOKS at each render and the fast-tier Nemotron still scores it (vision critic: ${models.vision}).`);
       } else {
         models.vision = "";
         notes.push("vision: no vision model in the catalog, so the critic runs in TEXT mode (SVG + render stats).");

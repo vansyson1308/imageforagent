@@ -1,0 +1,41 @@
+Token Factory public model catalog: the successors of the models retired on 2026-11-09 (D96).
+Captured 2026-10-30 14:18 UTC by rendering the pages in headless Chromium (they are client-rendered).
+Verbatim lines from the rendered pages; navigation and cookie text removed.
+Deprecation notice: https://docs.tokenfactory.nebius.com/model-deprecations-november-2026
+
+=== https://tokenfactory.nebius.com/models/catalog/image2text/nvidia%2FNemotron-3.5-Super-VL
+Nemotron 3.5 Super VL
+NVIDIA's multimodal model for visual understanding, coding, reasoning, and tool use. It processes text, images, and video to generate text responses.
+Vision
+License: OpenMDW-1.1
+Parameters: unknown
+Context: 1,024K tokens
+Quantization: BF16
+Tool calling: Available
+Reasoning: Available
+Public endpoint: Available
+Public endpoints (Base):
+1M Input  $0.30
+1M Cached $0.06
+1M Output $0.90
+282.4 Tok/s
+Current processing region: us-north1
+
+=== https://tokenfactory.nebius.com/models/catalog/text2text/nvidia%2FNemotron-3_5-Lightning
+Nemotron-3.5-Lightning
+NVIDIA's 30B-parameter hybrid MoE model with 3B active parameters per token, designed for efficient agentic reasoning, tool use, coding, and long-context workflows.
+Text-to-text
+License: OpenMDW v1.1
+Parameters: 30B
+Context: 1,024K tokens
+Quantization: BF16
+Tool calling: Available
+Reasoning: Available
+Dedicated endpoint: Available
+Public endpoint: Available
+Public endpoints (Base):
+1M Input  $0.06
+1M Cached $0.03
+1M Output $0.24
+314.12 Tok/s
+Current processing region: eu-north1

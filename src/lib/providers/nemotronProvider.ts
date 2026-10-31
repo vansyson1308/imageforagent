@@ -167,6 +167,7 @@ export class NemotronProvider implements LlmProvider {
       messages,
       ...(options.temperature !== undefined && { temperature: options.temperature }),
       ...(options.maxTokens !== undefined && { max_tokens: options.maxTokens }),
+      ...(options.frequencyPenalty !== undefined && { frequency_penalty: options.frequencyPenalty }),
     };
     const rf = toWireFormat(format);
     if (rf) body.response_format = rf;

@@ -20,7 +20,8 @@ const SECRET_KEY = "nb-SECRET-should-never-appear";
 const SECRET_PASS = "judge-pass-should-never-appear";
 const SECRET_TAVILY = "tvly-SECRET-should-never-appear";
 const tools = (cmd: string) => `${cmd} version 1.0`;
-const crewCatalog = ["nvidia/Nemotron-3-Ultra-550b-a55b", "nvidia/nemotron-3-super-120b-a12b", "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B", "google/gemma-3-27b-it"];
+// the catalog after the 2026-11-09 retirement (D96): the old Super / Nano / MiniCPM ids are gone
+const crewCatalog = ["nvidia/Nemotron-3-Ultra-550b-a55b", "nvidia/Nemotron-3.5-Super-VL", "nvidia/Nemotron-3_5-Lightning", "google/gemma-3-27b-it"];
 
 describe("GET /api/health report", () => {
   it("is public, green with a reachable catalog, and never contains a secret", async () => {
@@ -38,7 +39,7 @@ describe("GET /api/health report", () => {
     expect(r.checks.tokenFactory).toMatchObject({ status: "ok" });
     expect(r.checks.tavily.status).toBe("ok");
     expect(r.checks.passcode).toMatchObject({ status: "ok", detail: "set" });
-    expect(r.catalog?.crew).toEqual({ strong: true, mid: true, fast: true });
+    expect(r.catalog?.crew).toEqual({ strong: true, mid: true, fast: true, vision: true });
     expect(r.commit).toBe("abc123");
     expect(r.version).toBe(pkg.version);
     expect(APP_VERSION).toBe(pkg.version);
@@ -58,6 +59,12 @@ describe("GET /api/health report", () => {
     const gone = await runHealthChecks({ env: { NEBIUS_API_KEY: SECRET_KEY }, binaryVersion: tools, listModels: async () => crewCatalog.slice(1) });
     expect(gone.ok).toBe(false);
     expect(gone.checks.tokenFactory.detail).toContain("strong");
+
+    // pinned to a retired id (an old NEMOTRON_*_MODEL left on Railway) → health says so
+    resetHealthCache();
+    const stale = await runHealthChecks({ env: { NEBIUS_API_KEY: SECRET_KEY, NEMOTRON_FAST_MODEL: "nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B" }, binaryVersion: tools, listModels: async () => crewCatalog });
+    expect(stale.ok).toBe(false);
+    expect(stale.checks.tokenFactory.detail).toMatch(/not listed: fast$/);
 
     const noFfmpeg = await runHealthChecks({ env: { LLM_PROVIDER: "mock" }, binaryVersion: () => null });
     expect(noFfmpeg.checks.ffmpeg.status).toBe("fail");
