@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-31T04:15:22.878Z",
+  "base": "https://studio-production-049c.up.railway.app",
+  "capTokens": 500000,
+  "bar": {
+    "wallSec": 720,
+    "hardWallSec": 900,
+    "capShare": 0.75,
+    "gateFailures": 0,
+    "firstCallValid": 0.9,
+    "critic": 5.8,
+    "usdPerMin": 0.7
+  },
+  "rows": [
+    {
+      "projectId": "cmvvvvbny00002ao3xi5no59u",
+      "runId": "cmvvvvbxb00012ao3ywqpusj6",
+      "language": "en",
+      "models": {
+        "strong": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "mid": "nvidia/Nemotron-3-Ultra-550b-a55b",
+        "fast": "nvidia/Nemotron-3_5-Lightning",
+        "vision": "nvidia/Nemotron-3.5-Super-VL"
+      },
+      "status": "done",
+      "shots": 7,
+      "rendered": 7,
+      "firstPassOk": 1,
+      "wallSec": 252,
+      "tokens": 363085,
+      "capShare": 0.726,
+      "gateFailures": 2,
+      "gateFailShots": [
+        3,
+        4
+      ],
+      "artistFirstCallValidSvg": 1,
+      "artistCallsValidSvg": 1,
+      "artistCalls": 33,
+      "criticBefore": 4.86,
+      "criticAfter": 5,
+      "costUsd": 0.34424,
+      "filmSec": 26.75,
+      "usdPerMin": 0.772,
+      "checks": {
+        "done": true,
+        "allRendered": true,
+        "wall": true,
+        "hardWall": true,
+        "gates": false,
+        "firstCallValid": true,
+        "critic": false,
+        "cost": false
+      },
+      "pass": false
+    }
+  ]
+}
